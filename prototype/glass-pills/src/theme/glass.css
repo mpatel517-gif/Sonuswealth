@@ -1,0 +1,59 @@
+:root{
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --gap-sm: 8px;
+  --bg: #0b1118;
+  --surface: rgba(18,25,33,0.48);
+  --glass-stroke: rgba(255,255,255,0.04);
+  --muted: #cbd5e1;
+  --accent: #7dd3fc;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
+  --glass-shadow: 0 8px 30px rgba(0,0,0,0.6);
+}
+
+body { margin: 0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: var(--bg); color: var(--muted); }
+
+/* glass card */
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-stroke);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* pills */
+.pill {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:24px;
+  border:1px solid var(--glass-stroke);
+  background: var(--surface);
+  color: var(--muted);
+  min-width:140px;
+  cursor:grab;
+}
+.pill.dragging { transform: scale(1.03); box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+.pill .pill-handle { opacity:0.7; margin-right:6px; }
+.pill:focus { outline: 3px solid rgba(59,130,246,0.12); }
+
+/* button */
+.glass-btn {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-stroke);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+/* fallback when backdrop not supported: call this class on <html> */
+.no-backdrop .glass {
+  background: linear-gradient(180deg, rgba(17,24,39,0.7), rgba(17,24,39,0.68));
+  border: 1px solid rgba(255,255,255,0.03);
+}

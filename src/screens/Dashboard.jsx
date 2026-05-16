@@ -37,7 +37,7 @@ import { useEvents } from '../state/events.jsx'
 
 // Ask is no longer a tab — it's a persistent floating pill (D-ASK-1).
 const TABS = [
-  { id:'home',  label:'Home',     icon:'⌂' },
+  { id:'home',  label:'Overview',  icon:'⌂' },
   { id:'money', label:'My Money', icon:'◈' },
   { id:'flow',  label:'Cashflow', icon:'≋' },
   { id:'tax',   label:'Tax',      icon:'⚖' },

@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const NAV = [
-  { id: 'home',  label: 'Dashboard',   icon: '⌂' },
+  { id: 'home',  label: 'Overview',    icon: '⌂' },
   { id: 'money', label: 'My Money',    icon: '◈' },
   { id: 'flow',  label: 'Cashflow',    icon: '≋' },
   { id: 'tax',   label: 'Tax & Estate', icon: '⚖' },

@@ -1,0 +1,1057 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sonuswealth — Theme directions · probe 02</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..800,0..100&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ===================================================================
+   PROBE 02 — Two aesthetic directions, side-by-side
+   E = "Bedside Lantern"  · warm dusk + honey amber + Fraunces/Manrope
+   B = "Annual Report"    · charcoal ink + Economist red + Newsreader/Geist
+   =================================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: auto; }
+
+body {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: #0a0a0d;
+  color: #b5b8bf;
+  padding: 48px 24px;
+  min-height: 100vh;
+}
+
+/* ---- Page chrome (probe-only) ---- */
+.probe-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.probe-intro {
+  margin-bottom: 56px;
+  max-width: 760px;
+}
+
+.probe-intro h1 {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 36px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+
+.probe-intro p {
+  font-family: 'Geist', sans-serif;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #b5b8bf;
+  margin-bottom: 8px;
+}
+
+.probe-intro strong { color: #fff; font-weight: 600; }
+
+.direction-block {
+  margin-bottom: 64px;
+}
+
+.direction-label {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.direction-letter {
+  font-family: 'Newsreader', serif;
+  font-size: 64px;
+  font-weight: 400;
+  font-style: italic;
+  color: #4a4f5a;
+  line-height: 0.85;
+  margin-right: 4px;
+}
+
+.direction-title {
+  font-family: 'Newsreader', serif;
+  font-size: 28px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+.direction-tag {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #6e7280;
+  text-transform: uppercase;
+}
+
+.direction-poet {
+  font-family: 'Geist', sans-serif;
+  font-size: 13px;
+  color: #8a8d96;
+  line-height: 1.55;
+  margin-bottom: 28px;
+  padding-left: 88px;
+  max-width: 680px;
+}
+
+.theme-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 980px) {
+  .theme-pair { grid-template-columns: 1fr; }
+  .direction-poet { padding-left: 0; }
+}
+
+.theme-frame {
+  border-radius: 16px;
+  padding: 32px 24px;
+  position: relative;
+}
+
+.theme-frame__tag {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+
+/* ===================================================================
+   DIRECTION E — "Bedside Lantern"
+   =================================================================== */
+
+.theme--E-dark {
+  --bg:           #0d111c;     /* dusk-blue-black, warmer than midnight */
+  --surface:      #161a25;
+  --surface-2:    #1f2330;
+  --surface-3:    #2a2f3d;
+  --hairline:     rgba(236, 229, 209, 0.08);
+  --hairline-strong: rgba(236, 229, 209, 0.16);
+
+  --text:         #ece5d1;     /* parchment cream — the lamplight pool */
+  --text-2:       #b8b09c;
+  --text-3:       #7d7868;
+  --text-proj:    #8d8775;
+
+  --acc:          #f0a838;     /* honey amber — answer register */
+  --acc-soft:     rgba(240, 168, 56, 0.14);
+  --acc-line:     rgba(240, 168, 56, 0.30);
+  --acc-quiet:    rgba(240, 168, 56, 0.55);
+
+  --alert:        #e35b4d;     /* sumac red */
+  --diff:         #d4b76a;     /* aged warm-gold — calmer than accent */
+
+  --r-polygon-fill:   rgba(240, 168, 56, 0.10);
+  --r-polygon-stroke: rgba(240, 168, 56, 0.85);
+
+  --ff-display: 'Fraunces', 'Newsreader', Georgia, serif;
+  --ff-body:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --ff-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+.theme--E-light {
+  --bg:           #f4eedd;     /* vellum, NOT iOS grey */
+  --surface:      #faf6e8;     /* cream paper */
+  --surface-2:    #ede4cd;
+  --surface-3:    #e3d8b8;
+  --hairline:     rgba(42, 36, 25, 0.10);
+  --hairline-strong: rgba(42, 36, 25, 0.20);
+
+  --text:         #2a2419;     /* ink walnut */
+  --text-2:       #54493a;
+  --text-3:       #8b7f6e;
+  --text-proj:    #9a8e7c;
+
+  --acc:          #a04b2a;     /* terracotta */
+  --acc-soft:     rgba(160, 75, 42, 0.10);
+  --acc-line:     rgba(160, 75, 42, 0.30);
+  --acc-quiet:    rgba(160, 75, 42, 0.55);
+
+  --alert:        #8b1a1a;     /* deep oxblood */
+  --diff:         #8b6e3f;     /* aged bronze */
+
+  --r-polygon-fill:   rgba(160, 75, 42, 0.08);
+  --r-polygon-stroke: rgba(160, 75, 42, 0.85);
+
+  --ff-display: 'Fraunces', 'Newsreader', Georgia, serif;
+  --ff-body:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --ff-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+
+/* ===================================================================
+   DIRECTION B — "Annual Report"
+   =================================================================== */
+
+.theme--B-dark {
+  --bg:           #0e0f14;     /* charcoal-ink */
+  --surface:      #181a22;
+  --surface-2:    #20232c;
+  --surface-3:    #2b2f3a;
+  --hairline:     rgba(232, 230, 223, 0.08);
+  --hairline-strong: rgba(232, 230, 223, 0.16);
+
+  --text:         #e8e6df;     /* aged off-white, paper-tone */
+  --text-2:       #adaaa1;
+  --text-3:       #6e6b65;
+  --text-proj:    #7e7b75;
+
+  --acc:          #d6304b;     /* Economist red, slightly lifted for dark */
+  --acc-soft:     rgba(214, 48, 75, 0.14);
+  --acc-line:     rgba(214, 48, 75, 0.32);
+  --acc-quiet:    rgba(214, 48, 75, 0.55);
+
+  --alert:        #ed8a3b;     /* orange-rust — separate from accent red */
+  --diff:         #b89765;     /* aged gold-bronze */
+
+  --r-polygon-fill:   rgba(214, 48, 75, 0.10);
+  --r-polygon-stroke: rgba(214, 48, 75, 0.85);
+
+  --ff-display: 'Newsreader', Georgia, serif;
+  --ff-body:    'Geist', ui-sans-serif, system-ui, sans-serif;
+  --ff-mono:    'Geist Mono', ui-monospace, monospace;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+.theme--B-light {
+  --bg:           #f0ebdf;     /* cream paper */
+  --surface:      #f8f4e9;
+  --surface-2:    #e8e0d0;
+  --surface-3:    #ddd2bd;
+  --hairline:     rgba(28, 26, 23, 0.10);
+  --hairline-strong: rgba(28, 26, 23, 0.20);
+
+  --text:         #1c1a17;     /* ink */
+  --text-2:       #54504a;
+  --text-3:       #8a857d;
+  --text-proj:    #99948c;
+
+  --acc:          #a91931;     /* deep Economist red on light */
+  --acc-soft:     rgba(169, 25, 49, 0.08);
+  --acc-line:     rgba(169, 25, 49, 0.28);
+  --acc-quiet:    rgba(169, 25, 49, 0.55);
+
+  --alert:        #c25e1e;     /* orange-rust */
+  --diff:         #8e7242;
+
+  --r-polygon-fill:   rgba(169, 25, 49, 0.08);
+  --r-polygon-stroke: rgba(169, 25, 49, 0.85);
+
+  --ff-display: 'Newsreader', Georgia, serif;
+  --ff-body:    'Geist', ui-sans-serif, system-ui, sans-serif;
+  --ff-mono:    'Geist Mono', ui-monospace, monospace;
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+
+/* ===================================================================
+   THE CARD — shared structure, themed via CSS vars
+   Calm frame: flat surface, hairline border only, no gradient
+   Sharp numbers: serif display, accent on answer register
+   =================================================================== */
+
+.card {
+  font-family: var(--ff-body);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  padding: 24px 22px 22px;
+  color: var(--text);
+}
+
+/* HEAD */
+
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.card__eyebrow {
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.card__title {
+  font-family: var(--ff-display);
+  font-size: 19px;
+  font-weight: 500;
+  font-variation-settings: "opsz" 36, "SOFT" 50;
+  color: var(--text);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+}
+
+.card__mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 5px 9px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.card__mode::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+
+/* ANCHORS — three-register numbers */
+
+.anchors {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.anchor__label {
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.anchor__value {
+  font-family: var(--ff-display);
+  font-size: 30px;
+  font-weight: 500;
+  font-variation-settings: "opsz" 36, "SOFT" 50;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  color: var(--text);                /* ordinary register */
+  font-variant-numeric: tabular-nums;
+  display: block;
+}
+
+.anchor__value--answer {
+  color: var(--acc);                  /* answer register — THE number this card answers */
+  font-variation-settings: "opsz" 48, "SOFT" 30;
+}
+
+.anchor__value sup {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  vertical-align: top;
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+
+.anchor__delta {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--diff);                 /* diff register — change since last view */
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.anchor__delta::before {
+  content: '↑';
+  font-family: var(--ff-display);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+
+/* RADAR — no glass backdrop, flat tonal ground */
+
+.radar {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 320px;
+  margin: 0 auto 20px;
+}
+
+.radar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.r-ring {
+  fill: none;
+  stroke: var(--hairline);
+  stroke-width: 1;
+}
+
+.r-ring--outer { stroke: var(--hairline-strong); }
+
+.r-axis {
+  stroke: var(--hairline);
+  stroke-width: 1;
+}
+
+.r-polygon {
+  fill: var(--r-polygon-fill);
+  stroke: var(--r-polygon-stroke);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.r-node {
+  fill: var(--surface);
+  stroke-width: 1.5;
+}
+
+.r-node-inner { /* solid dot using fixed dim identity color */ }
+
+.r-handle {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1;
+  stroke-dasharray: 1.5 2;
+  opacity: 0.35;
+}
+
+.r-label {
+  font-family: var(--ff-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  fill: var(--text-3);
+  text-transform: uppercase;
+}
+
+.r-center {
+  fill: var(--surface);
+  stroke: var(--hairline-strong);
+  stroke-width: 1;
+}
+
+.r-score {
+  font-family: var(--ff-display);
+  font-size: 30px;
+  font-weight: 600;
+  font-variation-settings: "opsz" 48, "SOFT" 30;
+  fill: var(--acc);
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.r-score-label {
+  font-family: var(--ff-mono);
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  fill: var(--text-3);
+  text-anchor: middle;
+}
+
+
+/* FOOT */
+
+.card__foot {
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.card__callout {
+  font-family: var(--ff-body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-2);
+  flex: 1;
+  min-width: 200px;
+}
+
+.card__callout strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.card__callout em {
+  font-style: normal;
+  color: var(--acc);
+  font-weight: 600;
+}
+
+.card__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--acc-line);
+  background: transparent;
+  border-radius: 999px;
+  color: var(--acc);
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card__action:hover { background: var(--acc-soft); }
+
+.card__action::after {
+  content: '→';
+  font-family: var(--ff-display);
+  font-size: 14px;
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+
+/* ---- Direction-comparison strip ---- */
+
+.compare-strip {
+  margin-top: 64px;
+  padding: 32px 28px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 16px;
+}
+
+.compare-strip h2 {
+  font-family: 'Newsreader', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: #fff;
+  margin-bottom: 18px;
+  letter-spacing: -0.2px;
+}
+
+.compare-table {
+  display: grid;
+  grid-template-columns: 180px 1fr 1fr;
+  gap: 14px 24px;
+  font-family: 'Geist', sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.compare-table > div { padding: 8px 0; }
+
+.compare-table .row-label {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #6e7280;
+  padding-top: 11px;
+}
+
+.compare-table .col-e { color: #e8c89a; border-left: 2px solid #f0a838; padding-left: 14px; }
+.compare-table .col-b { color: #e8c8c0; border-left: 2px solid #d6304b; padding-left: 14px; }
+.compare-table .head {
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  padding-top: 0;
+}
+
+@media (max-width: 720px) {
+  .compare-table { grid-template-columns: 1fr; gap: 6px; }
+  .compare-table .row-label { padding-top: 0; padding-bottom: 0; margin-top: 14px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="probe-shell">
+
+  <!-- Intro -->
+  <section class="probe-intro">
+    <h1>Theme directions — probe 02</h1>
+    <p><strong>v01 was rejected on two grounds:</strong> indigo+teal palette didn't carry Sonuswealth's identity, and the "sharp numbers" register was screaming. Both feedbacks point the same way: less volume, more intentionality, real typographic gravity.</p>
+    <p>Two directions follow. Each has a clear point of view. The radar card content is identical across all four — only the aesthetic moves.</p>
+  </section>
+
+
+  <!-- ============================================================
+       DIRECTION E — Bedside Lantern
+       ============================================================ -->
+  <section class="direction-block">
+    <div class="direction-label">
+      <span class="direction-letter">E</span>
+      <div>
+        <span class="direction-tag">Direction · type-pair Fraunces + Manrope</span>
+        <h2 class="direction-title">Bedside Lantern</h2>
+      </div>
+    </div>
+    <p class="direction-poet">Pulls from Sonu and your own scene quote — phone in a dim room, the app is the only light source. The theme <em style="color:#f0a838;font-style:normal;font-weight:600">is</em> that lamp: warm parchment text on dusk-blue ground, honey amber on the one number that matters. Light mode reads as vellum.</p>
+
+    <div class="theme-pair">
+
+      <!-- E dark -->
+      <div class="theme-frame theme--E-dark">
+        <span class="theme-frame__tag">E · dark · Mathematical Resonance</span>
+        <div style="height: 20px;"></div>
+        <article class="card">
+          <header class="card__head">
+            <div>
+              <p class="card__eyebrow">Your wealth picture</p>
+              <h2 class="card__title">Dima · 32 · saving for first home</h2>
+            </div>
+            <span class="card__mode">Today</span>
+          </header>
+
+          <div class="anchors">
+            <div>
+              <span class="anchor__label">Net worth</span>
+              <span class="anchor__value">£487K</span>
+              <span class="anchor__delta">£8.2K · 7d</span>
+            </div>
+            <div>
+              <span class="anchor__label">Wealth Score</span>
+              <span class="anchor__value anchor__value--answer">60<sup>/100</sup></span>
+            </div>
+            <div>
+              <span class="anchor__label">Risk</span>
+              <span class="anchor__value" style="font-size: 24px;">4.2<sup>/7</sup></span>
+            </div>
+          </div>
+
+          <div class="radar">
+            <svg viewBox="0 0 320 320" aria-hidden="true">
+              <circle class="r-ring" cx="160" cy="160" r="40"/>
+              <circle class="r-ring" cx="160" cy="160" r="80"/>
+              <circle class="r-ring" cx="160" cy="160" r="120"/>
+              <circle class="r-ring r-ring--outer" cx="160" cy="160" r="135"/>
+
+              <line class="r-axis" x1="160" y1="160" x2="160" y2="25"/>
+              <line class="r-axis" x1="160" y1="160" x2="291.7" y2="92.5"/>
+              <line class="r-axis" x1="160" y1="160" x2="289.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="190.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="130.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="31.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="28.3" y2="92.5"/>
+
+              <!-- polygon: behaviour=70%, capital=61%, tax=56%, protection=50%, cashflow=75%, debt=64%, estate=50% -->
+              <polygon class="r-polygon" points="
+                160,65
+                241.7,118.3
+                234.1,202.5
+                208,250
+                118,250
+                73,212.4
+                93.2,113.5
+              "/>
+
+              <text class="r-label" x="160" y="14" text-anchor="middle">Habits</text>
+              <text class="r-label" x="304" y="92" text-anchor="middle">Own</text>
+              <text class="r-label" x="302" y="231" text-anchor="middle">Tax</text>
+              <text class="r-label" x="190" y="312" text-anchor="middle">Safety</text>
+              <text class="r-label" x="130" y="312" text-anchor="middle">Flow</text>
+              <text class="r-label" x="18" y="231" text-anchor="middle">Debt</text>
+              <text class="r-label" x="16" y="92" text-anchor="middle">Legacy</text>
+
+              <g>
+                <circle class="r-handle" cx="160" cy="65" r="9"/>
+                <circle class="r-node" cx="160" cy="65" r="5" stroke="#4d8eff"/>
+                <circle cx="160" cy="65" r="2.5" fill="#4d8eff"/>
+              </g>
+              <g>
+                <circle class="r-handle" cx="241.7" cy="118.3" r="9"/>
+                <circle class="r-node" cx="241.7" cy="118.3" r="5" stroke="#00e5a8"/>
+                <circle cx="241.7" cy="118.3" r="2.5" fill="#00e5a8"/>
+              </g>
+              <g>
+                <circle class="r-handle" cx="234.1" cy="202.5" r="9"/>
+                <circle class="r-node" cx="234.1" cy="202.5" r="5" stroke="#ffb347"/>
+                <circle cx="234.1" cy="202.5" r="2.5" fill="#ffb347"/>
+              </g>
+              <g>
+                <circle class="r-handle" cx="208" cy="250" r="9"/>
+                <circle class="r-node" cx="208" cy="250" r="5" stroke="#ff6b6b"/>
+                <circle cx="208" cy="250" r="2.5" fill="#ff6b6b"/>
+              </g>
+              <g>
+                <circle class="r-handle" cx="118" cy="250" r="9"/>
+                <circle class="r-node" cx="118" cy="250" r="5" stroke="#34c759"/>
+                <circle cx="118" cy="250" r="2.5" fill="#34c759"/>
+              </g>
+              <g>
+                <circle class="r-handle" cx="73" cy="212.4" r="9"/>
+                <circle class="r-node" cx="73" cy="212.4" r="5" stroke="#af52de"/>
+                <circle cx="73" cy="212.4" r="2.5" fill="#af52de"/>
+              </g>
+              <g>
+                <circle class="r-handle" cx="93.2" cy="113.5" r="9"/>
+                <circle class="r-node" cx="93.2" cy="113.5" r="5" stroke="#ff9500"/>
+                <circle cx="93.2" cy="113.5" r="2.5" fill="#ff9500"/>
+              </g>
+
+              <circle class="r-center" cx="160" cy="160" r="30"/>
+              <text class="r-score" x="160" y="158">60</text>
+              <text class="r-score-label" x="160" y="180">Score</text>
+            </svg>
+          </div>
+
+          <footer class="card__foot">
+            <p class="card__callout"><strong>Safety net</strong> is your lowest dim today. <em>One protection review</em> would lift this 6 points.</p>
+            <button class="card__action">Drill</button>
+          </footer>
+        </article>
+      </div>
+
+
+      <!-- E light -->
+      <div class="theme-frame theme--E-light">
+        <span class="theme-frame__tag" style="color:#54493a;">E · light · Digital Vellum</span>
+        <div style="height: 20px;"></div>
+        <article class="card">
+          <header class="card__head">
+            <div>
+              <p class="card__eyebrow">Your wealth picture</p>
+              <h2 class="card__title">Dima · 32 · saving for first home</h2>
+            </div>
+            <span class="card__mode">Today</span>
+          </header>
+
+          <div class="anchors">
+            <div>
+              <span class="anchor__label">Net worth</span>
+              <span class="anchor__value">£487K</span>
+              <span class="anchor__delta">£8.2K · 7d</span>
+            </div>
+            <div>
+              <span class="anchor__label">Wealth Score</span>
+              <span class="anchor__value anchor__value--answer">60<sup>/100</sup></span>
+            </div>
+            <div>
+              <span class="anchor__label">Risk</span>
+              <span class="anchor__value" style="font-size: 24px;">4.2<sup>/7</sup></span>
+            </div>
+          </div>
+
+          <div class="radar">
+            <svg viewBox="0 0 320 320" aria-hidden="true">
+              <circle class="r-ring" cx="160" cy="160" r="40"/>
+              <circle class="r-ring" cx="160" cy="160" r="80"/>
+              <circle class="r-ring" cx="160" cy="160" r="120"/>
+              <circle class="r-ring r-ring--outer" cx="160" cy="160" r="135"/>
+
+              <line class="r-axis" x1="160" y1="160" x2="160" y2="25"/>
+              <line class="r-axis" x1="160" y1="160" x2="291.7" y2="92.5"/>
+              <line class="r-axis" x1="160" y1="160" x2="289.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="190.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="130.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="31.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="28.3" y2="92.5"/>
+
+              <polygon class="r-polygon" points="160,65 241.7,118.3 234.1,202.5 208,250 118,250 73,212.4 93.2,113.5"/>
+
+              <text class="r-label" x="160" y="14" text-anchor="middle">Habits</text>
+              <text class="r-label" x="304" y="92" text-anchor="middle">Own</text>
+              <text class="r-label" x="302" y="231" text-anchor="middle">Tax</text>
+              <text class="r-label" x="190" y="312" text-anchor="middle">Safety</text>
+              <text class="r-label" x="130" y="312" text-anchor="middle">Flow</text>
+              <text class="r-label" x="18" y="231" text-anchor="middle">Debt</text>
+              <text class="r-label" x="16" y="92" text-anchor="middle">Legacy</text>
+
+              <g><circle class="r-handle" cx="160" cy="65" r="9"/><circle class="r-node" cx="160" cy="65" r="5" stroke="#4d8eff"/><circle cx="160" cy="65" r="2.5" fill="#4d8eff"/></g>
+              <g><circle class="r-handle" cx="241.7" cy="118.3" r="9"/><circle class="r-node" cx="241.7" cy="118.3" r="5" stroke="#00b078"/><circle cx="241.7" cy="118.3" r="2.5" fill="#00b078"/></g>
+              <g><circle class="r-handle" cx="234.1" cy="202.5" r="9"/><circle class="r-node" cx="234.1" cy="202.5" r="5" stroke="#c2802d"/><circle cx="234.1" cy="202.5" r="2.5" fill="#c2802d"/></g>
+              <g><circle class="r-handle" cx="208" cy="250" r="9"/><circle class="r-node" cx="208" cy="250" r="5" stroke="#c43e3e"/><circle cx="208" cy="250" r="2.5" fill="#c43e3e"/></g>
+              <g><circle class="r-handle" cx="118" cy="250" r="9"/><circle class="r-node" cx="118" cy="250" r="5" stroke="#2a8c40"/><circle cx="118" cy="250" r="2.5" fill="#2a8c40"/></g>
+              <g><circle class="r-handle" cx="73" cy="212.4" r="9"/><circle class="r-node" cx="73" cy="212.4" r="5" stroke="#7a3eae"/><circle cx="73" cy="212.4" r="2.5" fill="#7a3eae"/></g>
+              <g><circle class="r-handle" cx="93.2" cy="113.5" r="9"/><circle class="r-node" cx="93.2" cy="113.5" r="5" stroke="#c2680a"/><circle cx="93.2" cy="113.5" r="2.5" fill="#c2680a"/></g>
+
+              <circle class="r-center" cx="160" cy="160" r="30"/>
+              <text class="r-score" x="160" y="158">60</text>
+              <text class="r-score-label" x="160" y="180">Score</text>
+            </svg>
+          </div>
+
+          <footer class="card__foot">
+            <p class="card__callout"><strong>Safety net</strong> is your lowest dim today. <em>One protection review</em> would lift this 6 points.</p>
+            <button class="card__action">Drill</button>
+          </footer>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       DIRECTION B — Annual Report
+       ============================================================ -->
+  <section class="direction-block">
+    <div class="direction-label">
+      <span class="direction-letter">B</span>
+      <div>
+        <span class="direction-tag">Direction · type-pair Newsreader + Geist</span>
+        <h2 class="direction-title">Annual Report</h2>
+      </div>
+    </div>
+    <p class="direction-poet">Pulls from 180 years of financial heritage — FT pink paper, Economist red, the actual ledger book — without copying any one of them. Decisive editorial serif on cream paper. The answer wears <em style="color:#d6304b;font-style:normal;font-weight:600">red</em>, not as an alarm, but as the signature finance signal.</p>
+
+    <div class="theme-pair">
+
+      <!-- B dark -->
+      <div class="theme-frame theme--B-dark">
+        <span class="theme-frame__tag">B · dark · Charcoal Ledger</span>
+        <div style="height: 20px;"></div>
+        <article class="card">
+          <header class="card__head">
+            <div>
+              <p class="card__eyebrow">Your wealth picture</p>
+              <h2 class="card__title">Dima · 32 · saving for first home</h2>
+            </div>
+            <span class="card__mode">Today</span>
+          </header>
+
+          <div class="anchors">
+            <div>
+              <span class="anchor__label">Net worth</span>
+              <span class="anchor__value">£487K</span>
+              <span class="anchor__delta">£8.2K · 7d</span>
+            </div>
+            <div>
+              <span class="anchor__label">Wealth Score</span>
+              <span class="anchor__value anchor__value--answer">60<sup>/100</sup></span>
+            </div>
+            <div>
+              <span class="anchor__label">Risk</span>
+              <span class="anchor__value" style="font-size: 24px;">4.2<sup>/7</sup></span>
+            </div>
+          </div>
+
+          <div class="radar">
+            <svg viewBox="0 0 320 320" aria-hidden="true">
+              <circle class="r-ring" cx="160" cy="160" r="40"/>
+              <circle class="r-ring" cx="160" cy="160" r="80"/>
+              <circle class="r-ring" cx="160" cy="160" r="120"/>
+              <circle class="r-ring r-ring--outer" cx="160" cy="160" r="135"/>
+
+              <line class="r-axis" x1="160" y1="160" x2="160" y2="25"/>
+              <line class="r-axis" x1="160" y1="160" x2="291.7" y2="92.5"/>
+              <line class="r-axis" x1="160" y1="160" x2="289.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="190.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="130.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="31.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="28.3" y2="92.5"/>
+
+              <polygon class="r-polygon" points="160,65 241.7,118.3 234.1,202.5 208,250 118,250 73,212.4 93.2,113.5"/>
+
+              <text class="r-label" x="160" y="14" text-anchor="middle">Habits</text>
+              <text class="r-label" x="304" y="92" text-anchor="middle">Own</text>
+              <text class="r-label" x="302" y="231" text-anchor="middle">Tax</text>
+              <text class="r-label" x="190" y="312" text-anchor="middle">Safety</text>
+              <text class="r-label" x="130" y="312" text-anchor="middle">Flow</text>
+              <text class="r-label" x="18" y="231" text-anchor="middle">Debt</text>
+              <text class="r-label" x="16" y="92" text-anchor="middle">Legacy</text>
+
+              <g><circle class="r-handle" cx="160" cy="65" r="9"/><circle class="r-node" cx="160" cy="65" r="5" stroke="#4d8eff"/><circle cx="160" cy="65" r="2.5" fill="#4d8eff"/></g>
+              <g><circle class="r-handle" cx="241.7" cy="118.3" r="9"/><circle class="r-node" cx="241.7" cy="118.3" r="5" stroke="#00e5a8"/><circle cx="241.7" cy="118.3" r="2.5" fill="#00e5a8"/></g>
+              <g><circle class="r-handle" cx="234.1" cy="202.5" r="9"/><circle class="r-node" cx="234.1" cy="202.5" r="5" stroke="#ffb347"/><circle cx="234.1" cy="202.5" r="2.5" fill="#ffb347"/></g>
+              <g><circle class="r-handle" cx="208" cy="250" r="9"/><circle class="r-node" cx="208" cy="250" r="5" stroke="#ff6b6b"/><circle cx="208" cy="250" r="2.5" fill="#ff6b6b"/></g>
+              <g><circle class="r-handle" cx="118" cy="250" r="9"/><circle class="r-node" cx="118" cy="250" r="5" stroke="#34c759"/><circle cx="118" cy="250" r="2.5" fill="#34c759"/></g>
+              <g><circle class="r-handle" cx="73" cy="212.4" r="9"/><circle class="r-node" cx="73" cy="212.4" r="5" stroke="#af52de"/><circle cx="73" cy="212.4" r="2.5" fill="#af52de"/></g>
+              <g><circle class="r-handle" cx="93.2" cy="113.5" r="9"/><circle class="r-node" cx="93.2" cy="113.5" r="5" stroke="#ff9500"/><circle cx="93.2" cy="113.5" r="2.5" fill="#ff9500"/></g>
+
+              <circle class="r-center" cx="160" cy="160" r="30"/>
+              <text class="r-score" x="160" y="158">60</text>
+              <text class="r-score-label" x="160" y="180">Score</text>
+            </svg>
+          </div>
+
+          <footer class="card__foot">
+            <p class="card__callout"><strong>Safety net</strong> is your lowest dim today. <em>One protection review</em> would lift this 6 points.</p>
+            <button class="card__action">Drill</button>
+          </footer>
+        </article>
+      </div>
+
+
+      <!-- B light -->
+      <div class="theme-frame theme--B-light">
+        <span class="theme-frame__tag" style="color:#54504a;">B · light · Cream Ledger</span>
+        <div style="height: 20px;"></div>
+        <article class="card">
+          <header class="card__head">
+            <div>
+              <p class="card__eyebrow">Your wealth picture</p>
+              <h2 class="card__title">Dima · 32 · saving for first home</h2>
+            </div>
+            <span class="card__mode">Today</span>
+          </header>
+
+          <div class="anchors">
+            <div>
+              <span class="anchor__label">Net worth</span>
+              <span class="anchor__value">£487K</span>
+              <span class="anchor__delta">£8.2K · 7d</span>
+            </div>
+            <div>
+              <span class="anchor__label">Wealth Score</span>
+              <span class="anchor__value anchor__value--answer">60<sup>/100</sup></span>
+            </div>
+            <div>
+              <span class="anchor__label">Risk</span>
+              <span class="anchor__value" style="font-size: 24px;">4.2<sup>/7</sup></span>
+            </div>
+          </div>
+
+          <div class="radar">
+            <svg viewBox="0 0 320 320" aria-hidden="true">
+              <circle class="r-ring" cx="160" cy="160" r="40"/>
+              <circle class="r-ring" cx="160" cy="160" r="80"/>
+              <circle class="r-ring" cx="160" cy="160" r="120"/>
+              <circle class="r-ring r-ring--outer" cx="160" cy="160" r="135"/>
+
+              <line class="r-axis" x1="160" y1="160" x2="160" y2="25"/>
+              <line class="r-axis" x1="160" y1="160" x2="291.7" y2="92.5"/>
+              <line class="r-axis" x1="160" y1="160" x2="289.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="190.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="130.0" y2="294.3"/>
+              <line class="r-axis" x1="160" y1="160" x2="31.0" y2="221.6"/>
+              <line class="r-axis" x1="160" y1="160" x2="28.3" y2="92.5"/>
+
+              <polygon class="r-polygon" points="160,65 241.7,118.3 234.1,202.5 208,250 118,250 73,212.4 93.2,113.5"/>
+
+              <text class="r-label" x="160" y="14" text-anchor="middle">Habits</text>
+              <text class="r-label" x="304" y="92" text-anchor="middle">Own</text>
+              <text class="r-label" x="302" y="231" text-anchor="middle">Tax</text>
+              <text class="r-label" x="190" y="312" text-anchor="middle">Safety</text>
+              <text class="r-label" x="130" y="312" text-anchor="middle">Flow</text>
+              <text class="r-label" x="18" y="231" text-anchor="middle">Debt</text>
+              <text class="r-label" x="16" y="92" text-anchor="middle">Legacy</text>
+
+              <g><circle class="r-handle" cx="160" cy="65" r="9"/><circle class="r-node" cx="160" cy="65" r="5" stroke="#4d8eff"/><circle cx="160" cy="65" r="2.5" fill="#4d8eff"/></g>
+              <g><circle class="r-handle" cx="241.7" cy="118.3" r="9"/><circle class="r-node" cx="241.7" cy="118.3" r="5" stroke="#00b078"/><circle cx="241.7" cy="118.3" r="2.5" fill="#00b078"/></g>
+              <g><circle class="r-handle" cx="234.1" cy="202.5" r="9"/><circle class="r-node" cx="234.1" cy="202.5" r="5" stroke="#c2802d"/><circle cx="234.1" cy="202.5" r="2.5" fill="#c2802d"/></g>
+              <g><circle class="r-handle" cx="208" cy="250" r="9"/><circle class="r-node" cx="208" cy="250" r="5" stroke="#c43e3e"/><circle cx="208" cy="250" r="2.5" fill="#c43e3e"/></g>
+              <g><circle class="r-handle" cx="118" cy="250" r="9"/><circle class="r-node" cx="118" cy="250" r="5" stroke="#2a8c40"/><circle cx="118" cy="250" r="2.5" fill="#2a8c40"/></g>
+              <g><circle class="r-handle" cx="73" cy="212.4" r="9"/><circle class="r-node" cx="73" cy="212.4" r="5" stroke="#7a3eae"/><circle cx="73" cy="212.4" r="2.5" fill="#7a3eae"/></g>
+              <g><circle class="r-handle" cx="93.2" cy="113.5" r="9"/><circle class="r-node" cx="93.2" cy="113.5" r="5" stroke="#c2680a"/><circle cx="93.2" cy="113.5" r="2.5" fill="#c2680a"/></g>
+
+              <circle class="r-center" cx="160" cy="160" r="30"/>
+              <text class="r-score" x="160" y="158">60</text>
+              <text class="r-score-label" x="160" y="180">Score</text>
+            </svg>
+          </div>
+
+          <footer class="card__foot">
+            <p class="card__callout"><strong>Safety net</strong> is your lowest dim today. <em>One protection review</em> would lift this 6 points.</p>
+            <button class="card__action">Drill</button>
+          </footer>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Side-by-side reading guide -->
+  <section class="compare-strip">
+    <h2>How they differ where it counts</h2>
+    <div class="compare-table">
+      <div class="row-label">Dimension</div>
+      <div class="head col-e">E · Bedside Lantern</div>
+      <div class="head col-b">B · Annual Report</div>
+
+      <div class="row-label">Identity hook</div>
+      <div class="col-e">Sonu the owl reading by lamplight. The product's own backstory.</div>
+      <div class="col-b">180 years of finance documents — FT, Economist, ledger books — without cloning any.</div>
+
+      <div class="row-label">Accent color</div>
+      <div class="col-e">Honey amber on dusk-blue. Light: terracotta on vellum.</div>
+      <div class="col-b">Economist red on charcoal. Light: deep red on cream paper.</div>
+
+      <div class="row-label">Display type</div>
+      <div class="col-e">Fraunces — variable serif, SOFT axis dialed warm, characterful curves.</div>
+      <div class="col-b">Newsreader — editorial serif, designed for sustained reading, has presence.</div>
+
+      <div class="row-label">Body type</div>
+      <div class="col-e">Manrope — geometric humanist, warmer than Inter.</div>
+      <div class="col-b">Geist — Swiss-precise, Vercel's open-source ascetic alternative.</div>
+
+      <div class="row-label">Mono</div>
+      <div class="col-e">JetBrains Mono — distinctive numerals.</div>
+      <div class="col-b">Geist Mono — matches body.</div>
+
+      <div class="row-label">Mood</div>
+      <div class="col-e">Quiet · warm · considered · domestic.</div>
+      <div class="col-b">Decisive · premium · editorial · professional.</div>
+
+      <div class="row-label">Risk if wrong</div>
+      <div class="col-e">Could read "twee" if dialed too soft. Mitigated by serif's gravitas + warm amber's saturation.</div>
+      <div class="col-b">Could read "stuffy / old-economy" if dialed too dense. Mitigated by Geist's modern body + restrained color density.</div>
+
+      <div class="row-label">Best for</div>
+      <div class="col-e">Consumer-first read. Bedside check-in. Warmth wins novice users.</div>
+      <div class="col-b">IFA-first read. Desk session. Decisiveness wins power users.</div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

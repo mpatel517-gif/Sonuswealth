@@ -1,0 +1,379 @@
+{
+  "id": "e",
+  "name": "Willy Wonka",
+  "displayName": "Willy Wonka · 78",
+  "type": "individual",
+  "isIFA": false,
+  "lifeStage": 6,
+  "lifeStageName": "Preservation",
+  "lifeStageAge": "75–85",
+  "hasBusiness": true,
+  "isCouple": true,
+  "hasTrust": true,
+  "hasDBPension": false,
+  "isHigherRateTaxpayer": true,
+  "age": 78,
+  "targetIncome": 80000,
+  "dataLastUpdated": "2026-04-19",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+  "drawdown": 45000,
+  "postAge75": true,
+  "beneficiary": {
+    "name": "Charlie Bucket",
+    "relationship": "granddaughter",
+    "age": 24
+  },
+  "company": {
+    "name": "The Wonka Company Ltd",
+    "employees": 12,
+    "corporationTaxRate": 0.25,
+    "yearEnd": "2026-03-31",
+    "profits": 620000,
+    "bprQualifying": true,
+    "companyValue": 3200000,
+    "bprYearsHeld": 42
+  },
+  "assets": {
+    "sipp": {
+      "total": 680000,
+      "growth": 0.04,
+      "crystalised": 680000,
+      "tfcTaken": 227000,
+      "inDrawdown": true,
+      "drawdownStartAge": 68,
+      "pensions": [
+        {
+          "name": "Wonka SIPP (Flexi-Access Drawdown)",
+          "value": 480000,
+          "type": "FAD",
+          "provider": "Quilter",
+          "charge": 0.0035,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2025-11-15",
+          "postAge75Treatment": "lumpsum_taxable"
+        },
+        {
+          "name": "Wonka — Legacy Personal Pension",
+          "value": 200000,
+          "type": "Personal Pension",
+          "provider": "Standard Life",
+          "charge": 0.005,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2024-08-20",
+          "postAge75Treatment": "lumpsum_taxable"
+        }
+      ]
+    },
+    "isa": {
+      "value": 520000,
+      "growth": 0.04
+    },
+    "residence": {
+      "value": 1600000,
+      "ownership": "joint",
+      "ownershipShare": 0.5,
+      "address": "Wonka Manor, Buckinghamshire"
+    },
+    "portfolio": {
+      "value": 3200000,
+      "growth": 0.06,
+      "ret": 0.06,
+      "bpr": true,
+      "description": "The Wonka Company Ltd — BPR qualifying, 42 years held"
+    },
+    "cash": {
+      "total": 260000,
+      "own": 130000,
+      "spouseCash": 130000,
+      "rate": 0.042
+    },
+    "trustGifts": {
+      "each": 400000,
+      "total": 800000,
+      "date": "2022-09-10",
+      "numChildren": 1,
+      "beneficiaryName": "Charlie Bucket",
+      "trustType": "Discretionary"
+    },
+    "protection": {
+      "lifeInsurance": {
+        "exists": true,
+        "amount": 800000,
+        "inTrust": true,
+        "premium": 0,
+        "note": "Wonka Company Relevant Life Plan"
+      },
+      "criticalIllness": {
+        "exists": true,
+        "amount": 500000,
+        "premium": 2800
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": {
+        "exists": true,
+        "amount": 800000
+      },
+      "keyPerson": {
+        "exists": true,
+        "amount": 3200000
+      },
+      "shareholderProtection": {
+        "exists": true
+      }
+    }
+  },
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 0,
+      "monthlyPayment": 0,
+      "rateType": "none",
+      "rate": 0,
+      "remainingYears": 0
+    },
+    "otherLoans": []
+  },
+  "dependants": [
+    {
+      "type": "partner",
+      "age": 74,
+      "financiallyDependent": false
+    },
+    {
+      "type": "child",
+      "age": 24,
+      "financiallyDependent": false,
+      "note": "Charlie Bucket — beneficiary, not dependent"
+    }
+  ],
+  "willStatus": "current",
+  "lpaStatus": "both",
+  "guardianNamed": false,
+  "income": {
+    "statePension": {
+      "annual": 11973,
+      "startAge": 65,
+      "inPayment": true
+    },
+    "employment": 0,
+    "dividends": 45000,
+    "rentalIncome": 0,
+    "overseasIncome": 0
+  },
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "over-6",
+    "q12_income_protection": "partly",
+    "q13_income_sources": "three-or-more",
+    "d6_nominations_complete": "all",
+    "d6_will_current": "yes",
+    "confidenceLevel": "medium"
+  },
+  "deathBenefitModelling": {
+    "postAge75": true,
+    "lumpSumTaxableOnBeneficiary": true,
+    "beneficiaryDrawdownAvailable": true,
+    "successorDrawdownAvailable": true,
+    "charlieIncomeTaxBand": "basic",
+    "charlieEffectiveTaxOnInheritedSIPP": 0.2
+  },
+  "estateSummary": {
+    "currentIHTWithSIPP": 324000,
+    "currentIHTWithoutSIPP": 80000,
+    "rnrbTaperActive": false,
+    "bprSaving": 1280000,
+    "charlieNetInheritanceCurrentStrategy": 2640000,
+    "charlieNetInheritanceOptimisedStrategy": 3180000
+  },
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "353 days",
+      "headline": "SIPP death benefits — post-75 income tax on Charlie",
+      "context": "At age 78, SIPP death benefits are taxable income for Charlie. £680k SIPP also enters estate for IHT April 2027.",
+      "action": "Model beneficiary drawdown vs lump sum for Charlie",
+      "screen": "tax",
+      "lifeStage": 6
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "Estate planning",
+      "headline": "£244k COI — Charlie receives less than needed",
+      "context": "Current strategy leaves Charlie £540k short of what the optimised strategy delivers.",
+      "action": "Review estate strategies for Charlie",
+      "screen": "tax",
+      "lifeStage": 6
+    },
+    {
+      "level": "info",
+      "colour": "#34C759",
+      "badge": "POSITIVE",
+      "days": "Confirmed",
+      "headline": "BPR — £3.2m company fully IHT exempt",
+      "context": "Wonka Company qualifies for 100% BPR after 42 years. Saves £1.28m IHT.",
+      "action": "File annual BPR confirmation",
+      "screen": "tax",
+      "lifeStage": 6
+    },
+    {
+      "level": "info",
+      "colour": "#34C759",
+      "badge": "POSITIVE",
+      "days": "On track",
+      "headline": "Trust gift clock completing September 2029",
+      "context": "£800k gifted to Charlie's trust in September 2022. 7-year clock completes 2029.",
+      "action": "Review trust distributions",
+      "screen": "tax",
+      "lifeStage": 6
+    }
+  ],
+  "timeline": [
+    {
+      "dot": "⏳",
+      "bg": "#FFF3F3",
+      "date": "6 April 2027",
+      "title": "SIPP fully enters estate",
+      "sub": "£680k SIPP — review drawdown rate with Hermione"
+    },
+    {
+      "dot": "🎁",
+      "bg": "#FFF8E8",
+      "date": "September 2029",
+      "title": "Trust gifts IHT-free",
+      "sub": "£800k trust gift fully outside estate for Charlie"
+    },
+    {
+      "dot": "🏭",
+      "bg": "#EEF2FF",
+      "date": "Ongoing",
+      "title": "Wonka Company BPR active",
+      "sub": "£3.2m fully IHT exempt — review annually"
+    },
+    {
+      "dot": "📜",
+      "bg": "#F0F4FF",
+      "date": "Under review",
+      "title": "Will and LPA review",
+      "sub": "Last reviewed 2023 — update before end of 2026"
+    }
+  ],
+  "aiSuggestions": [
+    "What does Charlie receive under the current strategy vs the three alternatives?",
+    "Show me the income tax impact of Charlie taking drawdown vs a lump sum from my SIPP",
+    "How does charitable remainder trust compare to accelerated drawdown plus gifting?",
+    "What happens to Wonka Company if I die before the business is transferred?"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Full score — trust gifts in motion, nominations current, business BPR reviewed annually.",
+      "action": "Continue the annual rhythm with your adviser and review notes on file.",
+      "future": "At this life stage, sustained habits ARE the estate strategy."
+    },
+    "capital": {
+      "risk": "£5.5m total vs a retirement target around £1.6m — your capital position is vastly over-funded.",
+      "action": "At your age, capital planning becomes estate planning. Focus on Charlie's inheritance efficiency.",
+      "future": "When capital is secure, every decision from here is about transfer, not accumulation."
+    },
+    "tax": {
+      "risk": "Drawdown active. ISA at £520k. Extraction from the business runs annually.",
+      "action": "Model whether Charlie takes drawdown or a lump sum on death — tax treatment differs materially.",
+      "future": "Post-75 pension death benefits are taxable income — Charlie's tax band affects what reaches her."
+    },
+    "protection": {
+      "risk": "Life cover £800k in trust, Critical Illness £500k, Relevant Life Plan active. Comprehensive.",
+      "action": "Review premiums annually — some policies may no longer be needed at 78.",
+      "future": "Full protection layers at 78 are mostly about continuity for the Wonka Company, not income replacement."
+    },
+    "cashflow": {
+      "risk": "£260k joint cash gives multi-year runway. Strong.",
+      "action": "No cashflow action needed. Consider cash above 3 years moving into ISA for Charlie's inheritance.",
+      "future": "Preservation-stage cashflow is about stable reliable income, not reserves growing."
+    },
+    "debt": {
+      "risk": "Debt-free. Always has been.",
+      "action": "No debt action needed.",
+      "future": "A debt-free preservation stage means every asset goes to Charlie, nothing leaks to creditors."
+    },
+    "estate": {
+      "risk": "BPR confirmed. £800k gifted 2022 — trust clock completes 2029. SIPP enters estate April 2027.",
+      "action": "Model beneficiary drawdown vs lump sum for Charlie. Review will and LPA before end of 2026.",
+      "future": "Estate planning is largely done — remaining gains come from getting SIPP decisions right for Charlie."
+    }
+  },
+
+  "plans": [
+    { "id": "plan-legacy", "type": "estate", "label": "Zero residual IHT for Charlie",
+      "target": { "ihtCap": 0, "trustGiftsCompleted": 800000 },
+      "target_display": null,
+      "lastReviewedAt": "2026-02-10", "status": "active", "createdAt": "2022-04-01" },
+    { "id": "plan-gift", "type": "gift", "label": "Complete remaining gift strategy",
+      "target": { "additionalGifts": 250000, "deadline": "2028-04-01" },
+      "target_display": null,
+      "lastReviewedAt": "2026-03-15", "status": "active", "createdAt": "2024-06-01" },
+    { "id": "plan-bpr-maintain", "type": "estate", "label": "Maintain BPR-qualifying holdings to age 85",
+      "target": { "bprQualifyingValue": 1200000 },
+      "target_display": null,
+      "lastReviewedAt": "2025-11-08", "status": "active", "createdAt": "2023-09-01" },
+    { "id": "plan-care", "type": "protection", "label": "Long-term care funding reserve",
+      "target": { "careReserve": 350000 },
+      "target_display": null,
+      "lastReviewedAt": "2025-10-22", "status": "active", "createdAt": "2024-04-01" }
+  ],
+
+  "scenarios": [
+    { "id": "scen-additional-gift", "name": "Gift £200k more to trust",
+      "createdAt": "2026-03-20",
+      "changedFields": { "additionalTrustGift": 200000 },
+      "deltaResults": { "ihtAt85": -80000, "liquidPostGift": -200000 },
+      "status": "saved" },
+    { "id": "scen-care-reserve", "name": "Set aside £400k care reserve",
+      "createdAt": "2026-04-05",
+      "changedFields": { "careReserveAmount": 400000 },
+      "deltaResults": { "liquidFlexibility": -400000, "peace-of-mind": "high" },
+      "status": "saved" },
+    { "id": "scen-bpr-add", "name": "Add £300k BPR-qualifying AIM portfolio",
+      "createdAt": "2026-04-28",
+      "changedFields": { "aimBprPortfolio": 300000 },
+      "deltaResults": { "ihtAt85AfterBpr2yr": -120000, "marketRisk": "medium" },
+      "status": "saved" }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 5085000 }, { "date": "2025-07-01", "value": 5092000 },
+      { "date": "2025-08-01", "value": 5098000 }, { "date": "2025-09-01", "value": 5104000 },
+      { "date": "2025-10-01", "value": 5108000 }, { "date": "2025-11-01", "value": 5112000 },
+      { "date": "2025-12-01", "value": 5115000 }, { "date": "2026-01-01", "value": 5118000 },
+      { "date": "2026-02-01", "value": 5119000 }, { "date": "2026-03-01", "value": 5120000 },
+      { "date": "2026-04-01", "value": 5120000 }, { "date": "2026-05-01", "value": 5120000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 60 }, { "date": "2025-07-01", "score": 60 },
+      { "date": "2025-08-01", "score": 61 }, { "date": "2025-09-01", "score": 61 },
+      { "date": "2025-10-01", "score": 61 }, { "date": "2025-11-01", "score": 62 },
+      { "date": "2025-12-01", "score": 62 }, { "date": "2026-01-01", "score": 62 },
+      { "date": "2026-02-01", "score": 62 }, { "date": "2026-03-01", "score": 62 },
+      { "date": "2026-04-01", "score": 62 }, { "date": "2026-05-01", "score": 62 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 69 }, { "date": "2025-07-01", "score": 69 },
+      { "date": "2025-08-01", "score": 70 }, { "date": "2025-09-01", "score": 70 },
+      { "date": "2025-10-01", "score": 70 }, { "date": "2025-11-01", "score": 70 },
+      { "date": "2025-12-01", "score": 71 }, { "date": "2026-01-01", "score": 71 },
+      { "date": "2026-02-01", "score": 71 }, { "date": "2026-03-01", "score": 71 },
+      { "date": "2026-04-01", "score": 71 }, { "date": "2026-05-01", "score": 71 }
+    ]
+  }
+}

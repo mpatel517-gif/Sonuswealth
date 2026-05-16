@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sonuswealth — Home v2.0 (structure)</title>
+<style>
+/* ===================================================================
+   HOME v2.0 — STRUCTURE PROBE
+   Theme = current DESIGN.md (Mathematical Resonance + Digital Sterling)
+   Grammar = RetireWise V9 (founder's own working pattern from 2 months ago)
+   Content/state rules = brainstorming locks Q1–Q5
+
+   What this is FOR: getting the card list + order + density right.
+   What this is NOT: theme exploration. Stitch owns that later.
+   =================================================================== */
+
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Spacing & radii — locked from DESIGN.md */
+  --space-xs: 4px;  --space-sm: 8px;  --space-md: 12px;
+  --space-lg: 16px; --space-xl: 20px; --space-2xl: 28px; --space-3xl: 40px;
+  --r-xs: 6px;  --r-sm: 10px;  --r-md: 14px;  --r-lg: 20px;  --r-pill: 999px;
+
+  /* Type scale */
+  --fs-label: 11px;
+  --fs-small: 13px;
+  --fs-body: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-hero: 28px;
+  --fs-hero-lg: 36px;
+}
+
+/* ---- DARK theme = Mathematical Resonance (locked from DESIGN.md) ---- */
+.theme-dark {
+  --c-bg: #051424;
+  --c-bg2: #0c1119;
+  --c-surface: #122131;
+  --c-surface2: #1a2a3d;
+  --c-surface3: #273647;
+
+  --c-text: #d4e4fa;
+  --c-text2: #a9b5c8;
+  --c-text3: #8793a7;
+  --c-text-projected: #8b9bb3;
+
+  --c-acc: #5ddbc2;
+  --c-acc-soft: rgba(93, 219, 194, 0.14);
+  --c-acc-line: rgba(93, 219, 194, 0.32);
+  --c-acc3: #ff6f7d;
+  --c-acc3-soft: rgba(255, 111, 125, 0.12);
+  --c-gold: #ffbd59;
+  --c-gold-soft: rgba(255, 189, 89, 0.12);
+
+  --c-hairline: rgba(255, 255, 255, 0.06);
+  --c-hairline-strong: rgba(255, 255, 255, 0.12);
+
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+/* ---- LIGHT theme = Digital Sterling (locked from DESIGN.md) ---- */
+.theme-light {
+  --c-bg: #faf9fc;
+  --c-bg2: #f3f1f7;
+  --c-surface: #ffffff;
+  --c-surface2: #fbfaff;
+  --c-surface3: #f5f3fa;
+
+  --c-text: #1a1c1e;
+  --c-text2: #4a4f57;
+  --c-text3: #7c828c;
+  --c-text-projected: #8b909a;
+
+  --c-acc: #1c3fe7;
+  --c-acc-soft: rgba(28, 63, 231, 0.08);
+  --c-acc-line: rgba(28, 63, 231, 0.28);
+  --c-acc3: #ba1a1a;
+  --c-acc3-soft: rgba(186, 26, 26, 0.08);
+  --c-gold: #b96d00;
+  --c-gold-soft: rgba(185, 109, 0, 0.10);
+
+  --c-hairline: rgba(0, 0, 0, 0.06);
+  --c-hairline-strong: rgba(0, 0, 0, 0.12);
+
+  --grad-card: linear-gradient(180deg, #ffffff, #fbfaff);
+  --shadow-sm: 0 1px 2px rgba(10, 20, 36, 0.05);
+  --shadow-md: 0 2px 7px rgba(10, 20, 36, 0.07);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,1);
+
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+html, body {
+  font-family: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  background: #0a0a0d;
+  color: #aaa;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 32px 16px 80px;
+  min-height: 100vh;
+}
+
+/* Probe page header */
+.probe-intro {
+  max-width: 1000px;
+  width: 100%;
+  margin-bottom: var(--space-2xl);
+  padding: 0 var(--space-md);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+.probe-intro h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: #fff;
+  margin-bottom: var(--space-sm);
+}
+.probe-intro p { color: #8a8d96; margin-bottom: 6px; }
+.probe-intro strong { color: #d4d7de; font-weight: 600; }
+
+/* Side-by-side dark and light Home views */
+.viewport-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+  max-width: 1000px;
+  width: 100%;
+}
+@media (max-width: 880px) {
+  .viewport-row { grid-template-columns: 1fr; }
+}
+
+.viewport {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.viewport__label {
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--c-hairline);
+}
+.viewport__label small { font-weight: 500; opacity: 0.6; letter-spacing: 0.5px; text-transform: none; font-size: 11px; }
+
+/* ============================================================
+   THE HOME SCREEN
+   Mobile-realistic frame at 440px container width
+   ============================================================ */
+
+.home {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ============= 1. MASTHEAD ============= */
+
+.mast {
+  padding: var(--space-md) var(--space-xs) var(--space-lg);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.mast__greet {
+  font-size: var(--fs-small);
+  color: var(--c-text3);
+  letter-spacing: 0.2px;
+  margin-bottom: 2px;
+}
+
+.mast__name {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--c-text);
+  line-height: 1.15;
+}
+
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc-soft);
+  border: 1px solid var(--c-acc-line);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--c-acc);
+  flex-shrink: 0;
+}
+.mode-pill::before {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+}
+.mode-pill--today {
+  background: transparent;
+  border-color: var(--c-hairline-strong);
+  color: var(--c-text3);
+}
+.mode-pill--today::before { background: var(--c-text3); }
+
+/* ============= 2. ANCHOR ROW ============= */
+/* Three-register: NW ordinary, Score answer-accent, Risk band-color */
+
+.anchors {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.anchor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.anchor + .anchor {
+  padding-left: var(--space-md);
+  border-left: 1px solid var(--c-hairline);
+}
+
+.anchor__label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--c-text3);
+}
+.anchor__value {
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+.anchor__value sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text3);
+  vertical-align: baseline;
+  margin-left: 2px;
+}
+.anchor__value--answer { color: var(--c-acc); }
+.anchor__delta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-gold);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.anchor__delta::before { content: '↑ '; }
+
+/* Risk band sub-color */
+.anchor__value--risk-low { color: var(--c-acc); }
+.anchor__value--risk-mid { color: var(--c-gold); }
+.anchor__value--risk-high { color: var(--c-acc3); }
+
+
+/* ============= 3. THE RADAR CARD ============= */
+/* Drillable. ONE paragraph of plain English under the polygon.
+   Three-register applies inside. Polygon = aggregate; nodes = dim identity colors. */
+
+.card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.card__eyebrow {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--c-text3);
+  margin-bottom: 4px;
+}
+.card__title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+.card__chev {
+  color: var(--c-text3);
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.radar {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 300px;
+  margin: 0 auto;
+}
+.radar svg { width: 100%; height: 100%; display: block; }
+.r-ring { fill: none; stroke: var(--c-hairline); stroke-width: 1; }
+.r-ring--outer { stroke: var(--c-hairline-strong); }
+.r-axis { stroke: var(--c-hairline); stroke-width: 1; }
+.r-polygon {
+  fill: var(--c-acc-soft);
+  stroke: var(--c-acc);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+.r-node { fill: var(--c-surface); stroke-width: 1.5; }
+.r-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  fill: var(--c-text3);
+  text-transform: uppercase;
+}
+.r-center { fill: var(--c-surface); stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-score {
+  font-size: 26px;
+  font-weight: 800;
+  fill: var(--c-acc);
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+  dominant-baseline: central;
+  letter-spacing: -0.8px;
+}
+.r-score-lbl {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  fill: var(--c-text3);
+  text-anchor: middle;
+}
+
+.card__brief {
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--c-text2);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--c-hairline);
+}
+.card__brief strong { color: var(--c-text); font-weight: 700; }
+.card__brief em {
+  font-style: normal;
+  color: var(--c-acc);
+  font-weight: 700;
+}
+.card__brief .figure {
+  color: var(--c-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============= 4. PRIORITY ACTION ============= */
+
+.priority {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+  position: relative;
+  overflow: hidden;
+}
+
+.priority__pre {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--c-gold);
+  margin-bottom: var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.priority__pre::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--c-gold);
+}
+
+.priority__headline {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+  margin-bottom: var(--space-sm);
+}
+
+.priority__why {
+  font-size: var(--fs-small);
+  color: var(--c-text2);
+  line-height: 1.55;
+  margin-bottom: var(--space-md);
+}
+.priority__why .fig { color: var(--c-gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.priority__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc);
+  color: var(--c-bg);
+  border: none;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: transform 200ms ease-out;
+}
+.theme-light .priority__cta { color: #fff; }
+.priority__cta:hover { transform: translateY(-1px); }
+.priority__cta::after { content: ' →'; }
+
+/* ============= 5. PLAN PROGRESS ============= */
+
+.plan {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+}
+
+.plan__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.plan__title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+}
+.plan__horizon {
+  font-size: var(--fs-small);
+  color: var(--c-text3);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan__bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--c-surface2);
+  overflow: hidden;
+  margin-bottom: var(--space-sm);
+}
+.plan__bar-fill {
+  height: 100%;
+  background: var(--c-acc);
+  border-radius: 4px;
+  width: 24%;
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.plan__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-small);
+}
+.plan__pct {
+  font-weight: 700;
+  color: var(--c-acc);
+  font-variant-numeric: tabular-nums;
+}
+.plan__pct sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text3);
+  margin-left: 4px;
+}
+.plan__note { color: var(--c-text2); }
+
+/* ============= 6. ACTIVE INSIGHTS ============= */
+/* No left-stripe (DESIGN.md flags as anti-pattern). Severity via badge + bg tint instead. */
+
+.section-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-sm) var(--space-xs) var(--space-xs);
+}
+.section-hdr__title {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--c-text3);
+}
+.section-hdr__action {
+  font-size: var(--fs-small);
+  color: var(--c-acc);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.insight {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-sm), var(--inset-card);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  cursor: pointer;
+  transition: transform 200ms ease-out;
+}
+.insight:hover { transform: translateY(-1px); }
+
+.insight__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.insight__badge--critical {
+  background: var(--c-acc3-soft);
+  color: var(--c-acc3);
+  border: 1px solid var(--c-acc3);
+}
+.insight__badge--high {
+  background: var(--c-gold-soft);
+  color: var(--c-gold);
+  border: 1px solid var(--c-gold);
+}
+.insight__badge--info {
+  background: var(--c-acc-soft);
+  color: var(--c-acc);
+  border: 1px solid var(--c-acc-line);
+}
+
+.insight__body { flex: 1; min-width: 0; }
+.insight__title {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--c-text);
+  line-height: 1.4;
+  margin-bottom: 3px;
+}
+.insight__sub {
+  font-size: 12px;
+  color: var(--c-text2);
+  line-height: 1.5;
+}
+.insight__chev {
+  color: var(--c-text3);
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ============= FOOTER ============= */
+
+.foot-fca {
+  padding: var(--space-md) var(--space-xs) 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--c-text3);
+  text-align: center;
+}
+
+/* Probe footer notes */
+.probe-notes {
+  max-width: 1000px;
+  width: 100%;
+  margin-top: var(--space-2xl);
+  padding: var(--space-xl);
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: var(--r-md);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: #b5b8bf;
+}
+.probe-notes h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+  letter-spacing: -0.2px;
+}
+.probe-notes ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+.probe-notes li {
+  padding-left: 14px;
+  position: relative;
+}
+.probe-notes li::before { content: '·'; position: absolute; left: 0; top: -2px; color: #5ddbc2; font-size: 18px; }
+.probe-notes strong { color: #fff; font-weight: 600; }
+@media (max-width: 720px) { .probe-notes ul { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<section class="probe-intro">
+  <h1>Home v2.0 — structure probe</h1>
+  <p><strong>Theme = current DESIGN.md (untouched).</strong> Mathematical Resonance dark + Digital Sterling light. Inter throughout. No experimental colors, no new fonts. Theme replacement is Stitch's job, later.</p>
+  <p><strong>Grammar = your RetireWise V9 pattern</strong> from 2 months ago — the one you said was "easy to see and use." One hero number per card, single CTA, drill chevron on every drillable, action-priority order.</p>
+  <p><strong>Content/state rules = brainstorming locks Q1–Q5</strong> — radar wears three-register numbers (NW ordinary / Score accent / diffs gold); mode pill named "Today" / "Future" / "What-if"; insights ranked by impact. None of the theme-probe visual flourish from this morning carries over.</p>
+  <p style="color:#6e7280;">Six cards, in order: masthead → anchor row → radar → priority action → plan progress → active insights. Each card has one job.</p>
+</section>
+
+<div class="viewport-row">
+
+  <!-- =================== DARK =================== -->
+  <article class="viewport theme-dark">
+    <div class="viewport__label">
+      <span>Mathematical Resonance · dark</span>
+      <small>consumer mobile</small>
+    </div>
+
+    <div class="home">
+
+      <!-- 1. MASTHEAD -->
+      <header class="mast">
+        <div>
+          <p class="mast__greet">Good evening,</p>
+          <h1 class="mast__name">Dima · Mon 13 May</h1>
+        </div>
+        <span class="mode-pill mode-pill--today">Today</span>
+      </header>
+
+      <!-- 2. ANCHOR ROW -->
+      <section class="anchors" role="region" aria-label="Three-anchor row">
+        <div class="anchor">
+          <span class="anchor__label">Net worth</span>
+          <span class="anchor__value">£487K</span>
+          <span class="anchor__delta">£8.2K · 7d</span>
+        </div>
+        <div class="anchor">
+          <span class="anchor__label">Score</span>
+          <span class="anchor__value anchor__value--answer">60<sub>/100</sub></span>
+        </div>
+        <div class="anchor">
+          <span class="anchor__label">Risk</span>
+          <span class="anchor__value anchor__value--risk-mid">4.2<sub>/7</sub></span>
+        </div>
+      </section>
+
+      <!-- 3. THE RADAR CARD -->
+      <article class="card" role="button" tabindex="0">
+        <header class="card__head">
+          <div>
+            <p class="card__eyebrow">Your wealth shape</p>
+            <h2 class="card__title">7 dimensions · drag a point to test what-if</h2>
+          </div>
+          <span class="card__chev">›</span>
+        </header>
+
+        <div class="radar">
+          <svg viewBox="0 0 300 300" aria-hidden="true">
+            <circle class="r-ring" cx="150" cy="150" r="38"/>
+            <circle class="r-ring" cx="150" cy="150" r="76"/>
+            <circle class="r-ring" cx="150" cy="150" r="114"/>
+            <circle class="r-ring r-ring--outer" cx="150" cy="150" r="128"/>
+
+            <line class="r-axis" x1="150" y1="150" x2="150" y2="22"/>
+            <line class="r-axis" x1="150" y1="150" x2="274.8" y2="86.7"/>
+            <line class="r-axis" x1="150" y1="150" x2="272.4" y2="208.8"/>
+            <line class="r-axis" x1="150" y1="150" x2="178.4" y2="275.6"/>
+            <line class="r-axis" x1="150" y1="150" x2="121.6" y2="275.6"/>
+            <line class="r-axis" x1="150" y1="150" x2="27.6" y2="208.8"/>
+            <line class="r-axis" x1="150" y1="150" x2="25.2" y2="86.7"/>
+
+            <!-- polygon: 70/61/56/50/75/64/50 % -->
+            <polygon class="r-polygon" points="
+              150,60
+              225.4,109.6
+              219.1,189.5
+              193.6,236.2
+              106.4,236.2
+              68.8,193.0
+              86.9,109.2
+            "/>
+
+            <text class="r-label" x="150" y="14" text-anchor="middle">Habits</text>
+            <text class="r-label" x="287" y="84" text-anchor="middle">Own</text>
+            <text class="r-label" x="285" y="215" text-anchor="middle">Tax</text>
+            <text class="r-label" x="178" y="292" text-anchor="middle">Safety</text>
+            <text class="r-label" x="122" y="292" text-anchor="middle">Flow</text>
+            <text class="r-label" x="14" y="215" text-anchor="middle">Debt</text>
+            <text class="r-label" x="13" y="84" text-anchor="middle">Legacy</text>
+
+            <!-- nodes with dim identity colors (DESIGN.md locked) -->
+            <circle class="r-node" cx="150" cy="60" r="5.5" stroke="#4d8eff"/><circle cx="150" cy="60" r="2.5" fill="#4d8eff"/>
+            <circle class="r-node" cx="225.4" cy="109.6" r="5.5" stroke="#00e5a8"/><circle cx="225.4" cy="109.6" r="2.5" fill="#00e5a8"/>
+            <circle class="r-node" cx="219.1" cy="189.5" r="5.5" stroke="#ffb347"/><circle cx="219.1" cy="189.5" r="2.5" fill="#ffb347"/>
+            <circle class="r-node" cx="193.6" cy="236.2" r="5.5" stroke="#ff6b6b"/><circle cx="193.6" cy="236.2" r="2.5" fill="#ff6b6b"/>
+            <circle class="r-node" cx="106.4" cy="236.2" r="5.5" stroke="#34c759"/><circle cx="106.4" cy="236.2" r="2.5" fill="#34c759"/>
+            <circle class="r-node" cx="68.8" cy="193.0" r="5.5" stroke="#af52de"/><circle cx="68.8" cy="193.0" r="2.5" fill="#af52de"/>
+            <circle class="r-node" cx="86.9" cy="109.2" r="5.5" stroke="#ff9500"/><circle cx="86.9" cy="109.2" r="2.5" fill="#ff9500"/>
+
+            <circle class="r-center" cx="150" cy="150" r="28"/>
+            <text class="r-score" x="150" y="148">60</text>
+            <text class="r-score-lbl" x="150" y="166">Score</text>
+          </svg>
+        </div>
+
+        <p class="card__brief">
+          You hold <span class="figure">£487K</span> across pensions, ISAs, and the home. Of that, <span class="figure">£73K</span> sits inside tax shelters; <span class="figure">£18,200</span> of this year's ISA allowance is still on the table. <strong>Safety net</strong> is the one chart point that wants attention — <em>one protection review</em> would lift it 6 points.
+        </p>
+      </article>
+
+      <!-- 4. PRIORITY ACTION -->
+      <article class="priority" role="button" tabindex="0">
+        <p class="priority__pre">This month · 1 thing</p>
+        <h2 class="priority__headline">Use £20,000 of ISA allowance before 5 April 2027</h2>
+        <p class="priority__why">
+          You hold <span class="fig">£145K</span> in cash earning taxable interest. Moving £20K into your ISA shelters all future growth — <span class="fig">~£900/yr</span> tax saved at your current rate, compounding tax-free thereafter.
+        </p>
+        <button class="priority__cta">Show me how</button>
+      </article>
+
+      <!-- 5. PLAN PROGRESS -->
+      <article class="plan" role="button" tabindex="0">
+        <header class="plan__head">
+          <h2 class="plan__title">First-home deposit · £75K target</h2>
+          <span class="plan__horizon">July 2029</span>
+        </header>
+        <div class="plan__bar"><div class="plan__bar-fill" style="width:24%;"></div></div>
+        <div class="plan__meta">
+          <span class="plan__pct">24%<sub>· £18K of £75K</sub></span>
+          <span class="plan__note">On course at current saving rate</span>
+        </div>
+      </article>
+
+      <!-- 6. ACTIVE INSIGHTS -->
+      <div class="section-hdr">
+        <span class="section-hdr__title">Active insights</span>
+        <span class="section-hdr__action">See all 5 →</span>
+      </div>
+
+      <article class="insight">
+        <span class="insight__badge insight__badge--critical">High</span>
+        <div class="insight__body">
+          <p class="insight__title">Safety net is your lowest dim today</p>
+          <p class="insight__sub">8 of 16. Income protection + critical illness review would close most of the gap.</p>
+        </div>
+        <span class="insight__chev">›</span>
+      </article>
+
+      <article class="insight">
+        <span class="insight__badge insight__badge--high">Med</span>
+        <div class="insight__body">
+          <p class="insight__title">£3,000 CGT allowance available this year</p>
+          <p class="insight__sub">Commodity portfolio has unrealised gains of ~£18.4K. Bed-and-ISA crystallises tax-free.</p>
+        </div>
+        <span class="insight__chev">›</span>
+      </article>
+
+      <article class="insight">
+        <span class="insight__badge insight__badge--info">Watch</span>
+        <div class="insight__body">
+          <p class="insight__title">Pension drawdown rules change April 2027</p>
+          <p class="insight__sub">351 days. Model your scenarios early — Tax & Estate tab has the engine.</p>
+        </div>
+        <span class="insight__chev">›</span>
+      </article>
+
+      <p class="foot-fca">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</p>
+    </div>
+  </article>
+
+
+  <!-- =================== LIGHT =================== -->
+  <article class="viewport theme-light">
+    <div class="viewport__label">
+      <span>Digital Sterling · light</span>
+      <small>IFA laptop</small>
+    </div>
+
+    <div class="home">
+
+      <header class="mast">
+        <div>
+          <p class="mast__greet">Tuesday morning,</p>
+          <h1 class="mast__name">Dima · 14 May 2026</h1>
+        </div>
+        <span class="mode-pill mode-pill--today">Today</span>
+      </header>
+
+      <section class="anchors">
+        <div class="anchor">
+          <span class="anchor__label">Net worth</span>
+          <span class="anchor__value">£487K</span>
+          <span class="anchor__delta">£8.2K · 7d</span>
+        </div>
+        <div class="anchor">
+          <span class="anchor__label">Score</span>
+          <span class="anchor__value anchor__value--answer">60<sub>/100</sub></span>
+        </div>
+        <div class="anchor">
+          <span class="anchor__label">Risk</span>
+          <span class="anchor__value anchor__value--risk-mid">4.2<sub>/7</sub></span>
+        </div>
+      </section>
+
+      <article class="card">
+        <header class="card__head">
+          <div>
+            <p class="card__eyebrow">Your wealth shape</p>
+            <h2 class="card__title">7 dimensions · drag a point to test what-if</h2>
+          </div>
+          <span class="card__chev">›</span>
+        </header>
+
+        <div class="radar">
+          <svg viewBox="0 0 300 300" aria-hidden="true">
+            <circle class="r-ring" cx="150" cy="150" r="38"/>
+            <circle class="r-ring" cx="150" cy="150" r="76"/>
+            <circle class="r-ring" cx="150" cy="150" r="114"/>
+            <circle class="r-ring r-ring--outer" cx="150" cy="150" r="128"/>
+
+            <line class="r-axis" x1="150" y1="150" x2="150" y2="22"/>
+            <line class="r-axis" x1="150" y1="150" x2="274.8" y2="86.7"/>
+            <line class="r-axis" x1="150" y1="150" x2="272.4" y2="208.8"/>
+            <line class="r-axis" x1="150" y1="150" x2="178.4" y2="275.6"/>
+            <line class="r-axis" x1="150" y1="150" x2="121.6" y2="275.6"/>
+            <line class="r-axis" x1="150" y1="150" x2="27.6" y2="208.8"/>
+            <line class="r-axis" x1="150" y1="150" x2="25.2" y2="86.7"/>
+
+            <polygon class="r-polygon" points="
+              150,60
+              225.4,109.6
+              219.1,189.5
+              193.6,236.2
+              106.4,236.2
+              68.8,193.0
+              86.9,109.2
+            "/>
+
+            <text class="r-label" x="150" y="14" text-anchor="middle">Habits</text>
+            <text class="r-label" x="287" y="84" text-anchor="middle">Own</text>
+            <text class="r-label" x="285" y="215" text-anchor="middle">Tax</text>
+            <text class="r-label" x="178" y="292" text-anchor="middle">Safety</text>
+            <text class="r-label" x="122" y="292" text-anchor="middle">Flow</text>
+            <text class="r-label" x="14" y="215" text-anchor="middle">Debt</text>
+            <text class="r-label" x="13" y="84" text-anchor="middle">Legacy</text>
+
+            <circle class="r-node" cx="150" cy="60" r="5.5" stroke="#4d8eff"/><circle cx="150" cy="60" r="2.5" fill="#4d8eff"/>
+            <circle class="r-node" cx="225.4" cy="109.6" r="5.5" stroke="#00b078"/><circle cx="225.4" cy="109.6" r="2.5" fill="#00b078"/>
+            <circle class="r-node" cx="219.1" cy="189.5" r="5.5" stroke="#c2802d"/><circle cx="219.1" cy="189.5" r="2.5" fill="#c2802d"/>
+            <circle class="r-node" cx="193.6" cy="236.2" r="5.5" stroke="#c43e3e"/><circle cx="193.6" cy="236.2" r="2.5" fill="#c43e3e"/>
+            <circle class="r-node" cx="106.4" cy="236.2" r="5.5" stroke="#2a8c40"/><circle cx="106.4" cy="236.2" r="2.5" fill="#2a8c40"/>
+            <circle class="r-node" cx="68.8" cy="193.0" r="5.5" stroke="#7a3eae"/><circle cx="68.8" cy="193.0" r="2.5" fill="#7a3eae"/>
+            <circle class="r-node" cx="86.9" cy="109.2" r="5.5" stroke="#c2680a"/><circle cx="86.9" cy="109.2" r="2.5" fill="#c2680a"/>
+
+            <circle class="r-center" cx="150" cy="150" r="28"/>
+            <text class="r-score" x="150" y="148">60</text>
+            <text class="r-score-lbl" x="150" y="166">Score</text>
+          </svg>
+        </div>
+
+        <p class="card__brief">
+          You hold <span class="figure">£487K</span> across pensions, ISAs, and the home. Of that, <span class="figure">£73K</span> sits inside tax shelters; <span class="figure">£18,200</span> of this year's ISA allowance is still on the table. <strong>Safety net</strong> is the one chart point that wants attention — <em>one protection review</em> would lift it 6 points.
+        </p>
+      </article>
+
+      <article class="priority">
+        <p class="priority__pre">This month · 1 thing</p>
+        <h2 class="priority__headline">Use £20,000 of ISA allowance before 5 April 2027</h2>
+        <p class="priority__why">
+          You hold <span class="fig">£145K</span> in cash earning taxable interest. Moving £20K into your ISA shelters all future growth — <span class="fig">~£900/yr</span> tax saved at your current rate, compounding tax-free thereafter.
+        </p>
+        <button class="priority__cta">Show me how</button>
+      </article>
+
+      <article class="plan">
+        <header class="plan__head">
+          <h2 class="plan__title">First-home deposit · £75K target</h2>
+          <span class="plan__horizon">July 2029</span>
+        </header>
+        <div class="plan__bar"><div class="plan__bar-fill" style="width:24%;"></div></div>
+        <div class="plan__meta">
+          <span class="plan__pct">24%<sub>· £18K of £75K</sub></span>
+          <span class="plan__note">On course at current saving rate</span>
+        </div>
+      </article>
+
+      <div class="section-hdr">
+        <span class="section-hdr__title">Active insights</span>
+        <span class="section-hdr__action">See all 5 →</span>
+      </div>
+
+      <article class="insight">
+        <span class="insight__badge insight__badge--critical">High</span>
+        <div class="insight__body">
+          <p class="insight__title">Safety net is your lowest dim today</p>
+          <p class="insight__sub">8 of 16. Income protection + critical illness review would close most of the gap.</p>
+        </div>
+        <span class="insight__chev">›</span>
+      </article>
+
+      <article class="insight">
+        <span class="insight__badge insight__badge--high">Med</span>
+        <div class="insight__body">
+          <p class="insight__title">£3,000 CGT allowance available this year</p>
+          <p class="insight__sub">Commodity portfolio has unrealised gains of ~£18.4K. Bed-and-ISA crystallises tax-free.</p>
+        </div>
+        <span class="insight__chev">›</span>
+      </article>
+
+      <article class="insight">
+        <span class="insight__badge insight__badge--info">Watch</span>
+        <div class="insight__body">
+          <p class="insight__title">Pension drawdown rules change April 2027</p>
+          <p class="insight__sub">351 days. Model your scenarios early — Tax &amp; Estate tab has the engine.</p>
+        </div>
+        <span class="insight__chev">›</span>
+      </article>
+
+      <p class="foot-fca">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</p>
+    </div>
+  </article>
+
+</div>
+
+<section class="probe-notes">
+  <h2>What you're judging here — structure, not skin</h2>
+  <ul>
+    <li><strong>Card list</strong> — 6 cards, in this order, with these jobs. Right list? Right order? Anything missing or surplus?</li>
+    <li><strong>Anchor row density</strong> — NW + Score + Risk on one row. Too crowded? Right priority? Should Plan progress live here too?</li>
+    <li><strong>Radar's place</strong> — one card among six, paragraph context underneath. Drillable. Still earns its space?</li>
+    <li><strong>Priority Action</strong> — single thing, single CTA. Picked ISA allowance as a placeholder; the engine picks the actual top action per persona.</li>
+    <li><strong>Plan progress</strong> — Warren's "% complete · target date" pattern. One plan visible at Home; rest live in Plan tab.</li>
+    <li><strong>Insights (3 visible)</strong> — ranked by impact. "See all 5 →" routes to Plan tab. Severity via badge + tinted bg, not left-stripe (DESIGN.md anti-pattern).</li>
+    <li><strong>FCA line in footer</strong> — Warren's "trust line in chrome" move adapted to Sonuswealth's info-not-sales stance.</li>
+    <li><strong>Both themes parked exactly as DESIGN.md ships them</strong> — Stitch replaces this layer later. Today's exercise is grammar only.</li>
+  </ul>
+</section>
+
+</body>
+</html>

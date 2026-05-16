@@ -1,0 +1,457 @@
+{
+  "_meta": {
+    "version": "UK-2026.1",
+    "taxYear": "2026/27",
+    "effectiveFrom": "2026-04-06",
+    "effectiveTo": "2027-04-05",
+    "verifiedBy": "To be completed — see rules-changelog.md",
+    "verificationDate": "April 2026",
+    "jurisdiction": "United Kingdom",
+    "notes": "All monetary values in GBP. All rates as decimals. Never hardcode these values in UI components — always import from this file via the TAX object in fq-calculator.js."
+  },
+
+  "_disclaimer": "These rules are verified at the date shown above. Tax rules change at each Budget and tax year. Finio updates this file after each change following professional verification. Always verify planning decisions with a qualified tax adviser before acting.",
+
+  "income": {
+    "personalAllowance": 12570,
+    "personalAllowanceFrozenTo": 2028,
+    "personalAllowanceTaperStart": 100000,
+    "personalAllowanceTaperEnd": 125140,
+    "personalAllowanceTaperNote": "PA reduces by £1 for every £2 of income above £100,000. Effective 60% marginal rate in this band.",
+    "basicRateBand": 37700,
+    "basicRateThreshold": 50270,
+    "basicRate": 0.20,
+    "higherRate": 0.40,
+    "higherRateThreshold": 50270,
+    "additionalRate": 0.45,
+    "additionalRateThreshold": 125140,
+    "scottishBasicRate": 0.20,
+    "scottishIntermediateRate": 0.21,
+    "scottishHigherRate": 0.42,
+    "scottishAdvancedRate": 0.45,
+    "scottishTopRate": 0.48,
+    "scottishNote": "Scottish rates apply to Scottish taxpayers on non-savings, non-dividend income only",
+    "savingsAllowanceBasicRate": 1000,
+    "savingsAllowanceHigherRate": 500,
+    "savingsAllowanceAdditionalRate": 0,
+    "startingRateForSavings": 0.00,
+    "startingRateForSavingsBand": 5000,
+    "startingRateForSavingsNote": "0% on savings income if non-savings income below £17,570",
+    "dividendAllowance": 500,
+    "dividendBasicRate": 0.1075,
+    "dividendHigherRate": 0.3575,
+    "dividendAdditionalRate": 0.3935,
+    "marriageAllowanceTransfer": 1260,
+    "marriageAllowanceNote": "Lower earner transfers up to £1,260 of personal allowance to spouse/civil partner",
+    "blindPersonAllowance": 3070,
+    "tradingAllowance": 1000,
+    "propertyAllowance": 1000,
+    "rentARoomRelief": 7500,
+    "terminationPaymentExemption": 30000,
+    "highIncomeChildBenefitThreshold": 60000,
+    "highIncomeChildBenefitNote": "Child benefit clawed back above £60,000 — 1% per £200 of income above threshold"
+  },
+
+  "capitalGains": {
+    "annualExemptAmount": 3000,
+    "basicRate": 0.18,
+    "higherRate": 0.24,
+    "basicRateProperty": 0.18,
+    "higherRateProperty": 0.24,
+    "badrRate": 0.18,
+    "badrLifetimeLimit": 1000000,
+    "badrNote": "Business Asset Disposal Relief — qualifying business disposals. Rate 18% from 6 April 2026 (was 14%).",
+    "investorsReliefRate": 0.10,
+    "investorsReliefLifetimeLimit": 1000000,
+    "investorsReliefNote": "Qualifying unlisted shares held at least 3 years",
+    "propertyReportingDays": 60,
+    "propertyReportingNote": "UK residential property gains must be reported and tax paid within 60 days of completion",
+    "bedAndISANote": "Sell investments and rebuy inside ISA — crystallises gain within annual exempt amount",
+    "bedAndSpouseNote": "Sell investments and spouse rebuys — resets base cost using their annual exempt amount",
+    "thirtyDayRuleNote": "Cannot repurchase same shares within 30 days — use different fund or Bed and ISA/Spouse",
+    "giltsExempt": true,
+    "qualifyingCorporateBondsExempt": true,
+    "cryptoNote": "HMRC treats cryptoassets as capital assets — each disposal is a CGT event"
+  },
+
+  "inheritanceTax": {
+    "nilRateBand": 325000,
+    "nilRateBandFrozenTo": 2030,
+    "residenceNilRateBand": 175000,
+    "residenceNilRateBandTaperStart": 2000000,
+    "residenceNilRateBandNote": "RNRB tapers by £1 for every £2 of estate above £2m",
+    "transferableNilRateBand": true,
+    "transferableRNRB": true,
+    "combinedNilRateBandCouple": 650000,
+    "combinedRNRBCouple": 350000,
+    "maxIHTFreeCouple": 1000000,
+    "ihtRate": 0.40,
+    "ihtReducedRate": 0.36,
+    "ihtReducedRateCharityThreshold": 0.10,
+    "ihtReducedRateNote": "36% rate applies if 10% or more of net estate left to qualifying charity",
+    "pensionIHTInclusionDate": "2027-04-06",
+    "pensionIHTInclusionNote": "Defined contribution pensions (SIPP, workplace DC, personal pension) become subject to IHT from this date",
+    "definedBenefitDeathBenefitNote": "DB pension lump sum death benefits — usually discretionary trust, mostly outside estate. Complex — adviser needed.",
+    "lifeInsuranceInTrustNote": "Life insurance written in trust is outside the estate. Not in trust = inside estate, subject to IHT.",
+    "businessPropertyRelief100": 1.00,
+    "businessPropertyRelief50": 0.50,
+    "bprQualifyingNote": "100% relief on qualifying business assets, trading company shares, certain AIM shares. 50% on assets used in a business.",
+    "aprBprCombinedAllowance": 2500000,
+    "aprBprCombinedAllowanceCouple": 5000000,
+    "aprBprCombinedAllowanceEffectiveDate": "2026-04-06",
+    "aprBprCombinedAllowanceNote": "Combined APR/BPR allowance £2.5m per individual (transferable to spouse). 100% relief within allowance. 50% above. Refreshes every 7 years for lifetime gifting, 10 years in trusts.",
+    "aimBPRRate": 0.50,
+    "aimBPRNote": "AIM-listed and not-listed shares: 50% relief only from 6 April 2026 (was 100%). Regardless of allowance position.",
+    "agriculturalPropertyRelief100": 1.00,
+    "agriculturalPropertyRelief50": 0.50,
+    "spouseExemption": true,
+    "charityExemption": true,
+    "annualGiftExemption": 3000,
+    "annualGiftExemptionCarryForward": true,
+    "annualGiftExemptionCarryForwardYears": 1,
+    "smallGiftExemption": 250,
+    "smallGiftExemptionNote": "£250 per recipient per year — cannot combine with annual exemption for same recipient",
+    "weddingGiftParent": 5000,
+    "weddingGiftGrandparent": 2500,
+    "weddingGiftOther": 1000,
+    "weddingGiftNote": "Must be made before the ceremony",
+    "normalExpenditureExemptionNote": "Gifts from surplus income — regular pattern, does not reduce standard of living. Needs documentation.",
+    "petSevenYearRule": 7,
+    "petNote": "Potentially exempt transfers — gifts to individuals. Outside estate if donor survives 7 years.",
+    "cltEntryChargeRate": 0.20,
+    "cltNote": "Chargeable lifetime transfers — gifts into discretionary trusts. 20% entry charge on amounts above NRB.",
+    "taperRelief": {
+      "years3to4": 0.80,
+      "years4to5": 0.60,
+      "years5to6": 0.40,
+      "years6to7": 0.20,
+      "note": "Taper reduces IHT rate on CLTs and failed PETs. Applied to tax due, not to asset value."
+    },
+    "deedOfVariationYears": 2,
+    "deedOfVariationNote": "Beneficiary can redirect inherited assets within 2 years of death — treated as if deceased made the gift",
+    "quickSuccessionReliefNote": "Reduces IHT if property was inherited and beneficiary dies within 5 years",
+    "nonDomIHTResidenceYears": 10,
+    "nonDomIHTNote": "From April 2025: 10-year UK residence test replaces 17-year deemed domicile rule for IHT purposes",
+    "excludedPropertyTrustNote": "Non-dom assets in qualifying offshore trust before becoming deemed dom — protected under pre-April 2025 rules"
+  },
+
+  "pension": {
+    "annualAllowance": 60000,
+    "taperedAnnualAllowanceThreshold": 260000,
+    "taperedAnnualAllowanceMinimum": 10000,
+    "taperedAnnualAllowanceNote": "Adjusted income over £260,000: AA reduces by £1 for every £2 over threshold. Minimum £10,000.",
+    "moneyPurchaseAnnualAllowance": 10000,
+    "mpaaNote": "Triggered by accessing flexible drawdown income. Kills carry forward for money purchase.",
+    "carryForwardYears": 3,
+    "carryForwardNote": "Must have been a member of a registered pension scheme in the relevant year",
+    "lumpSumAllowance": 268275,
+    "lumpSumAllowanceNote": "Maximum tax-free cash across all registered pensions in lifetime. Post-LTA abolition.",
+    "lumpSumAndDeathBenefitAllowance": 1073100,
+    "taxFreeCashPercentage": 0.25,
+    "taxFreeCashNote": "25% of crystallised fund, up to Lump Sum Allowance",
+    "statePensionFullAmount": 11502,
+    "statePensionQualifyingYears": 35,
+    "statePensionAge": 66,
+    "statePensionNote": "Full new State Pension 2026/27. Requires 35 qualifying NI years.",
+    "statePensionDeferralNote": "Deferring State Pension increases it by 1% per 9 weeks (approx 5.8% per year)",
+    "basicRateTaxReliefAtSource": true,
+    "higherRateTaxReliefNote": "Higher rate taxpayers claim additional 20% via self-assessment or PAYE adjustment",
+    "employerContributionsNote": "Count toward annual allowance. CT-deductible. No NI.",
+    "salarysacrifice": {
+      "employeeNISaving": true,
+      "employerNISaving": true,
+      "note": "Both employer and employee save NI on sacrificed salary. Most tax-efficient route for pension contributions."
+    },
+    "annuityNote": "Secured income for life. Taxed as pension income. Irreversible.",
+    "flexibleDrawdownNote": "Income taken flexibly from defined contribution pension. Taxed as income. MPAA triggered on first flexible income payment.",
+    "ufplsNote": "Uncrystallised Funds Pension Lump Sum: 25% tax-free, 75% taxed as income. Each payment partially tax-free.",
+    "deathBefore75": {
+      "taxTreatment": "tax-free",
+      "note": "Death benefits before age 75 paid tax-free to nominated beneficiary (within LSA limits)"
+    },
+    "deathAfter75": {
+      "taxTreatment": "income-tax",
+      "note": "Death benefits after age 75 taxed as income at recipient's marginal rate"
+    },
+    "nominationNote": "Nominations are discretionary — pension trustees decide but usually follow nomination. Review regularly.",
+    "definedBenefitNote": "Annual allowance test uses pension input amount = 16 × (pension increase) + any lump sum increase",
+    "qropsNote": "Qualifying Recognised Overseas Pension Scheme — complex rules, adviser essential"
+  },
+
+  "isa": {
+    "annualAllowance": 20000,
+    "juniorISAAllowance": 9000,
+    "lifetimeISAAllowance": 4000,
+    "lifetimeISABonus": 0.25,
+    "lifetimeISAMaxAgeToOpen": 39,
+    "lifetimeISAMaxAgeToContribute": 49,
+    "lifetimeISAPenalty": 0.25,
+    "lifetimeISAPenaltyNote": "25% withdrawal penalty applies before age 60 except first home purchase or terminal illness",
+    "lifetimeISAFirstHomeBuyerNote": "Can use for first home purchase up to £450,000",
+    "helpToBuyNote": "Closed to new applicants. Existing accounts can continue and claim bonus until November 2029.",
+    "innovativeFinanceISANote": "P2P lending returns tax-free within ISA wrapper",
+    "apsNote": "Additional Permitted Subscription — surviving spouse inherits deceased's ISA allowance as one-off additional subscription",
+    "flexibilityNote": "Flexible ISAs allow withdrawals and redeposits within same tax year without using additional allowance",
+    "bedAndISANote": "Sell investment outside ISA, rebuy inside ISA. Crystallises gain within annual exempt CGT amount.",
+    "isaIncomeExempt": true,
+    "isaGainsExempt": true,
+    "isaIHTNote": "ISA is included in IHT estate unless left to spouse/civil partner"
+  },
+
+  "taxEfficientInvestments": {
+    "vct": {
+      "incomeTaxRelief": 0.30,
+      "annualInvestmentLimit": 200000,
+      "holdingPeriod": 5,
+      "dividendExempt": true,
+      "gainsExempt": true,
+      "note": "Venture Capital Trust. High risk — early-stage company investment."
+    },
+    "eis": {
+      "incomeTaxRelief": 0.30,
+      "annualInvestmentLimit": 1000000,
+      "knowledgeIntensiveLimit": 2000000,
+      "holdingPeriod": 3,
+      "cgtDeferralAvailable": true,
+      "ihtExemptAfterYears": 2,
+      "lossRelief": true,
+      "note": "Enterprise Investment Scheme. High risk. IHT exemption after 2 years via BPR."
+    },
+    "seis": {
+      "incomeTaxRelief": 0.50,
+      "annualInvestmentLimit": 200000,
+      "holdingPeriod": 3,
+      "cgtExemptOnGains": true,
+      "lossRelief": true,
+      "note": "Seed EIS. Highest relief rate. Very early-stage, very high risk."
+    }
+  },
+
+  "property": {
+    "sdlt": {
+      "residentialRates": [
+        { "upTo": 125000, "rate": 0.00, "note": "0% on first £125,000" },
+        { "from": 125001, "upTo": 250000, "rate": 0.02, "note": "2% on next £125,000" },
+        { "from": 250001, "upTo": 925000, "rate": 0.05, "note": "5% on next £675,000" },
+        { "from": 925001, "upTo": 1500000, "rate": 0.10, "note": "10% on next £575,000" },
+        { "from": 1500001, "rate": 0.12, "note": "12% above £1.5m" }
+      ],
+      "firstTimeBuyerRelief": {
+        "zeroRateTo": 425000,
+        "reducedRateTo": 625000,
+        "note": "First-time buyers: 0% up to £425,000, 5% to £625,000. No relief above £625,000."
+      },
+      "additionalPropertySurcharge": 0.03,
+      "nonUKResidentSurcharge": 0.02,
+      "annualTaxEnvelopedDwellings": {
+        "threshold": 500000,
+        "note": "ATED applies to residential properties worth over £500,000 held by companies"
+      }
+    },
+    "rentalIncome": {
+      "mortgageInterestRestriction": true,
+      "section24Note": "Mortgage interest not deductible from rental income. Tax credit of 20% instead. Higher rate landlords significantly impacted.",
+      "allowableExpenses": ["Letting agent fees", "Maintenance and repairs", "Insurance", "Ground rent", "Council tax (if landlord pays)", "Accountancy fees"],
+      "wearAndTearAllowanceNote": "Replaced by replacement of domestic items relief — actual cost of replacing items only",
+      "rentARoomRelief": 7500,
+      "propertyAllowance": 1000
+    },
+    "cgtOnProperty": {
+      "principalPrivateResidenceRelief": true,
+      "pprFinalPeriodExemptionMonths": 9,
+      "lettingRelief": "Restricted from April 2020 — only where owner shares occupancy",
+      "reportingDeadlineDays": 60,
+      "overseasPropertyNote": "UK residents pay UK CGT on all worldwide property gains. Overseas tax credit may apply."
+    },
+    "furnishedHolidayLettings": {
+      "specialStatusRemoved": true,
+      "effectiveDate": "2024-04-06",
+      "note": "FHL special tax status removed April 2024. Now taxed as ordinary residential rental income."
+    }
+  },
+
+  "nationalInsurance": {
+    "primaryThreshold": 12570,
+    "upperEarningsLimit": 50270,
+    "class1EmployeeRate": 0.08,
+    "class1EmployeeRateAboveUEL": 0.02,
+    "class1EmployerRate": 0.138,
+    "class1EmployerSecondaryThreshold": 9100,
+    "class2Rate": 3.45,
+    "class2SmallProfitsThreshold": 12570,
+    "class3Rate": 17.45,
+    "class3Note": "Voluntary contributions to fill State Pension gaps. Compare cost vs benefit before paying.",
+    "class4RateLowerBand": 0.06,
+    "class4RateUpperBand": 0.02,
+    "class4LowerProfitsLimit": 12570,
+    "class4UpperProfitsLimit": 50270,
+    "employmentAllowance": 5000,
+    "employmentAllowanceNote": "Eligible employers can reduce employer NI bill by up to £5,000/year",
+    "salarysacrificeNISaving": true,
+    "directorNIMethod": "Annual earnings period — different from monthly employee calculation",
+    "statePensionQualifyingYears": 35,
+    "stateNewPensionFullAmount": 11502
+  },
+
+  "trusts": {
+    "discretionaryTrust": {
+      "entryChargeRate": 0.20,
+      "entryChargeNote": "20% on CLTs above NRB. Effective 20% — half the death rate.",
+      "periodicCharge": {
+        "rate": 0.06,
+        "frequency": "Every 10 years",
+        "note": "6% of value above NRB at 10-year anniversary"
+      },
+      "exitCharge": {
+        "note": "Proportionate charge based on time elapsed since last 10-year anniversary"
+      }
+    },
+    "bareTrust": {
+      "note": "Assets taxed as if beneficiary owns them — income and gains attributed to beneficiary"
+    },
+    "interestInPossession": {
+      "note": "Income to life tenant, taxed as their income. Assets form part of their estate for IHT."
+    },
+    "trustRegistrationService": {
+      "required": true,
+      "note": "Most trusts must register with HMRC TRS. Penalties for non-compliance."
+    }
+  },
+
+  "overseas": {
+    "statutoryResidenceTest": {
+      "note": "Automatic UK tests and sufficient ties test determine UK tax residence. Complex — professional advice essential."
+    },
+    "nonDom": {
+      "newRegimeEffectiveDate": "2025-04-06",
+      "newArrivalExemptionYears": 4,
+      "newArrivalNote": "New UK residents exempt from UK tax on foreign income and gains for first 4 years",
+      "ihtResidenceYears": 10,
+      "ihtNote": "10 years UK residence triggers worldwide IHT exposure under new rules",
+      "oldDeemedDomicileYears": 17,
+      "oldRegimeNote": "Pre-April 2025 deemed domicile rules still relevant for existing arrangements"
+    },
+    "remittanceBasis": {
+      "note": "Available under old rules for non-doms. Taxed only on income/gains remitted to UK. Annual charge for long-term residents. Replaced by new regime from April 2025 for new claims."
+    },
+    "overseasWorkdayRelief": {
+      "note": "Inbound assignees may exempt proportion of employment income attributable to overseas workdays. Professional advice needed."
+    },
+    "doubleTaxationRelief": {
+      "creditMethod": "Offset overseas tax paid against UK liability — most common",
+      "exemptionMethod": "Some treaty income exempt from UK tax entirely",
+      "note": "UK has double taxation treaties with over 130 countries. Treatment varies. User declares jurisdiction — Finio shows UK tax treatment only."
+    },
+    "splitYearTreatment": {
+      "note": "Year of arrival or departure may be split — part UK resident, part not. Complex rules."
+    },
+    "foreignCurrencyGains": {
+      "note": "Gains on foreign currency bank accounts taxable as CGT above personal use. Personal use exemption for travel money."
+    },
+    "cryptoOverseas": {
+      "note": "Overseas crypto exchanges — HMRC still expects UK tax reporting on all gains"
+    }
+  },
+
+  "businessOwnerPersonal": {
+    "salaryVsDividend": {
+      "note": "Optimal split between salary (NI cost, CT deductible) and dividends (no NI, lower tax rates). Pension contributions change the calculation significantly."
+    },
+    "employerPensionContributions": {
+      "ctDeductible": true,
+      "niExempt": true,
+      "note": "Employer contributions count toward annual allowance. Most tax-efficient extraction route."
+    },
+    "relevantLifePlan": {
+      "ctDeductible": true,
+      "benefitInKind": false,
+      "note": "Death-in-service via company. Not a benefit in kind. CT-deductible. Outside employee's estate if in trust."
+    },
+    "badrRate": 0.18,
+    "badrLifetimeLimit": 1000000,
+    "badrNote": "Business Asset Disposal Relief on qualifying share or business sale. Rate 18% from 6 April 2026.",
+    "investorsReliefRate": 0.10,
+    "investorsReliefLimit": 1000000,
+    "bprQualifying": "100% IHT relief within £2.5m combined APR/BPR allowance after 2 years. 50% above allowance.",
+    "aimBPRRate": 0.50,
+    "aimBPRNote": "AIM shares 50% relief from April 2026 regardless of allowance position (was 100%).",
+    "employeeOwnershipTrust": {
+      "cgtFreeOnSale": true,
+      "note": "Sale of controlling interest to EOT is exempt from CGT. Employees get annual bonus up to £3,600 tax-free."
+    },
+    "ir35": {
+      "note": "Off-payroll working rules — if caught by IR35, income treated as employment income. NI and income tax apply."
+    },
+    "directorsLoan": {
+      "s455TaxRate": 0.3375,
+      "s455Note": "Outstanding director's loan at year end — company pays S455 tax. Repayable if loan repaid within 9 months."
+    }
+  },
+
+  "corporationTax": {
+    "inScope": false,
+    "note": "Corporation tax filing and compliance is out of scope for Finio. Personal tax impact of business ownership is in scope.",
+    "smallProfitsRate": 0.19,
+    "smallProfitsLimit": 50000,
+    "mainRate": 0.25,
+    "mainRateLimit": 250000,
+    "marginalReliefNote": "Marginal relief between £50,000 and £250,000 profits — effective rate tapers between 19% and 25%"
+  },
+
+  "allowancesAndReliefs": {
+    "tradingAllowance": 1000,
+    "propertyAllowance": 1000,
+    "rentARoomRelief": 7500,
+    "blindPersonAllowance": 3070,
+    "marriageAllowance": 1260,
+    "terminationPaymentExemption": 30000,
+    "stateNewPensionFull": 11502,
+    "childBenefitHighIncomeThreshold": 60000,
+    "makingTaxDigital": {
+      "note": "MTD for income tax — mandatory quarterly reporting for self-employed and landlords above threshold. Phased implementation."
+    },
+    "selfAssessment": {
+      "filingDeadlineOnline": "31 January",
+      "paymentDeadline": "31 January",
+      "paymentOnAccountNote": "Self-employed and landlords may have to make payments on account in January and July"
+    }
+  },
+
+  "safeWithdrawalRate": 0.04,
+  "bengenNote": "4% safe withdrawal rate (Bengen rule). Investable assets × 4% = safe annual spending ceiling.",
+
+  "milestones": {
+    "_note": "Timeline milestone catalogue v1.0 (UK-2026.1). Starter set — pending founder review per TL v1.0 §10.3. Each entry: id · category · target object · label.",
+    "catalogue": [
+      { "id": "net_worth_100k",   "category": "wealth", "metric": "netWorth",   "target": 100000,   "label": "First £100k net worth" },
+      { "id": "net_worth_250k",   "category": "wealth", "metric": "netWorth",   "target": 250000,   "label": "Quarter-million net worth" },
+      { "id": "net_worth_500k",   "category": "wealth", "metric": "netWorth",   "target": 500000,   "label": "Half-million net worth" },
+      { "id": "net_worth_1m",     "category": "wealth", "metric": "netWorth",   "target": 1000000,  "label": "Millionaire" },
+      { "id": "net_worth_2m",     "category": "wealth", "metric": "netWorth",   "target": 2000000,  "label": "£2m net worth" },
+      { "id": "investable_100k",  "category": "wealth", "metric": "investable", "target": 100000,   "label": "First £100k investable" },
+      { "id": "investable_500k",  "category": "wealth", "metric": "investable", "target": 500000,   "label": "Half-million investable" },
+      { "id": "investable_1m",    "category": "wealth", "metric": "investable", "target": 1000000,  "label": "£1m investable" },
+      { "id": "sipp_100k",        "category": "pension","metric": "sipp",       "target": 100000,   "label": "Pension pot reaches £100k" },
+      { "id": "sipp_500k",        "category": "pension","metric": "sipp",       "target": 500000,   "label": "Pension pot reaches £500k" },
+      { "id": "score_50",         "category": "score",  "metric": "finioScore", "target": 50,       "label": "Wealth Score reaches 50 (Building)" },
+      { "id": "score_60",         "category": "score",  "metric": "finioScore", "target": 60,       "label": "Wealth Score reaches 60 (Established)" },
+      { "id": "score_70",         "category": "score",  "metric": "finioScore", "target": 70,       "label": "Wealth Score reaches 70 (Optimised)" },
+      { "id": "score_80",         "category": "score",  "metric": "finioScore", "target": 80,       "label": "Wealth Score reaches 80" },
+      { "id": "score_90",         "category": "score",  "metric": "finioScore", "target": 90,       "label": "Wealth Score reaches 90 (Exceptional)" },
+      { "id": "risk_score_60",    "category": "risk",   "metric": "riskScore",  "target": 60,       "label": "Risk Score reaches 60 (Managed)" },
+      { "id": "risk_score_75",    "category": "risk",   "metric": "riskScore",  "target": 75,       "label": "Risk Score reaches 75 (Protected)" },
+      { "id": "age_55",           "category": "age",    "metric": "age",        "target": 55,       "label": "Age 55 (legacy NMPA reference)" },
+      { "id": "age_nmpa_57",      "category": "age",    "metric": "age",        "target": 57,       "label": "NMPA 57 (from 6 April 2028)" },
+      { "id": "age_spa_66",       "category": "age",    "metric": "age",        "target": 66,       "label": "State Pension Age 66" },
+      { "id": "age_spa_67",       "category": "age",    "metric": "age",        "target": 67,       "label": "State Pension Age 67 (from March 2028)" },
+      { "id": "age_75",           "category": "age",    "metric": "age",        "target": 75,       "label": "Age 75 (post-75 pension death benefit rules)" },
+      { "id": "age_85",           "category": "age",    "metric": "age",        "target": 85,       "label": "Age 85 (Legacy stage)" },
+      { "id": "funded_ratio_1",   "category": "fi",     "metric": "fundedRatio","target": 1.0,      "label": "Financial independence (funded ratio = 1.0)" },
+      { "id": "mortgage_paid",    "category": "debt",   "metric": "mortgage",   "target": 0,        "label": "Mortgage paid off", "direction": "down" },
+      { "id": "emergency_6mo",    "category": "buffer", "metric": "emergencyMonths", "target": 6,   "label": "6 months expenses in emergency fund" }
+    ]
+  },
+
+  "_lastUpdated": "April 2026",
+  "_nextReviewDue": "October 2026 (Autumn Budget) and April 2027 (new tax year)"
+}

@@ -1,0 +1,596 @@
+/* ═══════════════════════════════════════════════════
+   SONUSWEALTH DESIGN TOKENS
+   Dark = Mathematical Resonance (Google Stitch).
+   Light = Digital Sterling (Google Stitch).
+   Light mode via [data-theme="light"].
+
+   Palette discipline (PP-2 + user 2026-05-11):
+     · DARK chrome uses 5 functional colours: text, mint (success),
+       coral (risk), gold (DIFF ONLY — never decorative), neutral.
+       Violet/blue retained for data-encoding (wrapper segments) only.
+     · LIGHT chrome uses indigo (action), teal-mint (success), red (alert).
+
+   Tokens are read by every screen. Changing a value here cascades
+   to the entire app.
+   ═══════════════════════════════════════════════════ */
+
+:root, [data-theme="dark"] {
+  /* ── Mathematical Resonance — deep navy ground ──────────────── */
+  --c-bg:       #051424;       /* page ground (was #070a0f) */
+  --c-bg2:      #0c1119;
+  --c-surface:  #122131;       /* tile fill base */
+  --c-surface2: #1a2a3d;       /* elevated tile */
+  --c-surface3: #273647;       /* highest elevation */
+  --c-border:   rgba(255,255,255,.10);
+  --c-border2:  rgba(255,255,255,.18);
+  --c-text:     #d4e4fa;       /* primary text */
+  --c-text2:    #a9b5c8;
+  --c-text3:    #8793a7;
+
+  /* ── Functional 5-colour set ────────────────────────────────── */
+  --c-acc:      #5ddbc2;       /* Mathematical Teal — primary accent (Stitch dark) */
+  --c-acc2:     #7aa7ff;       /* blue — data-vis only (wrapper segments) */
+  --c-acc3:     #ff6f7d;       /* coral — risk / alert signal */
+  --c-gold:     #ffbd59;       /* gold — RESERVED FOR DIFF (change since last view) */
+  --c-coral:    #ff6f7d;       /* alias of acc3 */
+  --c-violet:   #ba8cff;       /* data-vis only */
+  --c-mint:     #7cf7de;       /* lighter teal variant */
+
+  --c-acc-bg:   rgba(93,219,194,.10);
+  --c-acc2-bg:  rgba(122,167,255,.10);
+  --c-acc3-bg:  rgba(255,111,125,.10);
+  --c-gold-bg:  rgba(255,189,89,.10);
+  /* Contrast colour for text/icons sitting on a --c-acc pill or fill.
+     Dark = navy on mint. Light = white on indigo. Always legible. */
+  --c-acc-contrast: #0B1F3A;
+
+  --sh:         0 2px 16px rgba(0,0,0,.5);
+  --sh2:        0 26px 70px rgba(0,0,0,.38);
+  --sh-acc:     0 8px 32px rgba(93,219,194,.22);
+  --c-sep:      rgba(255,255,255,.08);
+  --c-acc-text: #5ddbc2;
+
+  /* ── Radar tokens — theme-aware. Replaces hardcoded SVG colours. ─── */
+  --c-radar-fill:    rgba(93,219,194,.16);
+  --c-radar-stroke:  rgba(93,219,194,.92);
+  --c-radar-glow:    rgba(93,219,194,.28);
+  --c-radar-ring:    rgba(255,255,255,.10);
+  --c-radar-axis:    rgba(255,255,255,.08);
+  --c-radar-node-bg: rgba(9,13,21,.86);
+
+  /* ── Tile gradients (Stitch glass-morphism) ──────────────────── */
+  --card-bg:    linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --card-bg2:   linear-gradient(145deg, rgba(23,40,58,.96), rgba(8,15,28,.98));
+  --card-solid: rgba(18,33,49,.92);
+  --tile-inset: inset 0 1px 0 rgba(255,255,255,.06);
+
+  /* ── TYPOGRAPHY SCALE ─────────────────────────────────────────────────────
+     Floor policy (set 21 April 2026):
+       - Body text 14px minimum on primary surfaces
+       - Secondary/metadata 13px absolute floor
+       - 11px only for uppercase 0.8px-tracked labels where tracking carries
+         legibility
+       - Hero numbers 28px on triple-anchor tiles; 36px standalone
+     These tokens apply to BOTH dark and light modes — font sizes don't change
+     by theme. Same tokens, same values. Do not override in light mode.
+     ───────────────────────────────────────────────────────────────────────── */
+  --fs-hero-lg: 36px;   /* standalone big numbers — score dials, FQ breakdown */
+  --fs-hero:    28px;   /* triple-anchor tile numbers, primary score surfaces */
+  --fs-title-lg:20px;   /* section headers, prominent card titles */
+  --fs-title:   17px;   /* card titles, screen headers, top-bar brand */
+  --fs-body:    14px;   /* PRIMARY BODY — minimum for readable paragraphs */
+  --fs-small:   13px;   /* ABSOLUTE FLOOR — secondary/metadata text */
+  --fs-label:   11px;   /* ONLY for uppercase 0.8px-tracked labels */
+  --fs-micro:   10px;   /* legal disclaimers, absolute minimum */
+
+  /* ── WEIGHT LADDER ─────────────────────────────────────────────────────────
+     Clean ladder: 400 → 600 → 700 → 800. No arbitrary 780/820/850/880.
+     ───────────────────────────────────────────────────────────────────────── */
+  --fw-regular:  400;   /* Body text, paragraphs, descriptions */
+  --fw-medium:   600;   /* Emphasis, navigation, labels */
+  --fw-semibold: 700;   /* Strong emphasis, card titles */
+  --fw-bold:     800;   /* Hero numbers, scores, primary metrics */
+
+  /* ── LETTER SPACING ────────────────────────────────────────────────────── */
+  --ls-tight:   -0.5px; /* Hero/display numbers */
+  --ls-normal:   0;     /* Body text */
+  --ls-wide:     0.8px; /* Uppercase labels */
+  --ls-wider:    1.2px; /* Extra-tracked uppercase headers */
+}
+
+/* ── LIGHT MODE — Digital Sterling (Google Stitch) ──────────────────────── */
+[data-theme="light"] {
+  /* Warm off-white ground, pure-white tiles, indigo primary action.
+     "Paper on Air" — high whitespace, low-contrast separations,
+     ambient shadows instead of borders for hierarchy. */
+  --c-bg:       #faf9fc;       /* warm off-white — NOT iOS grey */
+  --c-bg2:      #f4f3f6;       /* low-contrast section grouping */
+  --c-surface:  #ffffff;       /* pure white tile fill */
+  --c-surface2: #efedf0;       /* low elevation */
+  --c-surface3: #e3e2e5;       /* highest elevation */
+  --c-border:   rgba(35,48,68,.10);
+  --c-border2:  rgba(35,48,68,.16);
+  --c-text:     #1a1c1e;       /* primary ink */
+  --c-text2:    #43474e;       /* muted */
+  --c-text3:    #657286;       /* secondary muted (labels, captions) */
+
+  /* Digital Sterling — Action Indigo replaces green entirely.
+     Per spec: "No green or traditional success indicators are used;
+     rely on Action Indigo and iconography for confirmation states." */
+  --c-acc:      #1c3fe7;       /* Action Indigo — primary accent + success */
+  --c-acc2:     #3d5afe;       /* Brighter indigo — secondary interactive */
+  --c-acc3:     #ba1a1a;       /* deep red — alert / leak */
+  /* 2026-05-12 token recalibration after theme parity audit:
+     Light gold was #b96d00 — readable but dim. As a 65% opacity dashed
+     polygon stroke it became nearly invisible. Bumped to a brighter,
+     more saturated gold that punches against #faf9fc ground while
+     keeping DIFF semantic (still warm-amber, not green or red). */
+  --c-gold:     #d97700;       /* bright gold-amber — DIFF ONLY */
+  --c-coral:    #ba1a1a;
+  --c-violet:   #7f57d9;
+  /* Light mint alias previously pointed to deep navy #001f3f, which read
+     as "muted/restricted" not "achieved/success." Repointed to --c-acc
+     (indigo) so success-state visual carries the same semantic across
+     both themes. Dark mode keeps mint as the success color. */
+  --c-mint:     #1c3fe7;       /* indigo — success-state alias (light) */
+
+  --c-acc-bg:   rgba(28,63,231,.08);
+  --c-acc2-bg:  rgba(61,90,254,.10);
+  --c-acc3-bg:  rgba(186,26,26,.08);
+  --c-gold-bg:  rgba(217,119,0,.12);                   /* recalibrated alpha for new gold */
+  --c-acc-contrast: #ffffff;                           /* white text on indigo pills */
+  --c-sep:      rgba(35,48,68,.10);
+  --c-acc-text: #1c3fe7;       /* indigo text on white */
+
+  /* Radar tokens — indigo treatment for Digital Sterling.
+     2026-05-12 token recalibration: glow opacity bumped from .18 to .35
+     so the halo is visible on light backgrounds. Stroke opacity bumped
+     from .85 to .95 to give the polygon more visual weight against the
+     pale ground. Fill stays at .10 to keep the polygon interior subtle. */
+  --c-radar-fill:    rgba(28,63,231,.10);
+  --c-radar-stroke:  rgba(28,63,231,.95);
+  --c-radar-glow:    rgba(28,63,231,.35);
+  --c-radar-ring:    rgba(22,38,62,.18);
+  --c-radar-axis:    rgba(22,38,62,.12);
+  --c-radar-node-bg: rgba(255,255,255,.94);
+
+  /* Ambient shadows — never harsh */
+  --sh:         0 2px 7px rgba(35,48,68,.07);
+  --sh2:        0 24px 60px rgba(35,48,68,.13), 0 2px 7px rgba(35,48,68,.07);
+  --sh-acc:     0 8px 24px rgba(0,168,132,.18);
+
+  /* Pure-white card with subtle gradient depth (Stitch pattern) */
+  --card-bg:    linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,251,255,.80));
+  --card-bg2:   linear-gradient(140deg, rgba(255,255,255,.98), rgba(231,239,250,.84));
+  --card-solid: #ffffff;
+  --tile-inset: inset 0 1px 0 rgba(255,255,255,.94),
+                inset 0 -1px 0 rgba(112,129,152,.07);
+}
+
+/* ── RESET ── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif; color:var(--c-text); background:var(--c-bg); -webkit-font-smoothing:antialiased; }
+button { cursor:pointer; font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif; border:none; background:none; color:inherit; }
+input, textarea { font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif; }
+
+/* ── APP SHELL — mobile-first, centred on desktop ─────────────────────────
+   Background gradient cascades from theme tokens. The radial highlights
+   add depth without colour pollution; transition is theme-aware. */
+body {
+  display:flex;
+  justify-content:center;
+  background:#000;
+  transition: background var(--dur-normal, 350ms) ease;
+}
+[data-theme="light"] body { background:#e8eef6; }
+
+#root {
+  width:100%;
+  max-width:480px;
+  min-height:100vh;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(45,242,195,.18), transparent 34%),
+    radial-gradient(circle at 88% 8%, rgba(255,111,125,.12), transparent 26%),
+    linear-gradient(180deg, #111722 0%, var(--c-bg) 42%, #05070b 100%);
+  box-shadow: 0 0 60px rgba(0,0,0,.8);
+  transition: background var(--dur-normal, 350ms) ease;
+}
+
+[data-theme="light"] #root {
+  background:
+    linear-gradient(135deg, rgba(221,241,246,.68), transparent 42%),
+    linear-gradient(225deg, rgba(224,231,255,.64), transparent 40%),
+    linear-gradient(180deg, #fbfdff 0%, #f1f5fa 52%, #e8eef6 100%);
+  box-shadow: 0 0 60px rgba(35,48,68,.08);
+}
+
+/* ── TRANSITIONS ── */
+.fade-in { animation:fadeIn .4s ease forwards; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+
+/* ── CAELIXA RADAR ANIMATIONS ── */
+@keyframes caelixaScan { to { transform: rotate(360deg); } }
+@keyframes caelixaRise {
+  from { opacity:0; transform:translate(-50%,-40%) scale(.92); }
+  to   { opacity:1; transform:translate(-50%,-50%) scale(1);  }
+}
+@keyframes caelixaDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes caelixaBlink {
+  50% { transform:scale(1.35); opacity:.72; }
+}
+
+/* ── BOTTOM NAV ── */
+.bnav { height:78px; background:var(--c-surface); border-top:1px solid var(--c-border); display:flex; align-items:flex-start; padding-top:8px; flex-shrink:0; }
+.ni { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0; }
+.ni-ico { font-size:21px; line-height:1; transition:transform .15s cubic-bezier(.34,1.56,.64,1); }
+.ni.active .ni-ico { transform:scale(1.12); }
+.ni-lbl { font-size:10px; font-weight:500; color:var(--c-text3); }
+.ni.active .ni-lbl { color:var(--c-acc); font-weight:700; }
+
+/* ── TOP BAR ── */
+.topbar { height:60px; padding:0 16px; background:var(--c-surface); border-bottom:1px solid var(--c-border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.tb-l { display:flex; align-items:center; gap:8px; }
+.tb-mark { width:30px; height:30px; background:var(--c-acc); border-radius:8px; display:flex; align-items:center; justify-content:center; }
+.tb-name { font-size:20px; font-weight:800; color:var(--c-text); letter-spacing:-.5px; }
+.tb-name em { color:var(--c-acc); font-style:normal; }
+.tb-persona { font-size:11px; font-weight:600; color:var(--c-text3); background:var(--c-surface2); border:1px solid var(--c-border); padding:3px 9px; border-radius:100px; }
+.tb-r { display:flex; gap:6px; }
+.ib { width:34px; height:34px; border-radius:50%; background:var(--c-surface2); border:1px solid var(--c-border); display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--c-text2); }
+
+/* ── DATA DATE ── */
+.data-date { padding:4px 16px 0; font-size:10px; color:var(--c-text3); text-align:right; letter-spacing:.3px; }
+
+/* ── SECTION HEADERS ── */
+.sh { display:flex; align-items:center; justify-content:space-between; padding:16px 16px 8px; }
+.sh-title { font-size:11px; font-weight:700; color:var(--c-text3); text-transform:uppercase; letter-spacing:.8px; }
+.sh-action { font-size:13px; font-weight:600; color:var(--c-acc); cursor:pointer; }
+
+/* ── ALERT CARDS ── */
+.alert-card { margin:0 16px 8px; background:var(--c-surface); border:1px solid var(--c-border); border-left:4px solid; border-radius:0 14px 14px 0; box-shadow:var(--sh); cursor:pointer; transition:transform .15s ease; }
+.alert-card:active { transform:scale(.99); }
+.alert-card.critical { border-left-color:#FF3B30; }
+.alert-card.high     { border-left-color:#FF9500; }
+.alert-card.medium   { border-left-color:#007AFF; }
+.alert-card.info     { border-left-color:#34C759; }
+.ac-inner { padding:12px 14px; }
+.ac-top { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.ac-badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; padding:3px 7px; border-radius:100px; }
+.critical .ac-badge { background:rgba(255,59,48,.12);  color:#FF3B30; }
+.high     .ac-badge { background:rgba(255,149,0,.12);  color:#FF9500; }
+.medium   .ac-badge { background:rgba(0,122,255,.12);  color:#007AFF; }
+.info     .ac-badge { background:rgba(52,199,89,.12);  color:#34C759; }
+.ac-days { font-size:11px; color:var(--c-text3); margin-left:auto; }
+.ac-title { font-size:14px; font-weight:600; color:var(--c-text); line-height:1.35; margin-bottom:4px; }
+.ac-body  { font-size:12px; color:var(--c-text3); line-height:1.5; margin-bottom:8px; }
+.ac-foot  { display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px solid var(--c-border); }
+.ac-cta   { font-size:12px; font-weight:600; color:var(--c-acc); }
+
+/* ── BOTTOM SHEETS ── */
+@keyframes sheetUp { from{transform:translateY(100%);}to{transform:translateY(0);} }
+
+/* ── AI TYPING ── */
+.ai-typing { display:flex; align-items:center; gap:2px; padding:8px 14px; }
+.ai-typing span { width:6px; height:6px; border-radius:50%; background:var(--c-text3); display:inline-block; margin:0 2px; animation:aiDot 1.2s infinite; }
+.ai-typing span:nth-child(2){animation-delay:.2s;} .ai-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes aiDot { 0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);} }
+
+/* ── LIFE STAGE PILL ── */
+.ls-pill { font-size:10px; font-weight:500; color:var(--c-acc); background:var(--c-acc-bg); padding:3px 8px; border-radius:20px; }
+
+/* ── FCA ── */
+.fca { text-align:center; font-size:10px; color:var(--c-text3); padding:14px 24px 8px; line-height:1.6; }
+
+/* ── STUB SCREENS ── */
+.stub { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:12px; padding:24px; text-align:center; color:var(--c-text3); }
+.stub-ico{font-size:44px;} .stub-t{font-size:18px;font-weight:700;color:var(--c-text2);} .stub-s{font-size:13px;line-height:1.6;}
+
+/* ── RESPONSIVE — iPad and desktop ─────────────────────────────────────── */
+@media (min-width: 768px) {
+  #root { max-width: 680px; }
+  .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .r-wide { padding: 0 8px; }
+  /* MyMoney tile grid: 2 cols at iPad */
+  .sw-tile-grid { grid-template-columns: 1fr 1fr !important; }
+  .sw-tile-grid-secondary { grid-template-columns: 1fr 1fr !important; }
+}
+@media (min-width: 1024px) {
+  /* MyMoney tile grid: 3 cols at laptop */
+  .sw-tile-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .sw-tile-grid-secondary { grid-template-columns: repeat(4, 1fr) !important; }
+
+  /* Phase 2 Batch B.5 — desktop sidebar layout.
+     Width opens up to 1280px and content sits next to a 240px sidebar.
+     Bottom-tab nav hides at desktop (sidebar replaces it). */
+  body { background: #050b14; }
+  [data-theme="light"] body { background: #eef2f7; }
+  #root {
+    max-width: 1280px;
+    flex-direction: row;
+    overflow: visible;
+    /* keep the radial-gradient background */
+  }
+  .sw-app-with-sidebar {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    width: 100%;
+    height: 100vh;
+  }
+  /* Hide bottom-tab nav at desktop */
+  .sw-app-with-sidebar .bnav,
+  .sw-app-with-sidebar [data-bottom-nav] {
+    display: none !important;
+  }
+  .r-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ── DESKTOP SIDEBAR (Phase 2 Batch B.5) ──────────────────────────────────
+   Hidden by default; revealed at ≥1024px viewports.
+   ───────────────────────────────────────────────────────────────────────── */
+.sw-sidebar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .sw-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    height: 100vh;
+    padding: 22px 14px 18px;
+    border-right: 1px solid var(--c-border);
+    background: linear-gradient(180deg,
+      rgba(18,33,49,0.92), rgba(9,20,36,0.96));
+    box-shadow: 0 0 30px rgba(0,0,0,0.25);
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  [data-theme="light"] .sw-sidebar {
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.97), rgba(248,251,255,0.92));
+    border-right: 1px solid var(--c-border);
+    box-shadow: 0 0 30px rgba(35,48,68,0.06);
+  }
+  .sw-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 6px 22px;
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: 16px;
+  }
+  .sw-sidebar-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(145deg,#07111f,#112a43);
+    border: 1px solid rgba(255,255,255,.16);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 12px 32px rgba(17,42,67,.3);
+    flex-shrink: 0;
+  }
+  .sw-sidebar-name {
+    font-size: 16px; font-weight: 800;
+    color: var(--c-text); letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .sw-sidebar-tagline {
+    font-size: 10px;
+    color: var(--c-text3);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .sw-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+  .sw-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: var(--c-text2);
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    text-align: left;
+  }
+  .sw-sidebar-item:hover {
+    background: var(--c-surface2);
+    color: var(--c-text);
+  }
+  .sw-sidebar-item-active {
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--c-acc) 16%, transparent),
+      color-mix(in srgb, var(--c-acc) 6%, transparent));
+    color: var(--c-acc-text, var(--c-acc));
+    border: 1px solid color-mix(in srgb, var(--c-acc) 30%, transparent);
+    font-weight: 700;
+  }
+  .sw-sidebar-icon {
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+  }
+  .sw-sidebar-label { flex: 1; }
+  .sw-sidebar-active-bar {
+    position: absolute;
+    left: -1px; top: 8px; bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--c-acc);
+  }
+  .sw-sidebar-cta {
+    margin-top: 18px;
+    padding: 11px 16px;
+    border-radius: 100px;
+    background: var(--c-acc);
+    color: #0B1F3A;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 8px 22px rgba(45,242,195,0.16);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .sw-sidebar-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(45,242,195,0.22);
+  }
+  [data-theme="light"] .sw-sidebar-cta { color: #fff; }
+  .sw-sidebar-footer {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--c-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sw-sidebar-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f9d873, #ff8d7a);
+    color: #111620;
+    font-size: 12px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+  }
+  .sw-sidebar-avatar-name {
+    font-size: 12px; font-weight: 700;
+    color: var(--c-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sw-sidebar-avatar-sub {
+    font-size: 10px; color: var(--c-text3); margin-top: 1px;
+  }
+}
+
+/* ── SCREEN CONTAINERS ─────────────────────────────────────────────────── */
+.screen { flex:1; overflow-y:auto; padding:0 16px 120px; }
+
+/* ── DESKTOP CONTENT SHELL (FIX-20 / R10 desktop black-void) ──────────────
+   At ≥1024px, the Dashboard area inherits 1040px from #root (1280 − 240
+   sidebar). Cards designed for 480px mobile look stranded inside that
+   width. Centre them in an inner column and let the page ground breathe.
+   Cards that opt in to wider layouts (`.r-wide` / `.sw-tile-grid`) keep
+   their existing breakpoint rules.                                         */
+@media (min-width: 1024px) {
+  .app-content,
+  .sw-app-with-sidebar > div:nth-child(2) {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  /* Give a sensible inner column to mobile-first screens so they don't
+     stretch awkwardly. Screens that want full width can override via
+     `.screen--wide` (declared below).                                       */
+  .sw-app-with-sidebar .screen {
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .sw-app-with-sidebar .screen--wide { max-width: none; }
+}
+
+/* ── CARD ──────────────────────────────────────────────────────────────── */
+.card { background:var(--c-surface); border:1px solid var(--c-sep); border-radius:20px; padding:16px; margin-bottom:12px; }
+.card-title { font-size:11px; font-weight:700; color:var(--c-text3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:12px; }
+
+/* ── ROW ───────────────────────────────────────────────────────────────── */
+.row { display:flex; align-items:center; justify-content:space-between; }
+.row + .row { border-top:1px solid var(--c-sep); padding-top:10px; margin-top:10px; }
+
+/* ── PILL BADGE ─────────────────────────────────────────────────────────── */
+.pill { display:inline-block; font-size:10px; font-weight:700; padding:3px 9px; border-radius:100px; }
+
+/* ── RISK DIMENSION BARS ─────────────────────────────────────────────────── */
+.risk-bar-track { flex:1; height:5px; background:rgba(255,255,255,.07); border-radius:100px; overflow:hidden; }
+.risk-bar-fill  { height:100%; border-radius:100px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+
+/* ── TREE ROWS ───────────────────────────────────────────────────────────── */
+.tree-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--c-sep); cursor:pointer; }
+.tree-row:last-child { border-bottom:none; }
+
+/* ── SHEET OVERLAY ───────────────────────────────────────────────────────── */
+.sheet-overlay { position:fixed; inset:0; z-index:600; pointer-events:all; }
+.sheet-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.55); }
+.sheet-panel { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:680px; background:var(--c-surface); border-radius:20px 20px 0 0; padding:20px 20px 44px; max-height:75vh; overflow-y:auto; }
+.sheet-handle { width:36px; height:5px; border-radius:3px; background:var(--c-sep); margin:0 auto 16px; }
+
+/* ── THEME-AWARE CARD BACKGROUNDS ──────────────────────────────────────────
+   Now token-driven — automatically swaps with theme via --card-bg vars.
+   Backwards-compat: existing .themed-card / .themed-card-hero usage works. */
+.themed-card {
+  background: var(--card-bg);
+  border: 1px solid var(--c-border);
+}
+.themed-card-hero {
+  background:
+    radial-gradient(circle at 88% 10%, rgba(255,255,255,.06), transparent 28%),
+    radial-gradient(circle at 12% 0%, rgba(122,167,255,.10), transparent 30%),
+    var(--card-bg2);
+  border: 1px solid var(--c-border2);
+  box-shadow: var(--sh2);
+}
+[data-theme="light"] .themed-card-hero {
+  background:
+    linear-gradient(155deg, rgba(255,255,255,.98), rgba(248,251,255,.92) 48%, rgba(238,245,255,.90)),
+    linear-gradient(315deg, rgba(0,168,132,.09), rgba(28,63,231,.06) 46%, transparent);
+}
+
+/* ── DISCLAIMER ──────────────────────────────────────────────────────────── */
+.disclaimer { text-align:center; font-size:10px; color:var(--c-text3); padding:16px 24px 8px; line-height:1.6; }
+
+/* ── GLOSSARY TERM (FIX-20 / R12 acronyms) ────────────────────────────────
+   Used by src/components/shared/Glossary.jsx <Term>. Dotted underline
+   signals "definition available on hover/tap"; trailing ⓘ adds a touch
+   target on mobile where :hover doesn't fire. Inline, non-disruptive.   */
+.glossary-term {
+  border-bottom: 1px dotted var(--c-text3);
+  cursor: help;
+  position: relative;
+  white-space: nowrap;
+}
+.glossary-marker {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 0.78em;
+  color: var(--c-text3);
+  vertical-align: baseline;
+  line-height: 1;
+  opacity: 0.7;
+}
+.glossary-term:hover .glossary-marker,
+.glossary-term:focus-within .glossary-marker { opacity: 1; color: var(--c-acc); }
+
+/* ── PREFERS-REDUCED-MOTION (FIX-20 / a11y global) ────────────────────────
+   Global hammer. Components that genuinely need motion to communicate
+   meaning (e.g. radar scan that signals "live") can opt back in by adding
+   `.respect-motion-pref` to their root element and self-managing.        */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.respect-motion-pref), *:not(.respect-motion-pref)::before, *:not(.respect-motion-pref)::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+  }
+}

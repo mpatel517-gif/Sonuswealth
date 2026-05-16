@@ -1,0 +1,928 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sonuswealth — Home v2.2 refined</title>
+<style>
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+  --space-lg: 16px; --space-xl: 20px; --space-2xl: 28px; --space-3xl: 40px;
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+}
+
+.theme-dark {
+  --c-bg: #051424;
+  --c-bg2: #0c1119;
+  --c-surface: #122131;
+  --c-surface2: #1a2a3d;
+  --c-surface3: #273647;
+  --c-text: #d4e4fa;
+  --c-text2: #a9b5c8;
+  --c-text3: #8793a7;
+  --c-acc: #5ddbc2;
+  --c-acc-soft: rgba(93,219,194,0.14);
+  --c-acc-line: rgba(93,219,194,0.32);
+  --c-acc3: #ff6f7d;
+  --c-acc3-soft: rgba(255,111,125,0.12);
+  --c-gold: #ffbd59;
+  --c-gold-soft: rgba(255,189,89,0.12);
+  --c-hairline: rgba(255,255,255,0.06);
+  --c-hairline-strong: rgba(255,255,255,0.12);
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+html, body {
+  font-family: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+body { background: #050608; padding: 32px 24px 80px; min-height: 100vh; color: #aaa; }
+
+.probe-bar {
+  max-width: 1640px;
+  margin: 0 auto var(--space-2xl);
+  padding: 16px 22px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 12px;
+  font-family: 'Inter var', sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.probe-bar h1 { font-size: 17px; font-weight: 700; color: #fff; }
+.probe-bar small { font-size: 12px; color: #8a8d96; }
+
+.viewport {
+  max-width: 1440px;
+  margin: 0 auto;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.viewport-label {
+  padding: 14px 22px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--c-text3);
+  border-bottom: 1px solid var(--c-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 880px;
+}
+
+/* === SIDEBAR === */
+.sidebar {
+  background: var(--c-bg2);
+  border-right: 1px solid var(--c-hairline);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 24px;
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: 16px;
+}
+.sidebar__mark {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--c-acc), #2da78d);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: var(--c-bg);
+}
+.sidebar__name { font-size: 14px; font-weight: 800; color: var(--c-text); letter-spacing: -0.2px; }
+.sidebar__tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); margin-top: 1px; }
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 600; color: var(--c-text2);
+  cursor: pointer; background: transparent; border: none;
+  font-family: inherit; text-align: left;
+}
+.nav-item:hover { background: var(--c-surface); color: var(--c-text); }
+.nav-item.active {
+  background: var(--c-acc-soft); color: var(--c-acc);
+  border-left: 2px solid var(--c-acc); padding-left: 10px;
+}
+.sidebar__foot {
+  padding-top: 16px; margin-top: 16px;
+  border-top: 1px solid var(--c-hairline);
+  display: flex; align-items: center; gap: 10px;
+}
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--c-gold); color: var(--c-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+.avatar-meta { flex: 1; }
+.avatar-name { font-size: 13px; font-weight: 700; color: var(--c-text); }
+.avatar-sub { font-size: 10px; color: var(--c-text3); margin-top: 1px; }
+
+/* === TOPBAR === */
+.main { display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 12px; padding: 14px 32px;
+  border-bottom: 1px solid var(--c-hairline);
+}
+.score-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 14px 6px 8px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.score-chip__ring {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--c-acc);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: var(--c-bg);
+}
+.score-chip__val { font-size: 13px; font-weight: 800; color: var(--c-text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.score-chip__band { font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--c-text3); margin-top: 2px; }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--c-surface); border: 1px solid var(--c-hairline);
+  color: var(--c-text2); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* === BODY === */
+.body {
+  padding: 28px 32px 40px;
+  display: flex; flex-direction: column; gap: 24px;
+  max-width: 1280px; margin: 0 auto; width: 100%;
+}
+
+/* === MASTHEAD + MODE PILLS === */
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.masthead__left { flex: 1; min-width: 0; }
+.masthead__greet { font-size: 13px; color: var(--c-text3); }
+.masthead__name {
+  font-size: 26px; font-weight: 800;
+  color: var(--c-text); letter-spacing: -0.5px;
+  line-height: 1.15; margin-top: 4px;
+}
+
+.mode-row {
+  display: flex; gap: 4px;
+  padding: 4px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-pill);
+}
+.mode-btn {
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  background: transparent; border: none;
+  font-family: inherit;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--c-text3); cursor: pointer;
+}
+.mode-btn.active {
+  background: var(--c-acc); color: var(--c-bg);
+}
+.mode-btn:not(.active):hover { color: var(--c-text); }
+
+/* === ANCHOR ROW (4 cols) === */
+.anchors {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-md), var(--inset-card);
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 24px;
+}
+.anchor { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.anchor + .anchor { padding-left: 24px; border-left: 1px solid var(--c-hairline); }
+.anchor__label {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.9px;
+  color: var(--c-text3);
+}
+.anchor__value {
+  font-size: 32px; font-weight: 800;
+  letter-spacing: -1px; line-height: 1;
+  color: var(--c-text); font-variant-numeric: tabular-nums;
+}
+.anchor__value sub {
+  font-size: 14px; font-weight: 600; color: var(--c-text3);
+  vertical-align: baseline; margin-left: 2px;
+}
+.anchor__value--accent { color: var(--c-acc); }
+.anchor__value--gold { color: var(--c-gold); }
+.anchor__value--alert { color: var(--c-acc3); }
+.anchor__sub {
+  font-size: 12px; font-weight: 500;
+  color: var(--c-text2); line-height: 1.4;
+  margin-top: 2px;
+}
+.anchor__sub--up { color: var(--c-acc); font-weight: 700; }
+.anchor__sub--down { color: var(--c-acc3); font-weight: 700; }
+.anchor__sub strong { color: var(--c-text); font-weight: 700; }
+
+/* === 2-COLUMN GRID === */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: 22px 26px;
+  box-shadow: var(--shadow-md), var(--inset-card);
+}
+
+.card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.card-eyebrow {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.1px;
+  color: var(--c-text3); margin-bottom: 3px;
+}
+.card-title {
+  font-size: 17px; font-weight: 700;
+  color: var(--c-text); letter-spacing: -0.2px; line-height: 1.25;
+}
+.card-chev {
+  color: var(--c-text3); font-size: 22px;
+  line-height: 1; cursor: pointer;
+}
+
+/* === RADAR === */
+.radar {
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1;
+  margin: 8px auto 12px;
+}
+.radar svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.r-ring { fill: none; stroke: var(--c-hairline); stroke-width: 1; }
+.r-ring--outer { stroke: var(--c-hairline-strong); }
+.r-axis { stroke: var(--c-hairline); stroke-width: 1; }
+.r-polygon {
+  fill: var(--c-acc-soft);
+  stroke: var(--c-acc);
+  stroke-width: 1.5; stroke-linejoin: round;
+}
+.r-target {
+  fill: none; stroke: var(--c-gold);
+  stroke-width: 1.5; stroke-dasharray: 4 4;
+  stroke-linejoin: round; opacity: 0.7;
+}
+.r-label {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.6px;
+  fill: var(--c-text3); text-transform: uppercase;
+}
+
+/* === RADAR CENTER (re-formatted) === */
+.r-center-bg {
+  fill: var(--c-bg);
+  stroke: var(--c-hairline-strong);
+  stroke-width: 1;
+}
+.r-center-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  fill: var(--c-text3);
+  text-anchor: middle;
+}
+.r-center-value-big {
+  font-size: 40px;
+  font-weight: 800;
+  fill: var(--c-acc);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1.2px;
+}
+.r-center-band {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  fill: var(--c-text2);
+  text-anchor: middle;
+}
+
+/* Drag handle on nodes */
+.r-handle {
+  fill: none;
+  stroke: var(--c-text3);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.4;
+}
+
+/* Brief with inline action chips + rotation */
+.brief-block {
+  padding-top: 16px;
+  border-top: 1px solid var(--c-hairline);
+}
+.brief-text {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--c-text2);
+  margin-bottom: 12px;
+}
+.brief-text strong { color: var(--c-text); font-weight: 700; }
+.brief-text .fig { color: var(--c-text); font-weight: 800; font-variant-numeric: tabular-nums; }
+.brief-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc-soft);
+  border: 1px solid var(--c-acc-line);
+  color: var(--c-acc);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.brief-action::after { content: ' →'; }
+.brief-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brief-rotation {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--c-text3);
+}
+.brief-dots { display: flex; gap: 4px; }
+.brief-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--c-hairline-strong);
+}
+.brief-dot.active { background: var(--c-acc); }
+.brief-drag-hint {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--c-text3);
+}
+.brief-drag-hint__icon {
+  width: 14px; height: 14px;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  border: 1px dashed var(--c-text3);
+  border-radius: 50%;
+  font-size: 8px; opacity: 0.7;
+}
+
+/* === ACTIONS ACCORDION === */
+.actions-card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: 18px 6px 8px;
+  box-shadow: var(--shadow-md), var(--inset-card);
+  display: flex;
+  flex-direction: column;
+}
+.actions-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 0 14px 12px;
+}
+.actions-head__title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.1px;
+  color: var(--c-text3);
+}
+.actions-head__count {
+  font-size: 11px; color: var(--c-text3); font-weight: 600;
+}
+.actions-list { display: flex; flex-direction: column; gap: 2px; }
+
+.action-row {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid transparent;
+  transition: background 150ms ease-out;
+}
+.action-row:hover { background: var(--c-surface); }
+.action-row + .action-row { border-top: 1px solid var(--c-hairline); border-radius: 0; }
+
+.action-row__top {
+  display: flex; align-items: center; gap: 10px;
+}
+.action-row__badge {
+  font-size: 9.5px; font-weight: 800;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.action-row__badge--high { background: var(--c-gold-soft); color: var(--c-gold); border: 1px solid var(--c-gold); }
+.action-row__badge--med  { background: var(--c-acc3-soft); color: var(--c-acc3); border: 1px solid var(--c-acc3); }
+.action-row__badge--watch { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); }
+.action-row__title {
+  flex: 1; min-width: 0;
+  font-size: 14px; font-weight: 700;
+  color: var(--c-text); letter-spacing: -0.1px;
+  line-height: 1.35;
+}
+.action-row__impact {
+  font-size: 11px; font-weight: 700;
+  color: var(--c-acc); font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.action-row__chev {
+  color: var(--c-text3); font-size: 18px; line-height: 1;
+  transition: transform 200ms ease-out;
+}
+
+/* Expanded state */
+.action-row.expanded {
+  background: linear-gradient(180deg, rgba(255,189,89,0.06), var(--c-surface));
+  border-color: rgba(255,189,89,0.20);
+  border-radius: var(--r-md) !important;
+}
+.action-row.expanded + .action-row { border-top-color: transparent; }
+.action-row.expanded .action-row__chev { transform: rotate(90deg); }
+
+.action-row__body {
+  display: none;
+  padding-top: 6px;
+}
+.action-row.expanded .action-row__body { display: block; }
+
+.action-row__why {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--c-text2);
+  margin-bottom: 12px;
+}
+.action-row__why .fig { color: var(--c-gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.action-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc);
+  color: var(--c-bg);
+  border: none;
+  font-family: inherit;
+  font-size: 12px; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.2px;
+}
+.action-cta::after { content: ' →'; }
+
+/* === PLAN PROGRESS STRIP === */
+.plan-strip {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  box-shadow: var(--shadow-sm), var(--inset-card);
+}
+.plan-strip__label {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.1px;
+  color: var(--c-text3);
+  flex-shrink: 0;
+}
+.plan-strip__body {
+  flex: 1;
+  font-size: 14px;
+  color: var(--c-text2);
+}
+.plan-strip__body strong { color: var(--c-text); font-weight: 700; }
+.plan-strip__cta {
+  font-size: 12px;
+  color: var(--c-acc);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* === FCA === */
+.fca {
+  padding: 20px 0 0;
+  font-size: 11px;
+  color: var(--c-text3);
+  text-align: center;
+  border-top: 1px solid var(--c-hairline);
+}
+
+/* === NOTES === */
+.notes {
+  max-width: 1440px;
+  margin: 24px auto 0;
+  padding: 24px 28px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 12px;
+  font-family: 'Inter var', sans-serif;
+  color: #b5b8bf;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.notes h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.notes ol { padding-left: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; }
+.notes ol li { padding-left: 4px; }
+.notes strong { color: #fff; font-weight: 600; }
+.notes em { color: #5ddbc2; font-style: normal; font-weight: 600; }
+@media (max-width: 720px) { .notes ol { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="probe-bar">
+  <div>
+    <h1>Home v2.2 — refined per founder review</h1>
+    <small>Plain-language anchors · expandable actions accordion · 4-mode segmented control · drag affordance · brief rotation</small>
+  </div>
+</div>
+
+<div class="viewport theme-dark">
+  <div class="viewport-label">
+    <span>Laptop · 1440 · refined</span>
+    <span style="color:var(--c-text3);font-weight:500;text-transform:none;letter-spacing:0.4px">click any collapsed action to expand it</span>
+  </div>
+
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <div class="sidebar__mark">SW</div>
+        <div>
+          <div class="sidebar__name">Sonuswealth</div>
+          <div class="sidebar__tag">Premium</div>
+        </div>
+      </div>
+      <nav class="sidebar__nav">
+        <button class="nav-item active"><span style="font-size:16px">⌂</span>Home</button>
+        <button class="nav-item"><span style="font-size:16px">💰</span>My Money</button>
+        <button class="nav-item"><span style="font-size:16px">≈</span>Cashflow</button>
+        <button class="nav-item"><span style="font-size:16px">📑</span>Tax &amp; Estate</button>
+        <button class="nav-item"><span style="font-size:16px">⊙</span>Risk</button>
+        <button class="nav-item"><span style="font-size:16px">⏱</span>Timeline</button>
+        <button class="nav-item"><span style="font-size:16px">🦉</span>Ask Sonu</button>
+      </nav>
+      <div class="sidebar__foot">
+        <div class="avatar">BW</div>
+        <div class="avatar-meta">
+          <div class="avatar-name">Bruce Wilson</div>
+          <div class="avatar-sub">Switch persona →</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div class="score-chip">
+          <div class="score-chip__ring">47</div>
+          <div>
+            <div class="score-chip__val">47<span style="color:var(--c-text3);font-weight:500">/100</span></div>
+            <div class="score-chip__band">Established</div>
+          </div>
+        </div>
+        <button class="icon-btn">🔔</button>
+        <button class="icon-btn">⚙</button>
+      </header>
+
+      <div class="body">
+
+        <!-- Masthead + 4-mode pills -->
+        <div class="masthead">
+          <div class="masthead__left">
+            <div class="masthead__greet">Good afternoon,</div>
+            <h1 class="masthead__name">Bruce · Wed 13 May</h1>
+          </div>
+          <div class="mode-row" role="tablist" aria-label="View mode">
+            <button class="mode-btn active">Today</button>
+            <button class="mode-btn">Future</button>
+            <button class="mode-btn">Plan</button>
+            <button class="mode-btn">What if</button>
+          </div>
+        </div>
+
+        <!-- 4-ANCHOR ROW with plain language -->
+        <section class="anchors">
+          <div class="anchor">
+            <span class="anchor__label">Net worth</span>
+            <span class="anchor__value">£3.63m</span>
+            <span class="anchor__sub anchor__sub--up">↑ £42K this week</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Wealth Score</span>
+            <span class="anchor__value anchor__value--accent">47<sub>/100</sub></span>
+            <span class="anchor__sub"><strong>Established</strong> · mid band</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Risk</span>
+            <span class="anchor__value anchor__value--gold">56<sub>/100</sub></span>
+            <span class="anchor__sub"><strong>Managed</strong> · within plan band</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Cost of Inaction</span>
+            <span class="anchor__value anchor__value--alert">£340K</span>
+            <span class="anchor__sub anchor__sub--down">328 days to act</span>
+          </div>
+        </section>
+
+        <!-- 2-COL: radar + actions accordion -->
+        <div class="grid-2col">
+
+          <!-- RADAR -->
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-eyebrow">Your wealth shape</div>
+                <div class="card-title">7 dimensions · Today's position vs your target</div>
+              </div>
+              <span class="card-chev">›</span>
+            </div>
+
+            <div class="radar">
+              <svg viewBox="0 0 440 440" aria-hidden="true">
+                <!-- rings -->
+                <circle class="r-ring" cx="220" cy="220" r="50"/>
+                <circle class="r-ring" cx="220" cy="220" r="100"/>
+                <circle class="r-ring" cx="220" cy="220" r="150"/>
+                <circle class="r-ring r-ring--outer" cx="220" cy="220" r="180"/>
+
+                <!-- axes -->
+                <line class="r-axis" x1="220" y1="220" x2="220" y2="40"/>
+                <line class="r-axis" x1="220" y1="220" x2="395.7" y2="129.4"/>
+                <line class="r-axis" x1="220" y1="220" x2="391.6" y2="304.3"/>
+                <line class="r-axis" x1="220" y1="220" x2="261.0" y2="394.1"/>
+                <line class="r-axis" x1="220" y1="220" x2="179.0" y2="394.1"/>
+                <line class="r-axis" x1="220" y1="220" x2="48.4" y2="304.3"/>
+                <line class="r-axis" x1="220" y1="220" x2="44.3" y2="129.4"/>
+
+                <!-- target dashed gold -->
+                <polygon class="r-target" points="220,55 374,144 369,275 271,365 169,365 71,275 66,144"/>
+
+                <!-- current polygon (Bruce: 95/78/61/0/88/71/18) -->
+                <polygon class="r-polygon" points="220,49 357,154 320,235 220,220 181,378 72,275 158,176"/>
+
+                <!-- labels -->
+                <text class="r-label" x="220" y="28" text-anchor="middle">Habits</text>
+                <text class="r-label" x="410" y="124" text-anchor="middle">Own</text>
+                <text class="r-label" x="408" y="316" text-anchor="middle">Tax</text>
+                <text class="r-label" x="261" y="416" text-anchor="middle">Safety</text>
+                <text class="r-label" x="179" y="416" text-anchor="middle">Flow</text>
+                <text class="r-label" x="32" y="316" text-anchor="middle">Debt</text>
+                <text class="r-label" x="30" y="124" text-anchor="middle">Legacy</text>
+
+                <!-- nodes with drag handles -->
+                <g>
+                  <circle class="r-handle" cx="220" cy="49" r="18"/>
+                  <circle r="14" stroke="#4d8eff" fill="#1a2a3d"/>
+                  <text font-size="11" font-weight="800" fill="#4d8eff" text-anchor="middle" dy="3" x="220" y="49">95</text>
+                </g>
+                <g><circle class="r-handle" cx="357" cy="154" r="18"/><circle cx="357" cy="154" r="14" stroke="#00e5a8" fill="#1a2a3d"/><text x="357" y="158" font-size="11" font-weight="800" fill="#00e5a8" text-anchor="middle">78</text></g>
+                <g><circle class="r-handle" cx="320" cy="235" r="18"/><circle cx="320" cy="235" r="14" stroke="#ffb347" fill="#1a2a3d"/><text x="320" y="239" font-size="11" font-weight="800" fill="#ffb347" text-anchor="middle">61</text></g>
+                <g><circle class="r-handle" cx="220" cy="380" r="20"/><circle cx="220" cy="380" r="16" stroke="#ff6b6b" stroke-width="2" fill="#1a2a3d"/><text x="220" y="384" font-size="12" font-weight="800" fill="#ff6b6b" text-anchor="middle">0</text></g>
+                <g><circle class="r-handle" cx="181" cy="378" r="18"/><circle cx="181" cy="378" r="14" stroke="#34c759" fill="#1a2a3d"/><text x="181" y="382" font-size="11" font-weight="800" fill="#34c759" text-anchor="middle">88</text></g>
+                <g><circle class="r-handle" cx="72" cy="275" r="18"/><circle cx="72" cy="275" r="14" stroke="#af52de" fill="#1a2a3d"/><text x="72" y="279" font-size="11" font-weight="800" fill="#af52de" text-anchor="middle">71</text></g>
+                <g><circle class="r-handle" cx="158" cy="176" r="18"/><circle cx="158" cy="176" r="14" stroke="#ff9500" fill="#1a2a3d"/><text x="158" y="180" font-size="11" font-weight="800" fill="#ff9500" text-anchor="middle">18</text></g>
+
+                <!-- coral ! gap markers -->
+                <g transform="translate(230,365)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                <g transform="translate(335,222)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                <g transform="translate(170,163)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+
+                <!-- CENTER: Wealth Score only (NW lives in anchor row) -->
+                <circle class="r-center-bg" cx="220" cy="220" r="68"/>
+                <text class="r-center-label" x="220" y="200">Wealth Score</text>
+                <text class="r-center-value-big" x="220" y="240">47</text>
+                <text class="r-center-band" x="220" y="262">Established</text>
+              </svg>
+            </div>
+
+            <!-- BRIEF with inline action + rotation -->
+            <div class="brief-block">
+              <p class="brief-text">
+                You hold <span class="fig">£3.63M</span> across pensions, ISAs, and the home. <span class="fig">35%</span> sits in tax shelters. Your <strong>Safety net</strong> dimension is at <span class="fig">0/16</span> — no life cover, no income protection. <a class="brief-action">Review protection</a> would lift it to <span class="fig">8/16</span> and your Wealth Score from <span class="fig">47</span> to <span class="fig">51</span>.
+              </p>
+              <div class="brief-foot">
+                <div class="brief-rotation">
+                  <span>Insight 1 of 3</span>
+                  <div class="brief-dots">
+                    <div class="brief-dot active"></div>
+                    <div class="brief-dot"></div>
+                    <div class="brief-dot"></div>
+                  </div>
+                </div>
+                <div class="brief-drag-hint">
+                  <span class="brief-drag-hint__icon">⋮</span>
+                  <span>Drag any point to test what-if</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- ACTIONS ACCORDION -->
+          <article class="actions-card">
+            <div class="actions-head">
+              <span class="actions-head__title">What to do next</span>
+              <span class="actions-head__count">6 actions · ranked by impact</span>
+            </div>
+
+            <div class="actions-list">
+
+              <!-- Action 1 — auto-expanded -->
+              <div class="action-row expanded">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--high">High priority</span>
+                  <span class="action-row__title">Start pension drawdown</span>
+                  <span class="action-row__impact">+34 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why">
+                    <span class="fig">£340K</span> cost of inaction. You have <span class="fig">328 days</span> to act before your SIPP enters estate from April 2027.
+                  </p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+
+              <!-- Action 2 -->
+              <div class="action-row">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--med">High</span>
+                  <span class="action-row__title">Arrange life insurance in trust</span>
+                  <span class="action-row__impact">+8 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why">No life cover in place. Estate of <span class="fig">£3.63m</span> has no protection against early death.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+
+              <!-- Action 3 -->
+              <div class="action-row">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--watch">Watch</span>
+                  <span class="action-row__title">Consider pension consolidation</span>
+                  <span class="action-row__impact">+3 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why"><span class="fig">3 pensions</span> detected. Consolidating reduces charges and simplifies nominations.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+
+              <!-- Action 4 -->
+              <div class="action-row">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--watch">Watch</span>
+                  <span class="action-row__title">Use £20K ISA allowance</span>
+                  <span class="action-row__impact">+2 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why">Move from taxable cash into ISA wrapper before <span class="fig">5 April</span>. Saves ~<span class="fig">£900/yr</span> tax.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+
+              <!-- Action 5 -->
+              <div class="action-row">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--watch">Watch</span>
+                  <span class="action-row__title">Use £3K CGT allowance</span>
+                  <span class="action-row__impact">+1 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why">Bed-and-ISA your commodity gains. Crystallises <span class="fig">£1,820</span> tax-free this year.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+
+              <!-- Action 6 -->
+              <div class="action-row">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--watch">Watch</span>
+                  <span class="action-row__title">Write a basic will</span>
+                  <span class="action-row__impact">Estate +18</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why">No will on file. Intestacy rules may not match your wishes.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+
+            </div>
+          </article>
+
+        </div><!-- /grid-2col -->
+
+        <!-- PLAN PROGRESS STRIP (compact, full width) -->
+        <div class="plan-strip">
+          <div class="plan-strip__label">Plan progress</div>
+          <div class="plan-strip__body">No active plan yet. Set one in the <strong>Plan tab</strong> to see your trajectory and milestones here.</div>
+          <div class="plan-strip__cta">Set plan →</div>
+        </div>
+
+        <div class="fca">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</div>
+
+      </div><!-- /body -->
+    </div><!-- /main -->
+  </div><!-- /shell -->
+</div><!-- /viewport -->
+
+<section class="notes">
+  <h2>Each piece of feedback, what changed</h2>
+  <ol>
+    <li><strong>Center cap formatting</strong> — Net worth removed from center (it already lives in the anchor row above). Center now holds <em>Wealth Score</em> only: label (9px tracked) + the big <em>47</em> (40px) + band <em>Established</em>. Three lines, proper vertical rhythm. No overlap.</li>
+    <li><strong>Plain-language labels</strong> — "COI" → <em>Cost of Inaction</em>. "↑ £42K · 7d" → <em>↑ £42K this week</em>. Band names spelled out ("Established · mid band", "Managed · within plan band"). No more codes.</li>
+    <li><strong>Expandable actions accordion</strong> — All 6 actions visible in one card. Top one auto-expanded (gold-tinted background, full why + CTA). Click any collapsed row to expand it; previous expanded collapses. Replaces both the standalone Priority Action card AND the bottom Active Insights row.</li>
+    <li><strong>Mode segmented control</strong> — 4 pills visible: <em>Today / Future / Plan / What if</em>. Today active. Founder's brainstorming Q5 lock is preserved (projected register quieter when non-Today is active).</li>
+    <li><strong>Drag affordance</strong> — Dashed handle ring around each radar node (subtle, ~40% opacity). Hint line below brief: <em>"Drag any point to test what-if"</em> with small icon. Discoverable without being noisy.</li>
+    <li><strong>Brief paragraph upgraded</strong> — Specific numbers ("0/16" not "low"), Wealth Score before-and-after ("47 → 51" if action taken), inline brass action chip <em>"Review protection"</em> that's clickable, and a <em>1 of 3</em> rotation indicator with dots showing more insights cycle in.</li>
+  </ol>
+</section>
+
+<script>
+// Accordion behavior — click any action row to expand it (close others)
+document.querySelectorAll('.action-row').forEach(row => {
+  row.addEventListener('click', () => {
+    const wasExpanded = row.classList.contains('expanded');
+    document.querySelectorAll('.action-row').forEach(r => r.classList.remove('expanded'));
+    if (!wasExpanded) row.classList.add('expanded');
+  });
+});
+// Mode pill toggle (cosmetic only in this mock)
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>

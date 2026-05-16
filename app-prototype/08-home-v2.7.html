@@ -1,0 +1,821 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sonuswealth — Home v2.7 (smaller radar center · What-if section)</title>
+<style>
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+  --space-lg: 16px; --space-xl: 20px; --space-2xl: 28px; --space-3xl: 40px;
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+}
+
+.theme-dark {
+  --c-bg: #051424; --c-bg2: #0c1119; --c-surface: #122131; --c-surface2: #1a2a3d; --c-surface3: #273647;
+  --c-text: #d4e4fa; --c-text2: #a9b5c8; --c-text3: #8793a7; --c-text-projected: #8b9bb3;
+  --c-acc: #5ddbc2; --c-acc-soft: rgba(93,219,194,0.14); --c-acc-line: rgba(93,219,194,0.32);
+  --c-acc2: #7aa7ff;
+  --c-acc3: #ff6f7d; --c-acc3-soft: rgba(255,111,125,0.12);
+  --c-gold: #ffbd59; --c-gold-soft: rgba(255,189,89,0.12);
+  --c-violet: #ba8cff;
+  --c-hairline: rgba(255,255,255,0.06); --c-hairline-strong: rgba(255,255,255,0.12);
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+html, body { font-family: 'Inter var','Inter',ui-sans-serif,system-ui,sans-serif; font-feature-settings: 'cv11','ss01'; -webkit-font-smoothing: antialiased; }
+body { background: #050608; padding: 32px 24px 80px; min-height: 100vh; color: #aaa; }
+
+.probe-bar { max-width: 1640px; margin: 0 auto var(--space-2xl); padding: 16px 22px; background: #14161c; border: 1px solid #25272f; border-radius: 12px; font-family: 'Inter var',sans-serif; }
+.probe-bar h1 { font-size: 17px; font-weight: 700; color: #fff; }
+.probe-bar small { font-size: 12px; color: #8a8d96; }
+.probe-bar p { font-size: 13px; color: #b5b8bf; margin-top: 6px; line-height: 1.5; }
+.probe-bar strong { color: #fff; }
+.probe-bar em { color: #5ddbc2; font-style: normal; font-weight: 600; }
+
+.viewport { max-width: 1440px; margin: 0 auto; border-radius: var(--r-lg); overflow: hidden; background: var(--c-bg); color: var(--c-text); }
+.viewport-label { padding: 14px 22px; font-size: 11px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--c-text3); border-bottom: 1px solid var(--c-hairline); display: flex; justify-content: space-between; align-items: center; }
+.viewport-label small { color: var(--c-acc); text-transform: none; letter-spacing: 0.3px; font-weight: 600; font-size: 12px; }
+
+.shell { display: grid; grid-template-columns: 240px 1fr; min-height: 920px; }
+
+/* SIDEBAR */
+.sidebar { background: var(--c-bg2); border-right: 1px solid var(--c-hairline); padding: 24px 16px; display: flex; flex-direction: column; }
+.sidebar__brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 24px; border-bottom: 1px solid var(--c-hairline); margin-bottom: 16px; }
+.sidebar__mark { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--c-acc), #2da78d); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: var(--c-bg); }
+.sidebar__name { font-size: 14px; font-weight: 800; color: var(--c-text); letter-spacing: -0.2px; }
+.sidebar__tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); margin-top: 1px; }
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; color: var(--c-text2); cursor: pointer; background: transparent; border: none; font-family: inherit; text-align: left; }
+.nav-item:hover { background: var(--c-surface); color: var(--c-text); }
+.nav-item.active { background: var(--c-acc-soft); color: var(--c-acc); border-left: 2px solid var(--c-acc); padding-left: 10px; }
+.sidebar__foot { padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--c-hairline); display: flex; align-items: center; gap: 10px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--c-gold); color: var(--c-bg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+.avatar-meta { flex: 1; }
+.avatar-name { font-size: 13px; font-weight: 700; color: var(--c-text); }
+.avatar-sub { font-size: 10px; color: var(--c-text3); margin-top: 1px; }
+
+/* TOPBAR */
+.main { display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 14px 32px; border-bottom: 1px solid var(--c-hairline); }
+.data-fresh { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--c-text3); font-weight: 600; margin-right: auto; padding-left: 4px; }
+.data-fresh__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-acc); box-shadow: 0 0 8px var(--c-acc); }
+
+/* ADDITION v2.4 — score chip now has tiny inline sparkline */
+.score-chip { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; background: var(--c-surface); border: 1px solid var(--c-hairline-strong); border-radius: var(--r-pill); cursor: pointer; }
+.score-chip__ring { width: 26px; height: 26px; border-radius: 50%; background: var(--c-acc); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--c-bg); }
+.score-chip__mid { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.score-chip__val { font-size: 13px; font-weight: 800; color: var(--c-text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.score-chip__band { font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--c-text3); margin-top: 2px; }
+.score-chip__spark { width: 42px; height: 16px; flex-shrink: 0; opacity: 0.85; }
+.score-chip__spark path { stroke: var(--c-acc); fill: none; stroke-width: 1.2; }
+
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--c-surface); border: 1px solid var(--c-hairline); color: var(--c-text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* BODY */
+.body { padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 24px; max-width: 1280px; margin: 0 auto; width: 100%; }
+
+/* MASTHEAD — ADDITION v2.4: avatar to the left of greeting */
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.masthead__left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; }
+.masthead__avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-gold), #b87f30);
+  color: var(--c-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(255,189,89,0.25);
+}
+.masthead__avatar::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--c-acc);
+  border: 2px solid var(--c-bg);
+  border-radius: 50%;
+  bottom: 0; right: 0;
+}
+.masthead__txt { flex: 1; min-width: 0; }
+.masthead__greet { font-size: 13px; color: var(--c-text3); }
+.masthead__name { font-size: 26px; font-weight: 800; color: var(--c-text); letter-spacing: -0.5px; line-height: 1.15; margin-top: 4px; }
+
+.mode-row { display: flex; gap: 4px; padding: 4px; background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--r-pill); }
+.mode-btn { padding: 7px 14px; border-radius: var(--r-pill); background: transparent; border: none; font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--c-text3); cursor: pointer; }
+.mode-btn.active { background: var(--c-acc); color: var(--c-bg); }
+.mode-btn:not(.active):hover { color: var(--c-text); }
+
+/* ANCHOR ROW */
+.anchors { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 22px 28px; box-shadow: var(--shadow-md), var(--inset-card); display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; }
+.anchor { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.anchor + .anchor { padding-left: 24px; border-left: 1px solid var(--c-hairline); }
+.anchor__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); }
+.anchor__value { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1; color: var(--c-text); font-variant-numeric: tabular-nums; }
+.anchor__value sub { font-size: 13px; font-weight: 600; color: var(--c-text3); vertical-align: baseline; margin-left: 2px; }
+.anchor__value--accent { color: var(--c-acc); }
+.anchor__value--gold { color: var(--c-gold); }
+.anchor__value--alert { color: var(--c-acc3); }
+.anchor__sub { font-size: 11.5px; font-weight: 500; color: var(--c-text2); line-height: 1.4; }
+.anchor__sub--up { color: var(--c-acc); font-weight: 700; }
+.anchor__sub--alert { color: var(--c-acc3); font-weight: 700; }
+.anchor__sub strong { color: var(--c-text); font-weight: 700; }
+
+/* NW composition (carried from v2.3) */
+.composition { margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+.comp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--c-surface2); }
+.comp-seg { height: 100%; transition: width 800ms cubic-bezier(0.16, 1, 0.3, 1); }
+.comp-legend { display: flex; gap: 10px; font-size: 10px; color: var(--c-text3); flex-wrap: wrap; }
+.comp-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.comp-legend i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+.comp-legend strong { color: var(--c-text2); font-weight: 600; }
+
+/* Score sparkline (carried from v2.3) */
+.spark-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.sparkline { width: 80px; height: 24px; display: block; }
+.spark-line { fill: none; stroke: var(--c-acc); stroke-width: 1.5; stroke-linejoin: round; }
+.spark-area { fill: var(--c-acc); opacity: 0.10; }
+.spark-dot { fill: var(--c-acc); }
+.spark-meta { font-size: 10.5px; color: var(--c-text3); font-weight: 600; }
+.spark-meta strong { color: var(--c-acc); font-weight: 700; }
+
+/* Confidence (carried from v2.3) */
+.confidence { font-size: 11px; color: var(--c-text3); display: inline-flex; align-items: center; gap: 6px; }
+.confidence-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-acc); }
+
+/* ADDITION v2.4 — CoI countdown timeline */
+.coi-timeline {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.coi-bar-bg {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-surface2);
+  overflow: visible;
+}
+.coi-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--c-gold), var(--c-acc3));
+  width: 10%;  /* days-elapsed / total */
+}
+.coi-bar-deadline {
+  position: absolute;
+  top: -3px;
+  right: 0;
+  width: 2px;
+  height: 10px;
+  background: var(--c-acc3);
+  border-radius: 1px;
+}
+.coi-bar-now {
+  position: absolute;
+  top: -3px;
+  left: 10%;
+  width: 2px;
+  height: 10px;
+  background: var(--c-text);
+  border-radius: 1px;
+}
+.coi-timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--c-text3);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.coi-timeline-labels strong { color: var(--c-acc3); font-weight: 700; }
+
+/* GRID + CARDS */
+.grid-2col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+.card { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 22px 26px; box-shadow: var(--shadow-md), var(--inset-card); }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.card-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-text3); margin-bottom: 3px; }
+.card-title { font-size: 17px; font-weight: 700; color: var(--c-text); letter-spacing: -0.2px; line-height: 1.25; }
+.card-chev { color: var(--c-text3); font-size: 22px; line-height: 1; cursor: pointer; }
+
+/* RADAR */
+.radar { width: 100%; max-width: 440px; aspect-ratio: 1; margin: 8px auto 12px; }
+.radar svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.r-ring { fill: none; stroke: var(--c-hairline); stroke-width: 1; }
+.r-ring--outer { stroke: var(--c-hairline-strong); }
+.r-axis { stroke: var(--c-hairline); stroke-width: 1; }
+.r-polygon { fill: var(--c-acc-soft); stroke: var(--c-acc); stroke-width: 1.5; stroke-linejoin: round; transition: all 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.r-target { fill: none; stroke: var(--c-gold); stroke-width: 1.5; stroke-dasharray: 4 4; stroke-linejoin: round; opacity: 0.7; transition: all 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.r-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; fill: var(--c-text3); text-transform: uppercase; }
+.r-center-bg { fill: var(--c-bg); stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-center-label { font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; fill: var(--c-text3); text-anchor: middle; }
+.r-center-value-big { font-size: 40px; font-weight: 800; fill: var(--c-acc); text-anchor: middle; font-variant-numeric: tabular-nums; letter-spacing: -1.2px; transition: all 400ms ease-out; }
+.r-center-band { font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; fill: var(--c-text2); text-anchor: middle; }
+.r-center-nw-value { font-size: 16px; font-weight: 800; fill: var(--c-text); text-anchor: middle; font-variant-numeric: tabular-nums; letter-spacing: -0.4px; }
+.r-center-divider { stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-handle { fill: none; stroke: var(--c-text3); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0.35; transition: all 200ms ease-out; }
+
+/* ADDITION v2.4 — RADAR LEGEND */
+.radar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--c-text3);
+  font-weight: 600;
+}
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.legend-swatch--target { background: var(--c-gold); height: 2px; border-top: 1px dashed var(--c-gold); }
+.legend-swatch--current { background: var(--c-acc); }
+.legend-swatch--gap {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--c-acc3);
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 7px; font-weight: 800;
+}
+.legend-swatch--gap::after { content: '!'; }
+.legend-dims {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--c-text3);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.legend-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.legend-dim i {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* MODE STATES */
+[data-mode="future"] .r-polygon { stroke-dasharray: 5 5; opacity: 0.55; fill: rgba(93,219,194,0.04); }
+[data-mode="future"] .r-center-value-big { opacity: 0.55; }
+[data-mode="future"] .anchor__value:not(.anchor__value--alert) { color: var(--c-text-projected); }
+[data-mode="future"] .anchor__value--accent { opacity: 0.70; }
+[data-mode="future"] .anchor__value--gold { opacity: 0.70; }
+[data-mode="plan"] .r-target { stroke-width: 2.5; opacity: 1; stroke-dasharray: 6 4; }
+[data-mode="plan"] .r-polygon { opacity: 0.45; }
+[data-mode="whatif"] .r-handle { stroke: var(--c-acc); stroke-width: 1.5; stroke-dasharray: 0; opacity: 0.7; }
+[data-mode="whatif"] .r-polygon { fill: var(--c-acc-soft); opacity: 0.65; }
+
+.brief-text { display: none; }
+[data-mode="today"]  .brief-text[data-when="today"]  { display: block; }
+[data-mode="future"] .brief-text[data-when="future"] { display: block; }
+[data-mode="plan"]   .brief-text[data-when="plan"]   { display: block; }
+[data-mode="whatif"] .brief-text[data-when="whatif"] { display: block; }
+
+.brief-block { padding-top: 4px; }
+.brief-text { font-size: 14.5px; line-height: 1.65; color: var(--c-text2); margin-bottom: 12px; }
+.brief-text strong { color: var(--c-text); font-weight: 700; }
+.brief-text .fig { color: var(--c-text); font-weight: 800; font-variant-numeric: tabular-nums; }
+.brief-text .fig-gold { color: var(--c-gold); font-weight: 800; font-variant-numeric: tabular-nums; }
+.brief-action { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: var(--r-pill); background: var(--c-acc-soft); border: 1px solid var(--c-acc-line); color: var(--c-acc); font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.brief-action::after { content: ' →'; }
+
+.brief-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.brief-rotation { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--c-text3); }
+.brief-dots { display: flex; gap: 4px; }
+.brief-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-hairline-strong); cursor: pointer; }
+.brief-dot.active { background: var(--c-acc); }
+.brief-drag-hint { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--c-text3); }
+.brief-drag-hint__icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--c-text3); border-radius: 50%; font-size: 8px; opacity: 0.7; }
+[data-mode="whatif"] .brief-drag-hint { color: var(--c-acc); font-weight: 700; }
+[data-mode="whatif"] .brief-drag-hint__icon { border-color: var(--c-acc); color: var(--c-acc); opacity: 1; }
+
+/* ACTIONS */
+.actions-card { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 18px 6px 8px; box-shadow: var(--shadow-md), var(--inset-card); display: flex; flex-direction: column; }
+.actions-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 14px 12px; }
+.actions-head__title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-text3); }
+.actions-head__count { font-size: 11px; color: var(--c-text3); font-weight: 600; }
+
+/* WHAT-IF SECTION */
+.whatif-section { margin-top: 4px; border-top: 1px solid var(--c-hairline); padding: 14px 14px 10px; }
+.whatif-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.whatif-head__title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-violet); display: flex; align-items: center; gap: 6px; }
+.whatif-head__title::before { content: '↔'; font-size: 12px; }
+.whatif-head__hint { font-size: 10px; color: var(--c-text3); font-weight: 500; }
+.whatif-scenarios { display: flex; flex-direction: column; gap: 2px; }
+.whatif-row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-radius: var(--r-sm); cursor: pointer; border-bottom: 1px solid var(--c-hairline); }
+.whatif-row:last-child { border-bottom: none; }
+.whatif-row:hover { background: rgba(186,140,255,0.06); }
+.whatif-row__icon { font-size: 15px; flex-shrink: 0; width: 22px; text-align: center; }
+.whatif-row__body { flex: 1; min-width: 0; }
+.whatif-row__title { font-size: 13px; font-weight: 700; color: var(--c-text); line-height: 1.3; }
+.whatif-row__sub { font-size: 10.5px; color: var(--c-text3); margin-top: 1px; }
+.whatif-row__tag { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 2px 6px; border-radius: var(--r-pill); white-space: nowrap; flex-shrink: 0; }
+.whatif-row__tag--engine { background: var(--c-acc-soft); color: var(--c-acc); }
+.whatif-row__tag--ai { background: rgba(186,140,255,0.12); color: var(--c-violet); }
+.whatif-freeform { margin-top: 10px; display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: rgba(186,140,255,0.07); border: 1px dashed rgba(186,140,255,0.30); border-radius: var(--r-md); cursor: pointer; }
+.whatif-freeform__input { flex: 1; font-family: inherit; font-size: 12px; font-weight: 500; color: var(--c-text2); background: transparent; border: none; outline: none; }
+.whatif-freeform__input::placeholder { color: var(--c-text3); }
+.whatif-freeform__btn { font-size: 11px; font-weight: 700; color: var(--c-violet); white-space: nowrap; cursor: pointer; padding: 4px 8px; border-radius: var(--r-pill); background: rgba(186,140,255,0.15); border: none; font-family: inherit; }
+.actions-list { display: flex; flex-direction: column; gap: 2px; }
+.action-row { padding: 12px 14px; border-radius: var(--r-md); cursor: pointer; display: flex; flex-direction: column; gap: 6px; border: 1px solid transparent; transition: background 150ms ease-out; }
+.action-row:hover { background: var(--c-surface); }
+.action-row + .action-row { border-top: 1px solid var(--c-hairline); border-radius: 0; }
+.action-row__top { display: flex; align-items: center; gap: 10px; }
+.action-row__badge { font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-pill); white-space: nowrap; flex-shrink: 0; }
+.action-row__badge--high { background: var(--c-gold-soft); color: var(--c-gold); border: 1px solid var(--c-gold); }
+.action-row__badge--med { background: var(--c-acc3-soft); color: var(--c-acc3); border: 1px solid var(--c-acc3); }
+.action-row__badge--watch { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); }
+.action-row__badge--scenario { background: rgba(186,140,255,0.12); color: var(--c-violet); border: 1px solid var(--c-violet); }
+.action-cta--sonu { background: var(--c-violet); }
+.action-row__title { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--c-text); letter-spacing: -0.1px; line-height: 1.35; }
+.action-row__impact { font-size: 11px; font-weight: 700; color: var(--c-acc); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.action-row__chev { color: var(--c-text3); font-size: 18px; line-height: 1; transition: transform 200ms ease-out; }
+.action-row.expanded { background: linear-gradient(180deg, rgba(255,189,89,0.06), var(--c-surface)); border-color: rgba(255,189,89,0.20); border-radius: var(--r-md) !important; }
+.action-row.expanded + .action-row { border-top-color: transparent; }
+.action-row.expanded .action-row__chev { transform: rotate(90deg); }
+.action-row__body { display: none; padding-top: 6px; }
+.action-row.expanded .action-row__body { display: block; }
+.action-row__why { font-size: 13px; line-height: 1.55; color: var(--c-text2); margin-bottom: 12px; }
+.action-row__why .fig { color: var(--c-gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.action-cta { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: var(--r-pill); background: var(--c-acc); color: var(--c-bg); border: none; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: 0.2px; }
+.action-cta::after { content: ' →'; }
+
+/* PLAN STRIP */
+.plan-strip { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 16px 22px; display: flex; align-items: center; gap: 18px; box-shadow: var(--shadow-sm), var(--inset-card); }
+.plan-strip__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-text3); flex-shrink: 0; }
+.plan-strip__body { flex: 1; font-size: 14px; color: var(--c-text2); }
+.plan-strip__body strong { color: var(--c-text); font-weight: 700; }
+.plan-strip__cta { font-size: 12px; color: var(--c-acc); font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+/* FOOTER */
+.foot { padding: 20px 0 0; border-top: 1px solid var(--c-hairline); display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; }
+.foot-line { font-size: 11px; color: var(--c-text3); display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.foot-line--trust { color: var(--c-text2); font-weight: 600; }
+.foot-line--trust::before { content: '🔒'; font-size: 10px; }
+
+/* NOTES */
+.notes { max-width: 1440px; margin: 24px auto 0; padding: 24px 28px; background: #14161c; border: 1px solid #25272f; border-radius: 12px; font-family: 'Inter var',sans-serif; color: #b5b8bf; font-size: 13.5px; line-height: 1.6; }
+.notes h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.notes ol { padding-left: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; }
+.notes ol li { padding-left: 4px; }
+.notes strong { color: #fff; font-weight: 600; }
+.notes em { color: #5ddbc2; font-style: normal; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="probe-bar">
+  <h1>Home v2.7 — radar center shrunk · dedicated What-if section</h1>
+  <p><strong>Founder feedback resolved:</strong> <em>Radar center back to r=68</em> — compact two-row layout, Wealth Score still dominant at 28px, NW secondary at 16px, polygon fully visible again. <em>What-if section now a distinct panel</em> below the actions list — 5 named scenarios (relocate, bigger home, early retire, income drop, ISA) + free-form input. Engine scenarios tagged "Instant," AI scenarios tagged "Ask Sonu."</p>
+  <p style="color:#6e7280">All v2.5 sparklines, CoI countdown, avatar, radar legend, mode pills retained.</p>
+</div>
+
+<div class="viewport theme-dark" data-mode="today">
+  <div class="viewport-label">
+    <span>Laptop · 1440 · v2.7</span>
+    <small>compact radar center · What-if section with 5 scenarios + free-form</small>
+  </div>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <div class="sidebar__mark">SW</div>
+        <div>
+          <div class="sidebar__name">Sonuswealth</div>
+          <div class="sidebar__tag">Premium</div>
+        </div>
+      </div>
+      <nav class="sidebar__nav">
+        <button class="nav-item active"><span style="font-size:16px">⌂</span>Home</button>
+        <button class="nav-item"><span style="font-size:16px">💰</span>My Money</button>
+        <button class="nav-item"><span style="font-size:16px">≈</span>Cashflow</button>
+        <button class="nav-item"><span style="font-size:16px">📑</span>Tax &amp; Estate</button>
+        <button class="nav-item"><span style="font-size:16px">⊙</span>Risk</button>
+        <button class="nav-item"><span style="font-size:16px">⏱</span>Timeline</button>
+        <button class="nav-item"><span style="font-size:16px">🦉</span>Ask Sonu</button>
+      </nav>
+      <div class="sidebar__foot">
+        <div class="avatar">BW</div>
+        <div class="avatar-meta">
+          <div class="avatar-name">Bruce Wilson</div>
+          <div class="avatar-sub">Switch persona →</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="data-fresh">
+          <span class="data-fresh__dot"></span>
+          <span>All sources fresh · synced 2h ago</span>
+        </div>
+        <!-- ADDITION v2.4: score chip with mini sparkline -->
+        <div class="score-chip">
+          <div class="score-chip__ring">47</div>
+          <div class="score-chip__mid">
+            <div class="score-chip__val">47<span style="color:var(--c-text3);font-weight:500">/100</span></div>
+            <div class="score-chip__band">Established</div>
+          </div>
+          <svg class="score-chip__spark" viewBox="0 0 42 16">
+            <path d="M0,12 C5,11 10,10 15,8 C20,7 25,6 30,5 C35,4 38,3 42,3"/>
+            <circle cx="42" cy="3" r="1.5" fill="#5ddbc2"/>
+          </svg>
+        </div>
+        <button class="icon-btn">🔔</button>
+        <button class="icon-btn">⚙</button>
+      </header>
+
+      <div class="body">
+
+        <!-- MASTHEAD with avatar (v2.4 addition) -->
+        <div class="masthead">
+          <div class="masthead__left">
+            <div class="masthead__avatar">BW</div>
+            <div class="masthead__txt">
+              <div class="masthead__greet">Good afternoon,</div>
+              <h1 class="masthead__name">Bruce · Wed 13 May</h1>
+            </div>
+          </div>
+          <div class="mode-row">
+            <button class="mode-btn active" data-mode-set="today">Today</button>
+            <button class="mode-btn" data-mode-set="future">Future</button>
+            <button class="mode-btn" data-mode-set="plan">Plan</button>
+            <button class="mode-btn" data-mode-set="whatif">What if</button>
+          </div>
+        </div>
+
+        <section class="anchors">
+
+          <div class="anchor">
+            <span class="anchor__label">Net worth</span>
+            <span class="anchor__value">£3.63m</span>
+            <!-- NEW v2.5: NW sparkline -->
+            <div class="spark-row">
+              <svg class="sparkline" viewBox="0 0 80 24">
+                <path class="spark-area" d="M0,19 C8,18 16,17 24,15 C32,13 40,11 48,9 C56,8 64,7 80,5 L80,24 L0,24 Z"/>
+                <path class="spark-line" d="M0,19 C8,18 16,17 24,15 C32,13 40,11 48,9 C56,8 64,7 80,5"/>
+                <circle class="spark-dot" cx="80" cy="5" r="2"/>
+              </svg>
+              <span class="spark-meta"><strong>+£180K</strong> in 6m</span>
+            </div>
+            <span class="anchor__sub anchor__sub--up">↑ £42K this week</span>
+            <div class="composition">
+              <div class="comp-bar">
+                <div class="comp-seg" style="width:42%;background:var(--c-acc2)"></div>
+                <div class="comp-seg" style="width:28%;background:var(--c-violet)"></div>
+                <div class="comp-seg" style="width:23%;background:var(--c-acc)"></div>
+                <div class="comp-seg" style="width:7%;background:var(--c-text3)"></div>
+              </div>
+              <div class="comp-legend">
+                <span><i style="background:var(--c-acc2)"></i>Pensions <strong>42%</strong></span>
+                <span><i style="background:var(--c-violet)"></i>Home <strong>28%</strong></span>
+                <span><i style="background:var(--c-acc)"></i>ISA <strong>23%</strong></span>
+                <span><i style="background:var(--c-text3)"></i>Cash <strong>7%</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="anchor">
+            <span class="anchor__label">Wealth Score</span>
+            <span class="anchor__value anchor__value--accent">47<sub>/100</sub></span>
+            <div class="spark-row">
+              <svg class="sparkline" viewBox="0 0 80 24">
+                <path class="spark-area" d="M0,17 C8,16 16,14 24,13 C32,12 40,10 48,9 C56,8 64,7 80,5 L80,24 L0,24 Z"/>
+                <path class="spark-line" d="M0,17 C8,16 16,14 24,13 C32,12 40,10 48,9 C56,8 64,7 80,5"/>
+                <circle class="spark-dot" cx="80" cy="5" r="2"/>
+              </svg>
+              <span class="spark-meta"><strong>+12</strong> in 6m</span>
+            </div>
+            <span class="confidence"><span class="confidence-dot"></span><strong style="color:var(--c-text2);font-weight:700">Established</strong> · 84 data points · high confidence</span>
+          </div>
+
+          <div class="anchor">
+            <span class="anchor__label">Risk</span>
+            <span class="anchor__value anchor__value--gold">56<sub>/100</sub></span>
+            <!-- NEW v2.5: Risk sparkline — line goes DOWN (62→56), meaning improves -->
+            <div class="spark-row">
+              <svg class="sparkline" viewBox="0 0 80 24">
+                <path class="spark-area" d="M0,4 C8,5 16,7 24,9 C32,11 40,12 48,13 C56,14 64,14 80,15 L80,24 L0,24 Z"/>
+                <path class="spark-line" d="M0,4 C8,5 16,7 24,9 C32,11 40,12 48,13 C56,14 64,14 80,15"/>
+                <circle class="spark-dot" cx="80" cy="15" r="2"/>
+              </svg>
+              <span class="spark-meta"><strong>−6</strong> in 6m · improving</span>
+            </div>
+            <span class="anchor__sub"><strong>Managed</strong> · within plan band</span>
+            <span class="anchor__sub" style="color:var(--c-text3);font-size:11px;margin-top:2px">3 gaps in radar →</span>
+          </div>
+
+          <!-- ADDITION v2.4: CoI countdown timeline -->
+          <div class="anchor">
+            <span class="anchor__label">Cost of Inaction</span>
+            <span class="anchor__value anchor__value--alert">£340K</span>
+            <span class="anchor__sub anchor__sub--alert">328 days to act</span>
+            <div class="coi-timeline">
+              <div class="coi-bar-bg">
+                <div class="coi-bar-fill"></div>
+                <div class="coi-bar-now"></div>
+                <div class="coi-bar-deadline"></div>
+              </div>
+              <div class="coi-timeline-labels">
+                <span>Today</span>
+                <span><strong>6 Apr 2027 · deadline</strong></span>
+              </div>
+              <span class="anchor__sub" style="color:var(--c-text3);font-size:10.5px;margin-top:1px">SIPP enters estate · compounds £610K by 2031 if no action</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="grid-2col">
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-eyebrow">Your wealth shape</div>
+                <div class="card-title">7 dimensions · Today's position vs your target</div>
+              </div>
+              <span class="card-chev">›</span>
+            </div>
+
+            <div class="radar">
+              <svg viewBox="0 0 440 440" aria-hidden="true">
+                <circle class="r-ring" cx="220" cy="220" r="50"/>
+                <circle class="r-ring" cx="220" cy="220" r="100"/>
+                <circle class="r-ring" cx="220" cy="220" r="150"/>
+                <circle class="r-ring r-ring--outer" cx="220" cy="220" r="180"/>
+
+                <line class="r-axis" x1="220" y1="220" x2="220" y2="40"/>
+                <line class="r-axis" x1="220" y1="220" x2="395.7" y2="129.4"/>
+                <line class="r-axis" x1="220" y1="220" x2="391.6" y2="304.3"/>
+                <line class="r-axis" x1="220" y1="220" x2="261.0" y2="394.1"/>
+                <line class="r-axis" x1="220" y1="220" x2="179.0" y2="394.1"/>
+                <line class="r-axis" x1="220" y1="220" x2="48.4" y2="304.3"/>
+                <line class="r-axis" x1="220" y1="220" x2="44.3" y2="129.4"/>
+
+                <polygon class="r-target" points="220,55 374,144 369,275 271,365 169,365 71,275 66,144"/>
+                <polygon class="r-polygon" points="220,49 357,154 320,235 220,220 181,378 72,275 158,176"/>
+
+                <text class="r-label" x="220" y="28" text-anchor="middle">Habits</text>
+                <text class="r-label" x="410" y="124" text-anchor="middle">Own</text>
+                <text class="r-label" x="408" y="316" text-anchor="middle">Tax</text>
+                <text class="r-label" x="261" y="416" text-anchor="middle">Safety</text>
+                <text class="r-label" x="179" y="416" text-anchor="middle">Flow</text>
+                <text class="r-label" x="32" y="316" text-anchor="middle">Debt</text>
+                <text class="r-label" x="30" y="124" text-anchor="middle">Legacy</text>
+
+                <g><circle class="r-handle" cx="220" cy="49" r="18"/><circle cx="220" cy="49" r="14" stroke="#4d8eff" fill="#1a2a3d" stroke-width="1.5"/><text x="220" y="53" font-size="11" font-weight="800" fill="#4d8eff" text-anchor="middle">95</text></g>
+                <g><circle class="r-handle" cx="357" cy="154" r="18"/><circle cx="357" cy="154" r="14" stroke="#00e5a8" fill="#1a2a3d" stroke-width="1.5"/><text x="357" y="158" font-size="11" font-weight="800" fill="#00e5a8" text-anchor="middle">78</text></g>
+                <g><circle class="r-handle" cx="320" cy="235" r="18"/><circle cx="320" cy="235" r="14" stroke="#ffb347" fill="#1a2a3d" stroke-width="1.5"/><text x="320" y="239" font-size="11" font-weight="800" fill="#ffb347" text-anchor="middle">61</text></g>
+                <g><circle class="r-handle" cx="220" cy="380" r="20"/><circle cx="220" cy="380" r="16" stroke="#ff6b6b" stroke-width="2" fill="#1a2a3d"/><text x="220" y="384" font-size="12" font-weight="800" fill="#ff6b6b" text-anchor="middle">0</text></g>
+                <g><circle class="r-handle" cx="181" cy="378" r="18"/><circle cx="181" cy="378" r="14" stroke="#34c759" fill="#1a2a3d" stroke-width="1.5"/><text x="181" y="382" font-size="11" font-weight="800" fill="#34c759" text-anchor="middle">88</text></g>
+                <g><circle class="r-handle" cx="72" cy="275" r="18"/><circle cx="72" cy="275" r="14" stroke="#af52de" fill="#1a2a3d" stroke-width="1.5"/><text x="72" y="279" font-size="11" font-weight="800" fill="#af52de" text-anchor="middle">71</text></g>
+                <g><circle class="r-handle" cx="158" cy="176" r="18"/><circle cx="158" cy="176" r="14" stroke="#ff9500" fill="#1a2a3d" stroke-width="1.5"/><text x="158" y="180" font-size="11" font-weight="800" fill="#ff9500" text-anchor="middle">18</text></g>
+
+                <g transform="translate(230,365)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                <g transform="translate(335,222)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                <g transform="translate(170,163)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+
+                <circle class="r-center-bg" cx="220" cy="220" r="68"/>
+                <text class="r-center-label" x="220" y="196">Net Worth</text>
+                <text class="r-center-nw-value" x="220" y="211">£3.63M</text>
+                <line class="r-center-divider" x1="163" y1="218" x2="277" y2="218"/>
+                <text class="r-center-label" x="220" y="228">Wealth Score</text>
+                <text class="r-center-value-big" x="220" y="250" style="font-size:28px">47</text>
+                <text class="r-center-band" x="220" y="263">Established</text>
+              </svg>
+            </div>
+
+            <!-- ADDITION v2.4: RADAR LEGEND -->
+            <div class="radar-legend">
+              <span class="legend-item"><span class="legend-swatch legend-swatch--target"></span>Target (life-stage)</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--current"></span>Where you are today</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--gap"></span>Gap to attention</span>
+            </div>
+
+            <div class="legend-dims">
+              <span class="legend-dim"><i style="background:#4d8eff"></i>Habits</span>
+              <span class="legend-dim"><i style="background:#00e5a8"></i>Own</span>
+              <span class="legend-dim"><i style="background:#ffb347"></i>Tax</span>
+              <span class="legend-dim"><i style="background:#ff6b6b"></i>Safety</span>
+              <span class="legend-dim"><i style="background:#34c759"></i>Flow</span>
+              <span class="legend-dim"><i style="background:#af52de"></i>Debt</span>
+              <span class="legend-dim"><i style="background:#ff9500"></i>Legacy</span>
+            </div>
+
+            <div class="brief-block">
+              <p class="brief-text" data-when="today">
+                You hold <span class="fig">£3.63M</span> across pensions, ISAs, and the home. <span class="fig">35%</span> sits in tax shelters. Your <strong>Safety net</strong> dimension is at <span class="fig">0/16</span> — no life cover, no income protection. <a class="brief-action">Review protection</a> would lift it to <span class="fig">8/16</span> and your Wealth Score from <span class="fig">47</span> to <span class="fig">51</span>.
+              </p>
+              <p class="brief-text" data-when="future">
+                <strong>On your current trajectory (5y out):</strong> NW projects to <span class="fig">£4.85M</span>, Wealth Score to <span class="fig">62</span>. But the <span class="fig-gold">£340K cost of inaction</span> compounds — your estate inherits <span class="fig-gold">£612K less</span> by 2031. Safety net stays <span class="fig">0/16</span>.
+              </p>
+              <p class="brief-text" data-when="plan">
+                <strong>Your plan target (gold dashed):</strong> reach Score <span class="fig">68</span> by July 2029. Currently at <span class="fig">47</span> — <span class="fig">21 points</span> below. Largest gaps: <strong>Safety net</strong> (target 12, today 0) and <strong>Legacy</strong> (target 28, today 18).
+              </p>
+              <p class="brief-text" data-when="whatif">
+                <strong>Drag any radar point</strong> to simulate. If you lift <strong>Safety net</strong> from 0 → 8 (one protection review), Wealth Score <span class="fig">47 → 51</span> and Cost of Inaction <span class="fig">£340K → £258K</span>. Release to apply.
+              </p>
+
+              <div class="brief-foot">
+                <div class="brief-rotation">
+                  <span><strong style="color:var(--c-text2)">Insight 1 of 3</strong></span>
+                  <div class="brief-dots">
+                    <div class="brief-dot active"></div>
+                    <div class="brief-dot"></div>
+                    <div class="brief-dot"></div>
+                  </div>
+                </div>
+                <div class="brief-drag-hint">
+                  <span class="brief-drag-hint__icon">⋮</span>
+                  <span>Drag any point to test what-if</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="actions-card">
+            <div class="actions-head">
+              <span class="actions-head__title">What to do next</span>
+              <span class="actions-head__count">6 · ranked by impact</span>
+            </div>
+            <div class="actions-list">
+              <div class="action-row expanded">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--high">High priority</span>
+                  <span class="action-row__title">Start pension drawdown</span>
+                  <span class="action-row__impact">+34 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why"><span class="fig">£340K</span> cost of inaction. You have <span class="fig">328 days</span> to act before your SIPP enters estate from April 2027.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--med">High</span><span class="action-row__title">Arrange life insurance in trust</span><span class="action-row__impact">+8 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">No life cover in place. Estate of <span class="fig">£3.63m</span> has no protection against early death.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Consider pension consolidation</span><span class="action-row__impact">+3 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why"><span class="fig">3 pensions</span> detected. Consolidating reduces charges and simplifies nominations.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Use £20K ISA allowance</span><span class="action-row__impact">+2 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">Move from taxable cash into ISA wrapper before <span class="fig">5 April</span>. Saves ~<span class="fig">£900/yr</span> tax.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Use £3K CGT allowance</span><span class="action-row__impact">+1 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">Bed-and-ISA your commodity gains. Crystallises <span class="fig">£1,820</span> tax-free this year.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Write a basic will</span><span class="action-row__impact">Estate +18</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">No will on file. Intestacy rules may not match your wishes.</p><button class="action-cta">Show me how</button></div>
+              </div>
+
+            </div>
+
+            <!-- WHAT-IF SECTION -->
+            <div class="whatif-section">
+              <div class="whatif-head">
+                <span class="whatif-head__title">What if?</span>
+                <span class="whatif-head__hint">Explore · not advice</span>
+              </div>
+              <div class="whatif-scenarios">
+                <div class="whatif-row">
+                  <span class="whatif-row__icon">✈</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">How much do I need to relocate?</div>
+                    <div class="whatif-row__sub">Kenya · Portugal · UAE — cost of living, tax position, residency</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--ai">Ask Sonu</span>
+                </div>
+                <div class="whatif-row">
+                  <span class="whatif-row__icon">🏡</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I moved to a bigger house?</div>
+                    <div class="whatif-row__sub">Stamp duty, mortgage impact, equity release on current home</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--ai">Ask Sonu</span>
+                </div>
+                <div class="whatif-row">
+                  <span class="whatif-row__icon">⏱</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I retired 5 years earlier?</div>
+                    <div class="whatif-row__sub">Pension drawdown at 60 → cashflow, Score, and IHT impact</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--engine">Instant</span>
+                </div>
+                <div class="whatif-row">
+                  <span class="whatif-row__icon">📉</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if my income dropped 30%?</div>
+                    <div class="whatif-row__sub">Runway, spending gaps, and months to plan adjustment</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--engine">Instant</span>
+                </div>
+                <div class="whatif-row">
+                  <span class="whatif-row__icon">🌱</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I invested my cash into ISA?</div>
+                    <div class="whatif-row__sub">Bed-and-ISA £20K — Score change, tax saving, 5-year projection</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--engine">Instant</span>
+                </div>
+              </div>
+              <div class="whatif-freeform">
+                <input class="whatif-freeform__input" placeholder="Ask your own what-if…" type="text"/>
+                <button class="whatif-freeform__btn">Ask Sonu →</button>
+              </div>
+            </div>
+
+          </article>
+
+        </div>
+
+        <div class="plan-strip">
+          <div class="plan-strip__label">Plan progress</div>
+          <div class="plan-strip__body">No active plan yet. Set one in the <strong>Plan tab</strong> to see your trajectory and milestones here.</div>
+          <div class="plan-strip__cta">Set plan →</div>
+        </div>
+
+        <div class="foot">
+          <div class="foot-line foot-line--trust">Your data is private — never sold, never lent · UK-hosted · You delete, we delete</div>
+          <div class="foot-line">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="notes">
+  <h2>v2.7 — compact radar center · dedicated What-if section</h2>
+  <ol>
+    <li><strong>Radar center (FIXED)</strong> — back to r=68. Two-row layout: "Net Worth / £3.63M" (16px, white) above divider + "Wealth Score / 47 / Established" (28px, mint) below. Polygon is now fully visible again. NW is there but doesn't dominate.</li>
+    <li><strong>What-if section (NEW)</strong> — separate panel below the actions accordion, in violet register. 5 named scenarios: relocate abroad, bigger home, early retirement, income drop 30%, ISA reallocation. Each has icon + title + one-line sub + tag ("Instant" for engine-route, "Ask Sonu" for AI-route). Free-form input field with Ask Sonu CTA at the bottom.</li>
+    <li><strong>Actions list unchanged</strong> — still 6 items ranked by impact. Kenya row removed from actions (it now lives in the What-if section as "How much do I need to relocate?").</li>
+    <li><strong>All v2.5/v2.6 content retained</strong> — sparklines, CoI countdown, avatar, radar legend, mode pills, plan strip, trust footer.</li>
+  </ol>
+  <p style="margin-top:14px"><strong>Design intent:</strong> two distinct right-panel registers — "What to do next" (engine-ranked, deterministic) and "What if?" (exploratory, conversational). The violet color and dashed free-form border signal "this is a different mode of thinking."</p>
+</section>
+
+<script>
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector('.viewport').setAttribute('data-mode', btn.dataset.modeSet);
+  });
+});
+document.querySelectorAll('.action-row').forEach(row => {
+  row.addEventListener('click', () => {
+    const wasExpanded = row.classList.contains('expanded');
+    document.querySelectorAll('.action-row').forEach(r => r.classList.remove('expanded'));
+    if (!wasExpanded) row.classList.add('expanded');
+  });
+});
+document.querySelectorAll('.brief-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    document.querySelectorAll('.brief-dot').forEach(d => d.classList.remove('active'));
+    dot.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>

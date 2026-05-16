@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sonuswealth — Radar card theme probe 01</title>
+<style>
+/* ===================================================================
+   THEME PROBE 01 — Radar card
+   Demonstrates:
+   - Two registers (calm frame, sharp numbers)
+   - Three-register number system (ordinary / answer / diff)
+   - viewMode quieter register for non-Today (Today vs Future side-by-side)
+   - Bounded glass: appears ONLY behind radar polygon, nowhere else
+   - Dim identity colors on nodes (locked, non-theme-aware)
+   - Aggregate polygon is theme-aware (teal-dark / indigo-light)
+   - Inter 14px floor; ladder 600/700/800; tabular-nums on numbers
+   - Mode pill backup at card corner
+   - Drag-handle affordance on each node
+   =================================================================== */
+
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+:root {
+  /* Spacing rhythm (locked, no intermediates) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 28px;
+  --space-3xl: 40px;
+
+  /* Radii (locked) */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* Type scale (probe-revised) */
+  --fs-label: 11px;
+  --fs-small: 13px;
+  --fs-body: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-hero: 28px;
+  --fs-hero-lg: 44px;     /* bumped from 36px per Round-2 lock */
+
+  /* Motion */
+  --dur-fast: 200ms;
+  --dur-emphasized: 600ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Dim identity colors (LOCKED, non-theme-aware) */
+  --d-behaviour: #4d8eff;
+  --d-capital:   #00e5a8;
+  --d-tax:       #ffb347;
+  --d-protection:#ff6b6b;
+  --d-cashflow:  #34c759;
+  --d-debt:      #af52de;
+  --d-estate:    #ff9500;
+}
+
+/* -------------------------------------------------------------------
+   DARK theme — Mathematical Resonance (consumer-mobile-bedside primary)
+   ------------------------------------------------------------------- */
+.theme-dark {
+  --c-bg:        #051424;
+  --c-bg2:       #0c1119;
+  --c-surface:   #122131;
+  --c-surface2:  #1a2a3d;
+  --c-surface3:  #273647;
+
+  --c-text:      #d4e4fa;
+  --c-text2:     #a9b5c8;
+  --c-text3:     #8793a7;
+  --c-text-projected: #8b9bb3;    /* ~20% desaturated from --c-text */
+
+  --c-acc:       #5ddbc2;          /* Mathematical Teal — answer accent */
+  --c-acc-soft:  rgba(93, 219, 194, 0.18);
+  --c-acc-line:  rgba(93, 219, 194, 0.34);
+  --c-acc3:      #ff6f7d;          /* coral — risk only */
+  --c-gold:      #ffbd59;          /* diff ONLY */
+
+  --c-hairline:  rgba(255, 255, 255, 0.06);
+  --c-hairline-strong: rgba(255, 255, 255, 0.12);
+
+  /* Card surface */
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.32);
+
+  /* Radar tokens (theme-aware aggregate polygon) */
+  --c-radar-fill:   rgba(93, 219, 194, 0.16);
+  --c-radar-fill-projected: rgba(93, 219, 194, 0.07);
+  --c-radar-stroke: rgba(93, 219, 194, 0.85);
+  --c-radar-stroke-projected: rgba(93, 219, 194, 0.40);
+  --c-radar-glow:   rgba(93, 219, 194, 0.35);
+  --c-radar-ring:   rgba(255, 255, 255, 0.06);
+  --c-radar-axis:   rgba(255, 255, 255, 0.10);
+  --c-radar-node-bg: #1a2a3d;
+
+  /* Bounded glass — radar backdrop only */
+  --c-glass-tint:   rgba(93, 219, 194, 0.04);
+  --c-glass-edge:   rgba(255, 255, 255, 0.08);
+}
+
+/* -------------------------------------------------------------------
+   LIGHT theme — Digital Sterling (IFA-laptop-office primary)
+   ------------------------------------------------------------------- */
+.theme-light {
+  --c-bg:        #faf9fc;
+  --c-bg2:       #f3f1f7;
+  --c-surface:   #ffffff;
+  --c-surface2:  #fbfaff;
+  --c-surface3:  #f5f3fa;
+
+  --c-text:      #1a1c1e;
+  --c-text2:     #4a4f57;
+  --c-text3:     #7c828c;
+  --c-text-projected: #8b909a;
+
+  --c-acc:       #1c3fe7;          /* Action Indigo — answer accent + success */
+  --c-acc-soft:  rgba(28, 63, 231, 0.10);
+  --c-acc-line:  rgba(28, 63, 231, 0.28);
+  --c-acc3:      #ba1a1a;          /* deep red — risk only */
+  --c-gold:      #b96d00;          /* dim gold — diff ONLY */
+
+  --c-hairline:  rgba(0, 0, 0, 0.06);
+  --c-hairline-strong: rgba(0, 0, 0, 0.12);
+
+  --grad-card: linear-gradient(180deg, #ffffff, #fbfaff);
+  --shadow-sm: 0 1px 2px rgba(10, 20, 36, 0.05);
+  --shadow-md: 0 2px 7px rgba(10, 20, 36, 0.07);
+  --shadow-lg: 0 24px 60px rgba(10, 20, 36, 0.13);
+
+  --c-radar-fill:   rgba(28, 63, 231, 0.10);
+  --c-radar-fill-projected: rgba(28, 63, 231, 0.04);
+  --c-radar-stroke: rgba(28, 63, 231, 0.85);
+  --c-radar-stroke-projected: rgba(28, 63, 231, 0.40);
+  --c-radar-glow:   rgba(28, 63, 231, 0.25);
+  --c-radar-ring:   rgba(0, 0, 0, 0.06);
+  --c-radar-axis:   rgba(0, 0, 0, 0.08);
+  --c-radar-node-bg: #ffffff;
+
+  --c-glass-tint:   rgba(28, 63, 231, 0.03);
+  --c-glass-edge:   rgba(0, 0, 0, 0.05);
+}
+
+/* -------------------------------------------------------------------
+   Page chrome (probe-only — not part of the design system)
+   ------------------------------------------------------------------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter var', 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  background: #1a1d24;
+  color: #d4d7de;
+  padding: var(--space-3xl) var(--space-xl);
+}
+
+.probe-header {
+  max-width: 1280px;
+  margin: 0 auto var(--space-2xl);
+  font-size: var(--fs-small);
+}
+
+.probe-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin: 0 0 var(--space-sm);
+  color: #fff;
+}
+
+.probe-header p {
+  margin: 0 0 var(--space-xs);
+  line-height: 1.5;
+  color: #a9b1bd;
+}
+
+.probe-header kbd {
+  font-family: 'Inter var', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  background: #2a2f3a;
+  border: 1px solid #3a4150;
+  border-radius: 4px;
+  color: #d4d7de;
+}
+
+.theme-band {
+  max-width: 1280px;
+  margin: 0 auto var(--space-3xl);
+  background: var(--c-bg);
+  border-radius: var(--r-lg);
+  padding: var(--space-2xl);
+  color: var(--c-text);
+  border: 1px solid var(--c-hairline);
+}
+
+.theme-band__title {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--c-text3);
+  margin: 0 0 var(--space-md);
+}
+
+.theme-band__subtitle {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--c-text2);
+  margin: 0 0 var(--space-2xl);
+  line-height: 1.55;
+}
+
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+}
+
+@media (max-width: 880px) {
+  .card-row { grid-template-columns: 1fr; }
+}
+
+/* -------------------------------------------------------------------
+   THE RADAR CARD — this is the actual design surface being probed
+   ------------------------------------------------------------------- */
+.sw-card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.sw-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.sw-card__eyebrow {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--c-text3);
+  margin: 0 0 var(--space-xs);
+}
+
+.sw-card__title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--c-text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Mode pill — backup signal when viewMode != Today */
+.sw-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc-soft);
+  border: 1px solid var(--c-acc-line);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--c-acc);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sw-mode-pill::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sw-mode-pill--today {
+  background: transparent;
+  border-color: var(--c-hairline-strong);
+  color: var(--c-text3);
+}
+
+.sw-mode-pill--today::before { background: var(--c-text3); }
+
+/* Anchors row — three-register numbers */
+.sw-anchors {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--c-hairline);
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: var(--space-lg);
+}
+
+.sw-anchor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sw-anchor__label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text3);
+}
+
+.sw-anchor__value {
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);             /* ordinary register */
+}
+
+/* THREE-REGISTER NUMBERS in action */
+.sw-anchor__value--answer {
+  color: var(--c-acc);              /* answer register — THE number this card answers */
+}
+
+.sw-anchor__value--diff {
+  color: var(--c-gold);             /* diff register — change since last view */
+  font-weight: 700;
+}
+
+.sw-anchor__delta {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--c-gold);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+/* PROJECTED REGISTER (Future / Plan / What-if) — quieter */
+.is-projected .sw-anchor__value {
+  color: var(--c-text-projected);
+  font-weight: 700;                 /* drop from 800 */
+}
+
+.is-projected .sw-anchor__value--answer {
+  color: var(--c-acc);
+  opacity: 0.70;                    /* answer accent kept, but quieted */
+}
+
+/* -------------------------------------------------------------------
+   RADAR — the polygon itself with bounded glass backdrop
+   ------------------------------------------------------------------- */
+.sw-radar-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+/* BOUNDED GLASS — the ONE place glass appears */
+.sw-radar-glass {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--c-glass-tint),
+    transparent 70%
+  );
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--c-glass-edge);
+  pointer-events: none;
+}
+
+.sw-radar-svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sw-radar__ring,
+.sw-radar__axis {
+  fill: none;
+  stroke: var(--c-radar-axis);
+  stroke-width: 1;
+}
+
+.sw-radar__ring--outer { stroke: var(--c-radar-ring); }
+
+.sw-radar__label {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--c-text3);
+  letter-spacing: 0.4px;
+}
+
+.sw-radar__polygon {
+  fill: var(--c-radar-fill);
+  stroke: var(--c-radar-stroke);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px var(--c-radar-glow));
+  transition: all var(--dur-emphasized) var(--ease-out-expo);
+}
+
+.is-projected .sw-radar__polygon {
+  fill: var(--c-radar-fill-projected);
+  stroke: var(--c-radar-stroke-projected);
+  stroke-dasharray: 4 4;
+  filter: none;
+}
+
+.sw-radar__node {
+  fill: var(--c-radar-node-bg);
+  stroke-width: 2;
+}
+
+.sw-radar__node-inner {
+  /* solid dot using dim identity color */
+}
+
+/* Drag-handle affordance — visible cue that node is interactive */
+.sw-radar__handle {
+  fill: none;
+  stroke: var(--c-text3);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.5;
+}
+
+/* Center cap — Wealth Score */
+.sw-radar__center {
+  fill: var(--c-radar-node-bg);
+  stroke: var(--c-hairline-strong);
+  stroke-width: 1;
+}
+
+.sw-radar__score {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  fill: var(--c-acc);
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.is-projected .sw-radar__score {
+  opacity: 0.70;
+}
+
+.sw-radar__score-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  fill: var(--c-text3);
+  text-anchor: middle;
+}
+
+/* -------------------------------------------------------------------
+   Footer row — call-out chips
+   ------------------------------------------------------------------- */
+.sw-card__foot {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--c-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.sw-callout {
+  font-size: var(--fs-small);
+  color: var(--c-text2);
+  line-height: 1.45;
+}
+
+.sw-callout strong {
+  color: var(--c-text);
+  font-weight: 700;
+}
+
+.sw-callout em {
+  font-style: normal;
+  color: var(--c-acc);
+  font-weight: 700;
+}
+
+.sw-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc-soft);
+  color: var(--c-acc);
+  border: 1px solid var(--c-acc-line);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--dur-fast) var(--ease-out-expo),
+              background var(--dur-fast) ease-out;
+}
+
+.sw-action:hover {
+  transform: translateY(-1px);
+  background: var(--c-acc-line);
+}
+
+/* -------------------------------------------------------------------
+   Annotation overlay (probe-only — not in production)
+   ------------------------------------------------------------------- */
+.probe-notes {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+  font-size: var(--fs-small);
+  color: #a9b1bd;
+}
+
+.probe-note {
+  background: #1a1d24;
+  border: 1px solid #2a2f3a;
+  border-radius: var(--r-md);
+  padding: var(--space-md);
+  line-height: 1.5;
+}
+
+.probe-note h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+
+.probe-note code {
+  font-size: 12px;
+  background: #2a2f3a;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+
+@media (max-width: 720px) {
+  .probe-notes { grid-template-columns: 1fr; }
+  body { padding: var(--space-lg) var(--space-md); }
+}
+</style>
+</head>
+<body>
+
+<header class="probe-header">
+  <h1>Theme probe 01 — Radar card</h1>
+  <p><strong>What to evaluate:</strong> Does the theme make the "calm frame, sharp numbers" contract land? Does the Future card feel projected rather than asserted? Does glass earn its place behind the polygon without harming legibility?</p>
+  <p style="color:#7c828c">Two themes side-by-side. Within each theme, Today (left) and Future&nbsp;·&nbsp;2031 (right). Resize the window to test responsive collapse.</p>
+</header>
+
+<!-- ============================================================
+     DARK — Mathematical Resonance
+     ============================================================ -->
+<section class="theme-band theme-dark">
+  <p class="theme-band__title">Mathematical Resonance · dark · consumer-mobile-bedside</p>
+  <p class="theme-band__subtitle">Deep navy ground · Mathematical-teal answer accent · coral risk · gold reserved for diff.</p>
+
+  <div class="card-row">
+
+    <!-- TODAY card -->
+    <article class="sw-card">
+      <header class="sw-card__head">
+        <div>
+          <p class="sw-card__eyebrow">Your wealth picture</p>
+          <h2 class="sw-card__title">Dima · age 32 · saving for first home</h2>
+        </div>
+        <span class="sw-mode-pill sw-mode-pill--today">Today</span>
+      </header>
+
+      <div class="sw-anchors">
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Net worth</span>
+          <span class="sw-anchor__value">£487K</span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Wealth Score</span>
+          <span class="sw-anchor__value sw-anchor__value--answer">60<span style="font-size:18px;font-weight:600;opacity:.6">/100</span></span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Risk</span>
+          <span class="sw-anchor__value" style="font-size:24px">4.2<span style="font-size:14px;font-weight:600;opacity:.6">/7</span></span>
+          <span class="sw-anchor__delta">+£8.2K · 7d</span>
+        </div>
+      </div>
+
+      <div class="sw-radar-wrap">
+        <div class="sw-radar-glass"></div>
+        <svg class="sw-radar-svg" viewBox="0 0 340 340" aria-hidden="true">
+          <!-- rings -->
+          <circle class="sw-radar__ring" cx="170" cy="170" r="40"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="80"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="120"></circle>
+          <circle class="sw-radar__ring sw-radar__ring--outer" cx="170" cy="170" r="140"></circle>
+
+          <!-- axes (7) -->
+          <line class="sw-radar__axis" x1="170" y1="170" x2="170" y2="30"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="306.7" y2="100.5"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="304.2" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="200.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="139.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="35.8" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="33.3" y2="100.5"></line>
+
+          <!-- polygon (today: behaviour=70%, capital=61%, tax=56%, protection=50%, cashflow=75%, debt=64%, estate=50%) -->
+          <!-- radii: 98, 85.4, 78.4, 70, 105, 89.6, 70 -->
+          <polygon class="sw-radar__polygon" points="
+            170,72
+            253.4,127.1
+            246.5,212.5
+            217.4,261.1
+            123.6,262.4
+            83.6,219.6
+            104.9,118.4
+          "/>
+
+          <!-- dim labels -->
+          <text class="sw-radar__label" x="170" y="20" text-anchor="middle">Habits</text>
+          <text class="sw-radar__label" x="322" y="98" text-anchor="middle">Own</text>
+          <text class="sw-radar__label" x="320" y="241" text-anchor="middle">Tax</text>
+          <text class="sw-radar__label" x="200" y="325" text-anchor="middle">Safety</text>
+          <text class="sw-radar__label" x="140" y="325" text-anchor="middle">Flow</text>
+          <text class="sw-radar__label" x="20" y="241" text-anchor="middle">Debt</text>
+          <text class="sw-radar__label" x="22" y="98" text-anchor="middle">Legacy</text>
+
+          <!-- nodes with dim identity colors + drag handle hint -->
+          <g>
+            <circle class="sw-radar__handle" cx="170" cy="72" r="11"></circle>
+            <circle class="sw-radar__node" cx="170" cy="72" r="6" style="stroke:#4d8eff"></circle>
+            <circle cx="170" cy="72" r="3" fill="#4d8eff"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="253.4" cy="127.1" r="11"></circle>
+            <circle class="sw-radar__node" cx="253.4" cy="127.1" r="6" style="stroke:#00e5a8"></circle>
+            <circle cx="253.4" cy="127.1" r="3" fill="#00e5a8"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="246.5" cy="212.5" r="11"></circle>
+            <circle class="sw-radar__node" cx="246.5" cy="212.5" r="6" style="stroke:#ffb347"></circle>
+            <circle cx="246.5" cy="212.5" r="3" fill="#ffb347"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="217.4" cy="261.1" r="11"></circle>
+            <circle class="sw-radar__node" cx="217.4" cy="261.1" r="6" style="stroke:#ff6b6b"></circle>
+            <circle cx="217.4" cy="261.1" r="3" fill="#ff6b6b"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="123.6" cy="262.4" r="11"></circle>
+            <circle class="sw-radar__node" cx="123.6" cy="262.4" r="6" style="stroke:#34c759"></circle>
+            <circle cx="123.6" cy="262.4" r="3" fill="#34c759"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="83.6" cy="219.6" r="11"></circle>
+            <circle class="sw-radar__node" cx="83.6" cy="219.6" r="6" style="stroke:#af52de"></circle>
+            <circle cx="83.6" cy="219.6" r="3" fill="#af52de"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="104.9" cy="118.4" r="11"></circle>
+            <circle class="sw-radar__node" cx="104.9" cy="118.4" r="6" style="stroke:#ff9500"></circle>
+            <circle cx="104.9" cy="118.4" r="3" fill="#ff9500"></circle>
+          </g>
+
+          <!-- center cap -->
+          <circle class="sw-radar__center" cx="170" cy="170" r="32"></circle>
+          <text class="sw-radar__score" x="170" y="166">60</text>
+          <text class="sw-radar__score-label" x="170" y="186">Score</text>
+        </svg>
+      </div>
+
+      <footer class="sw-card__foot">
+        <p class="sw-callout"><strong>Safety net</strong> is your lowest dim today. <em>One protection review</em> would lift this 6 points.</p>
+        <button class="sw-action">Drill →</button>
+      </footer>
+    </article>
+
+    <!-- FUTURE card (projected) -->
+    <article class="sw-card is-projected">
+      <header class="sw-card__head">
+        <div>
+          <p class="sw-card__eyebrow">Your wealth picture</p>
+          <h2 class="sw-card__title">If you keep doing what you're doing</h2>
+        </div>
+        <span class="sw-mode-pill">Future · 2031</span>
+      </header>
+
+      <div class="sw-anchors">
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Net worth</span>
+          <span class="sw-anchor__value">£612K</span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Wealth Score</span>
+          <span class="sw-anchor__value sw-anchor__value--answer">75<span style="font-size:18px;font-weight:600;opacity:.6">/100</span></span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Risk</span>
+          <span class="sw-anchor__value" style="font-size:24px">3.4<span style="font-size:14px;font-weight:600;opacity:.6">/7</span></span>
+        </div>
+      </div>
+
+      <div class="sw-radar-wrap">
+        <div class="sw-radar-glass"></div>
+        <svg class="sw-radar-svg" viewBox="0 0 340 340" aria-hidden="true">
+          <circle class="sw-radar__ring" cx="170" cy="170" r="40"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="80"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="120"></circle>
+          <circle class="sw-radar__ring sw-radar__ring--outer" cx="170" cy="170" r="140"></circle>
+
+          <line class="sw-radar__axis" x1="170" y1="170" x2="170" y2="30"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="306.7" y2="100.5"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="304.2" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="200.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="139.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="35.8" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="33.3" y2="100.5"></line>
+
+          <!-- Future polygon: behaviour=80%, capital=78%, tax=72%, protection=75%, cashflow=81%, debt=86%, estate=64% -->
+          <polygon class="sw-radar__polygon" points="
+            170,58
+            279.4,114.3
+            268.6,200.8
+            240.5,272.5
+            100.5,272.5
+            53.7,209.7
+            81.0,109.4
+          "/>
+
+          <text class="sw-radar__label" x="170" y="20" text-anchor="middle">Habits</text>
+          <text class="sw-radar__label" x="322" y="98" text-anchor="middle">Own</text>
+          <text class="sw-radar__label" x="320" y="241" text-anchor="middle">Tax</text>
+          <text class="sw-radar__label" x="200" y="325" text-anchor="middle">Safety</text>
+          <text class="sw-radar__label" x="140" y="325" text-anchor="middle">Flow</text>
+          <text class="sw-radar__label" x="20" y="241" text-anchor="middle">Debt</text>
+          <text class="sw-radar__label" x="22" y="98" text-anchor="middle">Legacy</text>
+
+          <!-- nodes (projected — lower opacity but identity color preserved) -->
+          <g opacity="0.55">
+            <circle class="sw-radar__node" cx="170" cy="58" r="6" style="stroke:#4d8eff"></circle>
+            <circle cx="170" cy="58" r="3" fill="#4d8eff"></circle>
+            <circle class="sw-radar__node" cx="279.4" cy="114.3" r="6" style="stroke:#00e5a8"></circle>
+            <circle cx="279.4" cy="114.3" r="3" fill="#00e5a8"></circle>
+            <circle class="sw-radar__node" cx="268.6" cy="200.8" r="6" style="stroke:#ffb347"></circle>
+            <circle cx="268.6" cy="200.8" r="3" fill="#ffb347"></circle>
+            <circle class="sw-radar__node" cx="240.5" cy="272.5" r="6" style="stroke:#ff6b6b"></circle>
+            <circle cx="240.5" cy="272.5" r="3" fill="#ff6b6b"></circle>
+            <circle class="sw-radar__node" cx="100.5" cy="272.5" r="6" style="stroke:#34c759"></circle>
+            <circle cx="100.5" cy="272.5" r="3" fill="#34c759"></circle>
+            <circle class="sw-radar__node" cx="53.7" cy="209.7" r="6" style="stroke:#af52de"></circle>
+            <circle cx="53.7" cy="209.7" r="3" fill="#af52de"></circle>
+            <circle class="sw-radar__node" cx="81.0" cy="109.4" r="6" style="stroke:#ff9500"></circle>
+            <circle cx="81.0" cy="109.4" r="3" fill="#ff9500"></circle>
+          </g>
+
+          <circle class="sw-radar__center" cx="170" cy="170" r="32"></circle>
+          <text class="sw-radar__score" x="170" y="166">75</text>
+          <text class="sw-radar__score-label" x="170" y="186">Score</text>
+        </svg>
+      </div>
+
+      <footer class="sw-card__foot">
+        <p class="sw-callout">By <strong>2031</strong>, every dim crosses 60%. Biggest lift: <em>Safety net</em> (+25 pts on current trajectory).</p>
+        <button class="sw-action">See plan →</button>
+      </footer>
+    </article>
+  </div>
+</section>
+
+<!-- ============================================================
+     LIGHT — Digital Sterling
+     ============================================================ -->
+<section class="theme-band theme-light">
+  <p class="theme-band__title">Digital Sterling · light · IFA-laptop-office</p>
+  <p class="theme-band__subtitle">Warm off-white · Action Indigo answer accent + success · deep red risk · dim gold for diff. No green.</p>
+
+  <div class="card-row">
+
+    <!-- TODAY card -->
+    <article class="sw-card">
+      <header class="sw-card__head">
+        <div>
+          <p class="sw-card__eyebrow">Your wealth picture</p>
+          <h2 class="sw-card__title">Dima · age 32 · saving for first home</h2>
+        </div>
+        <span class="sw-mode-pill sw-mode-pill--today">Today</span>
+      </header>
+
+      <div class="sw-anchors">
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Net worth</span>
+          <span class="sw-anchor__value">£487K</span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Wealth Score</span>
+          <span class="sw-anchor__value sw-anchor__value--answer">60<span style="font-size:18px;font-weight:600;opacity:.6">/100</span></span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Risk</span>
+          <span class="sw-anchor__value" style="font-size:24px">4.2<span style="font-size:14px;font-weight:600;opacity:.6">/7</span></span>
+          <span class="sw-anchor__delta">+£8.2K · 7d</span>
+        </div>
+      </div>
+
+      <div class="sw-radar-wrap">
+        <div class="sw-radar-glass"></div>
+        <svg class="sw-radar-svg" viewBox="0 0 340 340" aria-hidden="true">
+          <circle class="sw-radar__ring" cx="170" cy="170" r="40"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="80"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="120"></circle>
+          <circle class="sw-radar__ring sw-radar__ring--outer" cx="170" cy="170" r="140"></circle>
+
+          <line class="sw-radar__axis" x1="170" y1="170" x2="170" y2="30"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="306.7" y2="100.5"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="304.2" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="200.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="139.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="35.8" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="33.3" y2="100.5"></line>
+
+          <polygon class="sw-radar__polygon" points="
+            170,72
+            253.4,127.1
+            246.5,212.5
+            217.4,261.1
+            123.6,262.4
+            83.6,219.6
+            104.9,118.4
+          "/>
+
+          <text class="sw-radar__label" x="170" y="20" text-anchor="middle">Habits</text>
+          <text class="sw-radar__label" x="322" y="98" text-anchor="middle">Own</text>
+          <text class="sw-radar__label" x="320" y="241" text-anchor="middle">Tax</text>
+          <text class="sw-radar__label" x="200" y="325" text-anchor="middle">Safety</text>
+          <text class="sw-radar__label" x="140" y="325" text-anchor="middle">Flow</text>
+          <text class="sw-radar__label" x="20" y="241" text-anchor="middle">Debt</text>
+          <text class="sw-radar__label" x="22" y="98" text-anchor="middle">Legacy</text>
+
+          <g>
+            <circle class="sw-radar__handle" cx="170" cy="72" r="11"></circle>
+            <circle class="sw-radar__node" cx="170" cy="72" r="6" style="stroke:#4d8eff"></circle>
+            <circle cx="170" cy="72" r="3" fill="#4d8eff"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="253.4" cy="127.1" r="11"></circle>
+            <circle class="sw-radar__node" cx="253.4" cy="127.1" r="6" style="stroke:#00e5a8"></circle>
+            <circle cx="253.4" cy="127.1" r="3" fill="#00e5a8"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="246.5" cy="212.5" r="11"></circle>
+            <circle class="sw-radar__node" cx="246.5" cy="212.5" r="6" style="stroke:#ffb347"></circle>
+            <circle cx="246.5" cy="212.5" r="3" fill="#ffb347"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="217.4" cy="261.1" r="11"></circle>
+            <circle class="sw-radar__node" cx="217.4" cy="261.1" r="6" style="stroke:#ff6b6b"></circle>
+            <circle cx="217.4" cy="261.1" r="3" fill="#ff6b6b"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="123.6" cy="262.4" r="11"></circle>
+            <circle class="sw-radar__node" cx="123.6" cy="262.4" r="6" style="stroke:#34c759"></circle>
+            <circle cx="123.6" cy="262.4" r="3" fill="#34c759"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="83.6" cy="219.6" r="11"></circle>
+            <circle class="sw-radar__node" cx="83.6" cy="219.6" r="6" style="stroke:#af52de"></circle>
+            <circle cx="83.6" cy="219.6" r="3" fill="#af52de"></circle>
+          </g>
+          <g>
+            <circle class="sw-radar__handle" cx="104.9" cy="118.4" r="11"></circle>
+            <circle class="sw-radar__node" cx="104.9" cy="118.4" r="6" style="stroke:#ff9500"></circle>
+            <circle cx="104.9" cy="118.4" r="3" fill="#ff9500"></circle>
+          </g>
+
+          <circle class="sw-radar__center" cx="170" cy="170" r="32"></circle>
+          <text class="sw-radar__score" x="170" y="166">60</text>
+          <text class="sw-radar__score-label" x="170" y="186">Score</text>
+        </svg>
+      </div>
+
+      <footer class="sw-card__foot">
+        <p class="sw-callout"><strong>Safety net</strong> is your lowest dim today. <em>One protection review</em> would lift this 6 points.</p>
+        <button class="sw-action">Drill →</button>
+      </footer>
+    </article>
+
+    <!-- FUTURE card -->
+    <article class="sw-card is-projected">
+      <header class="sw-card__head">
+        <div>
+          <p class="sw-card__eyebrow">Your wealth picture</p>
+          <h2 class="sw-card__title">If you keep doing what you're doing</h2>
+        </div>
+        <span class="sw-mode-pill">Future · 2031</span>
+      </header>
+
+      <div class="sw-anchors">
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Net worth</span>
+          <span class="sw-anchor__value">£612K</span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Wealth Score</span>
+          <span class="sw-anchor__value sw-anchor__value--answer">75<span style="font-size:18px;font-weight:600;opacity:.6">/100</span></span>
+        </div>
+        <div class="sw-anchor">
+          <span class="sw-anchor__label">Risk</span>
+          <span class="sw-anchor__value" style="font-size:24px">3.4<span style="font-size:14px;font-weight:600;opacity:.6">/7</span></span>
+        </div>
+      </div>
+
+      <div class="sw-radar-wrap">
+        <div class="sw-radar-glass"></div>
+        <svg class="sw-radar-svg" viewBox="0 0 340 340" aria-hidden="true">
+          <circle class="sw-radar__ring" cx="170" cy="170" r="40"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="80"></circle>
+          <circle class="sw-radar__ring" cx="170" cy="170" r="120"></circle>
+          <circle class="sw-radar__ring sw-radar__ring--outer" cx="170" cy="170" r="140"></circle>
+
+          <line class="sw-radar__axis" x1="170" y1="170" x2="170" y2="30"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="306.7" y2="100.5"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="304.2" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="200.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="139.5" y2="306.7"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="35.8" y2="231.1"></line>
+          <line class="sw-radar__axis" x1="170" y1="170" x2="33.3" y2="100.5"></line>
+
+          <polygon class="sw-radar__polygon" points="
+            170,58
+            279.4,114.3
+            268.6,200.8
+            240.5,272.5
+            100.5,272.5
+            53.7,209.7
+            81.0,109.4
+          "/>
+
+          <text class="sw-radar__label" x="170" y="20" text-anchor="middle">Habits</text>
+          <text class="sw-radar__label" x="322" y="98" text-anchor="middle">Own</text>
+          <text class="sw-radar__label" x="320" y="241" text-anchor="middle">Tax</text>
+          <text class="sw-radar__label" x="200" y="325" text-anchor="middle">Safety</text>
+          <text class="sw-radar__label" x="140" y="325" text-anchor="middle">Flow</text>
+          <text class="sw-radar__label" x="20" y="241" text-anchor="middle">Debt</text>
+          <text class="sw-radar__label" x="22" y="98" text-anchor="middle">Legacy</text>
+
+          <g opacity="0.55">
+            <circle class="sw-radar__node" cx="170" cy="58" r="6" style="stroke:#4d8eff"></circle>
+            <circle cx="170" cy="58" r="3" fill="#4d8eff"></circle>
+            <circle class="sw-radar__node" cx="279.4" cy="114.3" r="6" style="stroke:#00e5a8"></circle>
+            <circle cx="279.4" cy="114.3" r="3" fill="#00e5a8"></circle>
+            <circle class="sw-radar__node" cx="268.6" cy="200.8" r="6" style="stroke:#ffb347"></circle>
+            <circle cx="268.6" cy="200.8" r="3" fill="#ffb347"></circle>
+            <circle class="sw-radar__node" cx="240.5" cy="272.5" r="6" style="stroke:#ff6b6b"></circle>
+            <circle cx="240.5" cy="272.5" r="3" fill="#ff6b6b"></circle>
+            <circle class="sw-radar__node" cx="100.5" cy="272.5" r="6" style="stroke:#34c759"></circle>
+            <circle cx="100.5" cy="272.5" r="3" fill="#34c759"></circle>
+            <circle class="sw-radar__node" cx="53.7" cy="209.7" r="6" style="stroke:#af52de"></circle>
+            <circle cx="53.7" cy="209.7" r="3" fill="#af52de"></circle>
+            <circle class="sw-radar__node" cx="81.0" cy="109.4" r="6" style="stroke:#ff9500"></circle>
+            <circle cx="81.0" cy="109.4" r="3" fill="#ff9500"></circle>
+          </g>
+
+          <circle class="sw-radar__center" cx="170" cy="170" r="32"></circle>
+          <text class="sw-radar__score" x="170" y="166">75</text>
+          <text class="sw-radar__score-label" x="170" y="186">Score</text>
+        </svg>
+      </div>
+
+      <footer class="sw-card__foot">
+        <p class="sw-callout">By <strong>2031</strong>, every dim crosses 60%. Biggest lift: <em>Safety net</em> (+25 pts on current trajectory).</p>
+        <button class="sw-action">See plan →</button>
+      </footer>
+    </article>
+  </div>
+</section>
+
+<!-- ============================================================
+     Annotation notes (for founder review only — not production)
+     ============================================================ -->
+<section class="probe-notes">
+
+  <div class="probe-note">
+    <h3>1 · Three-register number system</h3>
+    <p><code>Net worth</code> = ordinary (text color). <code>Wealth Score</code> = answer (accent — teal/indigo). <code>+£8.2K · 7d</code> on Today card = diff (gold). Three discrete affordances, all on the same anchor row.</p>
+  </div>
+
+  <div class="probe-note">
+    <h3>2 · viewMode quieter register</h3>
+    <p>Future card: text drops from weight 800 → 700, color shifts to <code>--c-text-projected</code> (~20% desaturated), polygon stroke goes dashed, fill drops to 7% alpha, glow removed. Mode pill ("Future · 2031") is the backup label. Both signals together; neither alone.</p>
+  </div>
+
+  <div class="probe-note">
+    <h3>3 · Bounded glass</h3>
+    <p>Glass appears in exactly one place: the radial blur backdrop behind the polygon (<code>.sw-radar-glass</code>). Card chrome is solid gradient. Numbers sit on opaque background. No glass behind anything that needs to be read.</p>
+  </div>
+
+  <div class="probe-note">
+    <h3>4 · Dim identity vs theme</h3>
+    <p>The 7 node dots wear their locked identity colors (blue Habits, teal Own, amber Tax, red Safety, green Flow, purple Debt, orange Legacy). The aggregate polygon wears the theme accent (Mathematical Teal in dark; Action Indigo in light). Two systems, clean separation.</p>
+  </div>
+
+  <div class="probe-note">
+    <h3>5 · Drag-handle affordance</h3>
+    <p>Each node has a dashed concentric ring (<code>.sw-radar__handle</code>) — the visible cue that the dot is draggable. Today card only; on Future the dots are static (projected, not interactive).</p>
+  </div>
+
+  <div class="probe-note">
+    <h3>6 · Calm frame, sharp numbers</h3>
+    <p>Card chrome: subtle gradient + hairline border + inset highlight. Quiet. The 28–44px hero numbers and accented Wealth Score carry all the visual weight. Two registers in one card.</p>
+  </div>
+
+</section>
+
+</body>
+</html>

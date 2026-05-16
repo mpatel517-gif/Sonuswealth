@@ -1,0 +1,9 @@
+[
+  { "stage": 1, "name": "Foundation",    "range": "18–30", "colour": "#4D8EFF", "concern": "Build foundations" },
+  { "stage": 2, "name": "Accumulation",  "range": "30–45", "colour": "#00E5A8", "concern": "Grow wealth" },
+  { "stage": 3, "name": "Consolidation", "range": "45–55", "colour": "#FFB347", "concern": "Optimise tax" },
+  { "stage": 4, "name": "Transition",    "range": "55–65", "colour": "#FF8C42", "concern": "Plan retirement" },
+  { "stage": 5, "name": "Decumulation",  "range": "65–75", "colour": "#FF6B6B", "concern": "Draw efficiently" },
+  { "stage": 6, "name": "Preservation",  "range": "75–85", "colour": "#9B59B6", "concern": "Preserve estate" },
+  { "stage": 7, "name": "Legacy",        "range": "85+",   "colour": "#7F8C8D", "concern": "Transfer wealth" }
+]

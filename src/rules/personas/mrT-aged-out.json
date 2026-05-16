@@ -1,0 +1,211 @@
+{
+  "fixture_id": "mrT-aged-out",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "Single UK adult at Foundation life stage, age 18 exactly at fixture date. Exercises JISA-to-adult-ISA auto-conversion on 18th birthday, parent-account data inheritance with consent-to-link, LISA eligibility gate (not yet opened), auto-enrolment threshold boundary (earnings below £10k trigger), and Finio Score confidence-low path from sparse data set. No pension, no property, no protection. Tests engine handling of minimal-data entity and data-inheritance verification flow.",
+  "fixture_anchor_archetype": "19",
+  "archetypes_exercised": ["19"],
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-aged-out-primary",
+    "name": "Mr T Aged Out",
+    "dob": "2008-04-23",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "employed-part-time",
+    "employer": "Synthetic Retail Ltd",
+    "gross_salary": 8400,
+    "income_band": "no-tax",
+    "ni_class_1_applicable": false,
+    "ni_class_1_reason": "Earnings £8,400 below Class 1 primary threshold £12,570",
+    "auto_enrolment_eligible": false,
+    "auto_enrolment_reason": "Earnings £8,400 below £10,000 auto-enrolment trigger threshold; employer not obligated to enrol",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 0,
+    "life_stage": "foundation",
+    "age_at_fixture_date": 18,
+    "parental_account_link": "mrT-aged-out-parent",
+    "consent_to_link_status": "active",
+    "data_inheritance_pending": true
+  },
+
+  "parent_entity": {
+    "id": "mrT-aged-out-parent",
+    "name": "Parent T",
+    "relationship_to_individual": "parent",
+    "consent_granted_date": "2026-04-01",
+    "consent_scope": "data-transfer-on-18th-birthday",
+    "data_items_inherited": ["jisa-legacy", "savings-contribution-history"],
+    "inherited_items_verification_status": "pending-user-confirmation",
+    "consent_expiry": null
+  },
+
+  "relationships": [],
+
+  "assets": {
+    "pensions": [],
+
+    "investments": [
+      {
+        "id": "isa-converted-from-jisa",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Hargreaves Lansdown",
+        "balance": 8500,
+        "contribution_current_tax_year": 0,
+        "isa_annual_limit": 20000,
+        "conversion_event": "jisa-to-isa-on-18th-birthday",
+        "conversion_date": "2026-04-23",
+        "original_jisa_id": "jisa-legacy",
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.0045,
+        "last_valuation_date": "2026-04-23",
+        "verified_by_user": false,
+        "null_reason": "FP-5 coverage: balance inherited from parent account; user has not independently confirmed post-conversion statement; engine holds at parent-verified value pending first user confirmation"
+      }
+    ],
+
+    "property": [],
+
+    "bank": [
+      {
+        "id": "current-1",
+        "type": "current-account",
+        "provider": "Monzo",
+        "balance": 420,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "savings-inherited",
+        "type": "savings",
+        "provider": "Nationwide",
+        "balance": 1200,
+        "interest_rate": 0.035,
+        "last_valuation_date": "2026-04-10",
+        "verified_by_user": false,
+        "null_reason": "FP-5 coverage: savings account opened in parent name for child; transfer to individual in progress; engine excludes from net worth until transfer confirmed and user verifies"
+      }
+    ],
+
+    "other": []
+  },
+
+  "liabilities": [],
+
+  "protection": [],
+
+  "gifts_and_trusts": [],
+
+  "events": [
+    {"date": "2008-04-23", "type": "birth"},
+    {"date": "2009-09-01", "type": "jisa-opened", "asset_id": "jisa-legacy", "opened_by": "mrT-aged-out-parent", "initial_balance": 500},
+    {"date": "2024-09-01", "type": "first-employment-start", "employer": "Synthetic Retail Ltd", "gross_salary_annual": 8400, "employment_type": "part-time"},
+    {"date": "2026-04-01", "type": "parent-consent-granted", "consent_scope": "data-transfer-on-18th-birthday", "parent_ref": "mrT-aged-out-parent"},
+    {"date": "2026-04-23", "type": "age-18-birthday", "engine_actions": ["jisa-auto-convert", "lisa-eligibility-opens", "auto-enrolment-threshold-check", "data-inheritance-trigger", "full-account-access-granted"]},
+    {"date": "2026-04-23", "type": "jisa-to-isa-conversion", "asset_id": "isa-converted-from-jisa", "balance_at_conversion": 8500, "annual_limit_becomes": 20000, "verified_by_user": false}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "individual.gross_salary", "expected_behaviour": "income unstable at foundation stage; cashflow dimension uses range projection — conservative = current £8,400, optimistic = median first-job full-time salary £24,000; Finio Score confidence forced to low"},
+      {"location": "assets.pensions", "expected_behaviour": "no pension; engine generates pension-gap APQ item; state pension accrual = 0 years; timeline projection shows accumulation from zero if contributions started now"},
+      {"location": "protection", "expected_behaviour": "no protection; protection dimension score = low; APQ item: 'no life or income protection — consider income protection first'; engine does not penalise heavily at Foundation stage"},
+      {"location": "expected_output_envelope.finio_score", "expected_behaviour": "sparse data set (< 3 asset categories populated, no protection, no pension); engine forces overall confidence = low; score bands have wide ranges"}
+    ],
+    "fp5": [
+      {"location": "assets.investments[0].verified_by_user", "expected_behaviour": "JISA/ISA balance inherited from parent account; engine uses parent-verified value as read-only anchor; APQ item generated: 'Confirm ISA balance post-conversion'; score shows amber confidence on capital dimension"},
+      {"location": "assets.bank[1].verified_by_user", "expected_behaviour": "savings account in parent name; engine excludes entirely from net worth until transfer confirmed and user provides first statement; APQ: 'Complete savings account transfer from parent'"}
+    ]
+  },
+
+  "archetype_specific": {
+    "parent_account_link": "mrT-aged-out-parent",
+    "consent_status": "active",
+    "data_inheritance_pending": true,
+    "lisa_eligibility": true,
+    "lisa_opened": false,
+    "lisa_apq_note": "LISA not opened; window open from today; APQ: open LISA before 40 for first-home or retirement; annual bonus 25% on up to £4,000 = max £1,000/yr government bonus being left unclaimed",
+    "auto_enrolment_state": {
+      "eligible": false,
+      "earnings_gbp": 8400,
+      "trigger_threshold_gbp": 10000,
+      "status": "not-yet-eligible",
+      "engine_note": "Monitor: if salary increases above £10,000, auto-enrolment triggered; APQ to fire on income update"
+    },
+    "jisa_conversion_state": {
+      "converted": true,
+      "conversion_date": "2026-04-23",
+      "balance_at_conversion": 8500,
+      "new_annual_limit": 20000,
+      "contribution_headroom_remaining_this_tax_year": 20000
+    },
+    "state_pension_trajectory": {
+      "accrued_years": 0,
+      "years_to_full_pension": 35,
+      "full_pension_annual": 11502,
+      "projected_start_age": 67,
+      "note": "No qualifying years yet; NI contributions not triggered at current salary"
+    },
+    "data_sparsity_level": "high",
+    "data_sparsity_reason": "Foundation life stage with inherited-unverified assets; no pension; no protection; one income source below threshold"
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [18, 35],
+      "confidence": "low",
+      "confidence_reason": "Sparse data: fewer than 3 verified asset categories; no pension; no protection; employment income below NI/AE threshold; two inherited-unverified assets",
+      "dimensions": {
+        "behaviour": {"range": [25, 40], "confidence": "low", "note": "Partial data; no saving patterns yet established"},
+        "capital": {"range": [10, 25], "confidence": "low", "note": "ISA unverified; savings excluded; very low verified capital base"},
+        "tax": {"range": [65, 80], "confidence": "medium", "note": "Clean: no tax liability, no complexity at this income level"},
+        "protection": {"range": [0, 5], "confidence": "high", "note": "No protection in place; appropriate floor score for Foundation stage"},
+        "cashflow": {"range": [15, 35], "confidence": "low", "note": "Income unstable; below AE threshold; wide range"},
+        "debt": {"range": [90, 100], "confidence": "high", "note": "No debt; clean slate — maximum score for debt dimension"},
+        "estate": {"range": [35, 50], "confidence": "medium", "note": "No IHT concern; LISA not opened is sole gap at this stage"}
+      }
+    },
+    "risk_score": {
+      "value_range": [15, 35],
+      "confidence": "low",
+      "confidence_reason": "Foundation stage; minimal data; no protection; income below thresholds — all risk dimensions sparse"
+    },
+    "net_worth": {
+      "value_range": [8000, 10500],
+      "confidence": "low",
+      "staleness_flags": [],
+      "excluded_assets": ["savings-inherited"],
+      "excluded_asset_reasons": {"savings-inherited": "transfer from parent not yet confirmed; excluded until verified and transferred"},
+      "note": "Includes ISA (unverified at £8,500 pending user confirmation) + current account £420 only"
+    },
+    "iht_projection": {
+      "value_range": [0, 0],
+      "confidence": "high",
+      "explanation": "Estate far below NRB £325k; no IHT concern at Foundation stage"
+    },
+    "cost_of_inaction": {
+      "value_range": [0, 3500],
+      "confidence": "medium",
+      "explanation": "Primary driver: LISA not opened — each year of delay costs up to £1,000 government bonus (25% on £4,000 max). Secondary: pension contributions not started — compound growth opportunity, especially significant at age 18."
+    },
+    "financial_profile_cell": "I-A",
+    "archetype_classification": "19 uk-aged-out-foundation",
+    "apq_items_expected": [
+      "lisa-not-opened-open-before-40",
+      "isa-balance-confirm-post-jisa-conversion",
+      "savings-transfer-from-parent-complete",
+      "pension-start-early-compound-benefit",
+      "auto-enrolment-review-if-salary-rises-above-10k",
+      "protection-gap-income-protection-first",
+      "ni-voluntary-contributions-review"
+    ]
+  }
+}

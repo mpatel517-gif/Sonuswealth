@@ -1,0 +1,493 @@
+{
+  "fixture_id": "mrT-uk-th",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK couple at Decumulation life stage (both age 68 — anchor archetype 52). Planning move to Thailand within 12 months. LTR (Long Term Resident) visa approved under Wealthy Pensioner category. Exercises: UK tax residency cessation projection and split-year treatment; LTR visa passive income requirement (THB 80k/month met); post-arrival Thai tax residency threshold (180 days); LTR visa 10-year foreign income tax exemption (principal benefit of Wealthy Pensioner category); UK SIPP drawdown remittance strategy (pre/post Thailand's 2024 remittance rule change for foreign-source income); UK main residence sold (PPR exempt); Thai property purchased (THB 25m); SSF/RMF eligibility gates post-arrival. FX baseline: THB 44 per GBP. Tax bundle: TH-2026.1 (stub-OPEN at fixture date — engine must gracefully handle incomplete Thai rules).",
+  "fixture_anchor_archetype": "52",
+  "archetypes_exercised": ["51", "52"],
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": "TH",
+    "tax_bundle_primary": "UK-2026.1",
+    "tax_bundle_secondary": "TH-2026.1",
+    "tax_bundle_secondary_status": "stub-OPEN at fixture date; engine must apply conservative UK-only calc with TH annotations; display TH-rules-pending marker on affected outputs",
+    "domicile": "UK",
+    "deemed_domicile": false,
+    "domicile_note": "UK domicile of origin; not changing; relevant to UK IHT position even post-departure",
+    "ltr_visa_approved": true,
+    "ltr_visa_category": "Wealthy-Pensioner",
+    "ltr_approval_date": "2026-01-15",
+    "ltr_validity_years": 10,
+    "ltr_expiry": "2036-01-15",
+    "fx_baseline": {"THB_per_GBP": 44, "as_of": "2026-04-20"},
+    "thai_residency_threshold_days": 180,
+    "thai_residency_projected_from": "2027-04-01",
+    "uk_residency_cessation_projected": "2027-03-31"
+  },
+
+  "individual": {
+    "id": "mrT-th-primary",
+    "name": "Mr T Thailand",
+    "dob": "1958-04-23",
+    "gender": "M",
+    "residency_status_uk": "UK-tax-resident",
+    "residency_status_th": "not-yet-resident",
+    "uk_srt_days_current_year": 285,
+    "uk_srt_status": "automatic-UK-resident",
+    "employment_status": "retired",
+    "gross_salary": 0,
+    "state_pension_start_age": 66,
+    "state_pension_start_date": "2024-04-23",
+    "state_pension_annual_gross": 11502,
+    "state_pension_accrued_years": 44,
+    "life_stage": "decumulation",
+    "age_at_fixture_date": 68,
+    "sipp_drawdown_active": true,
+    "annual_drawdown_gross": 35000
+  },
+
+  "partner": {
+    "id": "mrT-th-partner",
+    "name": "Mrs T Thailand",
+    "dob": "1958-09-14",
+    "gender": "F",
+    "residency_status_uk": "UK-tax-resident",
+    "residency_status_th": "not-yet-resident",
+    "employment_status": "retired",
+    "gross_salary": 0,
+    "state_pension_start_age": 66,
+    "state_pension_start_date": "2024-09-14",
+    "state_pension_annual_gross": 9880,
+    "state_pension_accrued_years": 38,
+    "life_stage": "decumulation",
+    "age_at_fixture_date": 67,
+    "sipp_drawdown_active": true,
+    "annual_drawdown_gross": 22000
+  },
+
+  "relationships": [
+    {
+      "id": "marriage-1",
+      "type": "married",
+      "partner_entity_ref": "mrT-th-partner",
+      "start_date": "1990-05-18",
+      "end_date": null,
+      "pso_applicable": false,
+      "children_from_relationship": 2
+    }
+  ],
+
+  "children": [
+    {"id": "child-1", "name": "Child A", "dob": "1992-06-10", "age": 33, "dependent": false, "uk_resident": true},
+    {"id": "child-2", "name": "Child B", "dob": "1995-11-08", "age": 30, "dependent": false, "uk_resident": true}
+  ],
+
+  "ltr_visa_qualification": {
+    "category": "Wealthy-Pensioner",
+    "passive_income_requirement_thb_per_month": 80000,
+    "passive_income_requirement_gbp_monthly_equivalent": 1818,
+    "passive_income_sources": [
+      {"source": "UK state pension primary", "annual_gbp": 11502, "monthly_gbp": 958, "monthly_thb": 42164},
+      {"source": "UK state pension partner", "annual_gbp": 9880, "monthly_gbp": 823, "monthly_thb": 36226},
+      {"source": "SIPP drawdown primary", "annual_gbp": 35000, "monthly_gbp": 2917, "monthly_thb": 128333},
+      {"source": "SIPP drawdown partner", "annual_gbp": 22000, "monthly_gbp": 1833, "monthly_thb": 80667}
+    ],
+    "total_passive_income_thb_per_month": 287390,
+    "requirement_met": true,
+    "requirement_met_multiple": 3.6,
+    "ltr_10yr_foreign_income_exemption": {
+      "applies": true,
+      "exemption_scope": "All foreign-source income earned before Thai residency AND remitted to Thailand exempt from Thai income tax for 10 years from visa approval date",
+      "exemption_end_date": "2036-01-15",
+      "engine_note": "LTR Wealthy Pensioner category exempts foreign income from Thai tax for 10 years; no Thai income tax on UK pension or investment income remitted; engine marks TH-side income as tax-exempt under LTR until 2036"
+    }
+  },
+
+  "uk_residency_cessation": {
+    "projected_departure_date": "2027-03-31",
+    "split_year_treatment": {
+      "applicable": true,
+      "split_year_applies": "2026-27 tax year",
+      "uk_part_from": "2026-04-06",
+      "uk_part_to": "2027-03-31",
+      "overseas_part_from": "2027-04-01",
+      "split_year_cases_applicable": ["Case 4 — Leaving UK to work full-time overseas"],
+      "note": "Case 4 (or Case 1 for overseas work) — HMRC split-year treatment applies; UK-part income taxed in UK; overseas-part income (from 1 Apr 2027) taxed in Thai resident regime under LTR exemption",
+      "engine_note": "Split-year treatment requires dual-period tax calc; engine must separate UK-part and overseas-part for 2026/27"
+    },
+    "uk_srt_post_departure": {
+      "uk_days_allowed_to_remain_non_resident": 90,
+      "note": "After departure, if visiting UK and spending >90 days/yr for 5+ yrs could re-trigger UK residency; engine should note threshold"
+    }
+  },
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-primary",
+        "owner": "mrT-th-primary",
+        "type": "SIPP",
+        "provider": "AJ Bell",
+        "balance": 680000,
+        "drawdown_active": true,
+        "annual_drawdown_gross": 35000,
+        "growth_rate_assumption": 0.04,
+        "charges_percent": 0.003,
+        "lsa_allowance_standard": 268275,
+        "lsa_consumed_to_date": 67000,
+        "lsa_remaining": 201275,
+        "mpaa_triggered": false,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Mrs T Thailand", "pct": 100}],
+          "date_set": "2024-05-01",
+          "stale": false
+        },
+        "post_fa2026_treatment": {
+          "pre_6_april_2027": "outside estate for IHT",
+          "post_6_april_2027": "within estate for IHT",
+          "engine_must_model_both": true
+        },
+        "remittance_to_thailand": {
+          "post_departure_strategy": "draw and remit as needed for Thai living costs",
+          "ltr_exemption_applies": true,
+          "thai_tax_on_remittance": "exempt under LTR until 2036",
+          "uk_tax_post_departure": "not UK tax resident; UK SIPP drawdown NOT subject to UK income tax once non-UK resident UNLESS double taxation treaty provision applies",
+          "dtaa_note": "UK-Thailand DTA: Article 17 (Pensions) — government pensions taxable only in UK; private pensions (SIPP) taxable in country of residence; post-departure SIPP draw = taxable in Thailand ONLY; exempt under LTR for 10 years"
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "sipp-partner",
+        "owner": "mrT-th-partner",
+        "type": "SIPP",
+        "provider": "Vanguard",
+        "balance": 420000,
+        "drawdown_active": true,
+        "annual_drawdown_gross": 22000,
+        "growth_rate_assumption": 0.04,
+        "charges_percent": 0.004,
+        "lsa_allowance_standard": 268275,
+        "lsa_consumed_to_date": 45000,
+        "lsa_remaining": 223275,
+        "mpaa_triggered": false,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Mr T Thailand", "pct": 100}],
+          "date_set": "2024-05-01",
+          "stale": false
+        },
+        "last_valuation_date": "2026-04-15"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-primary",
+        "owner": "mrT-th-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 185000,
+        "contribution_current_tax_year": 20000,
+        "isa_post_departure_note": "Cannot contribute to ISA once non-UK resident; subscriptions allowed up to departure date in split year; existing ISA can be retained and grows tax-free but no new subscriptions",
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "isa-partner",
+        "owner": "mrT-th-partner",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 145000,
+        "contribution_current_tax_year": 18000,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "gia-joint",
+        "owner": "joint",
+        "type": "GIA",
+        "provider": "Hargreaves Lansdown",
+        "balance": 85000,
+        "cost_base": 62000,
+        "growth_rate_assumption": 0.045,
+        "last_valuation_date": "2026-04-18",
+        "post_departure_note": "CGT on GIA disposals post-departure: UK non-resident; no UK CGT on most asset disposals EXCEPT UK residential property; GIA gains likely exempt from UK CGT once non-resident"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "uk-main-residence-sold",
+        "type": "main-residence",
+        "status": "sold",
+        "sale_date": "2026-02-15",
+        "sale_proceeds": 595000,
+        "purchase_price": 285000,
+        "purchase_date": "2004-06-10",
+        "gain_before_relief": 310000,
+        "ppr_relief": 310000,
+        "ppr_relief_note": "Full PPR relief — sole main residence throughout ownership; zero chargeable gain",
+        "chargeable_gain": 0,
+        "cgt_paid": 0,
+        "net_proceeds_after_legal_costs": 581500
+      },
+      {
+        "id": "thai-property",
+        "type": "primary-residence-thailand",
+        "jurisdiction": "TH",
+        "description": "Condo, Bangkok (Sathorn district)",
+        "value_thb": 25000000,
+        "value_gbp": 568182,
+        "purchase_date": "2026-03-20",
+        "purchase_price_thb": 25000000,
+        "purchase_price_gbp": 568182,
+        "mortgage_id": null,
+        "paid_cash": true,
+        "ownership": "joint",
+        "ownership_split": {"mrT-th-primary": 0.5, "mrT-th-partner": 0.5},
+        "thai_property_ownership_note": "Foreigners cannot own freehold land in Thailand; condo purchased under Condominium Act (up to 49% foreign quota); freehold unit title held; land component nil",
+        "foreign_quota_confirmed": true,
+        "last_valuation_date": "2026-03-20",
+        "uk_iht_note": "Thai property NOT UK situs; UK domicile individuals taxed on worldwide assets; Thai condo is in IHT estate as non-UK situs asset — different from non-dom"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "uk-current",
+        "owner": "joint",
+        "type": "current-account",
+        "jurisdiction": "UK",
+        "provider": "HSBC",
+        "balance": 45000,
+        "last_valuation_date": "2026-04-22",
+        "note": "Holding proceeds from UK property sale pending Thailand move; to be drawn down as Thai living expenses build"
+      },
+      {
+        "id": "uk-savings",
+        "owner": "joint",
+        "type": "savings",
+        "jurisdiction": "UK",
+        "provider": "NS&I Premium Bonds",
+        "balance": 100000,
+        "prize_based_return": true,
+        "effective_return_estimate": 0.04,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "thai-bank-account",
+        "owner": "mrT-th-primary",
+        "type": "current-account",
+        "jurisdiction": "TH",
+        "provider": "Bangkok Bank",
+        "balance_thb": 880000,
+        "balance_gbp": 20000,
+        "account_type": "Foreign Currency Deposit Account",
+        "opened_date": "2026-02-01",
+        "note": "Opened for property purchase transaction; will become main spending account post-departure"
+      }
+    ]
+  },
+
+  "liabilities": [],
+
+  "protection": [
+    {
+      "id": "whole-life-joint",
+      "type": "life-insurance-whole-of-life-joint-last-survivor",
+      "provider": "Aviva",
+      "cover_amount": 300000,
+      "premium_monthly": 220,
+      "start_date": "2010-03-01",
+      "trust_status": "in-trust-verified",
+      "trust_beneficiaries": ["child-1", "child-2"],
+      "purpose": "IHT liquidity on second death",
+      "policy_portability_to_thailand": "confirmed",
+      "policy_portability_note": "UK life policy continues post-departure; premiums payable from UK bank account; insurer notified of relocation — agreed to continue coverage"
+    }
+  ],
+
+  "gifts_and_trusts": [
+    {
+      "id": "pet-1",
+      "type": "PET",
+      "donor": "mrT-th-primary",
+      "amount": 50000,
+      "date": "2026-03-01",
+      "recipient_id": "child-1",
+      "purpose": "Inheritance advance — pre-move gift; 7-year clock starts now",
+      "years_elapsed": 0.1,
+      "within_annual_exemption": false,
+      "annual_exemption_offset": 3000,
+      "chargeable_amount": 47000,
+      "note": "Gifting to reduce UK estate before IHT position changes on FA2026 activation; 7-year clock must be survived for PET to fall out of estate"
+    },
+    {
+      "id": "pet-2",
+      "type": "PET",
+      "donor": "mrT-th-partner",
+      "amount": 50000,
+      "date": "2026-03-01",
+      "recipient_id": "child-2",
+      "purpose": "Matching gift to second child",
+      "years_elapsed": 0.1,
+      "within_annual_exemption": false,
+      "annual_exemption_offset": 3000,
+      "chargeable_amount": 47000
+    }
+  ],
+
+  "events": [
+    {"date": "1990-05-18", "type": "relationship-start", "relationship": "married"},
+    {"date": "2004-06-10", "type": "property-purchase", "asset_id": "uk-main-residence-sold", "amount": 285000},
+    {"date": "2024-04-23", "type": "state-pension-start", "entity": "mrT-th-primary", "annual": 11502},
+    {"date": "2024-09-14", "type": "state-pension-start", "entity": "mrT-th-partner", "annual": 9880},
+    {"date": "2026-01-15", "type": "ltr-visa-approved", "category": "Wealthy-Pensioner", "expiry": "2036-01-15"},
+    {"date": "2026-02-01", "type": "thai-bank-account-opened", "asset_id": "thai-bank-account"},
+    {"date": "2026-02-15", "type": "uk-property-sale", "asset_id": "uk-main-residence-sold", "proceeds": 595000, "cgt": 0, "ppr_full_relief": true},
+    {"date": "2026-03-01", "type": "gift-given", "gift_id": "pet-1", "amount": 50000},
+    {"date": "2026-03-01", "type": "gift-given", "gift_id": "pet-2", "amount": 50000},
+    {"date": "2026-03-20", "type": "property-purchase", "asset_id": "thai-property", "amount_thb": 25000000, "fx_rate": 44},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
+    {"date": "2027-03-31", "type": "uk-departure-projected", "engine_action": "trigger-split-year-calc-2026-27; cease-uk-residency; thai-residency-starts"},
+    {"date": "2027-04-01", "type": "thai-residency-projected-start", "ltr_foreign_income_exemption_active": true},
+    {"date": "2027-04-06", "type": "fa2026-pension-iht-activation", "note": "SIPP enters IHT estate on this date; both individual and partner SIPPs affected; cost of inaction calculation critical"}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "jurisdiction.tax_bundle_secondary_status", "expected_behaviour": "TH-2026.1 bundle stub-OPEN; engine applies UK-only calc; TH-side outputs annotated 'TH rules pending — provisional'; LTR exemption hardcoded as confirmed; SSF/RMF cannot be modelled until bundle complete"},
+      {"location": "assets.property[1].value_thb", "expected_behaviour": "Thai property value is purchase-price-as-valuation; no independent valuation post-purchase; FX rate applied at fixture date (THB 44/GBP); GBP value fluctuates with exchange rate; engine flags FX staleness if >30 days"},
+      {"location": "uk_residency_cessation.split_year_treatment", "expected_behaviour": "Split-year 2026/27 requires HMRC Case 4 determination; engine models provisionally; actual case determination depends on circumstances at year-end; IHT and income tax modelled pre/post departure separately"}
+    ],
+    "fp5": [
+      {"location": "assets.pensions[0].remittance_to_thailand.dtaa_note", "expected_behaviour": "UK-Thailand DTA Article 17: private pension income taxable only in resident country post-departure; LTR exempts for 10 years; engine marks SIPP drawdown post-departure as Thailand-taxable but LTR-exempt; flag when LTR approaches expiry 2036"},
+      {"location": "assets.investments[0].isa_post_departure_note", "expected_behaviour": "Cannot contribute to ISA post-departure as non-UK resident; engine generates APQ: maximise ISA contributions in 2026/27 split year up to departure date; existing ISA retained and continues tax-free wrapper but frozen subscription"}
+    ]
+  },
+
+  "archetype_specific": {
+    "cross_border_profile": "UK-primary-TH-secondary",
+    "move_to_thailand_status": "approved-planned",
+    "move_timeline_months": 11.3,
+    "ltr_visa_state": {
+      "category": "Wealthy-Pensioner",
+      "status": "approved",
+      "passive_income_multiple": 3.6,
+      "ten_year_foreign_income_exemption": true,
+      "exemption_expiry": "2036-01-15"
+    },
+    "uk_residency_cessation_plan": {
+      "departure_date": "2027-03-31",
+      "split_year_tax_year": "2026-27",
+      "uk_days_post_departure_limit": 90,
+      "ce_declaration_required": true
+    },
+    "thai_property_ownership": {
+      "type": "condominium-freehold",
+      "legal_basis": "Condominium-Act-freehold-unit",
+      "foreign_quota_confirmed": true,
+      "land_component": "nil"
+    },
+    "pension_remittance_strategy": {
+      "uk_sipp_draw_post_departure": "taxable-in-thailand-only",
+      "thai_tax_under_ltr": "exempt until 2036",
+      "optimal_draw_timing": "draw before LTR exemption expires where possible; review post-2036 when Thai tax will apply",
+      "thailand_2024_rule_change": {
+        "old_rule": "Foreign income only taxable in Thailand if remitted in same year as earned",
+        "new_rule_from_2024": "All foreign-source income assessable in year of remittance regardless of year earned",
+        "ltr_exemption_overrides_new_rule": true,
+        "note": "LTR Wealthy Pensioner exemption protects from 2024 rule change for duration of LTR; critical planning consideration post-LTR expiry"
+      }
+    },
+    "ssf_rmf_consideration": {
+      "status": "pending-post-arrival",
+      "ssf_eligibility_gate": "Thai tax resident",
+      "rmf_eligibility_gate": "Thai tax resident",
+      "ltr_exemption_interaction": "If income exempt under LTR, SSF/RMF relief may be academic (no tax to offset) — specialist Thai tax advice required post-arrival",
+      "engine_note": "Cannot model SSF/RMF until TH bundle complete and Thai residency status active"
+    },
+    "isa_freeze_on_departure": {
+      "existing_isa_retained": true,
+      "no_new_contributions_post_departure": true,
+      "maximise_before_departure_apq": true,
+      "contribution_headroom_2026_27_split_year": 40000
+    },
+    "iht_position": {
+      "uk_domicile_worldwide_assets": true,
+      "thai_property_in_iht_estate": true,
+      "combined_estate_estimate_gbp": 2433000,
+      "combined_nrb_available": 650000,
+      "combined_rnrb_available": 350000,
+      "fa2026_sipp_addition_from_6apr2027": 1100000,
+      "pre_fa2026_iht_estimate": 357200,
+      "post_fa2026_iht_estimate": 797200
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [68, 80],
+      "confidence": "medium",
+      "confidence_reason": "TH tax bundle stub; split-year treatment not yet triggered; FA2026 SIPP IHT activation approaching; FX exposure; otherwise well-planned transition",
+      "dimensions": {
+        "behaviour": {"range": [72, 84], "confidence": "medium", "note": "Pre-move gifting started; ISA maximising; pension nominations current"},
+        "capital": {"range": [75, 86], "confidence": "medium", "note": "Substantial combined wealth; diversified across pensions, ISAs, Thai property, GIA"},
+        "tax": {"range": [62, 76], "confidence": "low", "note": "TH bundle stub limits confidence; LTR exemption confirmed but SSF/RMF modelling pending; split-year complexity"},
+        "protection": {"range": [70, 82], "confidence": "high", "note": "Joint whole-of-life in trust; policy portable to Thailand; no liabilities"},
+        "cashflow": {"range": [75, 88], "confidence": "medium", "note": "Pensions and state pension provide stable income well above LTR requirement; living costs in Thailand lower than UK estimate"},
+        "debt": {"range": [95, 100], "confidence": "high", "note": "No liabilities; Thai property cash purchase; clean balance sheet"},
+        "estate": {"range": [42, 58], "confidence": "low", "note": "FA2026 activation April 2027 adds £1.1m to IHT estate; UK domicile means worldwide assets in estate; Thai property in estate; IHT planning urgently required"}
+      }
+    },
+    "risk_score": {
+      "value_range": [65, 78],
+      "confidence": "medium"
+    },
+    "net_worth": {
+      "value_range": [2380000, 2520000],
+      "confidence": "medium",
+      "confidence_reason": "Thai property FX-sensitive; TH bundle stub; ISA and SIPP valuations current",
+      "fx_rate_used": 44,
+      "staleness_flags": ["thai-property-purchase-price-only-no-independent-valuation"],
+      "excluded_assets": [],
+      "note": "Includes: SIPPs £1.1m + ISAs £330k + GIA £85k + Thai property £568k + UK cash £145k + Thai bank £20k + Premium Bonds £100k. UK main residence sold Feb 2026."
+    },
+    "iht_projection": {
+      "value_range_pre_fa2026": [320000, 400000],
+      "value_range_post_fa2026": [750000, 840000],
+      "confidence": "medium",
+      "confidence_reason": "FA2026 activation date confirmed (6 Apr 2027); estate calculation dependent on valuation at second death; PETs reduce estate if survived 7 years",
+      "scenario_ranges": {
+        "pre_fa2026_sipp_excluded": [320000, 400000],
+        "post_fa2026_sipp_included": [750000, 840000]
+      },
+      "exemption_flags": ["joint-whole-life-in-trust", "rnrb-direct-descendants-available", "tnrb-available", "pet-gifting-programme-started"],
+      "note": "UK domicile = worldwide assets in IHT estate including Thai condo"
+    },
+    "cost_of_inaction": {
+      "value_range": [392000, 440000],
+      "confidence": "medium",
+      "daily_ticker_value_from_6apr2027": 1099,
+      "explanation": "FA2026 activation 6 April 2027 — 348 days away at fixture date. Combined SIPPs £1.1m enter IHT estate at 40% = £440k additional IHT. PET programme started (£100k gifted) but 7-year survival required. Mitigation: accelerate drawdown, increase gifts, consider trust structuring before departure."
+    },
+    "financial_profile_cell": "V-A",
+    "archetype_classification": "52 uk-th-couple-decumulation",
+    "apq_items_expected": [
+      "fa2026-sipp-iht-activation-348-days-urgent",
+      "isa-maximise-contributions-before-departure-apr-2027",
+      "split-year-treatment-prepare-2026-27",
+      "ltr-visa-foreign-income-exemption-post-expiry-2036-plan",
+      "th-tax-bundle-pending-outputs-provisional",
+      "ssf-rmf-eligibility-review-post-arrival",
+      "thai-property-independent-valuation-obtain",
+      "pet-programme-continue-7yr-clock-tracking",
+      "uk-srt-days-limit-90-days-post-departure-calendar",
+      "iht-trust-structuring-before-departure-review"
+    ]
+  }
+}

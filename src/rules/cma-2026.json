@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "version": "UK-CMA-2026.1",
+    "published": "2026-01-01",
+    "expiryDate": "2027-01-01",
+    "sources": [
+      "Vanguard 2026 Economic and Market Outlook",
+      "Morningstar Investment Research Centre 2025",
+      "AJ Bell Equity Research 2026",
+      "BlackRock Investment Institute 2026"
+    ]
+  },
+  "inflation": 0.027,
+  "growth": 0.058,
+  "equityPremium": 0.035,
+  "assetClasses": {
+    "uk_equity":     { "expectedReturn": 0.072, "volatility": 0.165 },
+    "global_equity": { "expectedReturn": 0.076, "volatility": 0.155 },
+    "em_equity":     { "expectedReturn": 0.085, "volatility": 0.220 },
+    "uk_gilts":      { "expectedReturn": 0.035, "volatility": 0.080 },
+    "corp_bonds":    { "expectedReturn": 0.045, "volatility": 0.075 },
+    "property":      { "expectedReturn": 0.055, "volatility": 0.120 },
+    "cash":          { "expectedReturn": 0.045, "volatility": 0.008 },
+    "alternatives":  { "expectedReturn": 0.060, "volatility": 0.130 }
+  },
+  "correlations": {
+    "uk_equity_global_equity":   0.75,
+    "uk_equity_uk_gilts":       -0.15,
+    "uk_equity_corp_bonds":     -0.05,
+    "uk_equity_property":        0.35,
+    "global_equity_uk_gilts":   -0.10,
+    "global_equity_corp_bonds":  0.00,
+    "corp_bonds_uk_gilts":       0.60
+  },
+  "worstDecile": {
+    "cumulative_5yr": -0.35,
+    "annual_equiv":   -0.082
+  },
+  "defaultPortfolioWeights": {
+    "balanced": {
+      "uk_equity": 0.25, "global_equity": 0.30, "uk_gilts": 0.15,
+      "corp_bonds": 0.10, "property": 0.10, "cash": 0.05, "alternatives": 0.05
+    },
+    "growth": {
+      "uk_equity": 0.30, "global_equity": 0.40, "uk_gilts": 0.05,
+      "corp_bonds": 0.05, "property": 0.10, "cash": 0.05, "alternatives": 0.05
+    },
+    "cautious": {
+      "uk_equity": 0.10, "global_equity": 0.15, "uk_gilts": 0.30,
+      "corp_bonds": 0.20, "property": 0.10, "cash": 0.10, "alternatives": 0.05
+    }
+  }
+}

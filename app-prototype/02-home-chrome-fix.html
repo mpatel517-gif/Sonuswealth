@@ -1,0 +1,1196 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sonuswealth — Home chrome fix (laptop + mobile)</title>
+<style>
+/* ===================================================================
+   HOME v2.1 — CHROME FIX
+   Fixes (from founder screenshot review):
+   1. Laptop 2-column grid that fills width
+   2. Brand dedup — sidebar only
+   3. Resume strip moved off Home
+   4. Drillable underlines → chevron-on-corner pattern
+   5. Top-bar score chip retained as global summary (decision pending)
+   =================================================================== */
+
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+  --space-lg: 16px; --space-xl: 20px; --space-2xl: 28px; --space-3xl: 40px;
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+  --fs-label: 11px; --fs-small: 13px; --fs-body: 14px; --fs-md: 16px;
+  --fs-lg: 18px; --fs-xl: 22px; --fs-hero: 28px; --fs-hero-lg: 36px;
+}
+
+.theme-dark {
+  --c-bg: #051424;
+  --c-bg2: #0c1119;
+  --c-surface: #122131;
+  --c-surface2: #1a2a3d;
+  --c-surface3: #273647;
+  --c-text: #d4e4fa;
+  --c-text2: #a9b5c8;
+  --c-text3: #8793a7;
+  --c-acc: #5ddbc2;
+  --c-acc-soft: rgba(93,219,194,0.14);
+  --c-acc-line: rgba(93,219,194,0.32);
+  --c-acc3: #ff6f7d;
+  --c-acc3-soft: rgba(255,111,125,0.12);
+  --c-gold: #ffbd59;
+  --c-gold-soft: rgba(255,189,89,0.12);
+  --c-hairline: rgba(255,255,255,0.06);
+  --c-hairline-strong: rgba(255,255,255,0.12);
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+html, body {
+  font-family: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: #050608;
+  padding: 32px 24px 80px;
+  min-height: 100vh;
+  color: #aaa;
+}
+
+.probe-bar {
+  max-width: 1640px;
+  margin: 0 auto var(--space-2xl);
+  padding: 16px 22px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 12px;
+  font-family: 'Inter var', sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.probe-bar h1 { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+.probe-bar small { font-size: 12px; color: #8a8d96; }
+
+.stack {
+  max-width: 1640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xl);
+}
+
+.viewport {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.viewport-label {
+  padding: 14px 22px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--c-text3);
+  border-bottom: 1px solid var(--c-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ============================================================
+   LAPTOP SHELL (1440)
+   Sidebar 260px + Main 1180px
+   ============================================================ */
+
+.shell-laptop {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 760px;
+}
+
+.sidebar {
+  background: var(--c-bg2);
+  border-right: 1px solid var(--c-hairline);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 24px;
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: 16px;
+}
+.sidebar__mark {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--c-acc), #2da78d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--c-bg);
+  flex-shrink: 0;
+}
+.sidebar__name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+  line-height: 1.15;
+}
+.sidebar__tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--c-text3);
+  margin-top: 1px;
+}
+
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text2);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+}
+.nav-item:hover { background: var(--c-surface); color: var(--c-text); }
+.nav-item.active {
+  background: var(--c-acc-soft);
+  color: var(--c-acc);
+  border-left: 2px solid var(--c-acc);
+  padding-left: 10px;
+}
+.nav-icon { font-size: 16px; line-height: 1; opacity: 0.85; }
+
+.sidebar__foot {
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--c-hairline);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--c-gold);
+  color: var(--c-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.avatar-meta { flex: 1; min-width: 0; }
+.avatar-name { font-size: 13px; font-weight: 700; color: var(--c-text); line-height: 1.2; }
+.avatar-sub { font-size: 10px; color: var(--c-text3); margin-top: 1px; }
+
+/* === MAIN === */
+
+.main {
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--c-hairline);
+  background: var(--c-bg);
+}
+
+.score-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline-strong);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.score-chip__dot {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--c-acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--c-bg);
+}
+.score-chip__val {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--c-text);
+  letter-spacing: -0.1px;
+  font-variant-numeric: tabular-nums;
+}
+.score-chip__band {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--c-text3);
+  margin-top: 1px;
+}
+
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  color: var(--c-text2);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* === BODY (cards container) === */
+
+.body {
+  padding: 28px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Masthead */
+.masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 4px;
+}
+.masthead__greet { font-size: 13px; color: var(--c-text3); }
+.masthead__name {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--c-text);
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid var(--c-hairline-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--c-text3);
+  cursor: pointer;
+}
+.mode-pill::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--c-text3);
+}
+.mode-pill.active {
+  background: var(--c-acc-soft);
+  border-color: var(--c-acc-line);
+  color: var(--c-acc);
+}
+.mode-pill.active::before { background: var(--c-acc); }
+
+/* === ANCHOR ROW (full width on laptop) === */
+
+.anchors {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-md), var(--inset-card);
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 24px;
+}
+.anchor { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.anchor + .anchor {
+  padding-left: 24px;
+  border-left: 1px solid var(--c-hairline);
+}
+.anchor__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--c-text3);
+}
+.anchor__value {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+.anchor__value sub {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text3);
+  vertical-align: baseline;
+  margin-left: 2px;
+}
+.anchor__value--accent { color: var(--c-acc); }
+.anchor__value--gold { color: var(--c-gold); }
+.anchor__value--alert { color: var(--c-acc3); }
+.anchor__delta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-gold);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.anchor__band {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--c-text2);
+  margin-top: 2px;
+}
+
+/* === 2-COLUMN GRID (radar left + action stack right) === */
+
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Card primitive */
+.card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: 24px 26px;
+  box-shadow: var(--shadow-md), var(--inset-card);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.card-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--c-text3);
+  margin-bottom: 3px;
+}
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+}
+.card-chev {
+  color: var(--c-text3);
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+}
+.card-chev:hover { color: var(--c-text); }
+
+/* Radar */
+.radar {
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1;
+  margin: 8px auto 16px;
+}
+.radar svg { width: 100%; height: 100%; display: block; }
+.r-ring { fill: none; stroke: var(--c-hairline); stroke-width: 1; }
+.r-ring--outer { stroke: var(--c-hairline-strong); }
+.r-axis { stroke: var(--c-hairline); stroke-width: 1; }
+.r-polygon {
+  fill: var(--c-acc-soft);
+  stroke: var(--c-acc);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.r-target {
+  fill: none;
+  stroke: var(--c-gold);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
+.r-node { fill: var(--c-surface); stroke-width: 1.5; }
+.r-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  fill: var(--c-text3);
+  text-transform: uppercase;
+}
+.r-center { fill: var(--c-surface); stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-score-nw {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  fill: var(--c-text3);
+  text-anchor: middle;
+}
+.r-score-nw-val {
+  font-size: 16px;
+  font-weight: 800;
+  fill: var(--c-text);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+.r-score-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  fill: var(--c-text3);
+  text-anchor: middle;
+}
+.r-score-val {
+  font-size: 36px;
+  font-weight: 800;
+  fill: var(--c-acc);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.r-score-band {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  fill: var(--c-text2);
+  text-anchor: middle;
+}
+
+.card-brief {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--c-text2);
+  padding-top: 16px;
+  border-top: 1px solid var(--c-hairline);
+}
+.card-brief strong { color: var(--c-text); font-weight: 700; }
+.card-brief em { font-style: normal; color: var(--c-acc); font-weight: 700; }
+.card-brief .fig { color: var(--c-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Priority Action */
+.priority {
+  background: linear-gradient(180deg, rgba(255,189,89,0.08), var(--c-surface));
+  border: 1px solid rgba(255,189,89,0.25);
+  border-radius: var(--r-lg);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-sm), var(--inset-card);
+}
+.priority__pre {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255,189,89,0.18);
+  border: 1px solid rgba(255,189,89,0.35);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--c-gold);
+  margin-bottom: 10px;
+}
+.priority__headline {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--c-text);
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+}
+.priority__why {
+  font-size: 13px;
+  color: var(--c-text2);
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+.priority__why .fig { color: var(--c-gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc);
+  color: var(--c-bg);
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+}
+.cta::after { content: ' →'; }
+
+/* Plan progress */
+.plan-card { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 22px 24px; box-shadow: var(--shadow-sm), var(--inset-card); }
+.plan-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.plan-empty__text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text2);
+}
+.plan-empty__link {
+  font-size: 12px;
+  color: var(--c-acc);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Insights row (3 across on laptop) */
+.insights {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+.insight {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm), var(--inset-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+.insight:hover { border-color: var(--c-hairline-strong); }
+.insight__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.insight__badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.insight__badge--alert { background: var(--c-acc3-soft); color: var(--c-acc3); border: 1px solid var(--c-acc3); }
+.insight__badge--warn { background: var(--c-gold-soft); color: var(--c-gold); border: 1px solid var(--c-gold); }
+.insight__badge--info { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); }
+.insight__chev { color: var(--c-text3); font-size: 16px; }
+.insight__title { font-size: 14px; font-weight: 700; color: var(--c-text); line-height: 1.35; }
+.insight__sub { font-size: 12px; color: var(--c-text2); line-height: 1.5; }
+
+.section-hdr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 0 8px;
+}
+.section-hdr__title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--c-text3);
+}
+.section-hdr__action { font-size: 13px; color: var(--c-acc); font-weight: 600; cursor: pointer; }
+
+.fca {
+  padding: 20px 0 0;
+  font-size: 11px;
+  color: var(--c-text3);
+  text-align: center;
+  border-top: 1px solid var(--c-hairline);
+  margin-top: 12px;
+}
+
+/* ============================================================
+   MOBILE SHELL (480) — stays as before but cleaned
+   ============================================================ */
+
+.shell-mobile { max-width: 480px; margin: 0 auto; }
+
+.mobile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--c-hairline);
+}
+.mobile-brand { display: flex; align-items: center; gap: 8px; }
+.mobile-brand__mark {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--c-acc), #2da78d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-bg);
+}
+.mobile-brand__name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+}
+.mobile-brand__name span { color: var(--c-acc); }
+
+.mobile-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mobile-body .anchors { grid-template-columns: 1.3fr 1fr 1fr; padding: 18px 18px; gap: 14px; }
+.mobile-body .anchor__value { font-size: 26px; }
+.mobile-body .anchor + .anchor { padding-left: 14px; }
+.mobile-body .card { padding: 18px 18px; }
+.mobile-body .radar { max-width: 280px; margin-top: 4px; }
+.mobile-body .insights { grid-template-columns: 1fr; gap: 8px; }
+
+.bnav {
+  height: 64px;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-hairline);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 8px;
+}
+.bnav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--c-text3);
+}
+.bnav__icon { font-size: 18px; line-height: 1; }
+.bnav__lbl { font-size: 10px; font-weight: 600; }
+.bnav__item.active { color: var(--c-acc); }
+
+/* Notes block */
+.notes {
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 12px;
+  font-family: 'Inter var', sans-serif;
+  color: #b5b8bf;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.notes h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.notes ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; }
+.notes li { padding-left: 16px; position: relative; }
+.notes li::before { content: '·'; position: absolute; left: 0; top: -2px; color: #5ddbc2; font-size: 18px; }
+.notes strong { color: #fff; font-weight: 600; }
+@media (max-width: 720px) { .notes ul { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="probe-bar">
+  <div>
+    <h1>Home v2.1 — chrome fix (HTML mock)</h1>
+    <small>Laptop 2-column layout · brand dedup · resume strip removed · drillable underlines replaced with chevron-on-corner</small>
+  </div>
+</div>
+
+<div class="stack">
+
+  <!-- ========================================
+       LAPTOP — 1440px width
+       ======================================== -->
+  <div class="viewport theme-dark" style="max-width:1440px;margin:0 auto;width:100%">
+    <div class="viewport-label">
+      <span>Laptop · 1440 · IFA + power user</span>
+      <span style="color:var(--c-text3);font-weight:500;text-transform:none;letter-spacing:0.4px">2-column grid · radar left · action stack right · insights row across bottom</span>
+    </div>
+
+    <div class="shell-laptop">
+
+      <!-- SIDEBAR — only brand in app -->
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <div class="sidebar__mark">SW</div>
+          <div>
+            <div class="sidebar__name">Sonuswealth</div>
+            <div class="sidebar__tag">Premium</div>
+          </div>
+        </div>
+        <nav class="sidebar__nav">
+          <button class="nav-item active"><span class="nav-icon">⌂</span>Home</button>
+          <button class="nav-item"><span class="nav-icon">💰</span>My Money</button>
+          <button class="nav-item"><span class="nav-icon">≈</span>Cashflow</button>
+          <button class="nav-item"><span class="nav-icon">📑</span>Tax &amp; Estate</button>
+          <button class="nav-item"><span class="nav-icon">⊙</span>Risk</button>
+          <button class="nav-item"><span class="nav-icon">⏱</span>Timeline</button>
+          <button class="nav-item"><span class="nav-icon">🦉</span>Ask Sonu</button>
+        </nav>
+        <div class="sidebar__foot">
+          <div class="avatar">BW</div>
+          <div class="avatar-meta">
+            <div class="avatar-name">Bruce Wilson</div>
+            <div class="avatar-sub">Switch persona →</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <div class="main">
+
+        <!-- TOP BAR — no brand, just summary + actions -->
+        <header class="topbar">
+          <div class="score-chip" title="Global summary · Wealth Score">
+            <div class="score-chip__dot">47</div>
+            <div>
+              <div class="score-chip__val">47<span style="color:var(--c-text3);font-weight:500">/100</span></div>
+              <div class="score-chip__band">Established</div>
+            </div>
+          </div>
+          <button class="icon-btn" title="Notifications">🔔</button>
+          <button class="icon-btn" title="Settings">⚙</button>
+        </header>
+
+        <!-- BODY -->
+        <div class="body">
+
+          <!-- Masthead -->
+          <div class="masthead">
+            <div>
+              <div class="masthead__greet">Good afternoon,</div>
+              <h1 class="masthead__name">Bruce · Wed 13 May</h1>
+            </div>
+            <span class="mode-pill active">Today</span>
+          </div>
+
+          <!-- Anchor row — full width, 4 columns -->
+          <section class="anchors">
+            <div class="anchor">
+              <span class="anchor__label">Net worth</span>
+              <span class="anchor__value">£3.63m</span>
+              <span class="anchor__delta">↑ £42K · 7d</span>
+            </div>
+            <div class="anchor">
+              <span class="anchor__label">Wealth Score</span>
+              <span class="anchor__value anchor__value--accent">47<sub>/100</sub></span>
+              <span class="anchor__band">Established</span>
+            </div>
+            <div class="anchor">
+              <span class="anchor__label">Risk</span>
+              <span class="anchor__value anchor__value--gold">56<sub>/100</sub></span>
+              <span class="anchor__band">Managed</span>
+            </div>
+            <div class="anchor">
+              <span class="anchor__label">CoI</span>
+              <span class="anchor__value anchor__value--alert">£340K</span>
+              <span class="anchor__band">328 days to act</span>
+            </div>
+          </section>
+
+          <!-- 2-COLUMN: Radar (left) + Priority+Plan (right) -->
+          <div class="grid-2col">
+
+            <!-- LEFT: Radar -->
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-eyebrow">Your wealth shape</div>
+                  <div class="card-title">7 dimensions · drag to test what-if</div>
+                </div>
+                <span class="card-chev">›</span>
+              </div>
+              <div class="radar">
+                <svg viewBox="0 0 440 440" aria-hidden="true">
+                  <!-- rings -->
+                  <circle class="r-ring" cx="220" cy="220" r="50"/>
+                  <circle class="r-ring" cx="220" cy="220" r="100"/>
+                  <circle class="r-ring" cx="220" cy="220" r="150"/>
+                  <circle class="r-ring r-ring--outer" cx="220" cy="220" r="180"/>
+
+                  <!-- axes -->
+                  <line class="r-axis" x1="220" y1="220" x2="220" y2="40"/>
+                  <line class="r-axis" x1="220" y1="220" x2="395.7" y2="129.4"/>
+                  <line class="r-axis" x1="220" y1="220" x2="391.6" y2="304.3"/>
+                  <line class="r-axis" x1="220" y1="220" x2="261.0" y2="394.1"/>
+                  <line class="r-axis" x1="220" y1="220" x2="179.0" y2="394.1"/>
+                  <line class="r-axis" x1="220" y1="220" x2="48.4" y2="304.3"/>
+                  <line class="r-axis" x1="220" y1="220" x2="44.3" y2="129.4"/>
+
+                  <!-- target polygon (dashed gold) -->
+                  <polygon class="r-target" points="220,55 374,144 369,275 271,365 169,365 71,275 66,144"/>
+
+                  <!-- current polygon (mint fill) — Bruce: 95/78/61/0/88/71/18 (different shape, safety at 0) -->
+                  <polygon class="r-polygon" points="
+                    220,49
+                    357,154
+                    320,235
+                    220,220
+                    181,378
+                    72,275
+                    158,176
+                  "/>
+
+                  <!-- labels -->
+                  <text class="r-label" x="220" y="28" text-anchor="middle">Habits</text>
+                  <text class="r-label" x="410" y="124" text-anchor="middle">Own</text>
+                  <text class="r-label" x="408" y="316" text-anchor="middle">Tax</text>
+                  <text class="r-label" x="261" y="416" text-anchor="middle">Safety</text>
+                  <text class="r-label" x="179" y="416" text-anchor="middle">Flow</text>
+                  <text class="r-label" x="32" y="316" text-anchor="middle">Debt</text>
+                  <text class="r-label" x="30" y="124" text-anchor="middle">Legacy</text>
+
+                  <!-- nodes with identity colors + score badges -->
+                  <g><circle class="r-node" cx="220" cy="49" r="14" stroke="#4d8eff" fill="#1a2a3d"/><text x="220" y="50" font-size="11" font-weight="800" fill="#4d8eff" text-anchor="middle" dominant-baseline="middle">95</text></g>
+                  <g><circle class="r-node" cx="357" cy="154" r="14" stroke="#00e5a8" fill="#1a2a3d"/><text x="357" y="155" font-size="11" font-weight="800" fill="#00e5a8" text-anchor="middle" dominant-baseline="middle">78</text></g>
+                  <g><circle class="r-node" cx="320" cy="235" r="14" stroke="#ffb347" fill="#1a2a3d"/><text x="320" y="236" font-size="11" font-weight="800" fill="#ffb347" text-anchor="middle" dominant-baseline="middle">61</text></g>
+                  <g><circle class="r-node" cx="220" cy="380" r="16" stroke="#ff6b6b" stroke-width="2" fill="#1a2a3d"/><text x="220" y="381" font-size="12" font-weight="800" fill="#ff6b6b" text-anchor="middle" dominant-baseline="middle">0</text></g>
+                  <g><circle class="r-node" cx="181" cy="378" r="14" stroke="#34c759" fill="#1a2a3d"/><text x="181" y="379" font-size="11" font-weight="800" fill="#34c759" text-anchor="middle" dominant-baseline="middle">88</text></g>
+                  <g><circle class="r-node" cx="72" cy="275" r="14" stroke="#af52de" fill="#1a2a3d"/><text x="72" y="276" font-size="11" font-weight="800" fill="#af52de" text-anchor="middle" dominant-baseline="middle">71</text></g>
+                  <g><circle class="r-node" cx="158" cy="176" r="14" stroke="#ff9500" fill="#1a2a3d"/><text x="158" y="177" font-size="11" font-weight="800" fill="#ff9500" text-anchor="middle" dominant-baseline="middle">18</text></g>
+
+                  <!-- gap marks (coral !) on Safety, Tax, Legacy -->
+                  <g transform="translate(232,365)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                  <g transform="translate(335,222)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                  <g transform="translate(170,163)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+
+                  <!-- center -->
+                  <circle class="r-center" cx="220" cy="220" r="58"/>
+                  <text class="r-score-nw" x="220" y="200">Net worth</text>
+                  <text class="r-score-nw-val" x="220" y="216">£3.63M</text>
+                  <text class="r-score-lbl" x="220" y="232">Wealth Score</text>
+                  <text class="r-score-val" x="220" y="252">47</text>
+                  <text class="r-score-band" x="220" y="266">Established</text>
+                </svg>
+              </div>
+              <p class="card-brief">
+                You hold <span class="fig">£3.63M</span> across pensions, ISAs, and the home. <span class="fig">35%</span> of that is in tax shelters. <strong>Safety net</strong> is the chart point that wants attention — <em>one protection review</em> would lift it 6+ points.
+              </p>
+            </article>
+
+            <!-- RIGHT STACK: Priority + Plan -->
+            <div style="display:flex;flex-direction:column;gap:16px">
+
+              <article class="priority">
+                <div class="priority__pre">Highest priority · +34 Wealth Score</div>
+                <h2 class="priority__headline">Start pension drawdown</h2>
+                <p class="priority__why">
+                  <span class="fig">£340K</span> cost of inaction. You have <span class="fig">328 days</span> to act before your SIPP enters estate from April 2027.
+                </p>
+                <button class="cta">Show me how</button>
+              </article>
+
+              <article class="plan-card">
+                <div class="card-eyebrow" style="margin-bottom:8px">Plan progress</div>
+                <div class="plan-empty">
+                  <div class="plan-empty__text">No active plan yet</div>
+                  <div class="plan-empty__link">Set one in Plan tab →</div>
+                </div>
+              </article>
+
+            </div>
+
+          </div><!-- /grid-2col -->
+
+          <!-- INSIGHTS — 3 across on laptop -->
+          <div class="section-hdr">
+            <span class="section-hdr__title">Active insights</span>
+            <span class="section-hdr__action">See all 6 →</span>
+          </div>
+          <div class="insights">
+            <article class="insight">
+              <div class="insight__top">
+                <span class="insight__badge insight__badge--alert">High</span>
+                <span class="insight__chev">›</span>
+              </div>
+              <div class="insight__title">Arrange life insurance in trust</div>
+              <div class="insight__sub">No life cover in place. Estate of £3.63m has no protection against early death.</div>
+            </article>
+            <article class="insight">
+              <div class="insight__top">
+                <span class="insight__badge insight__badge--info">Watch</span>
+                <span class="insight__chev">›</span>
+              </div>
+              <div class="insight__title">Consider pension consolidation</div>
+              <div class="insight__sub">3 pensions detected. Consolidating reduces charges and simplifies nominations.</div>
+            </article>
+            <article class="insight">
+              <div class="insight__top">
+                <span class="insight__badge insight__badge--info">Watch</span>
+                <span class="insight__chev">›</span>
+              </div>
+              <div class="insight__title">Use £20K ISA allowance</div>
+              <div class="insight__sub">Move from taxable cash into ISA wrapper before 5 April.</div>
+            </article>
+          </div>
+
+          <div class="fca">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</div>
+
+        </div><!-- /body -->
+      </div><!-- /main -->
+    </div><!-- /shell-laptop -->
+  </div><!-- /viewport laptop -->
+
+
+  <!-- ========================================
+       MOBILE — 480px width
+       ======================================== -->
+  <div class="viewport theme-dark" style="max-width:480px;margin:0 auto;width:100%">
+    <div class="viewport-label" style="padding:12px 18px">
+      <span>Mobile · 480 · consumer</span>
+      <span style="color:var(--c-text3);font-weight:500;text-transform:none;letter-spacing:0.4px">single column · bottom nav</span>
+    </div>
+
+    <div class="shell-mobile">
+
+      <header class="mobile-topbar">
+        <div class="mobile-brand">
+          <div class="mobile-brand__mark">SW</div>
+          <div class="mobile-brand__name">Sonus<span>wealth</span></div>
+        </div>
+        <div class="score-chip" title="Global summary">
+          <div class="score-chip__dot" style="width:18px;height:18px;font-size:10px">47</div>
+          <div>
+            <div class="score-chip__val" style="font-size:11px">47<span style="color:var(--c-text3);font-weight:500">/100</span></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="mobile-body">
+
+        <div class="masthead" style="padding:0">
+          <div>
+            <div class="masthead__greet">Good afternoon,</div>
+            <h1 class="masthead__name" style="font-size:22px">Bruce · Wed 13 May</h1>
+          </div>
+          <span class="mode-pill active" style="padding:4px 10px;font-size:10px">Today</span>
+        </div>
+
+        <section class="anchors">
+          <div class="anchor">
+            <span class="anchor__label">Net worth</span>
+            <span class="anchor__value">£3.63m</span>
+            <span class="anchor__delta">↑ £42K · 7d</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Score</span>
+            <span class="anchor__value anchor__value--accent">47<sub>/100</sub></span>
+            <span class="anchor__band" style="font-size:10px">Established</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Risk</span>
+            <span class="anchor__value anchor__value--gold">56<sub>/100</sub></span>
+            <span class="anchor__band" style="font-size:10px">Managed</span>
+          </div>
+        </section>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="card-eyebrow">Your wealth shape</div>
+              <div class="card-title">7 dimensions · drag what-if</div>
+            </div>
+            <span class="card-chev">›</span>
+          </div>
+          <div class="radar">
+            <svg viewBox="0 0 280 280" aria-hidden="true">
+              <circle class="r-ring" cx="140" cy="140" r="34"/>
+              <circle class="r-ring" cx="140" cy="140" r="68"/>
+              <circle class="r-ring" cx="140" cy="140" r="102"/>
+              <circle class="r-ring r-ring--outer" cx="140" cy="140" r="118"/>
+              <line class="r-axis" x1="140" y1="140" x2="140" y2="22"/>
+              <line class="r-axis" x1="140" y1="140" x2="255" y2="81.7"/>
+              <line class="r-axis" x1="140" y1="140" x2="252.8" y2="194.8"/>
+              <line class="r-axis" x1="140" y1="140" x2="166.2" y2="256.4"/>
+              <line class="r-axis" x1="140" y1="140" x2="113.8" y2="256.4"/>
+              <line class="r-axis" x1="140" y1="140" x2="27.2" y2="194.8"/>
+              <line class="r-axis" x1="140" y1="140" x2="25" y2="81.7"/>
+              <polygon class="r-target" points="140,40 240,99 235,182 173,238 107,238 45,182 40,99"/>
+              <polygon class="r-polygon" points="140,32 230,108 204,150 140,140 115,240 46,180 100,114"/>
+              <text class="r-label" x="140" y="14" text-anchor="middle" style="font-size:9px">Habits</text>
+              <text class="r-label" x="265" y="80" text-anchor="middle" style="font-size:9px">Own</text>
+              <text class="r-label" x="263" y="201" text-anchor="middle" style="font-size:9px">Tax</text>
+              <text class="r-label" x="166" y="272" text-anchor="middle" style="font-size:9px">Safety</text>
+              <text class="r-label" x="114" y="272" text-anchor="middle" style="font-size:9px">Flow</text>
+              <text class="r-label" x="14" y="201" text-anchor="middle" style="font-size:9px">Debt</text>
+              <text class="r-label" x="13" y="80" text-anchor="middle" style="font-size:9px">Legacy</text>
+              <g><circle r="10" stroke="#4d8eff" fill="#1a2a3d" cx="140" cy="32"/><text x="140" y="33" font-size="9" font-weight="800" fill="#4d8eff" text-anchor="middle" dominant-baseline="middle">95</text></g>
+              <g><circle r="10" stroke="#00e5a8" fill="#1a2a3d" cx="230" cy="108"/><text x="230" y="109" font-size="9" font-weight="800" fill="#00e5a8" text-anchor="middle" dominant-baseline="middle">78</text></g>
+              <g><circle r="10" stroke="#ffb347" fill="#1a2a3d" cx="204" cy="150"/><text x="204" y="151" font-size="9" font-weight="800" fill="#ffb347" text-anchor="middle" dominant-baseline="middle">61</text></g>
+              <g><circle r="11" stroke="#ff6b6b" stroke-width="2" fill="#1a2a3d" cx="140" cy="245"/><text x="140" y="246" font-size="10" font-weight="800" fill="#ff6b6b" text-anchor="middle" dominant-baseline="middle">0</text></g>
+              <g><circle r="10" stroke="#34c759" fill="#1a2a3d" cx="115" cy="240"/><text x="115" y="241" font-size="9" font-weight="800" fill="#34c759" text-anchor="middle" dominant-baseline="middle">88</text></g>
+              <g><circle r="10" stroke="#af52de" fill="#1a2a3d" cx="46" cy="180"/><text x="46" y="181" font-size="9" font-weight="800" fill="#af52de" text-anchor="middle" dominant-baseline="middle">71</text></g>
+              <g><circle r="10" stroke="#ff9500" fill="#1a2a3d" cx="100" cy="114"/><text x="100" y="115" font-size="9" font-weight="800" fill="#ff9500" text-anchor="middle" dominant-baseline="middle">18</text></g>
+              <circle class="r-center" cx="140" cy="140" r="36"/>
+              <text class="r-score-nw" x="140" y="128" style="font-size:8px">Net worth</text>
+              <text class="r-score-nw-val" x="140" y="142" style="font-size:13px">£3.63M</text>
+              <text class="r-score-val" x="140" y="162" style="font-size:22px">47</text>
+            </svg>
+          </div>
+          <p class="card-brief" style="font-size:13px">
+            You hold <span class="fig">£3.63M</span> across pensions, ISAs, and the home. <span class="fig">35%</span> of that is in tax shelters. <strong>Safety net</strong> is the chart point that wants attention — <em>one protection review</em> would lift it 6+ points.
+          </p>
+        </article>
+
+        <article class="priority">
+          <div class="priority__pre">Highest · +34 Score</div>
+          <h2 class="priority__headline" style="font-size:16px">Start pension drawdown</h2>
+          <p class="priority__why">
+            <span class="fig">£340K</span> cost of inaction. <span class="fig">328 days</span> to act before SIPP enters estate.
+          </p>
+          <button class="cta">Show me how</button>
+        </article>
+
+        <article class="plan-card">
+          <div class="card-eyebrow" style="margin-bottom:8px">Plan progress</div>
+          <div class="plan-empty">
+            <div class="plan-empty__text" style="font-size:13px">No active plan yet</div>
+            <div class="plan-empty__link">Plan tab →</div>
+          </div>
+        </article>
+
+        <div class="section-hdr">
+          <span class="section-hdr__title">Active insights</span>
+          <span class="section-hdr__action">See all 6 →</span>
+        </div>
+        <div class="insights">
+          <article class="insight">
+            <div class="insight__top">
+              <span class="insight__badge insight__badge--alert">High</span>
+              <span class="insight__chev">›</span>
+            </div>
+            <div class="insight__title">Arrange life insurance in trust</div>
+            <div class="insight__sub">No life cover. Estate of £3.63m unprotected against early death.</div>
+          </article>
+          <article class="insight">
+            <div class="insight__top">
+              <span class="insight__badge insight__badge--info">Watch</span>
+              <span class="insight__chev">›</span>
+            </div>
+            <div class="insight__title">Consider pension consolidation</div>
+            <div class="insight__sub">3 pensions detected. Reduces charges and simplifies nominations.</div>
+          </article>
+          <article class="insight">
+            <div class="insight__top">
+              <span class="insight__badge insight__badge--info">Watch</span>
+              <span class="insight__chev">›</span>
+            </div>
+            <div class="insight__title">Use £20K ISA allowance</div>
+            <div class="insight__sub">Move from taxable cash into ISA wrapper before 5 April.</div>
+          </article>
+        </div>
+
+        <div class="fca">Information &amp; guidance only · Not regulated financial advice</div>
+
+      </div><!-- /mobile-body -->
+
+      <nav class="bnav">
+        <button class="bnav__item active"><span class="bnav__icon">⌂</span><span class="bnav__lbl">Home</span></button>
+        <button class="bnav__item"><span class="bnav__icon">💰</span><span class="bnav__lbl">Money</span></button>
+        <button class="bnav__item"><span class="bnav__icon">📑</span><span class="bnav__lbl">Tax</span></button>
+        <button class="bnav__item"><span class="bnav__icon">📅</span><span class="bnav__lbl">Plan</span></button>
+        <button class="bnav__item"><span class="bnav__icon">🦉</span><span class="bnav__lbl">Ask</span></button>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <section class="notes">
+    <h2>Fixes from your screenshot review</h2>
+    <ul>
+      <li><strong>Brand dedup</strong> — Sonuswealth appears only in the sidebar. Top bar dropped its brand cluster entirely. Top bar is now just score-chip + bell + ⚙.</li>
+      <li><strong>Score moved to top bar as global summary</strong> — Wealth Score chip ("47 · Established") sits in top bar across every tab. Card 2 anchor row keeps it because on Home specifically it's the focal point — but you can drop it from anchor row if the redundancy bothers you.</li>
+      <li><strong>"Yesterday you were exploring" resume strip removed from Home</strong> — that pre-existing strip moves to a notification or fires only on session re-entry. Off the Home tab.</li>
+      <li><strong>Drillable underlines gone</strong> — replaced with chevron-on-card-corner. Numbers stay clean. Hover state can show a subtle lift if you want a discoverability cue.</li>
+      <li><strong>Laptop layout uses the full width</strong> — 2-column grid (radar 60% / action stack 40%), anchor row spans full width above. Active Insights becomes a 3-column row at the bottom. Empty space gone.</li>
+      <li><strong>Anchor row now has 4 anchors on laptop</strong> — added CoI (Cost of Inaction) as the 4th since you have a lot of horizontal space. Mobile stays at 3.</li>
+      <li><strong>Radar center keeps NW + Score + band</strong> — Net worth, Wealth Score number, "Established" band name. The polygon shape is the visual; the center cap is the summary fact.</li>
+      <li><strong>Dim nodes now carry their score inline</strong> — each dim node shows its raw number (95, 78, 61, 0, etc.) inside the dot, so you don't need to drill to read the value. Coral ! mark on gap dims.</li>
+    </ul>
+  </section>
+
+</div>
+
+</body>
+</html>

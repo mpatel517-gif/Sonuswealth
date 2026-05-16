@@ -1,0 +1,1700 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sonuswealth — Home v2.8 (all 11 interactions wired)</title>
+<style>
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* CSS vars on :root so overlays outside .theme-dark can access them */
+:root {
+  --c-bg: #051424; --c-bg2: #0c1119; --c-surface: #122131; --c-surface2: #1a2a3d; --c-surface3: #273647;
+  --c-text: #d4e4fa; --c-text2: #a9b5c8; --c-text3: #8793a7; --c-text-projected: #8b9bb3;
+  --c-acc: #5ddbc2; --c-acc-soft: rgba(93,219,194,0.14); --c-acc-line: rgba(93,219,194,0.32);
+  --c-acc2: #7aa7ff; --c-acc3: #ff6f7d; --c-acc3-soft: rgba(255,111,125,0.12);
+  --c-gold: #ffbd59; --c-gold-soft: rgba(255,189,89,0.12);
+  --c-violet: #ba8cff;
+  --c-hairline: rgba(255,255,255,0.06); --c-hairline-strong: rgba(255,255,255,0.12);
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20); --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+}
+
+:root {
+  --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+  --space-lg: 16px; --space-xl: 20px; --space-2xl: 28px; --space-3xl: 40px;
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+}
+
+.theme-dark {
+  --c-bg: #051424; --c-bg2: #0c1119; --c-surface: #122131; --c-surface2: #1a2a3d; --c-surface3: #273647;
+  --c-text: #d4e4fa; --c-text2: #a9b5c8; --c-text3: #8793a7; --c-text-projected: #8b9bb3;
+  --c-acc: #5ddbc2; --c-acc-soft: rgba(93,219,194,0.14); --c-acc-line: rgba(93,219,194,0.32);
+  --c-acc2: #7aa7ff;
+  --c-acc3: #ff6f7d; --c-acc3-soft: rgba(255,111,125,0.12);
+  --c-gold: #ffbd59; --c-gold-soft: rgba(255,189,89,0.12);
+  --c-violet: #ba8cff;
+  --c-hairline: rgba(255,255,255,0.06); --c-hairline-strong: rgba(255,255,255,0.12);
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+html, body { font-family: 'Inter var','Inter',ui-sans-serif,system-ui,sans-serif; font-feature-settings: 'cv11','ss01'; -webkit-font-smoothing: antialiased; }
+body { background: #050608; padding: 32px 24px 80px; min-height: 100vh; color: #aaa; }
+
+.probe-bar { max-width: 1640px; margin: 0 auto var(--space-2xl); padding: 16px 22px; background: #14161c; border: 1px solid #25272f; border-radius: 12px; font-family: 'Inter var',sans-serif; }
+.probe-bar h1 { font-size: 17px; font-weight: 700; color: #fff; }
+.probe-bar small { font-size: 12px; color: #8a8d96; }
+.probe-bar p { font-size: 13px; color: #b5b8bf; margin-top: 6px; line-height: 1.5; }
+.probe-bar strong { color: #fff; }
+.probe-bar em { color: #5ddbc2; font-style: normal; font-weight: 600; }
+
+.viewport { max-width: 1440px; margin: 0 auto; border-radius: var(--r-lg); overflow: hidden; background: var(--c-bg); color: var(--c-text); }
+.viewport-label { padding: 14px 22px; font-size: 11px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--c-text3); border-bottom: 1px solid var(--c-hairline); display: flex; justify-content: space-between; align-items: center; }
+.viewport-label small { color: var(--c-acc); text-transform: none; letter-spacing: 0.3px; font-weight: 600; font-size: 12px; }
+
+.shell { display: grid; grid-template-columns: 240px 1fr; min-height: 920px; }
+
+/* SIDEBAR */
+.sidebar { background: var(--c-bg2); border-right: 1px solid var(--c-hairline); padding: 24px 16px; display: flex; flex-direction: column; }
+.sidebar__brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 24px; border-bottom: 1px solid var(--c-hairline); margin-bottom: 16px; }
+.sidebar__mark { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--c-acc), #2da78d); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: var(--c-bg); }
+.sidebar__name { font-size: 14px; font-weight: 800; color: var(--c-text); letter-spacing: -0.2px; }
+.sidebar__tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); margin-top: 1px; }
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; color: var(--c-text2); cursor: pointer; background: transparent; border: none; font-family: inherit; text-align: left; }
+.nav-item:hover { background: var(--c-surface); color: var(--c-text); }
+.nav-item.active { background: var(--c-acc-soft); color: var(--c-acc); border-left: 2px solid var(--c-acc); padding-left: 10px; }
+.sidebar__foot { padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--c-hairline); display: flex; align-items: center; gap: 10px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--c-gold); color: var(--c-bg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+.avatar-meta { flex: 1; }
+.avatar-name { font-size: 13px; font-weight: 700; color: var(--c-text); }
+.avatar-sub { font-size: 10px; color: var(--c-text3); margin-top: 1px; }
+
+/* TOPBAR */
+.main { display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 14px 32px; border-bottom: 1px solid var(--c-hairline); }
+.data-fresh { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--c-text3); font-weight: 600; margin-right: auto; padding-left: 4px; }
+.data-fresh__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-acc); box-shadow: 0 0 8px var(--c-acc); }
+
+/* ADDITION v2.4 — score chip now has tiny inline sparkline */
+.score-chip { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; background: var(--c-surface); border: 1px solid var(--c-hairline-strong); border-radius: var(--r-pill); cursor: pointer; }
+.score-chip__ring { width: 26px; height: 26px; border-radius: 50%; background: var(--c-acc); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--c-bg); }
+.score-chip__mid { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.score-chip__val { font-size: 13px; font-weight: 800; color: var(--c-text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.score-chip__band { font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--c-text3); margin-top: 2px; }
+.score-chip__spark { width: 42px; height: 16px; flex-shrink: 0; opacity: 0.85; }
+.score-chip__spark path { stroke: var(--c-acc); fill: none; stroke-width: 1.2; }
+
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--c-surface); border: 1px solid var(--c-hairline); color: var(--c-text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* BODY */
+.body { padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 24px; max-width: 1280px; margin: 0 auto; width: 100%; }
+
+/* MASTHEAD — ADDITION v2.4: avatar to the left of greeting */
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.masthead__left { flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px; }
+.masthead__avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-gold), #b87f30);
+  color: var(--c-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(255,189,89,0.25);
+}
+.masthead__avatar::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--c-acc);
+  border: 2px solid var(--c-bg);
+  border-radius: 50%;
+  bottom: 0; right: 0;
+}
+.masthead__txt { flex: 1; min-width: 0; }
+.masthead__greet { font-size: 13px; color: var(--c-text3); }
+.masthead__name { font-size: 26px; font-weight: 800; color: var(--c-text); letter-spacing: -0.5px; line-height: 1.15; margin-top: 4px; }
+
+.mode-row { display: flex; gap: 4px; padding: 4px; background: var(--c-surface); border: 1px solid var(--c-hairline); border-radius: var(--r-pill); }
+.mode-btn { padding: 7px 14px; border-radius: var(--r-pill); background: transparent; border: none; font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--c-text3); cursor: pointer; }
+.mode-btn.active { background: var(--c-acc); color: var(--c-bg); }
+.mode-btn:not(.active):hover { color: var(--c-text); }
+
+/* ANCHOR ROW */
+.anchors { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 22px 28px; box-shadow: var(--shadow-md), var(--inset-card); display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; }
+.anchor { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.anchor + .anchor { padding-left: 24px; border-left: 1px solid var(--c-hairline); }
+.anchor__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); }
+.anchor__value { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1; color: var(--c-text); font-variant-numeric: tabular-nums; }
+.anchor__value sub { font-size: 13px; font-weight: 600; color: var(--c-text3); vertical-align: baseline; margin-left: 2px; }
+.anchor__value--accent { color: var(--c-acc); }
+.anchor__value--gold { color: var(--c-gold); }
+.anchor__value--alert { color: var(--c-acc3); }
+.anchor__sub { font-size: 11.5px; font-weight: 500; color: var(--c-text2); line-height: 1.4; }
+.anchor__sub--up { color: var(--c-acc); font-weight: 700; }
+.anchor__sub--alert { color: var(--c-acc3); font-weight: 700; }
+.anchor__sub strong { color: var(--c-text); font-weight: 700; }
+
+/* NW composition (carried from v2.3) */
+.composition { margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+.comp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--c-surface2); }
+.comp-seg { height: 100%; transition: width 800ms cubic-bezier(0.16, 1, 0.3, 1); }
+.comp-legend { display: flex; gap: 10px; font-size: 10px; color: var(--c-text3); flex-wrap: wrap; }
+.comp-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.comp-legend i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+.comp-legend strong { color: var(--c-text2); font-weight: 600; }
+
+/* Score sparkline (carried from v2.3) */
+.spark-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.sparkline { width: 80px; height: 24px; display: block; }
+.spark-line { fill: none; stroke: var(--c-acc); stroke-width: 1.5; stroke-linejoin: round; }
+.spark-area { fill: var(--c-acc); opacity: 0.10; }
+.spark-dot { fill: var(--c-acc); }
+.spark-meta { font-size: 10.5px; color: var(--c-text3); font-weight: 600; }
+.spark-meta strong { color: var(--c-acc); font-weight: 700; }
+
+/* Confidence (carried from v2.3) */
+.confidence { font-size: 11px; color: var(--c-text3); display: inline-flex; align-items: center; gap: 6px; }
+.confidence-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-acc); }
+
+/* ADDITION v2.4 — CoI countdown timeline */
+.coi-timeline {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.coi-bar-bg {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-surface2);
+  overflow: visible;
+}
+.coi-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--c-gold), var(--c-acc3));
+  width: 10%;  /* days-elapsed / total */
+}
+.coi-bar-deadline {
+  position: absolute;
+  top: -3px;
+  right: 0;
+  width: 2px;
+  height: 10px;
+  background: var(--c-acc3);
+  border-radius: 1px;
+}
+.coi-bar-now {
+  position: absolute;
+  top: -3px;
+  left: 10%;
+  width: 2px;
+  height: 10px;
+  background: var(--c-text);
+  border-radius: 1px;
+}
+.coi-timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--c-text3);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.coi-timeline-labels strong { color: var(--c-acc3); font-weight: 700; }
+
+/* GRID + CARDS */
+.grid-2col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+.card { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 22px 26px; box-shadow: var(--shadow-md), var(--inset-card); }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.card-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-text3); margin-bottom: 3px; }
+.card-title { font-size: 17px; font-weight: 700; color: var(--c-text); letter-spacing: -0.2px; line-height: 1.25; }
+.card-chev { color: var(--c-text3); font-size: 22px; line-height: 1; cursor: pointer; }
+
+/* RADAR */
+.radar { width: 100%; max-width: 440px; aspect-ratio: 1; margin: 8px auto 12px; }
+.radar svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.r-ring { fill: none; stroke: var(--c-hairline); stroke-width: 1; }
+.r-ring--outer { stroke: var(--c-hairline-strong); }
+.r-axis { stroke: var(--c-hairline); stroke-width: 1; }
+.r-polygon { fill: var(--c-acc-soft); stroke: var(--c-acc); stroke-width: 1.5; stroke-linejoin: round; transition: all 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.r-target { fill: none; stroke: var(--c-gold); stroke-width: 1.5; stroke-dasharray: 4 4; stroke-linejoin: round; opacity: 0.7; transition: all 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+.r-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.6px; fill: var(--c-text3); text-transform: uppercase; }
+.r-center-bg { fill: var(--c-bg); stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-center-label { font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; fill: var(--c-text3); text-anchor: middle; }
+.r-center-value-big { font-size: 40px; font-weight: 800; fill: var(--c-acc); text-anchor: middle; font-variant-numeric: tabular-nums; letter-spacing: -1.2px; transition: all 400ms ease-out; }
+.r-center-band { font-size: 9.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; fill: var(--c-text2); text-anchor: middle; }
+.r-center-nw-value { font-size: 16px; font-weight: 800; fill: var(--c-text); text-anchor: middle; font-variant-numeric: tabular-nums; letter-spacing: -0.4px; }
+.r-center-divider { stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-handle { fill: none; stroke: var(--c-text3); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0.35; transition: all 200ms ease-out; }
+
+/* ADDITION v2.4 — RADAR LEGEND */
+.radar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--c-text3);
+  font-weight: 600;
+}
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.legend-swatch--target { background: var(--c-gold); height: 2px; border-top: 1px dashed var(--c-gold); }
+.legend-swatch--current { background: var(--c-acc); }
+.legend-swatch--gap {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--c-acc3);
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 7px; font-weight: 800;
+}
+.legend-swatch--gap::after { content: '!'; }
+.legend-dims {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--c-text3);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--c-hairline);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.legend-dim {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.legend-dim i {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* hide carousel in non-today modes */
+[data-mode="future"] .brief-insight,
+[data-mode="plan"]   .brief-insight { display: none !important; }
+
+/* MODE STATES */
+[data-mode="future"] .r-polygon { stroke-dasharray: 5 5; opacity: 0.55; fill: rgba(93,219,194,0.04); }
+[data-mode="future"] .r-center-value-big { opacity: 0.55; }
+[data-mode="future"] .anchor__value:not(.anchor__value--alert) { color: var(--c-text-projected); }
+[data-mode="future"] .anchor__value--accent { opacity: 0.70; }
+[data-mode="future"] .anchor__value--gold { opacity: 0.70; }
+[data-mode="plan"] .r-target { stroke-width: 2.5; opacity: 1; stroke-dasharray: 6 4; }
+[data-mode="plan"] .r-polygon { opacity: 0.45; }
+[data-mode="whatif"] .r-handle { stroke: var(--c-acc); stroke-width: 1.5; stroke-dasharray: 0; opacity: 0.7; }
+[data-mode="whatif"] .r-polygon { fill: var(--c-acc-soft); opacity: 0.65; }
+
+.brief-text { display: none; }
+[data-mode="today"]  .brief-text[data-when="today"]  { display: block; }
+[data-mode="future"] .brief-text[data-when="future"] { display: block; }
+[data-mode="plan"]   .brief-text[data-when="plan"]   { display: block; }
+[data-mode="whatif"] .brief-text[data-when="whatif"] { display: block; }
+
+.brief-block { padding-top: 4px; }
+.brief-text { font-size: 14.5px; line-height: 1.65; color: var(--c-text2); margin-bottom: 12px; }
+.brief-text strong { color: var(--c-text); font-weight: 700; }
+.brief-text .fig { color: var(--c-text); font-weight: 800; font-variant-numeric: tabular-nums; }
+.brief-text .fig-gold { color: var(--c-gold); font-weight: 800; font-variant-numeric: tabular-nums; }
+.brief-action { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: var(--r-pill); background: var(--c-acc-soft); border: 1px solid var(--c-acc-line); color: var(--c-acc); font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.brief-action::after { content: ' →'; }
+
+.brief-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.brief-rotation { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--c-text3); }
+.brief-dots { display: flex; gap: 4px; }
+.brief-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-hairline-strong); cursor: pointer; }
+.brief-dot.active { background: var(--c-acc); }
+.brief-drag-hint { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--c-text3); }
+.brief-drag-hint__icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px dashed var(--c-text3); border-radius: 50%; font-size: 8px; opacity: 0.7; }
+[data-mode="whatif"] .brief-drag-hint { color: var(--c-acc); font-weight: 700; }
+[data-mode="whatif"] .brief-drag-hint__icon { border-color: var(--c-acc); color: var(--c-acc); opacity: 1; }
+
+/* ACTIONS */
+.actions-card { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 18px 6px 8px; box-shadow: var(--shadow-md), var(--inset-card); display: flex; flex-direction: column; }
+.actions-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 14px 12px; }
+.actions-head__title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-text3); }
+.actions-head__count { font-size: 11px; color: var(--c-text3); font-weight: 600; }
+
+/* WHAT-IF SECTION */
+.whatif-section { margin-top: 4px; border-top: 1px solid var(--c-hairline); padding: 14px 14px 10px; }
+.whatif-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.whatif-head__title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-violet); display: flex; align-items: center; gap: 6px; }
+.whatif-head__title::before { content: '↔'; font-size: 12px; }
+.whatif-head__hint { font-size: 10px; color: var(--c-text3); font-weight: 500; }
+.whatif-scenarios { display: flex; flex-direction: column; gap: 2px; }
+.whatif-row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-radius: var(--r-sm); cursor: pointer; border-bottom: 1px solid var(--c-hairline); }
+.whatif-row:last-child { border-bottom: none; }
+.whatif-row:hover { background: rgba(186,140,255,0.06); }
+.whatif-row__icon { font-size: 15px; flex-shrink: 0; width: 22px; text-align: center; }
+.whatif-row__body { flex: 1; min-width: 0; }
+.whatif-row__title { font-size: 13px; font-weight: 700; color: var(--c-text); line-height: 1.3; }
+.whatif-row__sub { font-size: 10.5px; color: var(--c-text3); margin-top: 1px; }
+.whatif-row__tag { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; padding: 2px 6px; border-radius: var(--r-pill); white-space: nowrap; flex-shrink: 0; }
+.whatif-row__tag--engine { background: var(--c-acc-soft); color: var(--c-acc); }
+.whatif-row__tag--ai { background: rgba(186,140,255,0.12); color: var(--c-violet); }
+.whatif-freeform { margin-top: 10px; display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: rgba(186,140,255,0.07); border: 1px dashed rgba(186,140,255,0.30); border-radius: var(--r-md); cursor: pointer; }
+.whatif-freeform__input { flex: 1; font-family: inherit; font-size: 12px; font-weight: 500; color: var(--c-text2); background: transparent; border: none; outline: none; }
+.whatif-freeform__input::placeholder { color: var(--c-text3); }
+.whatif-freeform__btn { font-size: 11px; font-weight: 700; color: var(--c-violet); white-space: nowrap; cursor: pointer; padding: 4px 8px; border-radius: var(--r-pill); background: rgba(186,140,255,0.15); border: none; font-family: inherit; }
+.actions-list { display: flex; flex-direction: column; gap: 2px; }
+.action-row { padding: 12px 14px; border-radius: var(--r-md); cursor: pointer; display: flex; flex-direction: column; gap: 6px; border: 1px solid transparent; transition: background 150ms ease-out; }
+.action-row:hover { background: var(--c-surface); }
+.action-row + .action-row { border-top: 1px solid var(--c-hairline); border-radius: 0; }
+.action-row__top { display: flex; align-items: center; gap: 10px; }
+.action-row__badge { font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-pill); white-space: nowrap; flex-shrink: 0; }
+.action-row__badge--high { background: var(--c-gold-soft); color: var(--c-gold); border: 1px solid var(--c-gold); }
+.action-row__badge--med { background: var(--c-acc3-soft); color: var(--c-acc3); border: 1px solid var(--c-acc3); }
+.action-row__badge--watch { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); }
+.action-row__badge--scenario { background: rgba(186,140,255,0.12); color: var(--c-violet); border: 1px solid var(--c-violet); }
+.action-cta--sonu { background: var(--c-violet); }
+.action-row__title { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--c-text); letter-spacing: -0.1px; line-height: 1.35; }
+.action-row__impact { font-size: 11px; font-weight: 700; color: var(--c-acc); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.action-row__chev { color: var(--c-text3); font-size: 18px; line-height: 1; transition: transform 200ms ease-out; }
+.action-row.expanded { background: linear-gradient(180deg, rgba(255,189,89,0.06), var(--c-surface)); border-color: rgba(255,189,89,0.20); border-radius: var(--r-md) !important; }
+.action-row.expanded + .action-row { border-top-color: transparent; }
+.action-row.expanded .action-row__chev { transform: rotate(90deg); }
+.action-row__body { display: none; padding-top: 6px; }
+.action-row.expanded .action-row__body { display: block; }
+.action-row__why { font-size: 13px; line-height: 1.55; color: var(--c-text2); margin-bottom: 12px; }
+.action-row__why .fig { color: var(--c-gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.action-cta { display: inline-flex; align-items: center; padding: 8px 16px; border-radius: var(--r-pill); background: var(--c-acc); color: var(--c-bg); border: none; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: 0.2px; }
+.action-cta::after { content: ' →'; }
+
+/* PLAN STRIP */
+.plan-strip { background: var(--grad-card); border: 1px solid var(--c-hairline); border-radius: var(--r-lg); padding: 16px 22px; display: flex; align-items: center; gap: 18px; box-shadow: var(--shadow-sm), var(--inset-card); }
+.plan-strip__label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; color: var(--c-text3); flex-shrink: 0; }
+.plan-strip__body { flex: 1; font-size: 14px; color: var(--c-text2); }
+.plan-strip__body strong { color: var(--c-text); font-weight: 700; }
+.plan-strip__cta { font-size: 12px; color: var(--c-acc); font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+/* FOOTER */
+.foot { padding: 20px 0 0; border-top: 1px solid var(--c-hairline); display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; }
+.foot-line { font-size: 11px; color: var(--c-text3); display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.foot-line--trust { color: var(--c-text2); font-weight: 600; }
+.foot-line--trust::before { content: '🔒'; font-size: 10px; }
+
+/* ─── SCORE DONUT ───────────────────── */
+.score-donut-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.score-donut { flex-shrink: 0; transform: rotate(-90deg); }
+.score-donut-bg { fill: none; stroke: var(--c-surface2); stroke-width: 5; }
+.score-donut-fill { fill: none; stroke: var(--c-acc); stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray 600ms cubic-bezier(0.16,1,0.3,1); }
+.score-donut-meta { display: flex; flex-direction: column; gap: 2px; }
+.score-donut-meta .spark-meta { margin: 0; }
+
+/* ─── RISK GAUGE ─────────────────────── */
+.risk-gauge { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.risk-gauge__track { position: relative; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #34c759 0%, #ffb347 50%, #ff6b6b 100%); overflow: visible; }
+.risk-gauge__pointer { position: absolute; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: var(--c-gold); border: 2px solid var(--c-bg); box-shadow: 0 0 6px rgba(255,189,89,0.5); transform: translateX(-50%); }
+.risk-gauge__labels { display: flex; justify-content: space-between; font-size: 9px; font-weight: 600; color: var(--c-text3); letter-spacing: 0.3px; }
+.risk-gauge__label-mid { text-align: center; color: var(--c-text3); font-size: 9px; font-weight: 600; }
+
+/* ─── DIMENSION DRILL OVERLAY ────────── */
+.dim-overlay { display: none; position: fixed; inset: 0; background: rgba(5,20,36,0.88); backdrop-filter: blur(12px); z-index: 1100; overflow-y: auto; padding: 40px 20px 80px; }
+.dim-overlay.open { display: flex; align-items: flex-start; justify-content: center; animation: fadeIn 200ms ease-out; }
+.dim-panel { background: var(--c-surface); border: 1px solid var(--c-hairline-strong); border-radius: 20px; width: 100%; max-width: 560px; box-shadow: 0 32px 80px rgba(0,0,0,0.55); animation: slideUp 260ms cubic-bezier(0.16,1,0.3,1); overflow: hidden; }
+.dim-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 22px 16px; border-bottom: 1px solid var(--c-hairline); }
+.dim-header__left { display: flex; align-items: center; gap: 12px; }
+.dim-badge { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dim-name { font-size: 18px; font-weight: 800; color: var(--c-text); letter-spacing: -0.3px; }
+.dim-close { width: 32px; height: 32px; border-radius: 50%; background: var(--c-surface2); border: 1px solid var(--c-hairline); color: var(--c-text3); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.dim-body { padding: 22px; }
+.dim-score-row { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+.dim-donut-wrap { position: relative; flex-shrink: 0; }
+.dim-donut-wrap svg { transform: rotate(-90deg); }
+.dim-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.dim-donut-val { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.dim-donut-max { font-size: 10px; color: var(--c-text3); font-weight: 600; }
+.dim-score-meta { flex: 1; }
+.dim-score-title { font-size: 22px; font-weight: 800; color: var(--c-text); font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 6px; }
+.dim-vs-target { font-size: 12px; color: var(--c-text3); display: flex; align-items: center; gap: 6px; }
+.dim-vs-target strong { color: var(--c-gold); }
+.dim-vs-target .gap-chip { background: rgba(255,111,125,0.12); color: var(--c-acc3); border: 1px solid var(--c-acc3); padding: 2px 8px; border-radius: var(--r-pill); font-size: 10px; font-weight: 700; }
+.dim-vs-target .on-chip { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); padding: 2px 8px; border-radius: var(--r-pill); font-size: 10px; font-weight: 700; }
+.dim-section { margin-bottom: 18px; }
+.dim-section__hd { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); margin-bottom: 8px; }
+.dim-section__body { font-size: 13.5px; color: var(--c-text2); line-height: 1.6; }
+.dim-section__body strong { color: var(--c-text); }
+.dim-gaps { display: flex; flex-direction: column; gap: 6px; }
+.dim-gap-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--c-text2); line-height: 1.4; }
+.dim-gap-item::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--c-acc3); flex-shrink: 0; margin-top: 5px; }
+.dim-actions { display: flex; flex-direction: column; gap: 8px; }
+.dim-action-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; background: var(--c-surface2); border-radius: var(--r-md); border: 1px solid var(--c-hairline); }
+.dim-action-item__num { width: 20px; height: 20px; border-radius: 50%; background: var(--c-acc-soft); border: 1px solid var(--c-acc-line); color: var(--c-acc); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dim-action-item__text { font-size: 13px; color: var(--c-text2); line-height: 1.4; }
+.dim-action-item__text strong { color: var(--c-text); font-weight: 700; }
+.dim-impact-strip { margin-top: 18px; padding: 12px 14px; background: var(--c-acc-soft); border: 1px solid var(--c-acc-line); border-radius: var(--r-md); font-size: 13px; color: var(--c-acc); display: flex; align-items: center; gap: 8px; }
+.dim-impact-strip strong { font-weight: 800; }
+
+/* ─── DRAG TOOLTIP ───────────────────── */
+.drag-tooltip { display: none; position: absolute; background: var(--c-surface); border: 1px solid var(--c-hairline-strong); border-radius: 12px; padding: 12px 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); font-size: 12px; color: var(--c-text2); max-width: 220px; z-index: 10; pointer-events: none; }
+.drag-tooltip.show { display: block; animation: fadeIn 150ms ease-out; }
+.drag-tooltip__title { font-size: 13px; font-weight: 800; color: var(--c-text); margin-bottom: 6px; }
+.drag-tooltip__row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 3px; }
+.drag-tooltip__key { color: var(--c-text3); }
+.drag-tooltip__val { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ─── GAPS MINI OVERLAY ──────────────── */
+.gaps-toast { display: none; position: fixed; bottom: 24px; right: 24px; background: var(--c-surface); border: 1px solid var(--c-hairline-strong); border-radius: 16px; padding: 18px 20px; max-width: 340px; box-shadow: 0 16px 48px rgba(0,0,0,0.4); z-index: 900; animation: slideUp 250ms cubic-bezier(0.16,1,0.3,1); }
+.gaps-toast.show { display: block; }
+.gaps-toast__hd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--c-acc3); margin-bottom: 12px; }
+.gap-item { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.gap-item:last-child { margin-bottom: 0; }
+.gap-item__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.gap-item__body { flex: 1; }
+.gap-item__name { font-size: 13px; font-weight: 700; color: var(--c-text); }
+.gap-item__sub { font-size: 11.5px; color: var(--c-text3); margin-top: 2px; line-height: 1.4; }
+.gaps-toast__close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--c-text3); font-size: 14px; cursor: pointer; }
+
+/* ═══════════════════════════════════
+   WHAT-IF OVERLAY
+   ═══════════════════════════════════ */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(5,20,36,0.90); backdrop-filter: blur(14px); z-index: 1000; overflow-y: auto; padding: 40px 20px 80px; }
+.overlay.open { display: flex; align-items: flex-start; justify-content: center; animation: fadeIn 220ms ease-out; }
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+.overlay-panel { background: var(--c-surface); border: 1px solid var(--c-hairline-strong); border-radius: 22px; width: 100%; max-width: 660px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); animation: slideUp 280ms cubic-bezier(0.16,1,0.3,1); overflow: hidden; }
+@keyframes slideUp { from { transform: translateY(28px); opacity:0 } to { transform: translateY(0); opacity:1 } }
+
+.overlay-header { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px 18px; border-bottom: 1px solid var(--c-hairline); }
+.overlay-scenario { display: flex; align-items: center; gap: 12px; }
+.overlay-icon { font-size: 24px; line-height: 1; }
+.overlay-title { font-size: 18px; font-weight: 800; color: var(--c-text); letter-spacing: -0.3px; }
+.overlay-close { width: 34px; height: 34px; border-radius: 50%; background: var(--c-surface2); border: 1px solid var(--c-hairline); color: var(--c-text3); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.overlay-close:hover { background: var(--c-surface3); color: var(--c-text); }
+
+.overlay-progress { display: flex; gap: 5px; padding: 14px 24px 0; }
+.progress-seg { flex: 1; height: 3px; border-radius: 2px; background: var(--c-hairline-strong); transition: background 300ms ease; }
+.progress-seg.done { background: var(--c-acc); opacity: 0.5; }
+.progress-seg.active { background: var(--c-acc); }
+
+.overlay-body { padding: 28px 24px 20px; min-height: 320px; }
+.overlay-phase { display: none; }
+.overlay-phase.active { display: block; animation: fadeIn 200ms ease-out; }
+
+/* ── QUESTIONS phase ─────────────────── */
+.qs-block { margin-bottom: 28px; }
+.qs-q { font-size: 16px; font-weight: 800; color: var(--c-text); margin-bottom: 12px; letter-spacing: -0.2px; line-height: 1.35; }
+.qs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.qs-chip { padding: 9px 18px; border-radius: var(--r-pill); background: var(--c-surface2); border: 1.5px solid var(--c-hairline-strong); color: var(--c-text2); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 120ms ease-out; user-select: none; }
+.qs-chip:hover { border-color: var(--c-acc); color: var(--c-acc); }
+.qs-chip.sel { background: var(--c-acc-soft); border-color: var(--c-acc); color: var(--c-acc); font-weight: 700; }
+.qs-hint { font-size: 11px; color: var(--c-text3); margin-top: 8px; font-style: italic; }
+
+/* ── LOADING phase ───────────────────── */
+.loading-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 56px 24px; text-align: center; }
+.loading-ring { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--c-hairline-strong); border-top-color: var(--c-acc); animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
+.loading-title { font-size: 16px; font-weight: 700; color: var(--c-text); }
+.loading-sub { font-size: 12px; color: var(--c-text3); line-height: 1.5; }
+.loading-steps { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; margin-top: 8px; }
+.loading-step { font-size: 12px; color: var(--c-text3); display: flex; align-items: center; gap: 8px; }
+.loading-step::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--c-acc); flex-shrink: 0; }
+
+/* ── RESULTS phase ───────────────────── */
+.result-summary { padding: 14px 16px; background: var(--c-surface2); border-radius: var(--r-md); margin-bottom: 20px; font-size: 14px; color: var(--c-text2); line-height: 1.6; }
+.result-summary strong { color: var(--c-text); font-weight: 700; }
+.result-summary .fig { color: var(--c-acc); font-weight: 700; }
+.result-summary .fig-gold { color: var(--c-gold); font-weight: 700; }
+.result-summary .fig-alert { color: var(--c-acc3); font-weight: 700; }
+
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.metric-tile { background: var(--c-bg); border: 1px solid var(--c-hairline); border-radius: var(--r-md); padding: 14px 16px; }
+.metric-tile__lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.9px; color: var(--c-text3); margin-bottom: 5px; }
+.metric-tile__val { font-size: 24px; font-weight: 800; color: var(--c-text); letter-spacing: -0.5px; line-height: 1; font-variant-numeric: tabular-nums; }
+.metric-tile__val--acc { color: var(--c-acc); }
+.metric-tile__val--gold { color: var(--c-gold); }
+.metric-tile__val--alert { color: var(--c-acc3); }
+.metric-tile__delta { font-size: 11px; font-weight: 700; margin-top: 4px; }
+.metric-tile__delta--pos { color: var(--c-acc); }
+.metric-tile__delta--neg { color: var(--c-acc3); }
+.metric-tile__delta--neu { color: var(--c-text3); }
+.metric-tile__sub { font-size: 10.5px; color: var(--c-text3); margin-top: 2px; line-height: 1.4; }
+
+.implications { margin-bottom: 20px; }
+.implications__hd { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--c-text3); margin-bottom: 12px; }
+.impl { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.impl__dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.impl__text { font-size: 13.5px; color: var(--c-text2); line-height: 1.55; }
+.impl__text strong { color: var(--c-text); }
+.impl__text .fig { color: var(--c-acc); font-weight: 700; }
+.impl__text .fig-gold { color: var(--c-gold); font-weight: 700; }
+.impl__text .fig-alert { color: var(--c-acc3); font-weight: 700; }
+
+.disclaimer { font-size: 11px; color: var(--c-text3); font-style: italic; margin-bottom: 20px; }
+
+/* ── ACTIONS phase ───────────────────── */
+.actions-phase__hd { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--c-text3); margin-bottom: 14px; }
+.action-tiles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.action-tile { display: flex; gap: 14px; padding: 14px 16px; background: var(--c-surface2); border: 1px solid var(--c-hairline); border-radius: var(--r-md); align-items: flex-start; }
+.action-tile__num { width: 24px; height: 24px; border-radius: 50%; background: var(--c-acc-soft); border: 1px solid var(--c-acc-line); color: var(--c-acc); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.action-tile__body { flex: 1; }
+.action-tile__title { font-size: 14px; font-weight: 700; color: var(--c-text); margin-bottom: 3px; }
+.action-tile__sub { font-size: 12px; color: var(--c-text2); line-height: 1.5; }
+.action-tile__route { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--c-text3); margin-top: 6px; }
+.action-tile__route span { color: var(--c-acc); }
+
+.sonu-strip { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: rgba(186,140,255,0.08); border: 1px solid rgba(186,140,255,0.28); border-radius: var(--r-md); cursor: pointer; }
+.sonu-strip:hover { background: rgba(186,140,255,0.13); }
+.sonu-strip__owl { font-size: 24px; }
+.sonu-strip__body { flex: 1; }
+.sonu-strip__title { font-size: 14px; font-weight: 700; color: var(--c-violet); }
+.sonu-strip__sub { font-size: 12px; color: var(--c-text3); margin-top: 2px; }
+.sonu-strip__arr { color: var(--c-violet); font-size: 20px; font-weight: 300; }
+
+/* ── FOOTER ──────────────────────────── */
+.overlay-footer { padding: 4px 24px 22px; display: flex; align-items: center; justify-content: space-between; }
+.btn-back { padding: 10px 18px; border-radius: var(--r-pill); background: transparent; border: 1px solid var(--c-hairline-strong); color: var(--c-text3); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.btn-back:hover { color: var(--c-text); border-color: var(--c-text3); }
+.btn-next { padding: 11px 28px; border-radius: var(--r-pill); background: var(--c-acc); color: var(--c-bg); border: none; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.btn-next:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-done { padding: 11px 28px; border-radius: var(--r-pill); background: var(--c-surface2); color: var(--c-text); border: 1px solid var(--c-hairline-strong); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+/* NOTES */
+.notes { max-width: 1440px; margin: 24px auto 0; padding: 24px 28px; background: #14161c; border: 1px solid #25272f; border-radius: 12px; font-family: 'Inter var',sans-serif; color: #b5b8bf; font-size: 13.5px; line-height: 1.6; }
+.notes h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+.notes ol { padding-left: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; }
+.notes ol li { padding-left: 4px; }
+.notes strong { color: #fff; font-weight: 600; }
+.notes em { color: #5ddbc2; font-style: normal; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="probe-bar">
+  <h1>Home v2.7 — radar center shrunk · dedicated What-if section</h1>
+  <p><strong>Founder feedback resolved:</strong> <em>Radar center back to r=68</em> — compact two-row layout, Wealth Score still dominant at 28px, NW secondary at 16px, polygon fully visible again. <em>What-if section now a distinct panel</em> below the actions list — 5 named scenarios (relocate, bigger home, early retire, income drop, ISA) + free-form input. Engine scenarios tagged "Instant," AI scenarios tagged "Ask Sonu."</p>
+  <p style="color:#6e7280">All v2.5 sparklines, CoI countdown, avatar, radar legend, mode pills retained.</p>
+</div>
+
+<div class="viewport theme-dark" data-mode="today">
+  <div class="viewport-label">
+    <span>Laptop · 1440 · v2.7</span>
+    <small>compact radar center · What-if section with 5 scenarios + free-form</small>
+  </div>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <div class="sidebar__mark">SW</div>
+        <div>
+          <div class="sidebar__name">Sonuswealth</div>
+          <div class="sidebar__tag">Premium</div>
+        </div>
+      </div>
+      <nav class="sidebar__nav">
+        <button class="nav-item active"><span style="font-size:16px">⌂</span>Home</button>
+        <button class="nav-item"><span style="font-size:16px">💰</span>My Money</button>
+        <button class="nav-item"><span style="font-size:16px">≈</span>Cashflow</button>
+        <button class="nav-item"><span style="font-size:16px">📑</span>Tax &amp; Estate</button>
+        <button class="nav-item"><span style="font-size:16px">⊙</span>Risk</button>
+        <button class="nav-item"><span style="font-size:16px">⏱</span>Timeline</button>
+        <button class="nav-item"><span style="font-size:16px">🦉</span>Ask Sonu</button>
+      </nav>
+      <div class="sidebar__foot">
+        <div class="avatar">BW</div>
+        <div class="avatar-meta">
+          <div class="avatar-name">Bruce Wilson</div>
+          <div class="avatar-sub">Switch persona →</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="data-fresh">
+          <span class="data-fresh__dot"></span>
+          <span>All sources fresh · synced 2h ago</span>
+        </div>
+        <!-- ADDITION v2.4: score chip with mini sparkline -->
+        <div class="score-chip">
+          <div class="score-chip__ring">47</div>
+          <div class="score-chip__mid">
+            <div class="score-chip__val">47<span style="color:var(--c-text3);font-weight:500">/100</span></div>
+            <div class="score-chip__band">Established</div>
+          </div>
+          <svg class="score-chip__spark" viewBox="0 0 42 16">
+            <path d="M0,12 C5,11 10,10 15,8 C20,7 25,6 30,5 C35,4 38,3 42,3"/>
+            <circle cx="42" cy="3" r="1.5" fill="#5ddbc2"/>
+          </svg>
+        </div>
+        <button class="icon-btn">🔔</button>
+        <button class="icon-btn">⚙</button>
+      </header>
+
+      <div class="body">
+
+        <!-- MASTHEAD with avatar (v2.4 addition) -->
+        <div class="masthead">
+          <div class="masthead__left">
+            <div class="masthead__avatar">BW</div>
+            <div class="masthead__txt">
+              <div class="masthead__greet">Good afternoon,</div>
+              <h1 class="masthead__name">Bruce · Wed 13 May</h1>
+            </div>
+          </div>
+          <div class="mode-row">
+            <button class="mode-btn active" data-mode-set="today">Today</button>
+            <button class="mode-btn" data-mode-set="future">Future</button>
+            <button class="mode-btn" data-mode-set="plan">Plan</button>
+          </div>
+        </div>
+
+        <section class="anchors">
+
+          <div class="anchor">
+            <span class="anchor__label">Net worth</span>
+            <span class="anchor__value">£3.63m</span>
+            <!-- NEW v2.5: NW sparkline -->
+            <div class="spark-row">
+              <svg class="sparkline" viewBox="0 0 80 24">
+                <path class="spark-area" d="M0,19 C8,18 16,17 24,15 C32,13 40,11 48,9 C56,8 64,7 80,5 L80,24 L0,24 Z"/>
+                <path class="spark-line" d="M0,19 C8,18 16,17 24,15 C32,13 40,11 48,9 C56,8 64,7 80,5"/>
+                <circle class="spark-dot" cx="80" cy="5" r="2"/>
+              </svg>
+              <span class="spark-meta"><strong>+£180K</strong> in 6m</span>
+            </div>
+            <span class="anchor__sub anchor__sub--up">↑ £42K this week</span>
+            <div class="composition">
+              <div class="comp-bar">
+                <div class="comp-seg" style="width:42%;background:var(--c-acc2)"></div>
+                <div class="comp-seg" style="width:28%;background:var(--c-violet)"></div>
+                <div class="comp-seg" style="width:23%;background:var(--c-acc)"></div>
+                <div class="comp-seg" style="width:7%;background:var(--c-text3)"></div>
+              </div>
+              <div class="comp-legend">
+                <span><i style="background:var(--c-acc2)"></i>Pensions <strong>42%</strong></span>
+                <span><i style="background:var(--c-violet)"></i>Home <strong>28%</strong></span>
+                <span><i style="background:var(--c-acc)"></i>ISA <strong>23%</strong></span>
+                <span><i style="background:var(--c-text3)"></i>Cash <strong>7%</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="anchor">
+            <span class="anchor__label">Wealth Score</span>
+            <span class="anchor__value anchor__value--accent">47<sub>/100</sub></span>
+            <div class="score-donut-row">
+              <!-- donut: r=16, C=100.5, 47%=47.2 filled -->
+              <svg class="score-donut" width="44" height="44" viewBox="0 0 44 44">
+                <circle class="score-donut-bg" cx="22" cy="22" r="16"/>
+                <circle class="score-donut-fill" cx="22" cy="22" r="16" stroke-dasharray="47.2 53.3"/>
+              </svg>
+              <div class="score-donut-meta">
+                <span class="spark-meta"><strong>+12</strong> in 6m</span>
+                <span class="confidence" style="margin-top:3px"><span class="confidence-dot"></span>Target <strong style="color:var(--c-gold);font-weight:700">68</strong> · gap 21</span>
+              </div>
+            </div>
+            <span class="confidence" style="margin-top:2px"><span class="confidence-dot"></span><strong style="color:var(--c-text2);font-weight:700">Established</strong> · 84 data points</span>
+          </div>
+
+          <div class="anchor">
+            <span class="anchor__label">Risk</span>
+            <span class="anchor__value anchor__value--gold">56<sub>/100</sub></span>
+            <div class="risk-gauge">
+              <div class="risk-gauge__track">
+                <div class="risk-gauge__pointer" style="left:56%"></div>
+              </div>
+              <div class="risk-gauge__labels">
+                <span>Conservative</span>
+                <span style="text-align:center">Balanced</span>
+                <span>Aggressive</span>
+              </div>
+            </div>
+            <span class="spark-meta" style="margin-top:4px"><strong>−6</strong> in 6m · improving</span>
+            <span class="anchor__sub"><strong>Managed</strong> · within plan band</span>
+            <span class="anchor__sub" style="color:var(--c-acc3);font-size:11px;margin-top:2px;cursor:pointer;font-weight:700" id="gaps-link">⚠ 3 gaps in radar →</span>
+          </div>
+
+          <!-- ADDITION v2.4: CoI countdown timeline -->
+          <div class="anchor">
+            <span class="anchor__label">Cost of Inaction</span>
+            <span class="anchor__value anchor__value--alert">£340K</span>
+            <span class="anchor__sub anchor__sub--alert">328 days to act</span>
+            <div class="coi-timeline">
+              <div class="coi-bar-bg">
+                <div class="coi-bar-fill"></div>
+                <div class="coi-bar-now"></div>
+                <div class="coi-bar-deadline"></div>
+              </div>
+              <div class="coi-timeline-labels">
+                <span>Today</span>
+                <span><strong>6 Apr 2027 · deadline</strong></span>
+              </div>
+              <span class="anchor__sub" style="color:var(--c-text3);font-size:10.5px;margin-top:1px">SIPP enters estate · compounds £610K by 2031 if no action</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="grid-2col">
+
+          <article class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-eyebrow">Your wealth shape</div>
+                <div class="card-title">7 dimensions · Today's position vs your target</div>
+              </div>
+              <span class="card-chev" id="btn-radar-detail" title="See all 7 dimensions">›</span>
+            </div>
+
+            <div class="radar">
+              <svg viewBox="0 0 440 440" aria-hidden="true">
+                <circle class="r-ring" cx="220" cy="220" r="50"/>
+                <circle class="r-ring" cx="220" cy="220" r="100"/>
+                <circle class="r-ring" cx="220" cy="220" r="150"/>
+                <circle class="r-ring r-ring--outer" cx="220" cy="220" r="180"/>
+
+                <line class="r-axis" x1="220" y1="220" x2="220" y2="40"/>
+                <line class="r-axis" x1="220" y1="220" x2="395.7" y2="129.4"/>
+                <line class="r-axis" x1="220" y1="220" x2="391.6" y2="304.3"/>
+                <line class="r-axis" x1="220" y1="220" x2="261.0" y2="394.1"/>
+                <line class="r-axis" x1="220" y1="220" x2="179.0" y2="394.1"/>
+                <line class="r-axis" x1="220" y1="220" x2="48.4" y2="304.3"/>
+                <line class="r-axis" x1="220" y1="220" x2="44.3" y2="129.4"/>
+
+                <polygon class="r-target" points="220,55 374,144 369,275 271,365 169,365 71,275 66,144"/>
+                <polygon class="r-polygon" points="220,49 357,154 320,235 220,220 181,378 72,275 158,176"/>
+
+                <text class="r-label" x="220" y="28" text-anchor="middle">Habits</text>
+                <text class="r-label" x="410" y="124" text-anchor="middle">Own</text>
+                <text class="r-label" x="408" y="316" text-anchor="middle">Tax</text>
+                <text class="r-label" x="261" y="416" text-anchor="middle">Safety</text>
+                <text class="r-label" x="179" y="416" text-anchor="middle">Flow</text>
+                <text class="r-label" x="32" y="316" text-anchor="middle">Debt</text>
+                <text class="r-label" x="30" y="124" text-anchor="middle">Legacy</text>
+
+                <g class="r-node" data-dim="habits" style="cursor:pointer"><circle class="r-handle" cx="220" cy="49" r="18"/><circle cx="220" cy="49" r="14" stroke="#4d8eff" fill="#1a2a3d" stroke-width="1.5"/><text x="220" y="53" font-size="11" font-weight="800" fill="#4d8eff" text-anchor="middle">95</text></g>
+                <g class="r-node" data-dim="own" style="cursor:pointer"><circle class="r-handle" cx="357" cy="154" r="18"/><circle cx="357" cy="154" r="14" stroke="#00e5a8" fill="#1a2a3d" stroke-width="1.5"/><text x="357" y="158" font-size="11" font-weight="800" fill="#00e5a8" text-anchor="middle">78</text></g>
+                <g class="r-node" data-dim="tax" style="cursor:pointer"><circle class="r-handle" cx="320" cy="235" r="18"/><circle cx="320" cy="235" r="14" stroke="#ffb347" fill="#1a2a3d" stroke-width="1.5"/><text x="320" y="239" font-size="11" font-weight="800" fill="#ffb347" text-anchor="middle">61</text></g>
+                <g class="r-node" data-dim="safety" style="cursor:pointer"><circle class="r-handle" cx="220" cy="380" r="20"/><circle cx="220" cy="380" r="16" stroke="#ff6b6b" stroke-width="2" fill="#1a2a3d"/><text x="220" y="384" font-size="12" font-weight="800" fill="#ff6b6b" text-anchor="middle">0</text></g>
+                <g class="r-node" data-dim="flow" style="cursor:pointer"><circle class="r-handle" cx="181" cy="378" r="18"/><circle cx="181" cy="378" r="14" stroke="#34c759" fill="#1a2a3d" stroke-width="1.5"/><text x="181" y="382" font-size="11" font-weight="800" fill="#34c759" text-anchor="middle">88</text></g>
+                <g class="r-node" data-dim="debt" style="cursor:pointer"><circle class="r-handle" cx="72" cy="275" r="18"/><circle cx="72" cy="275" r="14" stroke="#af52de" fill="#1a2a3d" stroke-width="1.5"/><text x="72" y="279" font-size="11" font-weight="800" fill="#af52de" text-anchor="middle">71</text></g>
+                <g class="r-node" data-dim="legacy" style="cursor:pointer"><circle class="r-handle" cx="158" cy="176" r="18"/><circle cx="158" cy="176" r="14" stroke="#ff9500" fill="#1a2a3d" stroke-width="1.5"/><text x="158" y="180" font-size="11" font-weight="800" fill="#ff9500" text-anchor="middle">18</text></g>
+
+                <g transform="translate(230,365)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                <g transform="translate(335,222)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+                <g transform="translate(170,163)"><circle r="6" fill="#ff6b6b"/><text font-size="9" font-weight="800" fill="#fff" text-anchor="middle" dy="3">!</text></g>
+
+                <circle class="r-center-bg" cx="220" cy="220" r="68"/>
+                <text class="r-center-label" x="220" y="196">Net Worth</text>
+                <text class="r-center-nw-value" x="220" y="211">£3.63M</text>
+                <line class="r-center-divider" x1="163" y1="218" x2="277" y2="218"/>
+                <text class="r-center-label" x="220" y="228">Wealth Score</text>
+                <text class="r-center-value-big" x="220" y="250" style="font-size:28px">47</text>
+                <text class="r-center-band" x="220" y="263">Established</text>
+              </svg>
+            </div>
+
+            <!-- ADDITION v2.4: RADAR LEGEND -->
+            <div class="radar-legend">
+              <span class="legend-item"><span class="legend-swatch legend-swatch--target"></span>Target (life-stage)</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--current"></span>Where you are today</span>
+              <span class="legend-item"><span class="legend-swatch legend-swatch--gap"></span>Gap to attention</span>
+            </div>
+
+            <div class="legend-dims">
+              <span class="legend-dim"><i style="background:#4d8eff"></i>Habits</span>
+              <span class="legend-dim"><i style="background:#00e5a8"></i>Own</span>
+              <span class="legend-dim"><i style="background:#ffb347"></i>Tax</span>
+              <span class="legend-dim"><i style="background:#ff6b6b"></i>Safety</span>
+              <span class="legend-dim"><i style="background:#34c759"></i>Flow</span>
+              <span class="legend-dim"><i style="background:#af52de"></i>Debt</span>
+              <span class="legend-dim"><i style="background:#ff9500"></i>Legacy</span>
+            </div>
+
+            <div class="brief-block">
+              <!-- INSIGHT 1 -->
+              <div class="brief-insight" data-insight="0" style="display:block">
+                <p class="brief-text" data-when="today" style="display:block;margin-bottom:10px">
+                  You hold <span class="fig">£3.63M</span> across pensions, ISAs, and the home. <span class="fig">35%</span> sits in tax shelters. Your <strong>Safety net</strong> is at <span class="fig">0/16</span> — no life cover, no income protection.
+                </p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <button class="brief-action" id="btn-review-protection">Review protection</button>
+                  <span style="font-size:12.5px;color:var(--c-text2)">lifts Score <strong style="color:var(--c-acc)">47 → 51</strong></span>
+                </div>
+              </div>
+              <!-- INSIGHT 2 -->
+              <div class="brief-insight" data-insight="1" style="display:none">
+                <p class="brief-text" data-when="today" style="display:block;margin-bottom:10px">
+                  Your <span class="fig-gold">£340K cost of inaction</span> compounds to <span class="fig-gold">£612K</span> by 2031 if your SIPP enters the estate. You have <strong>328 days</strong> before the April 2027 deadline.
+                </p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <button class="brief-action" id="btn-start-drawdown">Start drawdown</button>
+                  <span style="font-size:12.5px;color:var(--c-text2)">lifts Score <strong style="color:var(--c-acc)">47 → 53</strong></span>
+                </div>
+              </div>
+              <!-- INSIGHT 3 -->
+              <div class="brief-insight" data-insight="2" style="display:none">
+                <p class="brief-text" data-when="today" style="display:block;margin-bottom:10px">
+                  Your <strong>Legacy</strong> dimension (18/100) is your largest gap — no will, nominations possibly out of date. Writing a will takes 2 hours. Updating SIPP nominations is free and online.
+                </p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <button class="brief-action" id="btn-fix-legacy">Fix legacy gap</button>
+                  <span style="font-size:12.5px;color:var(--c-text2)">lifts Score <strong style="color:var(--c-acc)">47 → 49</strong></span>
+                </div>
+              </div>
+              <p class="brief-text" data-when="future">
+                <strong>On your current trajectory (5y out):</strong> NW projects to <span class="fig">£4.85M</span>, Wealth Score to <span class="fig">62</span>. But the <span class="fig-gold">£340K cost of inaction</span> compounds — your estate inherits <span class="fig-gold">£612K less</span> by 2031. Safety net stays <span class="fig">0/16</span>.
+              </p>
+              <p class="brief-text" data-when="plan">
+                <strong>Your plan target (gold dashed):</strong> reach Score <span class="fig">68</span> by July 2029. Currently at <span class="fig">47</span> — <span class="fig">21 points</span> below. Largest gaps: <strong>Safety net</strong> (target 12, today 0) and <strong>Legacy</strong> (target 28, today 18).
+              </p>
+              <p class="brief-text" data-when="whatif">
+                <strong>Drag any radar point</strong> to simulate. If you lift <strong>Safety net</strong> from 0 → 8 (one protection review), Wealth Score <span class="fig">47 → 51</span> and Cost of Inaction <span class="fig">£340K → £258K</span>. Release to apply.
+              </p>
+
+              <div class="brief-foot">
+                <div class="brief-rotation">
+                  <span><strong style="color:var(--c-text2)">Insight 1 of 3</strong></span>
+                  <div class="brief-dots">
+                    <div class="brief-dot active"></div>
+                    <div class="brief-dot"></div>
+                    <div class="brief-dot"></div>
+                  </div>
+                </div>
+                <div class="brief-drag-hint">
+                  <span class="brief-drag-hint__icon">⋮</span>
+                  <span>Drag any point to test what-if</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="actions-card">
+            <div class="actions-head">
+              <span class="actions-head__title">What to do next</span>
+              <span class="actions-head__count">6 · ranked by impact</span>
+            </div>
+            <div class="actions-list">
+              <div class="action-row expanded">
+                <div class="action-row__top">
+                  <span class="action-row__badge action-row__badge--high">High priority</span>
+                  <span class="action-row__title">Start pension drawdown</span>
+                  <span class="action-row__impact">+34 Score</span>
+                  <span class="action-row__chev">›</span>
+                </div>
+                <div class="action-row__body">
+                  <p class="action-row__why"><span class="fig">£340K</span> cost of inaction. You have <span class="fig">328 days</span> to act before your SIPP enters estate from April 2027.</p>
+                  <button class="action-cta">Show me how</button>
+                </div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--med">High</span><span class="action-row__title">Arrange life insurance in trust</span><span class="action-row__impact">+8 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">No life cover in place. Estate of <span class="fig">£3.63m</span> has no protection against early death.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Consider pension consolidation</span><span class="action-row__impact">+3 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why"><span class="fig">3 pensions</span> detected. Consolidating reduces charges and simplifies nominations.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Use £20K ISA allowance</span><span class="action-row__impact">+2 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">Move from taxable cash into ISA wrapper before <span class="fig">5 April</span>. Saves ~<span class="fig">£900/yr</span> tax.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Use £3K CGT allowance</span><span class="action-row__impact">+1 Score</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">Bed-and-ISA your commodity gains. Crystallises <span class="fig">£1,820</span> tax-free this year.</p><button class="action-cta">Show me how</button></div>
+              </div>
+              <div class="action-row">
+                <div class="action-row__top"><span class="action-row__badge action-row__badge--watch">Watch</span><span class="action-row__title">Write a basic will</span><span class="action-row__impact">Estate +18</span><span class="action-row__chev">›</span></div>
+                <div class="action-row__body"><p class="action-row__why">No will on file. Intestacy rules may not match your wishes.</p><button class="action-cta">Show me how</button></div>
+              </div>
+
+            </div>
+
+            <!-- WHAT-IF SECTION -->
+            <div class="whatif-section">
+              <div class="whatif-head">
+                <span class="whatif-head__title">What if?</span>
+                <span class="whatif-head__hint">Explore · not advice</span>
+              </div>
+              <div class="whatif-scenarios">
+                <div class="whatif-row" data-scenario="relocate">
+                  <span class="whatif-row__icon">✈️</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">How much do I need to relocate?</div>
+                    <div class="whatif-row__sub">Kenya · Portugal · UAE — cost of living, tax, residency</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--ai">Ask Sonu</span>
+                </div>
+                <div class="whatif-row" data-scenario="house">
+                  <span class="whatif-row__icon">🏡</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I moved to a bigger house?</div>
+                    <div class="whatif-row__sub">Stamp duty, mortgage impact, equity on current home</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--ai">Ask Sonu</span>
+                </div>
+                <div class="whatif-row" data-scenario="retire">
+                  <span class="whatif-row__icon">⏱️</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I retired 5 years earlier?</div>
+                    <div class="whatif-row__sub">Pension drawdown at 60 → cashflow, Score, IHT impact</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--engine">Instant</span>
+                </div>
+                <div class="whatif-row" data-scenario="parttime">
+                  <span class="whatif-row__icon">🌴</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I went part-time or took a break?</div>
+                    <div class="whatif-row__sub">Runway, monthly shortfall, and when to return</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--engine">Instant</span>
+                </div>
+                <div class="whatif-row" data-scenario="children">
+                  <span class="whatif-row__icon">🏠</span>
+                  <div class="whatif-row__body">
+                    <div class="whatif-row__title">What if I helped my children get started?</div>
+                    <div class="whatif-row__sub">Gifting, joint mortgage, trust — IHT and estate impact</div>
+                  </div>
+                  <span class="whatif-row__tag whatif-row__tag--ai">Ask Sonu</span>
+                </div>
+              </div>
+              <div class="whatif-freeform">
+                <input class="whatif-freeform__input" placeholder="Ask your own what-if…" type="text"/>
+                <button class="whatif-freeform__btn">Ask Sonu →</button>
+              </div>
+            </div>
+
+          </article>
+
+        </div>
+
+        <div class="plan-strip">
+          <div class="plan-strip__label">Plan progress</div>
+          <div class="plan-strip__body">No active plan yet. Set one in the <strong>Plan tab</strong> to see your trajectory and milestones here.</div>
+          <div class="plan-strip__cta" id="btn-set-plan" style="cursor:pointer">Set plan →</div>
+        </div>
+
+        <div class="foot">
+          <div class="foot-line foot-line--trust">Your data is private — never sold, never lent · UK-hosted · You delete, we delete</div>
+          <div class="foot-line">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="notes">
+  <h2>v2.7 — compact radar center · dedicated What-if section</h2>
+  <ol>
+    <li><strong>Radar center (FIXED)</strong> — back to r=68. Two-row layout: "Net Worth / £3.63M" (16px, white) above divider + "Wealth Score / 47 / Established" (28px, mint) below. Polygon is now fully visible again. NW is there but doesn't dominate.</li>
+    <li><strong>What-if section (NEW)</strong> — separate panel below the actions accordion, in violet register. 5 named scenarios: relocate abroad, bigger home, early retirement, income drop 30%, ISA reallocation. Each has icon + title + one-line sub + tag ("Instant" for engine-route, "Ask Sonu" for AI-route). Free-form input field with Ask Sonu CTA at the bottom.</li>
+    <li><strong>Actions list unchanged</strong> — still 6 items ranked by impact. Kenya row removed from actions (it now lives in the What-if section as "How much do I need to relocate?").</li>
+    <li><strong>All v2.5/v2.6 content retained</strong> — sparklines, CoI countdown, avatar, radar legend, mode pills, plan strip, trust footer.</li>
+  </ol>
+  <p style="margin-top:14px"><strong>Design intent:</strong> two distinct right-panel registers — "What to do next" (engine-ranked, deterministic) and "What if?" (exploratory, conversational). The violet color and dashed free-form border signal "this is a different mode of thinking."</p>
+</section>
+
+<!-- ═══════════════════ DIMENSION DRILL OVERLAY ═══════════════════ -->
+<div class="dim-overlay" id="dim-overlay">
+  <div class="dim-panel">
+    <div class="dim-header">
+      <div class="dim-header__left">
+        <div class="dim-badge" id="dim-badge"></div>
+        <span class="dim-name" id="dim-name">—</span>
+      </div>
+      <button class="dim-close" id="dim-close">✕</button>
+    </div>
+    <div class="dim-body" id="dim-body"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ GAPS TOAST ═══════════════════ -->
+<div class="gaps-toast" id="gaps-toast">
+  <button class="gaps-toast__close" id="gaps-toast-close">✕</button>
+  <div class="gaps-toast__hd">⚠ 3 gaps needing attention</div>
+  <div class="gap-item"><div class="gap-item__dot" style="background:#ff6b6b"></div><div class="gap-item__body"><div class="gap-item__name">Safety — 0/16</div><div class="gap-item__sub">No life cover, no income protection. Largest single gap in your score.</div></div></div>
+  <div class="gap-item"><div class="gap-item__dot" style="background:#ff9500"></div><div class="gap-item__body"><div class="gap-item__name">Legacy — 18/100</div><div class="gap-item__sub">No will, nominations possibly outdated, no IHT planning in place.</div></div></div>
+  <div class="gap-item"><div class="gap-item__dot" style="background:#ffb347"></div><div class="gap-item__body"><div class="gap-item__name">Tax — 61/100</div><div class="gap-item__sub">SIPP entering estate in 328 days. £340K cost of inaction if not resolved.</div></div></div>
+</div>
+
+<!-- drag tooltip element (referenced by CSS) -->
+<div class="drag-tooltip" id="drag-tooltip"><div class="drag-tooltip__title"></div></div>
+
+<!-- ═══════════════════ WHAT-IF OVERLAY ═══════════════════ -->
+<div class="overlay" id="whatif-overlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <div class="overlay-scenario">
+        <span class="overlay-icon" id="ov-icon">✈️</span>
+        <span class="overlay-title" id="ov-title">Loading…</span>
+      </div>
+      <button class="overlay-close" id="ov-close">✕</button>
+    </div>
+    <div class="overlay-progress" id="ov-progress">
+      <div class="progress-seg active" data-seg="0"></div>
+      <div class="progress-seg" data-seg="1"></div>
+      <div class="progress-seg" data-seg="2"></div>
+    </div>
+    <div class="overlay-body" id="ov-body"></div>
+    <div class="overlay-footer" id="ov-footer">
+      <button class="btn-back" id="btn-back">← Back</button>
+      <button class="btn-next" id="btn-next">Calculate →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   HOME v2.8 — all interactions
+   ══════════════════════════════════════════════════ */
+
+/* ── Mode pill ───────────────────────────────────── */
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector('.viewport').setAttribute('data-mode', btn.dataset.modeSet);
+  });
+});
+
+/* ── Action accordion ────────────────────────────── */
+document.querySelectorAll('.action-row').forEach(row => {
+  row.addEventListener('click', e => {
+    if (e.target.closest('.action-cta')) return; // let CTA handle itself
+    const wasExpanded = row.classList.contains('expanded');
+    document.querySelectorAll('.action-row').forEach(r => r.classList.remove('expanded'));
+    if (!wasExpanded) row.classList.add('expanded');
+  });
+});
+document.querySelectorAll('.action-cta').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const title = btn.closest('.action-row').querySelector('.action-row__title').textContent;
+    showActionDetail(title);
+  });
+});
+
+/* ── Insight carousel (FIX 5) ────────────────────── */
+let currentInsight = 0;
+const totalInsights = 3;
+function showInsight(idx) {
+  document.querySelectorAll('.brief-insight').forEach((el, i) => {
+    el.style.display = i === idx ? 'block' : 'none';
+  });
+  document.querySelectorAll('.brief-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === idx);
+  });
+  document.querySelector('.brief-rotation span strong').textContent = `Insight ${idx+1} of ${totalInsights}`;
+  currentInsight = idx;
+}
+document.querySelectorAll('.brief-dot').forEach((dot, i) => {
+  dot.addEventListener('click', () => showInsight(i));
+});
+// Auto-cycle every 8 seconds
+setInterval(() => showInsight((currentInsight + 1) % totalInsights), 8000);
+
+/* ── Review protection CTA (FIX 4) ──────────────── */
+document.getElementById('btn-review-protection')?.addEventListener('click', () => openDimDrill('safety'));
+document.getElementById('btn-start-drawdown')?.addEventListener('click', () => openDimDrill('tax'));
+document.getElementById('btn-fix-legacy')?.addEventListener('click', () => openDimDrill('legacy'));
+
+/* ── 3 gaps link (FIX 8) ─────────────────────────── */
+document.getElementById('gaps-link')?.addEventListener('click', () => {
+  document.getElementById('gaps-toast').classList.toggle('show');
+});
+document.getElementById('gaps-toast-close')?.addEventListener('click', () => {
+  document.getElementById('gaps-toast').classList.remove('show');
+});
+
+/* ── Set plan (FIX 11) ───────────────────────────── */
+document.getElementById('btn-set-plan')?.addEventListener('click', () => {
+  openSimpleModal('Set your wealth plan',
+    '<p style="font-size:14px;color:var(--c-text2);line-height:1.65;margin-bottom:20px">Define your target Wealth Score, timeline, and key milestones. Your plan appears on every screen as the gold dashed ring — showing you exactly where you\'re aiming and how close you are.</p>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+    '<div style="padding:14px;background:var(--c-surface2);border-radius:12px;font-size:13px;color:var(--c-text2)">🎯 <strong style="color:var(--c-text)">Target Score:</strong> 68 by July 2029</div>' +
+    '<div style="padding:14px;background:var(--c-surface2);border-radius:12px;font-size:13px;color:var(--c-text2)">📅 <strong style="color:var(--c-text)">Retirement target:</strong> age 65 · £85K/yr</div>' +
+    '<div style="padding:14px;background:var(--c-surface2);border-radius:12px;font-size:13px;color:var(--c-text2)">🏠 <strong style="color:var(--c-text)">Estate target:</strong> £5M NW · IHT mitigated</div>' +
+    '</div>' +
+    '<button onclick="document.getElementById(\'simple-modal\').remove()" class="btn-next" style="margin-top:20px;width:100%">Open Plan tab →</button>'
+  );
+});
+
+/* ── Radar card chevron (FIX 2) ──────────────────── */
+document.getElementById('btn-radar-detail')?.addEventListener('click', () => {
+  openSimpleModal('Your 7 wealth dimensions',
+    `<div style="display:flex;flex-direction:column;gap:8px">` +
+    Object.entries(DIMS).map(([k,d]) => {
+      const pct = Math.round((d.score / d.max) * 100);
+      const tpct = Math.round((d.target / d.max) * 100);
+      const isGap = d.score < d.target;
+      return `<div onclick="document.getElementById('simple-modal').remove();setTimeout(()=>openDimDrill('${k}'),100)" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--c-surface2);border-radius:10px;cursor:pointer;border:1px solid var(--c-hairline)">
+        <div style="width:10px;height:10px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--c-text)">${d.name}</div>
+          <div style="height:4px;background:var(--c-surface3);border-radius:2px;margin-top:5px;position:relative">
+            <div style="height:100%;background:${d.color};border-radius:2px;width:${pct}%;opacity:0.85"></div>
+            <div style="position:absolute;top:-3px;left:${tpct}%;width:2px;height:10px;background:var(--c-gold);border-radius:1px"></div>
+          </div>
+        </div>
+        <div style="font-size:14px;font-weight:800;color:${d.color};min-width:32px;text-align:right">${d.score}</div>
+        ${isGap ? '<div style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(255,111,125,0.12);color:#ff6f7d;border:1px solid #ff6f7d">GAP</div>' : ''}
+      </div>`;
+    }).join('') + '</div>'
+  );
+});
+
+/* ── Action detail modal (FIX 9) ─────────────────── */
+const ACTION_DETAIL = {
+  'Start pension drawdown': { body: 'Your SIPP will enter your estate on 6 April 2027 under the new IHT rules, creating a <strong style="color:var(--c-gold)">£340K cost of inaction</strong>. Starting flexible drawdown before that date keeps the pension outside the estate.<br><br>Steps: (1) Contact your pension provider, (2) request flexi-access drawdown, (3) take no income if you don\'t need it — just crystallise the pension. This alone lifts your Tax dimension from 61 → 78 and Score from 47 → 53.<br><br><strong>Time required:</strong> 30 minutes. No financial advice needed for the crystallisation decision itself.', tab: 'Tax & Estate tab' },
+  'Arrange life insurance in trust': { body: 'Writing life insurance in trust means the payout goes directly to your beneficiaries — outside your estate, so no IHT. For a £3.63M estate, a £1M term policy costs roughly <strong>£80–120/mo</strong> at your age.<br><br>Writing it in trust is free and done at the same time as taking out the policy. Without it, the payout would add to your estate and be taxed at 40%.<br><br><strong>Who to contact:</strong> a whole-of-life broker or your financial adviser.', tab: 'Ask Sonu for broker names' },
+  'Consider pension consolidation': { body: 'You have <strong>3 pensions</strong> detected. Each has separate charges, separate nominations, and separate performance to track.<br><br>Consolidating into one SIPP: reduces admin, may reduce charges (from ~0.75% × 3 to ~0.3% × 1), makes death benefit nominations simpler, and reduces the chance of losing track of a pension.<br><br><strong>Watch for:</strong> protected benefits (final salary, guaranteed annuity rates). Never consolidate without checking.', tab: 'My Money tab' },
+  'Use £20K ISA allowance': { body: 'You have £254K in cash (7% of NW). £20K can be moved into a Stocks & Shares ISA before 5 April — shielding future growth from CGT and income tax.<br><br>At your current savings rate, this saves roughly <strong>£900/yr</strong> in tax on growth. Over 20 years at 6% growth, tax-free compounding adds ~£18K vs taxable equivalent.<br><br><strong>Time to complete:</strong> 20 minutes online with most platforms.', tab: 'My Money tab' },
+  'Use £3K CGT allowance': { body: 'The CGT annual exempt amount is £3,000 for 2024/25. You have commodity holdings outside an ISA — you can crystallise <strong>£3,000 of gains tax-free</strong> this year by selling and buying back inside an ISA (bed-and-ISA).<br><br>This permanently removes those gains from future CGT liability. Without doing this, the gains sit in your taxable estate compounding.<br><br><strong>Time to complete:</strong> 30 minutes. Do it before 5 April.', tab: 'Tax & Estate tab' },
+  'Write a basic will': { body: 'You have no will on file. If you die without one, intestacy rules apply — your estate passes to next of kin under a fixed formula that may not match your wishes.<br><br>For a £3.63M estate with a mortgage and pension, a basic will should cover: (1) who gets what, (2) guardianship if children, (3) executors, (4) any trusts.<br><br><strong>Cost:</strong> £150–400 for a solicitor. Time: 1–2 hours. This is the single easiest action on your list.', tab: 'Ask Sonu for solicitor checklist' }
+};
+
+function showActionDetail(title) {
+  const d = ACTION_DETAIL[title];
+  if (!d) return;
+  openSimpleModal(title,
+    `<p style="font-size:13.5px;line-height:1.65;color:var(--c-text2);margin-bottom:20px">${d.body}</p>` +
+    `<button onclick="document.getElementById('simple-modal').remove()" class="btn-next" style="width:100%">${d.tab} →</button>`
+  );
+}
+
+/* ── Simple modal helper ─────────────────────────── */
+function openSimpleModal(title, bodyHTML) {
+  document.getElementById('simple-modal')?.remove();
+  const m = document.createElement('div');
+  m.id = 'simple-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(5,20,36,0.88);backdrop-filter:blur(12px);z-index:1200;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px 80px;overflow-y:auto;animation:fadeIn 200ms ease-out';
+  m.innerHTML = `<div style="background:var(--c-surface);border:1px solid var(--c-hairline-strong);border-radius:20px;width:100%;max-width:560px;box-shadow:0 32px 80px rgba(0,0,0,0.55);overflow:hidden;animation:slideUp 260ms cubic-bezier(0.16,1,0.3,1)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 22px 16px;border-bottom:1px solid var(--c-hairline)">
+      <span style="font-size:17px;font-weight:800;color:var(--c-text);letter-spacing:-0.2px">${title}</span>
+      <button onclick="document.getElementById('simple-modal').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--c-surface2);border:1px solid var(--c-hairline);color:var(--c-text3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="padding:22px">${bodyHTML}</div>
+  </div>`;
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  document.body.appendChild(m);
+}
+
+/* ══════════════════════════════════════════════════
+   DIMENSION DRILL (FIX 3 + 6)
+   ══════════════════════════════════════════════════ */
+const DIMS = {
+  habits: {
+    name: 'Habits', color: '#4d8eff', score: 95, target: 90, max: 100,
+    what: 'How consistently you save, review, and act on your finances. Measured by: contribution regularity, review frequency, missed payments, and financial behaviour patterns.',
+    why: 'You review finances monthly, contribute to pension on schedule, and have no missed payments or overdrafts. One of your strongest dimensions.',
+    gaps: [],
+    actions: ['Keep your monthly review cadence — it\'s paying off', 'Consider setting up automatic ISA contributions to lock in the habit'],
+    impact: { from: 95, to: 95, score_from: 47, score_to: 47 }
+  },
+  own: {
+    name: 'Own', color: '#00e5a8', score: 78, target: 85, max: 100,
+    what: 'Quality, diversification, and growth potential of your assets. Covers asset class mix, concentration risk, and liquidity profile.',
+    why: 'Strong portfolio across pensions, ISA, and property. Gap is mild concentration in property (28% vs target 20%) and limited international equity exposure.',
+    gaps: ['Property at 28% — target is 20% for your life stage', 'Limited international equity in pension allocation'],
+    actions: ['Over next 2 years, redirect contributions to global equity fund to dilute property %', 'Review pension fund choices — confirm you hold a global tracker, not UK-only'],
+    impact: { from: 78, to: 85, score_from: 47, score_to: 50 }
+  },
+  tax: {
+    name: 'Tax', color: '#ffb347', score: 61, target: 78, max: 100,
+    what: 'How efficiently your assets are structured to minimise tax — income tax now, CGT on gains, and inheritance tax at estate. This is your largest engine-driven gap.',
+    why: 'Your SIPP will enter your estate from April 2027 under new IHT rules — this is the single biggest drag. CGT and ISA allowances are underused. No gifting programme.',
+    gaps: ['SIPP entering estate: £340K cost of inaction', 'ISA allowance unused (£20K available)', 'CGT allowance partially unused (£3K)', 'No annual gifting programme'],
+    actions: ['Start flexi-access drawdown on SIPP before 6 April 2027 — free to do, takes 30 mins', 'Move £20K cash to ISA before 5 April each year'],
+    impact: { from: 61, to: 78, score_from: 47, score_to: 53 }
+  },
+  safety: {
+    name: 'Safety', color: '#ff6b6b', score: 0, target: 12, max: 16,
+    what: 'Your protection layer — life insurance, income protection, critical illness cover. Scored out of 16 based on coverage adequacy for your estate size and dependants.',
+    why: 'No life insurance in trust, no income protection policy detected. For a £3.63M estate, this is a critical gap. Your estate has no protection against early death or disability.',
+    gaps: ['No life insurance (in trust or otherwise)', 'No income protection policy', 'No critical illness cover'],
+    actions: ['Arrange a whole-of-life or term policy written in trust — payout bypasses estate and IHT', 'Get an income protection quote covering £85K/yr — costs roughly £100–200/mo at your age'],
+    impact: { from: 0, to: 12, score_from: 47, score_to: 51 }
+  },
+  flow: {
+    name: 'Flow', color: '#34c759', score: 88, target: 85, max: 100,
+    what: 'Monthly cashflow health — income vs spending ratio, emergency buffer adequacy, and debt service coverage. This tells you if you\'re living sustainably.',
+    why: 'Your income materially exceeds expenses. Cash reserves cover 6+ months of spending. Mortgage is within comfortable capacity. One of your strongest dimensions — above target.',
+    gaps: [],
+    actions: ['Your cashflow is healthy — direct surplus to ISA or pension rather than building more cash', 'Review your spend review annually to catch lifestyle creep'],
+    impact: { from: 88, to: 88, score_from: 47, score_to: 47 }
+  },
+  debt: {
+    name: 'Debt Health', color: '#af52de', score: 71, target: 80, max: 100,
+    what: 'This measures how WELL your debt is managed — not how much you have. Higher = better. It covers: mortgage LTV, interest rate vs market, debt-to-income ratio, and repayment trajectory.\n\n⚠ Moving this node toward the centre means a LOWER score — meaning WORSE debt management. Moving it outward means your debt is better managed (lower LTV, better rate, faster paydown).',
+    why: 'Mortgage is at a competitive rate with no high-interest debt. The gap is your LTV — currently 35% vs the target of 25% for your life stage. This will naturally improve as you pay down.',
+    gaps: ['Mortgage LTV 35% — target 25% for your life stage'],
+    actions: ['Two £5K overpayments this year reduce LTV and save ~£240/mo when fixed rate ends', 'Review remortgage rate at next renewal — a 0.5% drop on your balance saves ~£6K/yr'],
+    impact: { from: 71, to: 80, score_from: 47, score_to: 49 }
+  },
+  legacy: {
+    name: 'Legacy', color: '#ff9500', score: 18, target: 65, max: 100,
+    what: 'Estate planning completeness — will, IHT structure, pension death nominations, trust arrangements, and gifting. This is the most neglected dimension for most people.',
+    why: 'No will. SIPP nominations possibly not updated. No IHT planning beyond default nil-rate band. No annual gifting programme. This is your largest score gap — 47 points below target.',
+    gaps: ['No will on file', 'SIPP death benefit nominations potentially outdated', 'No IHT planning (NRB £325K + RNRB £175K = only £500K sheltered)', 'No annual gifting programme (£3K/yr + carryforward)'],
+    actions: ['Write a basic will — 1–2 hours, £150–400. Single easiest action you can take', 'Update SIPP nominations TODAY — takes 10 minutes online, free, highest IHT impact'],
+    impact: { from: 18, to: 65, score_from: 47, score_to: 55 }
+  }
+};
+
+function openDimDrill(key) {
+  const d = DIMS[key];
+  if (!d) return;
+  document.getElementById('dim-name').textContent = d.name;
+  document.getElementById('dim-badge').style.background = d.color;
+
+  const C = 2 * Math.PI * 28; // r=28 circle, C≈175.9
+  const filled = (d.score / d.max) * C;
+  const target_filled = (d.target / d.max) * C;
+  const isGap = d.score < d.target;
+  const deltaScore = d.impact.score_to - d.impact.score_from;
+
+  const gapsHTML = d.gaps.length ? d.gaps.map(g => `<div class="dim-gap-item">${g}</div>`).join('') : '<div style="font-size:13px;color:var(--c-acc)">✓ No gaps — this dimension is on or above target</div>';
+
+  const actionsHTML = d.actions.map((a, i) => `
+    <div class="dim-action-item">
+      <div class="dim-action-item__num">${i+1}</div>
+      <div class="dim-action-item__text">${a}</div>
+    </div>`).join('');
+
+  const impactHTML = deltaScore > 0 ?
+    `<div class="dim-impact-strip">📈 Reaching target (${d.target}) lifts Wealth Score <strong>${d.impact.score_from} → ${d.impact.score_to}</strong> (+${deltaScore} points)</div>` :
+    `<div class="dim-impact-strip" style="background:var(--c-acc-soft);border-color:var(--c-acc-line)">✓ This dimension is at or above target — maintain it</div>`;
+
+  const noteStyle = key === 'debt' ? 'margin-top:10px;padding:10px 12px;background:rgba(255,189,89,0.08);border:1px solid rgba(255,189,89,0.2);border-radius:10px;font-size:12px;color:var(--c-text3);line-height:1.5' : 'display:none';
+
+  document.getElementById('dim-body').innerHTML = `
+    <div class="dim-score-row">
+      <div class="dim-donut-wrap">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="28" fill="none" stroke="var(--c-surface2)" stroke-width="7"/>
+          <circle cx="40" cy="40" r="28" fill="none" stroke="${d.color}" stroke-width="7"
+            stroke-dasharray="${filled.toFixed(1)} ${(C-filled).toFixed(1)}" stroke-linecap="round" opacity="0.9"/>
+          <circle cx="40" cy="40" r="28" fill="none" stroke="var(--c-gold)" stroke-width="2"
+            stroke-dasharray="4 ${(C-4).toFixed(1)}"
+            stroke-dashoffset="${(-target_filled + 2).toFixed(1)}" opacity="0.6"/>
+        </svg>
+        <div class="dim-donut-center">
+          <div class="dim-donut-val" style="color:${d.color}">${d.score}</div>
+          <div class="dim-donut-max">/${d.max}</div>
+        </div>
+      </div>
+      <div class="dim-score-meta">
+        <div class="dim-score-title" style="color:${d.color}">${d.score}<span style="font-size:14px;color:var(--c-text3);font-weight:500">/${d.max}</span></div>
+        <div class="dim-vs-target">
+          Target <strong>${d.target}</strong>
+          ${isGap ? `<span class="gap-chip">−${d.target - d.score} gap</span>` : '<span class="on-chip">✓ on target</span>'}
+        </div>
+      </div>
+    </div>
+    ${key === 'debt' ? `<div style="${noteStyle}">⚠ <strong style="color:var(--c-gold)">Debt Health</strong> measures how WELL-MANAGED your debt is — not how much you have. A higher score = better. Moving this dimension's node <em>inward</em> on the radar = worse debt management (higher LTV, worse rate). Moving <em>outward</em> = better.</div>` : ''}
+    <div class="dim-section">
+      <div class="dim-section__hd">What this measures</div>
+      <div class="dim-section__body">${d.what.replace(/\n/g, '<br>')}</div>
+    </div>
+    <div class="dim-section">
+      <div class="dim-section__hd">Why your score is ${d.score}</div>
+      <div class="dim-section__body">${d.why}</div>
+    </div>
+    ${d.gaps.length ? `<div class="dim-section"><div class="dim-section__hd">Current gaps</div><div class="dim-gaps">${gapsHTML}</div></div>` : ''}
+    <div class="dim-section">
+      <div class="dim-section__hd">What improves it</div>
+      <div class="dim-actions">${actionsHTML}</div>
+    </div>
+    ${impactHTML}`;
+
+  document.getElementById('dim-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+document.getElementById('dim-close').addEventListener('click', () => {
+  document.getElementById('dim-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+});
+document.getElementById('dim-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('dim-overlay')) {
+    document.getElementById('dim-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+});
+
+/* ── Wire radar nodes to drill ───────────────────── */
+document.querySelectorAll('.r-node').forEach(node => {
+  node.addEventListener('click', () => openDimDrill(node.dataset.dim));
+});
+
+/* ── Brief dot carousel override ────────────────── */
+
+/* ── WHAT-IF OVERLAY ENGINE ─────────────────────────── */
+const SCENARIOS = {
+  relocate: {
+    icon: '✈️',
+    title: 'How much do I need to relocate?',
+    questions: [
+      { id: 'country', q: 'Which country are you thinking about?', chips: ['Kenya','Portugal','UAE','Spain','Australia','Other'] },
+      { id: 'home',    q: 'What would you do with your UK home?',  chips: ['Sell it','Rent it out','Keep it empty'] },
+      { id: 'when',    q: 'How soon are you thinking?',            chips: ['Within 2 years','3–5 years','Just exploring'] }
+    ],
+    results: (ans) => {
+      const c = ans.country || 'Kenya';
+      const colMap = { Kenya:'~40%', Portugal:'~65%', UAE:'~70%', Spain:'~60%', Australia:'~85%' };
+      const col = colMap[c] || '~55%';
+      const ukCost = 85000;
+      const pct = parseInt(col) / 100;
+      const newCost = Math.round(ukCost * pct / 1000) * 1000;
+      return `
+        <div class="result-summary">
+          Moving to <strong>${c}</strong> on your current lifestyle costs roughly <strong>${col} of UK living</strong>. On your estimated £85K/yr UK spend, that's about <span class="fig">£${newCost.toLocaleString()}/yr</span> — a saving of <span class="fig">£${(ukCost-newCost).toLocaleString()}/yr</span>. Your wealth can support this move comfortably. The key questions are tax, pension, and your UK assets.
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-tile"><div class="metric-tile__lbl">Est. annual cost</div><div class="metric-tile__val metric-tile__val--acc">£${newCost.toLocaleString()}</div><div class="metric-tile__sub">vs £85K UK baseline</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Annual saving</div><div class="metric-tile__val metric-tile__val--acc">£${(ukCost-newCost).toLocaleString()}</div><div class="metric-tile__sub">reinvest or draw less</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Pension treatment</div><div class="metric-tile__val" style="font-size:16px;margin-top:2px">UK-taxed</div><div class="metric-tile__sub">DTA protects pension income</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">IHT domicile</div><div class="metric-tile__val metric-tile__val--gold" style="font-size:16px;margin-top:2px">17-yr rule</div><div class="metric-tile__sub">UK deemed domicile persists</div></div>
+        </div>
+        <div class="implications">
+          <div class="implications__hd">Key implications for your position</div>
+          <div class="impl"><div class="impl__dot" style="background:#4d8eff"></div><div class="impl__text"><strong>Pension stays UK-taxed.</strong> Under the UK–${c} double tax agreement, your SIPP and drawdown income is taxed in the UK only. The <span class="fig-alert">£340K cost of inaction</span> on your SIPP does <em>not</em> disappear when you move — that deadline is still <strong>6 April 2027</strong>.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#ffb347"></div><div class="impl__text"><strong>UK domicile follows you.</strong> You remain UK-deemed domicile for inheritance tax for up to 17 years after leaving. Your <span class="fig">£3.63M</span> estate stays within the UK IHT net during that window.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#00e5a8"></div><div class="impl__text"><strong>Currency exposure.</strong> ${Math.round((1-pct)*100)}% of your assets are in GBP-denominated investments. Living expenses in local currency creates a natural hedge on spending, but your wealth is still GBP-exposed.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#34c759"></div><div class="impl__text"><strong>Wealth Score impact: minimal.</strong> Relocation itself doesn't move your Score significantly — but acting on the SIPP before you leave would lift it <span class="fig">47 → 53</span>.</div></div>
+        </div>
+        <div class="disclaimer">Estimate · not financial advice · Tax position depends on individual circumstances · FCA boundary applies</div>`;
+    },
+    actions: (ans) => {
+      const c = ans.country || 'Kenya';
+      return [
+        { n:1, title: 'Resolve the SIPP before you go', sub: `The £340K cost of inaction deadline (6 Apr 2027) doesn't move when you leave the UK. Start drawdown before you go.`, route: 'Tax & Estate tab' },
+        { n:2, title: 'Open a multi-currency account', sub: `Hold 6–12 months of ${c} living costs in local currency before moving to avoid FX timing risk on early expenses.`, route: 'Ask Sonu for recommendations' },
+        { n:3, title: 'Get a cross-border tax review', sub: 'UK-domicile rules, the 17-year IHT window, and any local tax registration need a specialist sign-off before departure.', route: 'Ask Sonu to find a specialist' }
+      ];
+    },
+    sonuPrompt: (ans) => `I'm considering moving to ${ans.country||'Kenya'} and want to understand the full financial picture — cost of living, UK-${ans.country||'Kenya'} tax treaty, pension treatment, IHT domicile rules, and what I should do with my UK home. My current NW is £3.63M.`
+  },
+
+  house: {
+    icon: '🏡',
+    title: 'What if I moved to a bigger house?',
+    questions: [
+      { id: 'target',  q: "What's the rough value of the new home?", chips: ['£1.5M','£2M','£2.5M','£3M','£3.5M+'] },
+      { id: 'fund',    q: 'How would you fund the move?',            chips: ['Sell current home','Remortgage','Use savings','Combination'] }
+    ],
+    results: (ans) => {
+      const vals = { '£1.5M':1500000,'£2M':2000000,'£2.5M':2500000,'£3M':3000000,'£3.5M+':3500000 };
+      const target = vals[ans.target] || 2000000;
+      const currentHome = Math.round(3630000 * 0.28);
+      const gap = target - currentHome;
+      const sdlt = target <= 250000 ? 0 : target <= 925000 ? (target-250000)*0.05 : target <= 1500000 ? 33750+(target-925000)*0.1 : 33750+57500+(target-1500000)*0.12;
+      return `
+        <div class="result-summary">
+          Moving from your current home (est. <strong>£${currentHome.toLocaleString()}</strong>) to a <strong>${ans.target||'£2M'}</strong> property means a gap of roughly <span class="fig">£${Math.max(0,gap).toLocaleString()}</span> plus <span class="fig-gold">£${Math.round(sdlt).toLocaleString()} stamp duty</span>. On a £3.63M portfolio this is financeable — the question is which assets to use.
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-tile"><div class="metric-tile__lbl">Funding gap</div><div class="metric-tile__val metric-tile__val--acc">£${Math.max(0,gap).toLocaleString()}</div><div class="metric-tile__sub">after selling current home</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Stamp duty (SDLT)</div><div class="metric-tile__val metric-tile__val--gold">£${Math.round(sdlt).toLocaleString()}</div><div class="metric-tile__sub">non-recoverable cost</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Wealth Score</div><div class="metric-tile__val">47 → 44</div><div class="metric-tile__delta metric-tile__delta--neg">−3 (debt rises)</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">NW impact</div><div class="metric-tile__val">Neutral</div><div class="metric-tile__sub">asset swap, not a loss</div></div>
+        </div>
+        <div class="implications">
+          <div class="implications__hd">Key implications</div>
+          <div class="impl"><div class="impl__dot" style="background:#ffb347"></div><div class="impl__text"><strong>Stamp duty is the real cost.</strong> <span class="fig-gold">£${Math.round(sdlt).toLocaleString()}</span> leaves your estate permanently. It's not an asset — plan to hold the new home long enough for capital growth to absorb it.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#af52de"></div><div class="impl__text"><strong>Debt dimension rises.</strong> If you remortgage, your Debt score drops — dragging Wealth Score from 47 to ~44. Offset by increasing pension contributions post-move.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#34c759"></div><div class="impl__text"><strong>Best funding order:</strong> ISA cash first (tax-free), then taxable savings, then remortgage. Avoid drawing pension early — the SIPP deadline pressure means you want flexibility there.</div></div>
+        </div>
+        <div class="disclaimer">Estimate · not financial advice · SDLT calculated at standard rates, no reliefs assumed</div>`;
+    },
+    actions: (ans) => [
+      { n:1, title: 'Map your liquid assets first', sub: 'ISA (£23%), cash (7%) — total ~£1.1M available without touching pension. Check this covers gap + SDLT + 6-month buffer.', route: 'My Money tab' },
+      { n:2, title: 'Stress-test the mortgage', sub: "If remortgaging, model repayments against your retirement income plan — especially if you plan to retire before it's paid off.", route: 'Cashflow tab' },
+      { n:3, title: 'Time it around your SIPP decision', sub: "Don't move your most liquid assets into property before you've resolved the April 2027 pension deadline.", route: 'Tax & Estate tab' }
+    ],
+    sonuPrompt: (ans) => `I'm thinking of buying a ${ans.target||'£2M'} home. Walk me through stamp duty, best way to fund the gap from my current portfolio, and how this affects my retirement plans.`
+  },
+
+  retire: {
+    icon: '⏱️',
+    title: 'What if I retired 5 years earlier?',
+    questions: [
+      { id: 'age',    q: 'What age are you aiming for?',            chips: ['55','58','60','62'] },
+      { id: 'income', q: 'Target annual income in retirement?',     chips: ['£40K','£60K','£80K','£100K','£120K+'] }
+    ],
+    results: (ans) => {
+      const age = parseInt(ans.age) || 60;
+      const inc = { '£40K':40000,'£60K':60000,'£80K':80000,'£100K':100000,'£120K+':120000 };
+      const target = inc[ans.income] || 80000;
+      const pensionAge = 57;
+      const stateAge = 67;
+      const gap = age < pensionAge ? stateAge - age : stateAge - age;
+      const isaRun = Math.round((3630000*0.23) / target * 10) / 10;
+      return `
+        <div class="result-summary">
+          Retiring at <strong>${age}</strong> on <strong>${ans.income||'£80K'}/yr</strong> is achievable from your current position — but it requires sequencing your income sources carefully. Your ISA alone gives <span class="fig">${isaRun} years</span> of runway before touching your pension.
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-tile"><div class="metric-tile__lbl">ISA runway</div><div class="metric-tile__val metric-tile__val--acc">${isaRun} yrs</div><div class="metric-tile__sub">at ${ans.income||'£80K'}/yr draw</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Pension access</div><div class="metric-tile__val">Age ${pensionAge}</div><div class="metric-tile__sub">${Math.max(0,pensionAge-age)} years after retirement</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">State pension gap</div><div class="metric-tile__val metric-tile__val--gold">${Math.max(0,stateAge-age)} yrs</div><div class="metric-tile__sub">deferred until age ${stateAge}</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Score without action</div><div class="metric-tile__val metric-tile__val--alert">47 → 39</div><div class="metric-tile__delta metric-tile__delta--neg">−8 on early exit</div></div>
+        </div>
+        <div class="implications">
+          <div class="implications__hd">Key implications</div>
+          <div class="impl"><div class="impl__dot" style="background:#00e5a8"></div><div class="impl__text"><strong>ISA + cash bridge.</strong> Your ISA (23%) and cash (7%) total ~<span class="fig">£1.1M</span>. At ${ans.income||'£80K'}/yr that bridges <span class="fig">${isaRun} years</span> to pension access at 57.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#ffb347"></div><div class="impl__text"><strong>SIPP deadline still applies.</strong> The <span class="fig-alert">£340K cost of inaction</span> doesn't move. Resolve drawdown before you retire — don't let the deadline pass in the transition.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#7aa7ff"></div><div class="impl__text"><strong>State pension deferred.</strong> You won't receive state pension until 67 — that's <span class="fig">${stateAge-age} years</span> after retiring at ${age}. £11,502/yr is at stake; deferring it past 67 increases it 1% per 9 weeks.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#34c759"></div><div class="impl__text"><strong>With planning, Score improves.</strong> If you resolve the SIPP, max ISA, and set up a drawdown ladder before retiring, Score rises to ~<span class="fig">58</span> — retiring stronger, not weaker.</div></div>
+        </div>
+        <div class="disclaimer">Estimate · not financial advice · Assumes no further contributions after retirement · State pension at current £11,502/yr</div>`;
+    },
+    actions: (ans) => [
+      { n:1, title: 'Build a 3-bucket income ladder', sub: 'Cash (2yr buffer) → ISA drawdown (bridge to pension) → SIPP drawdown (post-57). Model this in Cashflow.', route: 'Cashflow tab' },
+      { n:2, title: 'Resolve SIPP before you stop working', sub: 'The April 2027 deadline doesn't care when you retire. Act while you still have employment income to offset against.', route: 'Tax & Estate tab' },
+      { n:3, title: 'Check if phased retirement makes sense', sub: 'Going part-time first (3–4 days) preserves pension contributions and delays the income gap. Often better than a hard stop.', route: 'Ask Sonu to model it' }
+    ],
+    sonuPrompt: (ans) => `I want to retire at ${ans.age||60} on ${ans.income||'£80K'}/yr. Walk me through income sequencing — ISA bridge, pension drawdown, state pension — and what I need to do in the next 2 years.`
+  },
+
+  parttime: {
+    icon: '🌴',
+    title: 'What if I went part-time or took a break?',
+    questions: [
+      { id: 'type',   q: 'What are you considering?',               chips: ['6-month sabbatical','1-year break','Go permanently part-time','4-day week'] },
+      { id: 'income', q: 'Income during this period?',              chips: ['None (full break)','25% of salary','50% of salary','75% of salary'] }
+    ],
+    results: (ans) => {
+      const isFull = ans.income === 'None (full break)';
+      const pcts = { 'None (full break)':0, '25% of salary':0.25, '50% of salary':0.5, '75% of salary':0.75 };
+      const incPct = pcts[ans.income] ?? 0;
+      const ukSalary = 120000;
+      const monthlySpend = 7100;
+      const monthlyIncome = Math.round(ukSalary * incPct / 12);
+      const monthlyGap = Math.max(0, monthlySpend - monthlyIncome);
+      const liquidAssets = 3630000 * 0.07;
+      const runwayMonths = monthlyGap > 0 ? Math.round(liquidAssets / monthlyGap) : 999;
+      return `
+        <div class="result-summary">
+          On <strong>${ans.income||'no income'}</strong>, your monthly gap is roughly <span class="fig">£${monthlyGap.toLocaleString()}/mo</span>. Your cash reserves cover approximately <span class="fig">${Math.min(runwayMonths,36)} months</span> before you need to draw on ISA. Your wealth makes this very manageable.
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-tile"><div class="metric-tile__lbl">Monthly gap</div><div class="metric-tile__val metric-tile__val--acc">£${monthlyGap.toLocaleString()}</div><div class="metric-tile__sub">spend vs reduced income</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Cash runway</div><div class="metric-tile__val">${Math.min(runwayMonths,36)} mo</div><div class="metric-tile__sub">before touching ISA</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Pension contributions</div><div class="metric-tile__val metric-tile__val--gold">${isFull?'Paused':'Reduced'}</div><div class="metric-tile__sub">${isFull?'resume on return':'proportional to income'}</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Score impact</div><div class="metric-tile__val">47 → 43</div><div class="metric-tile__delta metric-tile__delta--neg">recovers 6m after return</div></div>
+        </div>
+        <div class="implications">
+          <div class="implications__hd">Key implications</div>
+          <div class="impl"><div class="impl__dot" style="background:#00e5a8"></div><div class="impl__text"><strong>Cash first, ISA second.</strong> Draw from cash (7% = ~£254K) before touching ISA. At £${monthlyGap.toLocaleString()}/mo gap that's <span class="fig">${Math.round(254000/monthlyGap)} months</span> of pure cash runway.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#ffb347"></div><div class="impl__text"><strong>Annual pension allowance.</strong> If fully paused, you lose the employer match and reduce your annual allowance carry-forward. A 1-year break costs roughly <span class="fig-gold">£${(ukSalary*0.05).toLocaleString()}</span> in lost employer contributions.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#4d8eff"></div><div class="impl__text"><strong>SIPP deadline unaffected.</strong> The April 2027 deadline is independent of employment status. If anything, act on it <em>before</em> the break while you still have salary to offset.</div></div>
+        </div>
+        <div class="disclaimer">Estimate · not financial advice · Based on estimated salary of £120K and monthly spend of £7,100</div>`;
+    },
+    actions: (ans) => [
+      { n:1, title: 'Build a 6-month cash buffer before leaving', sub: 'Pre-fund the gap so you're not making forced decisions mid-break. Move to a high-interest account now.', route: 'My Money tab' },
+      { n:2, title: 'Negotiate salary continuity for pension', sub: 'Many employers will continue minimal pension contributions during a career break — worth asking before you go.', route: 'Ask Sonu for a script' },
+      { n:3, title: 'Set a return trigger in advance', sub: 'Agree with yourself: if ISA drops below £X, return to work. Having a pre-committed rule prevents emotional drift.', route: 'Timeline tab' }
+    ],
+    sonuPrompt: (ans) => `I'm thinking of ${ans.type||'taking a career break'} on ${ans.income||'no income'}. What's the financial plan — draw-down order, pension impact, and how to set it up cleanly?`
+  },
+
+  children: {
+    icon: '🏠',
+    title: 'What if I helped my children get started?',
+    questions: [
+      { id: 'amount', q: 'How much are you thinking of giving?',    chips: ['£25K','£50K','£100K','£150K','£250K+'] },
+      { id: 'how',    q: 'How would you structure it?',             chips: ['Cash gift','Loan (informal)','Joint mortgage','Family trust'] },
+      { id: 'when',   q: 'When are you planning this?',             chips: ['This year','1–2 years','3–5 years'] }
+    ],
+    results: (ans) => {
+      const amtMap = { '£25K':25000,'£50K':50000,'£100K':100000,'£150K':150000,'£250K+':250000 };
+      const amt = amtMap[ans.amount] || 100000;
+      const isGift = !ans.how || ans.how === 'Cash gift';
+      const sevenYrClear = ans.when === 'This year' || ans.when === '1–2 years';
+      const ihtSaving = Math.round(amt * 0.40);
+      const newNW = 3630000 - (isGift ? amt : 0);
+      return `
+        <div class="result-summary">
+          ${isGift ? `A gift of <strong>£${amt.toLocaleString()}</strong> leaves your estate at <span class="fig">£${newNW.toLocaleString()}</span>. If you survive 7 years, the full <span class="fig">£${amt.toLocaleString()}</span> is outside your estate — saving <span class="fig-gold">£${ihtSaving.toLocaleString()} IHT</span>. Given your current estate, this is a meaningful and low-risk move.` : `A <strong>${ans.how}</strong> of <strong>£${amt.toLocaleString()}</strong> keeps the asset in your estate until structured otherwise. The IHT clock only starts on outright gifts.`}
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-tile"><div class="metric-tile__lbl">Amount</div><div class="metric-tile__val metric-tile__val--acc">£${amt.toLocaleString()}</div><div class="metric-tile__sub">${ans.how||'cash gift'}</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">IHT saved (7yr)</div><div class="metric-tile__val metric-tile__val--gold">£${isGift?ihtSaving.toLocaleString():'—'}</div><div class="metric-tile__sub">${isGift?'if you survive 7 years':'loan/trust treated differently'}</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Annual allowance</div><div class="metric-tile__val">£3K/yr</div><div class="metric-tile__sub">clears immediately, no 7yr rule</div></div>
+          <div class="metric-tile"><div class="metric-tile__lbl">Score impact</div><div class="metric-tile__val">+2</div><div class="metric-tile__delta metric-tile__delta--pos">Estate dim improves</div></div>
+        </div>
+        <div class="implications">
+          <div class="implications__hd">Key implications</div>
+          <div class="impl"><div class="impl__dot" style="background:#ff9500"></div><div class="impl__text"><strong>7-year taper rule.</strong> The gift is exempt from IHT if you survive 7 years. Taper relief reduces the charge from years 3–7. Gift sooner = more time to clear.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#4d8eff"></div><div class="impl__text"><strong>Use your annual allowances first.</strong> You can gift £3K/yr IHT-free (can carry back 1 year = £6K). Plus £5K on a child's wedding, and regular gifts from surplus income are fully exempt.</div></div>
+          <div class="impl"><div class="impl__dot" style="background:#00e5a8"></div><div class="impl__text"><strong>${isGift?'Gift is clean and simple.':'Consider structure carefully.'}</strong> ${isGift?`For your estate size (£3.63M), outright cash gifts are typically the most straightforward route. A trust adds flexibility but also compliance cost.`:`An informal loan remains in your estate. A formal trust gives control but needs legal setup (~£2–5K). Ask Sonu to explain the trade-offs.`}</div></div>
+        </div>
+        <div class="disclaimer">Estimate · not financial advice · IHT at 40% on amounts above nil-rate band · Consult an estate specialist</div>`;
+    },
+    actions: (ans) => [
+      { n:1, title: 'Use annual allowances first', sub: '£3K this year + £3K carried from last year = £6K immediately IHT-clear. Zero cost, zero paperwork, do it now.', route: 'Tax & Estate tab' },
+      { n:2, title: 'Start the 7-year clock early', sub: 'The earlier you gift, the more likely it clears before the 7-year window. Document it in writing with a simple letter.', route: 'Ask Sonu for a template' },
+      { n:3, title: 'Check your will reflects the gift', sub: 'If your estate drops by £100K+, review your will to ensure the remaining distribution still matches your wishes.', route: 'Ask Sonu for next steps' }
+    ],
+    sonuPrompt: (ans) => `I want to give ${ans.amount||'£100K'} to my children via ${ans.how||'a cash gift'}. Explain the IHT implications, 7-year taper, annual allowances I can use, and best structure for my estate.`
+  }
+};
+
+/* ── Overlay state ────────────────────────────────── */
+let currentScenario = null;
+let currentPhase = 0; // 0=questions, 1=loading, 2=results, 3=actions
+let answers = {};
+
+const overlay  = document.getElementById('whatif-overlay');
+const ovTitle  = document.getElementById('ov-title');
+const ovIcon   = document.getElementById('ov-icon');
+const ovBody   = document.getElementById('ov-body');
+const ovFooter = document.getElementById('ov-footer');
+function openOverlay(key) {
+  currentScenario = SCENARIOS[key];
+  currentPhase = 0;
+  answers = {};
+  if (!currentScenario) return;
+  ovTitle.textContent = currentScenario.title;
+  ovIcon.textContent  = currentScenario.icon;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderPhase();
+}
+
+function closeOverlay() {
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function setProgress(phase) {
+  document.querySelectorAll('.progress-seg').forEach((s,i) => {
+    s.classList.remove('active','done');
+    if (i < phase) s.classList.add('done');
+    else if (i === phase) s.classList.add('active');
+  });
+}
+
+function renderPhase() {
+  // Phases: 0=questions, 1=loading, 2=results+actions combined
+  setProgress(currentPhase);
+
+  if (currentPhase === 0) {
+    // Questions
+    const qs = currentScenario.questions;
+    let html = '';
+    qs.forEach(q => {
+      html += `<div class="qs-block">
+        <div class="qs-q">${q.q}</div>
+        <div class="qs-chips" data-qid="${q.id}">
+          ${q.chips.map(c => `<button class="qs-chip" data-val="${c}">${c}</button>`).join('')}
+        </div>
+      </div>`;
+    });
+    ovBody.innerHTML = html;
+    // chip selection
+    ovBody.querySelectorAll('.qs-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const group = chip.closest('.qs-chips');
+        group.querySelectorAll('.qs-chip').forEach(c => c.classList.remove('sel'));
+        chip.classList.add('sel');
+        answers[group.dataset.qid] = chip.dataset.val;
+      });
+    });
+    ovFooter.innerHTML = `<span style="font-size:11px;color:var(--c-text3)">Select any option to continue</span><button class="btn-next" id="btn-next-q">Calculate →</button>`;
+    document.getElementById('btn-next-q').addEventListener('click', () => {
+      currentPhase = 1;
+      renderPhase();
+    });
+
+  } else if (currentPhase === 1) {
+    // Loading
+    ovBody.innerHTML = `<div class="loading-wrap">
+      <div class="loading-ring"></div>
+      <div class="loading-title">Calculating your personalised picture…</div>
+      <div class="loading-sub">Using your £3.63M position, UK tax profile, and answers</div>
+      <div class="loading-steps">
+        <div class="loading-step">Comparing against your wealth shape</div>
+        <div class="loading-step">Running UK tax scenarios</div>
+        <div class="loading-step">Preparing your action plan</div>
+      </div>
+    </div>`;
+    ovFooter.innerHTML = '';
+    setTimeout(() => { currentPhase = 2; renderPhase(); }, 1600);
+
+  } else if (currentPhase === 2) {
+    // Results + actions
+    const resultsHTML = currentScenario.results(answers);
+    const acts = currentScenario.actions(answers);
+    const sonuQ = currentScenario.sonuPrompt(answers);
+    const actHTML = acts.map(a => `
+      <div class="action-tile">
+        <div class="action-tile__num">${a.n}</div>
+        <div class="action-tile__body">
+          <div class="action-tile__title">${a.title}</div>
+          <div class="action-tile__sub">${a.sub}</div>
+          <div class="action-tile__route">→ <span>${a.route}</span></div>
+        </div>
+      </div>`).join('');
+    ovBody.innerHTML = `
+      ${resultsHTML}
+      <div class="actions-phase__hd">What to do with this</div>
+      <div class="action-tiles">${actHTML}</div>
+      <div class="sonu-strip" data-prompt="${sonuQ.replace(/"/g,"'")}">
+        <span class="sonu-strip__owl">🦉</span>
+        <div class="sonu-strip__body">
+          <div class="sonu-strip__title">Go deeper with Sonu</div>
+          <div class="sonu-strip__sub">Ask follow-up questions, model variations, or explore edge cases</div>
+        </div>
+        <span class="sonu-strip__arr">›</span>
+      </div>`;
+    ovFooter.innerHTML = `<button class="btn-back" id="btn-back-r">← Edit answers</button><button class="btn-done" id="btn-done-r">Done</button>`;
+    document.getElementById('btn-back-r').addEventListener('click', () => { currentPhase = 0; renderPhase(); });
+    document.getElementById('btn-done-r').addEventListener('click', closeOverlay);
+    ovBody.querySelector('.sonu-strip').addEventListener('click', e => {
+      alert('Opens Ask Sonu pre-seeded with:\n\n"' + e.currentTarget.dataset.prompt + '"');
+    });
+  }
+}
+
+/* ── Wire up what-if rows ─────────────────────────── */
+document.querySelectorAll('.whatif-row[data-scenario]').forEach(row => {
+  row.addEventListener('click', () => openOverlay(row.dataset.scenario));
+});
+document.querySelectorAll('.whatif-freeform__btn').forEach(btn => {
+  btn.addEventListener('click', () => alert('Opens Ask Sonu with your custom question'));
+});
+document.getElementById('ov-close').addEventListener('click', closeOverlay);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeOverlay(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlay(); });
+</script>
+
+</body>
+</html>

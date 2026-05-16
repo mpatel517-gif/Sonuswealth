@@ -1,0 +1,346 @@
+{
+  "id": "b",
+  "name": "Fred & Wilma",
+  "displayName": "Fred & Wilma · 64 / 61",
+  "type": "couple",
+  "isIFA": false,
+  "lifeStage": 4,
+  "lifeStageName": "Transition",
+  "lifeStageAge": "55–65",
+  "isCouple": true,
+  "hasTrust": false,
+  "hasBusiness": false,
+  "hasDBPension": false,
+  "isHigherRateTaxpayer": false,
+  "age": 64,
+  "agePartner": 61,
+  "targetIncome": 55000,
+  "dataLastUpdated": "2026-04-19",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+  "drawdown": 0,
+  "assets": {
+    "sipp": {
+      "total": 480000,
+      "growth": 0.05,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "name": "Fred — Bedrock Quarry Pension",
+          "value": 195000,
+          "type": "Workplace DC",
+          "provider": "Royal London",
+          "charge": 0.004,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2022-03-15"
+        },
+        {
+          "name": "Fred — Personal SIPP",
+          "value": 145000,
+          "type": "SIPP",
+          "provider": "Hargreaves Lansdown",
+          "charge": 0.0045,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2021-09-01"
+        },
+        {
+          "name": "Wilma — Teachers Supplementary DC",
+          "value": 140000,
+          "type": "Workplace DC",
+          "provider": "Aviva",
+          "charge": 0.0055,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2023-06-20"
+        }
+      ]
+    },
+    "isa": {
+      "value": 280000,
+      "growth": 0.05
+    },
+    "residence": {
+      "value": 680000,
+      "ownership": "joint",
+      "ownershipShare": 0.5,
+      "address": "3 Cobblestone Way, Bedrock, Surrey"
+    },
+    "portfolio": {
+      "value": 0,
+      "growth": 0.05,
+      "bpr": false
+    },
+    "cash": {
+      "total": 95000,
+      "own": 48000,
+      "spouseCash": 47000,
+      "rate": 0.042
+    },
+    "trustGifts": null,
+    "protection": {
+      "lifeInsurance": {
+        "exists": true,
+        "amount": 250000,
+        "inTrust": false,
+        "premium": 1440
+      },
+      "criticalIllness": {
+        "exists": false,
+        "amount": 0,
+        "premium": 0
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": {
+        "exists": false,
+        "amount": 0
+      },
+      "keyPerson": {
+        "exists": false,
+        "amount": 0
+      },
+      "shareholderProtection": {
+        "exists": false
+      }
+    }
+  },
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 0,
+      "monthlyPayment": 0,
+      "rateType": "none",
+      "rate": 0,
+      "remainingYears": 0
+    },
+    "otherLoans": []
+  },
+  "dependants": [],
+  "willStatus": "outdated",
+  "lpaStatus": "neither",
+  "guardianNamed": false,
+  "income": {
+    "statePension": {
+      "annual": 11973,
+      "startAge": 66
+    },
+    "statePensionPartner": {
+      "annual": 9840,
+      "startAge": 67
+    },
+    "employment": 0,
+    "dividends": 0,
+    "rentalIncome": 0,
+    "overseasIncome": 0
+  },
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "3-6",
+    "q12_income_protection": "no",
+    "q13_income_sources": "two",
+    "d6_nominations_complete": "some",
+    "d6_will_current": "outdated",
+    "confidenceLevel": "medium"
+  },
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "353 days",
+      "headline": "Both pensions enter estate April 2027",
+      "context": "Combined £480k DC pensions subject to IHT from 6 April 2027. Neither drawdown started.",
+      "action": "Model joint drawdown strategy",
+      "screen": "tax",
+      "lifeStage": 4
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "This year",
+      "headline": "Life insurance not in trust — adds to estate",
+      "context": "£250k policy sits in your estate. A discretionary trust removes it from IHT instantly.",
+      "action": "Speak to adviser about trust placement",
+      "screen": "money",
+      "lifeStage": 4
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "This year",
+      "headline": "Will is outdated — update before retirement",
+      "context": "Last reviewed 2018. Circumstances have changed — review before Fred retires.",
+      "action": "Book will review",
+      "screen": "money",
+      "lifeStage": 4
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "New tax year",
+      "headline": "£40,000 combined ISA allowance available",
+      "context": "£20k each from 6 April. Move cash savings into ISA wrappers to shelter growth.",
+      "action": "Split ISA contribution between accounts",
+      "screen": "money",
+      "lifeStage": 4
+    },
+    {
+      "level": "medium",
+      "colour": "#007AFF",
+      "badge": "OPPORTUNITY",
+      "days": "Before retirement",
+      "headline": "Fred retires in 1 year — income gap to plan",
+      "context": "State pension starts age 66 for Fred. A 1-year income gap needs bridging from ISA or drawdown.",
+      "action": "Model retirement income sequence",
+      "screen": "tax",
+      "lifeStage": 4
+    }
+  ],
+  "timeline": [
+    {
+      "dot": "⏳",
+      "bg": "#FFF3F3",
+      "date": "6 April 2027",
+      "title": "Both pensions enter estate",
+      "sub": "£480k combined subject to IHT if not addressed"
+    },
+    {
+      "dot": "🏦",
+      "bg": "#E8F7EF",
+      "date": "6 April 2026",
+      "title": "Combined ISA allowance",
+      "sub": "£40,000 available between Fred and Wilma"
+    },
+    {
+      "dot": "🏛",
+      "bg": "#EEF2FF",
+      "date": "Age 65 (Fred)",
+      "title": "Fred's state pension",
+      "sub": "£11,973/yr — closes income gap"
+    },
+    {
+      "dot": "🏛",
+      "bg": "#EEF2FF",
+      "date": "Age 67 (Wilma)",
+      "title": "Wilma's state pension",
+      "sub": "£9,840/yr"
+    }
+  ],
+  "aiSuggestions": [
+    "What is our combined IHT position after April 2027 if we don't act?",
+    "Should we start drawdown from Fred's pension first or Wilma's?",
+    "How do we use our combined ISA allowance most tax-efficiently?",
+    "Does placing our life insurance in trust save IHT and how do we do it?"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Habits are solid. Some nominations are fresh, others need review.",
+      "action": "Review pension beneficiary nominations together — especially on the older Workplace DCs.",
+      "future": "Small habits reviewed once a year keep compounding in your favour."
+    },
+    "capital": {
+      "risk": "At £1.45m vs a joint retirement number around £1.1m you are on track.",
+      "action": "Review your joint retirement income target now Fred retires in under a year.",
+      "future": "Being on track means drawdown decisions ahead are about efficiency, not survival."
+    },
+    "tax": {
+      "risk": "Combined £480k DC pensions untouched. April 2027 IHT inclusion is under a year away.",
+      "action": "Model a joint drawdown strategy. Use your combined £40,000 ISA allowance from 6 April.",
+      "future": "Sequencing two drawdowns efficiently over the next decade can save tens of thousands in tax."
+    },
+    "protection": {
+      "risk": "£250k life insurance is in place but NOT in trust — so it sits in your estate for IHT.",
+      "action": "Place the policy in a discretionary trust. Same cover, no IHT.",
+      "future": "A policy in trust pays the full amount to your family instantly. Outside trust, it adds 40% to the IHT bill."
+    },
+    "cashflow": {
+      "risk": "£95k joint cash gives you 20+ months of combined spending runway.",
+      "action": "Move cash above 24 months into your new ISA allowances from 6 April.",
+      "future": "Joint cashflow covering at least 12 months means income gaps don't force early drawdown."
+    },
+    "debt": {
+      "risk": "Debt-free. Nothing to address here.",
+      "action": "No debt action needed.",
+      "future": "Entering retirement debt-free preserves more of the joint estate for your family."
+    },
+    "estate": {
+      "risk": "Both pensions enter the estate under a year from now. Will is outdated. Life policy adds to the IHT bill.",
+      "action": "Three actions: start a joint drawdown plan, book a will review, and place the life policy in trust.",
+      "future": "Acting on all three reduces your combined IHT bill meaningfully and simplifies probate for each other."
+    }
+  },
+
+  "plans": [
+    { "id": "plan-joint-retirement", "type": "retirement", "label": "Both retire by Wilma's 65th (2030)",
+      "target": { "date": "2030-04-01", "jointAnnualIncome": 72000 },
+      "target_display": null,
+      "monthlyContribution": 400, "lastReviewedAt": "2025-10-08", "status": "active", "createdAt": "2024-04-01" },
+    { "id": "plan-estate", "type": "estate", "label": "Use both NRBs + RNRBs + spouse exemption",
+      "target": { "ihtCap": 0, "rnrbUsedBoth": true },
+      "target_display": null,
+      "lastReviewedAt": "2024-11-01", "status": "stale", "createdAt": "2023-08-01" },
+    { "id": "plan-will-refresh", "type": "estate", "label": "Refresh outdated mirror wills",
+      "target": { "willStatus": "current" },
+      "target_display": null,
+      "lastReviewedAt": "2019-05-12", "status": "stale", "createdAt": "2019-05-12" },
+    { "id": "plan-protection", "type": "protection", "label": "Place existing life policies in trust",
+      "target": { "lifePoliciesInTrust": 2 },
+      "target_display": null,
+      "lastReviewedAt": "2025-06-20", "status": "active", "createdAt": "2022-03-01" }
+  ],
+
+  "scenarios": [
+    { "id": "scen-fred-retires-now", "name": "Fred retires now, Wilma works to 65",
+      "createdAt": "2026-02-18",
+      "changedFields": { "fredRetireDate": "2026-06-01", "wilmaRetireDate": "2030-04-01" },
+      "deltaResults": { "jointAnnualIncomePostFredRetire": 48000, "probabilityOfSuccess": 0.84 },
+      "status": "saved" },
+    { "id": "scen-downsize", "name": "Downsize to £550k cottage in 2028",
+      "createdAt": "2026-03-20",
+      "changedFields": { "residenceProceeds": 580000, "newResidenceCost": 550000 },
+      "deltaResults": { "liquidReleased": 30000, "ihtAt75Joint": -42000, "probabilityOfSuccess": 0.89 },
+      "status": "saved" },
+    { "id": "scen-fred-pension-first", "name": "Draw Fred's SIPP first, defer Wilma's",
+      "createdAt": "2026-04-12",
+      "changedFields": { "drawdownOrder": "fred-first" },
+      "deltaResults": { "ihtAt85": -68000, "probabilityOfSuccess": 0.87 },
+      "status": "saved" }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 1052000 }, { "date": "2025-07-01", "value": 1061000 },
+      { "date": "2025-08-01", "value": 1068000 }, { "date": "2025-09-01", "value": 1077000 },
+      { "date": "2025-10-01", "value": 1085000 }, { "date": "2025-11-01", "value": 1094000 },
+      { "date": "2025-12-01", "value": 1103000 }, { "date": "2026-01-01", "value": 1110000 },
+      { "date": "2026-02-01", "value": 1118000 }, { "date": "2026-03-01", "value": 1125000 },
+      { "date": "2026-04-01", "value": 1133000 }, { "date": "2026-05-01", "value": 1140000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 49 }, { "date": "2025-07-01", "score": 50 },
+      { "date": "2025-08-01", "score": 50 }, { "date": "2025-09-01", "score": 51 },
+      { "date": "2025-10-01", "score": 51 }, { "date": "2025-11-01", "score": 52 },
+      { "date": "2025-12-01", "score": 52 }, { "date": "2026-01-01", "score": 52 },
+      { "date": "2026-02-01", "score": 53 }, { "date": "2026-03-01", "score": 53 },
+      { "date": "2026-04-01", "score": 54 }, { "date": "2026-05-01", "score": 54 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 56 }, { "date": "2025-07-01", "score": 57 },
+      { "date": "2025-08-01", "score": 58 }, { "date": "2025-09-01", "score": 58 },
+      { "date": "2025-10-01", "score": 59 }, { "date": "2025-11-01", "score": 59 },
+      { "date": "2025-12-01", "score": 60 }, { "date": "2026-01-01", "score": 60 },
+      { "date": "2026-02-01", "score": 60 }, { "date": "2026-03-01", "score": 61 },
+      { "date": "2026-04-01", "score": 61 }, { "date": "2026-05-01", "score": 61 }
+    ]
+  }
+}

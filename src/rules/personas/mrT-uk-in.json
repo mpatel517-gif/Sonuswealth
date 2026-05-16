@@ -1,0 +1,400 @@
+{
+  "fixture_id": "mrT-uk-in",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK/IN cross-border NRI at Accumulation life stage (age 38 — Priya-adjacent). UK tax resident (>183 days), Indian domicile of origin, DTAA applicable. Exercises dual residency test, DTAA article-by-article application, NRE interest exemption, NRO TDS mechanics, PPF frozen-contributions rule for NRIs, ELSS LTCG calc, NPS Tier-I/II withdrawal rules, ESOPs dual tax, Indian rental with TDS collected by tenant.",
+  "fixture_anchor_archetype": "46",
+  "archetypes_exercised": ["46", "47", "48", "49", "50"],
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": "IN",
+    "tax_bundle_primary": "UK-2026.1",
+    "tax_bundle_secondary": "IN-2026.1",
+    "tax_bundle_secondary_status": "stub-OPEN at fixture-date; engine must handle gracefully",
+    "domicile": "India-of-origin",
+    "deemed_domicile_uk": false,
+    "deemed_domicile_uk_trigger_date": null,
+    "dtaa_applicable": true,
+    "dtaa_treaty": "UK-India Double Taxation Avoidance Agreement 1993 (as amended)",
+    "fx_baseline": {"INR_per_GBP": 103, "as_of": "2026-04-20"}
+  },
+
+  "individual": {
+    "id": "mrT-uk-in-primary",
+    "name": "Ms T NRI",
+    "dob": "1988-01-14",
+    "gender": "F",
+    "residency_status_uk": "UK-tax-resident",
+    "residency_status_in": "NRI (non-resident-Indian)",
+    "residency_tests": {
+      "uk_srt_days": 298,
+      "uk_srt_status": "automatic-UK-resident",
+      "in_residency_days": 42,
+      "in_status_per_section_6": "non-resident",
+      "not_ordinarily_resident_in_for_passed_yrs": true
+    },
+    "employment_status": "employed",
+    "employer_uk": "Synthetic UK Tech Ltd",
+    "gross_salary_gbp": 95000,
+    "income_band_uk": "higher-rate",
+    "uk_state_pension_start_age": 67,
+    "uk_state_pension_accrued_years": 11,
+    "in_state_pension_scheme": null,
+    "life_stage": "accumulation",
+    "uk_years_of_residence": 12,
+    "arrived_uk_date": "2014-08-01"
+  },
+
+  "relationships": [],
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "workplace-dc-uk",
+        "owner": "mrT-uk-in-primary",
+        "type": "occupational-DC",
+        "provider": "Standard Life",
+        "jurisdiction": "UK",
+        "balance_gbp": 85000,
+        "contribution_monthly_personal": 475,
+        "contribution_monthly_employer": 475,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.006,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Parents (India)", "pct": 100}],
+          "date_set": "2022-11-10",
+          "stale": false,
+          "cross_border_nomination_note": "Non-UK resident beneficiaries; scheme can still pay out but distribution may trigger different tax in recipient jurisdiction"
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "nps-tier-1",
+        "owner": "mrT-uk-in-primary",
+        "type": "Indian-NPS-Tier-I",
+        "jurisdiction": "IN",
+        "balance_inr": 500000,
+        "balance_gbp": 4854,
+        "contribution_annual_inr": 50000,
+        "asset_class_allocation": {"equity": 0.65, "corporate_debt": 0.20, "government_debt": 0.15},
+        "maturity_age": 60,
+        "withdrawal_rules": "60pct lump sum tax-free at maturity; 40pct mandatory annuity",
+        "nri_contribution_permitted": true,
+        "tax_treatment_uk": "accrual taxable in UK under worldwide income principle; DTAA relief for Indian tax paid",
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "nps-tier-2",
+        "owner": "mrT-uk-in-primary",
+        "type": "Indian-NPS-Tier-II",
+        "jurisdiction": "IN",
+        "balance_inr": 200000,
+        "balance_gbp": 1942,
+        "note": "Voluntary additional account; no tax benefits on contributions; freely withdrawable",
+        "last_valuation_date": "2026-04-15"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-ss-uk",
+        "owner": "mrT-uk-in-primary",
+        "type": "stocks-and-shares-ISA",
+        "jurisdiction": "UK",
+        "provider": "Vanguard",
+        "balance_gbp": 42000,
+        "contribution_current_tax_year": 15000,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.003,
+        "isa_eligibility_note": "Eligible while UK resident; cannot contribute if ceases UK residence",
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "elss-india",
+        "owner": "mrT-uk-in-primary",
+        "type": "Indian-ELSS",
+        "jurisdiction": "IN",
+        "balance_inr": 3200000,
+        "balance_gbp": 31068,
+        "holdings_date_earliest": "2018-07-01",
+        "lock_in_period_years": 3,
+        "fund_family": "Synthetic Axis ELSS",
+        "tax_treatment_in": "LTCG above INR 125k at 12.5pct post-April-2024 rule change",
+        "tax_treatment_uk": "arising basis for UK-resident; offshore-income-gains rules may apply; DTAA relief for Indian tax",
+        "nri_contribution_permitted": true,
+        "last_valuation_date": "2026-04-18"
+      },
+      {
+        "id": "ppf-india-legacy",
+        "owner": "mrT-uk-in-primary",
+        "type": "Indian-PPF",
+        "jurisdiction": "IN",
+        "balance_inr": 1250000,
+        "balance_gbp": 12136,
+        "account_opened": "2010-05-15",
+        "maturity_date": "2025-03-31",
+        "status_at_fixture_date": "matured-held-without-contributions",
+        "nri_contribution_permitted": false,
+        "nri_rule_note": "Since 2018 Indian govt clarification: NRIs cannot contribute to PPF; existing accounts can remain until maturity but not be extended",
+        "tax_treatment_uk": "interest accrual taxable in UK on arising basis; PPF is NOT automatically tax-exempt for UK purposes despite Indian exemption",
+        "tax_treatment_in": "interest and maturity proceeds tax-exempt in India under section 10(11)",
+        "fp4_marker_location": "null_coverage",
+        "last_valuation_date": "2026-04-18"
+      },
+      {
+        "id": "esops-unexercised",
+        "owner": "mrT-uk-in-primary",
+        "type": "ESOP-unexercised",
+        "jurisdiction": "IN",
+        "issuer": "Synthetic Indian Employer (former)",
+        "shares_vested": 3500,
+        "strike_price_inr": 180,
+        "current_market_price_inr_estimate": 1485,
+        "unrealised_gain_inr": 4567500,
+        "unrealised_gain_gbp_estimate": 44345,
+        "tax_treatment_at_exercise": "Indian perquisite tax on exercise (FMV - strike) taxed as salary; subsequent capital gain taxed as LTCG/STCG",
+        "dtaa_consideration": "UK tax on perquisite if received post-UK-residence; DTAA credit for Indian tax under Article 16",
+        "exercise_not_yet_triggered": true,
+        "last_valuation_date": "2026-04-18"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "uk-main-residence",
+        "type": "main-residence",
+        "jurisdiction": "UK",
+        "value_gbp": 485000,
+        "purchase_price_gbp": 380000,
+        "purchase_date": "2020-09-10",
+        "mortgage_id": "mortgage-uk",
+        "ownership": "sole",
+        "last_valuation_date": "2026-02-10"
+      },
+      {
+        "id": "mumbai-rental",
+        "type": "rental-property",
+        "jurisdiction": "IN",
+        "value_inr": 18500000,
+        "value_gbp": 179612,
+        "purchase_price_inr": 12800000,
+        "purchase_date": "2017-04-22",
+        "gross_rental_inr_annual": 680000,
+        "gross_rental_gbp_annual": 6602,
+        "tds_pct_on_rent_to_nri": 0.30,
+        "tds_collected_by_tenant": true,
+        "tds_withheld_inr_annual": 204000,
+        "net_rental_received_inr": 476000,
+        "indian_tax_return_filing_required": true,
+        "uk_tax_treatment": "rental income taxable in UK on arising basis; DTAA Article 6 credit for Indian tax paid",
+        "ownership": "sole",
+        "last_valuation_date": "2026-03-15"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "uk-current",
+        "owner": "mrT-uk-in-primary",
+        "type": "current-account",
+        "jurisdiction": "UK",
+        "provider": "Monzo",
+        "balance_gbp": 7500,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "uk-savings",
+        "owner": "mrT-uk-in-primary",
+        "type": "savings",
+        "jurisdiction": "UK",
+        "provider": "Chase",
+        "balance_gbp": 18000,
+        "interest_rate": 0.041,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "nre-india",
+        "owner": "mrT-uk-in-primary",
+        "type": "NRE-account",
+        "jurisdiction": "IN",
+        "provider": "HDFC Bank",
+        "balance_inr": 1800000,
+        "balance_gbp": 17476,
+        "interest_rate": 0.071,
+        "account_type_detail": "NRE = Non-Resident External; for foreign earnings remitted to India; freely repatriable",
+        "tax_treatment_in": "interest exempt in India under section 10(4)",
+        "tax_treatment_uk": "interest taxable in UK on arising basis under worldwide income principle; NO automatic UK exemption",
+        "repatriation_restrictions": "none — freely repatriable principal and interest",
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "nro-india",
+        "owner": "mrT-uk-in-primary",
+        "type": "NRO-account",
+        "jurisdiction": "IN",
+        "provider": "HDFC Bank",
+        "balance_inr": 800000,
+        "balance_gbp": 7767,
+        "interest_rate": 0.068,
+        "account_type_detail": "NRO = Non-Resident Ordinary; for Indian-source income (dividends, rent); repatriation capped at USD 1m/yr",
+        "tax_treatment_in": "interest TDS 30pct withheld by bank",
+        "tax_treatment_uk": "interest taxable in UK; DTAA credit for Indian TDS",
+        "repatriation_restrictions": "capped at USD 1m per financial year under RBI rules; requires Form 15CA/15CB",
+        "last_valuation_date": "2026-04-22"
+      }
+    ]
+  },
+
+  "liabilities": [
+    {
+      "id": "mortgage-uk",
+      "type": "residential-mortgage",
+      "lender": "HSBC",
+      "outstanding_balance_gbp": 295000,
+      "original_balance_gbp": 320000,
+      "interest_rate": 0.045,
+      "rate_type": "fixed-until-2027",
+      "term_remaining_years": 25,
+      "monthly_payment_gbp": 1640,
+      "secured_on": "uk-main-residence"
+    }
+  ],
+
+  "protection": [
+    {
+      "id": "life-insurance-uk",
+      "type": "life-insurance",
+      "owner": "mrT-uk-in-primary",
+      "cover_amount_gbp": 350000,
+      "premium_monthly_gbp": 22,
+      "trust_status": "in-trust-verified",
+      "trust_beneficiaries": ["Parents (India)"],
+      "cross_border_trust_note": "UK trust with Indian-resident beneficiaries; payout mechanics and Indian-side tax on receipt differ from UK-resident beneficiary path"
+    },
+    {
+      "id": "lic-india-legacy",
+      "type": "LIC-endowment",
+      "jurisdiction": "IN",
+      "provider": "LIC India",
+      "cover_amount_inr": 2000000,
+      "cover_amount_gbp": 19417,
+      "premium_annual_inr": 35000,
+      "maturity_date": "2035-04-01",
+      "note": "Legacy Indian endowment; continues paying premium; UK tax treatment of foreign policy gains under ITTOIA Chapter 9 — chargeable-event gains calc"
+    }
+  ],
+
+  "gifts_and_trusts": [],
+
+  "events": [
+    {"date": "2010-05-15", "type": "ppf-account-opened", "asset_id": "ppf-india-legacy"},
+    {"date": "2014-08-01", "type": "arrived-uk", "residency_change": "IN-resident to UK-resident-temporary"},
+    {"date": "2017-04-22", "type": "property-purchase", "asset_id": "mumbai-rental"},
+    {"date": "2018-07-01", "type": "elss-investment-start", "asset_id": "elss-india"},
+    {"date": "2020-09-10", "type": "property-purchase", "asset_id": "uk-main-residence"},
+    {"date": "2021-04-06", "type": "uk-tax-resident-status-confirmed-year-7"},
+    {"date": "2022-11-10", "type": "pension-nomination-set", "pension_id": "workplace-dc-uk"},
+    {"date": "2025-03-31", "type": "ppf-matured", "asset_id": "ppf-india-legacy", "note": "PPF matured; NRI cannot extend; held without contributions"},
+    {"date": "2026-03-15", "type": "rental-valuation", "asset_id": "mumbai-rental", "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
+    {"date": "2026-04-18", "type": "cross-border-asset-revaluation-bulk", "fx_rate_applied": 103, "verified_by_user": true}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "jurisdiction.tax_bundle_secondary_status", "expected_behaviour": "IN-2026.1 bundle is stub-OPEN at fixture-date; engine must apply conservative UK-only calc with annotations where Indian rules needed; display 'IN rules pending' marker on affected outputs"},
+      {"location": "assets.investments.ppf-india-legacy.tax_treatment_uk", "expected_behaviour": "PPF interest accrual in UK requires annual calc; if Indian statement not provided, engine projects range from account opening + stated rate"},
+      {"location": "assets.investments.esops-unexercised.current_market_price_inr_estimate", "expected_behaviour": "private/estimated share price carries FP-4 range; unrealised gain displayed as range not point"}
+    ],
+    "fp5": [
+      {"location": "jurisdiction.fx_baseline", "expected_behaviour": "FX rate is point-in-time; GBP values recomputed on re-run; engine flags stale if >30 days old"}
+    ]
+  },
+
+  "archetype_specific": {
+    "cross_border_profile": "UK-primary-IN-secondary",
+    "nri_status": true,
+    "dtaa_articles_invoked": [
+      {"article": "Article 6 (Immovable Property)", "applicable_to": "Mumbai rental income"},
+      {"article": "Article 11 (Interest)", "applicable_to": "NRE, NRO interest"},
+      {"article": "Article 13 (Capital Gains)", "applicable_to": "ELSS LTCG on realisation"},
+      {"article": "Article 16 (Dependent Personal Services)", "applicable_to": "ESOPs at exercise"},
+      {"article": "Article 22 (Other Income)", "applicable_to": "Residual cross-border items"},
+      {"article": "Article 24 (Elimination of Double Taxation)", "applicable_to": "Credit mechanism for Indian tax paid"}
+    ],
+    "asset_split_by_jurisdiction": {
+      "uk_gbp": 562500,
+      "in_gbp_equivalent": 321248,
+      "uk_share_pct": 0.636,
+      "in_share_pct": 0.364
+    },
+    "repatriation_state": {
+      "nre_freely_repatriable": 1800000,
+      "nro_capped_annual_usd_1m": true,
+      "nro_current_year_repatriation_used": 0
+    },
+    "ppf_frozen_state": {
+      "status": "matured-not-contributable",
+      "balance_at_maturity_inr": 1250000,
+      "options": ["withdraw and repatriate", "retain earning interest at current rate without further contributions"],
+      "engine_note": "Cannot extend account as NRI; can only hold as non-earning or withdraw"
+    },
+    "domicile_trajectory": {
+      "current_uk_years": 12,
+      "deemed_domicile_uk_year_15_rule": true,
+      "deemed_domicile_projected_date": "2029-04-06",
+      "implication_note": "Once UK deemed domicile triggers, worldwide assets enter UK IHT net; currently only UK-situs assets in estate"
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [62, 72],
+      "confidence": "medium",
+      "confidence_reason": "Cross-border complexity; IN bundle stub status; FX drift; deemed-domicile approaching"
+    },
+    "risk_score": {
+      "value_range": [58, 68],
+      "confidence": "medium"
+    },
+    "net_worth": {
+      "value_range": [555000, 605000],
+      "confidence": "medium",
+      "confidence_reason": "FX point-in-time; private-company ESOP valuation range",
+      "fx_rate_used": 103,
+      "staleness_flags": [],
+      "excluded_assets": [],
+      "jurisdiction_split": {"UK-gbp": 395000, "IN-gbp-equivalent": 190000}
+    },
+    "iht_projection": {
+      "value_range_pre_deemed_domicile": [0, 25000],
+      "value_range_post_deemed_domicile": [45000, 85000],
+      "confidence": "medium",
+      "confidence_reason": "Deemed-domicile trigger 2029 shifts Indian assets into UK IHT net; modelling both regimes",
+      "scenario_ranges": {
+        "current_regime_uk_situs_only": [0, 25000],
+        "post_2029_worldwide": [45000, 85000]
+      },
+      "exemption_flags": ["policies-in-trust", "UK-main-residence-below-RNRB-combined-threshold"]
+    },
+    "cost_of_inaction": {
+      "value_range": [15000, 45000],
+      "confidence": "medium",
+      "explanation": "Primary driver: deemed-domicile-at-year-15 trigger in April 2029 will bring worldwide assets into UK IHT. Mitigation: excluded-property trust structuring before trigger; PPF withdrawal; ESOP exercise timing."
+    },
+    "financial_profile_cell": "III-B",
+    "archetype_classification": "46 uk-in-single-accumulation",
+    "apq_items_expected": [
+      "dtaa-article-11-interest-credit-review",
+      "deemed-domicile-trigger-2029-planning-window",
+      "ppf-matured-decision-withdraw-vs-hold",
+      "esops-exercise-timing-tax-optimisation",
+      "nro-repatriation-capacity-1m-usd-unused",
+      "mumbai-rental-indian-tax-return-reminder-july",
+      "isa-contribution-continues-while-uk-resident",
+      "in-tax-bundle-pending-mark-affected-numbers-provisional"
+    ]
+  }
+}

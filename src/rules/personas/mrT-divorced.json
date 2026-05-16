@@ -1,0 +1,394 @@
+{
+  "fixture_id": "mrT-divorced",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK divorced individual at Consolidation life stage (age 50 — anchor archetype 21). Divorce finalised 2 years ago. Exercises PSO incoming pension credit (£180k pending transfer from ex-spouse SIPP), child maintenance outflow (£12k/yr, 4 years remaining), 40% custody of one child, stale life-insurance nomination (ex-spouse still named), rebuilding savings trajectory post-divorce, RNRB still available (direct descendant child), and ex-spouse entity retained as non-resident linked relationship. Primary archetype for post-divorce financial rebuild engine paths.",
+  "fixture_anchor_archetype": "21",
+  "archetypes_exercised": ["20", "21", "22", "23", "24"],
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-divorced-primary",
+    "name": "Mr T Divorced",
+    "dob": "1976-04-23",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "employed",
+    "employer": "Synthetic Engineering Ltd",
+    "gross_salary": 72000,
+    "income_band": "higher-rate",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 24,
+    "life_stage": "consolidation",
+    "divorce_finalised_date": "2024-03-15",
+    "years_since_divorce": 2.1,
+    "financial_rebuild_phase": "year-2-post-divorce"
+  },
+
+  "ex_spouse_entity": {
+    "id": "mrT-divorced-ex-spouse",
+    "name": "Mrs T Divorced (ex)",
+    "relationship_type": "ex-spouse",
+    "dob": "1977-09-10",
+    "gender": "F",
+    "residency_status": "UK-resident",
+    "link_status": "retained-non-resident",
+    "reason_retained": "PSO source; child custody; maintenance order; stale nomination reference"
+  },
+
+  "relationships": [
+    {
+      "id": "marriage-1",
+      "type": "divorced",
+      "partner_entity_ref": "mrT-divorced-ex-spouse",
+      "start_date": "2008-06-14",
+      "end_date": "2024-03-15",
+      "end_reason": "divorce",
+      "pso_order": true,
+      "pso_id": "pso-1",
+      "children_from_relationship": 1
+    }
+  ],
+
+  "children": [
+    {
+      "id": "child-1",
+      "name": "Child T",
+      "dob": "2011-08-20",
+      "age": 14,
+      "dependent": true,
+      "custody_split": {"primary_carer": "mrT-divorced-ex-spouse", "primary_pct": 60, "secondary_pct": 40},
+      "child_maintenance_payable_by": "mrT-divorced-primary",
+      "maintenance_annual": 12000,
+      "maintenance_end_date": "2029-08-20",
+      "maintenance_end_reason": "child reaches 18",
+      "rnrb_direct_descendant": true
+    }
+  ],
+
+  "pension_sharing_orders": [
+    {
+      "id": "pso-1",
+      "type": "pension-sharing-order",
+      "direction": "incoming",
+      "source_entity": "mrT-divorced-ex-spouse",
+      "source_pension_id": "ex-spouse-sipp-hl",
+      "credit_amount": 180000,
+      "order_date": "2024-03-15",
+      "transfer_status": "pending",
+      "transfer_deadline": "2024-09-15",
+      "transfer_delay_reason": "receiving scheme admin delays; chase action open",
+      "target_pension_id": "sipp-primary",
+      "engine_note": "PSO credit increases SIPP balance by £180k on transfer; debit day-1 IHT and LTA implications assessed at point of receipt; APQ chase item active"
+    }
+  ],
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-primary",
+        "owner": "mrT-divorced-primary",
+        "type": "SIPP",
+        "provider": "AJ Bell",
+        "balance": 95000,
+        "balance_excludes_pso": true,
+        "pso_incoming_pending": 180000,
+        "balance_post_pso_transfer": 275000,
+        "contribution_monthly_personal": 650,
+        "contribution_monthly_employer": 0,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.005,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Child T", "pct": 100}],
+          "date_set": "2024-04-01",
+          "stale": false,
+          "note": "Updated post-divorce to remove ex-spouse nomination; child-only now correct"
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "dc-pot-legacy",
+        "owner": "mrT-divorced-primary",
+        "type": "occupational-DC",
+        "provider": "Aviva",
+        "from_employer": "First Employer (2002-2009)",
+        "balance": 28500,
+        "growth_rate_assumption": 0.045,
+        "charges_percent": 0.0085,
+        "last_valuation_date": "2026-04-10"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-ss",
+        "owner": "mrT-divorced-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 28000,
+        "contribution_current_tax_year": 6000,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-20",
+        "rebuild_trajectory_note": "ISA restarted post-divorce; was liquidated to fund legal costs and property buyout; now rebuilding"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "main-residence",
+        "type": "main-residence",
+        "value": 385000,
+        "purchase_price_buyout": 192500,
+        "buyout_note": "Ex-spouse's 50% share bought out at divorce settlement; funded by remortgage; now sole owner",
+        "ownership": "sole",
+        "mortgage_id": "mortgage-primary",
+        "last_valuation_date": "2026-02-01"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "current-1",
+        "type": "current-account",
+        "provider": "First Direct",
+        "balance": 4800,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "savings-1",
+        "type": "savings",
+        "provider": "Marcus",
+        "balance": 12500,
+        "interest_rate": 0.042,
+        "last_valuation_date": "2026-04-22",
+        "rebuild_trajectory_note": "Emergency fund rebuilding target £21,600 (3 months gross salary); at 58% of target"
+      }
+    ]
+  },
+
+  "liabilities": [
+    {
+      "id": "mortgage-primary",
+      "type": "residential-mortgage",
+      "lender": "Halifax",
+      "outstanding_balance": 212000,
+      "original_balance": 192500,
+      "remortgage_note": "Remortgaged at divorce to fund ex-spouse buyout; added to existing balance; fixed rate ends 2028",
+      "interest_rate": 0.048,
+      "rate_type": "fixed-until-2028",
+      "term_remaining_years": 18,
+      "monthly_payment": 1380,
+      "secured_on": "main-residence"
+    },
+    {
+      "id": "personal-loan-divorce-costs",
+      "type": "personal-loan",
+      "lender": "Barclays",
+      "outstanding_balance": 8500,
+      "original_balance": 15000,
+      "purpose": "Legal and divorce settlement costs",
+      "interest_rate": 0.079,
+      "monthly_payment": 295,
+      "term_remaining_months": 30
+    }
+  ],
+
+  "protection": [
+    {
+      "id": "life-1",
+      "type": "life-insurance",
+      "provider": "Legal & General",
+      "cover_amount": 300000,
+      "premium_monthly": 28,
+      "term_years": 25,
+      "start_date": "2008-07-01",
+      "trust_status": "no-trust",
+      "nomination": {
+        "named_beneficiary": "Mrs T Divorced",
+        "stale": true,
+        "stale_reason": "Ex-spouse named on policy nomination pre-divorce; not updated; engine flags RH-3 APQ trigger 5 — stale nomination on key life policy",
+        "action_required": "Update nomination to Child T or new trust structure"
+      }
+    },
+    {
+      "id": "ip-1",
+      "type": "income-protection",
+      "provider": "Vitality",
+      "cover_pct_of_salary": 0.55,
+      "deferred_period_weeks": 13,
+      "premium_monthly": 52,
+      "start_date": "2020-03-01"
+    }
+  ],
+
+  "maintenance_obligations": [
+    {
+      "id": "child-maintenance-1",
+      "type": "child-maintenance",
+      "payable_to": "mrT-divorced-ex-spouse",
+      "for_child": "child-1",
+      "annual_amount": 12000,
+      "monthly_amount": 1000,
+      "calculation_basis": "CMS-standard-rate",
+      "start_date": "2024-04-01",
+      "end_date": "2029-08-20",
+      "years_remaining": 3.3,
+      "total_remaining_obligation": 39600,
+      "cashflow_classification": "recurring-outflow-committed",
+      "engine_note": "Maintenance reduces discretionary cashflow; cashflow engine must include as committed outflow alongside mortgage; reviewed annually if incomes change materially"
+    }
+  ],
+
+  "gifts_and_trusts": [
+    {
+      "id": "pet-1",
+      "type": "PET",
+      "donor": "mrT-divorced-primary",
+      "amount": 3000,
+      "date": "2025-12-25",
+      "recipient_id": "child-1",
+      "purpose": "Christmas gift to child",
+      "years_elapsed": 0.3,
+      "within_annual_exemption": true,
+      "exemption_reason": "Within annual exemption £3,000"
+    }
+  ],
+
+  "events": [
+    {"date": "2008-06-14", "type": "relationship-start", "relationship": "married"},
+    {"date": "2011-08-20", "type": "child-birth", "child_id": "child-1"},
+    {"date": "2023-09-01", "type": "divorce-proceedings-start"},
+    {"date": "2024-03-15", "type": "divorce-finalised", "pso_id": "pso-1", "property_settlement": "buyout-of-ex-share"},
+    {"date": "2024-04-01", "type": "child-maintenance-start", "obligation_id": "child-maintenance-1", "annual_amount": 12000},
+    {"date": "2024-04-01", "type": "pension-nomination-update", "pension_id": "sipp-primary", "previous_nominee": "ex-spouse", "new_nominee": "child-1"},
+    {"date": "2024-04-15", "type": "remortgage", "asset_id": "main-residence", "new_balance": 212000, "reason": "Ex-spouse buyout funded"},
+    {"date": "2024-04-15", "type": "property-ownership-change", "asset_id": "main-residence", "from": "joint", "to": "sole"},
+    {"date": "2025-12-25", "type": "gift-given", "gift_id": "pet-1", "amount": 3000},
+    {"date": "2026-02-01", "type": "property-valuation", "asset_id": "main-residence", "amount": 385000, "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
+    {"date": "2026-04-23", "type": "pso-transfer-chase", "pso_id": "pso-1", "status": "still-pending", "months_overdue": 7, "engine_action": "APQ chase item active"}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "pension_sharing_orders[0].transfer_status", "expected_behaviour": "PSO pending for 7 months; engine shows SIPP balance at £95k current + £180k pending; net worth shows range [current, current+PSO]; APQ chase item active; overdue flag surfaced"},
+      {"location": "maintenance_obligations[0].total_remaining_obligation", "expected_behaviour": "£39,600 maintenance liability shows as committed future cashflow outflow; reduces discretionary spend capacity and cashflow score; modelled as certain liability not optional"},
+      {"location": "assets.bank[1]", "expected_behaviour": "emergency fund at 58% of target; cashflow engine flags 'emergency fund below 3-month target'; APQ item generated; score downgraded on cashflow dimension"}
+    ],
+    "fp5": [
+      {"location": "protection[0].nomination.stale", "expected_behaviour": "Stale nomination — ex-spouse still named on life policy; engine generates high-priority APQ: 'Life insurance nomination names ex-spouse — update immediately'; IHT engine cannot assume intended beneficiary; treated as estate asset until resolved"},
+      {"location": "pension_sharing_orders[0].transfer_status", "expected_behaviour": "PSO transfer admin delay — self-reported reason; engine cannot verify delay is legitimate vs scheme refusal; APQ includes chase instruction with legal escalation note if unresolved 12 months post-order"}
+    ]
+  },
+
+  "archetype_specific": {
+    "divorce_finalised_date": "2024-03-15",
+    "years_since_divorce": 2.1,
+    "financial_rebuild_phase": "year-2",
+    "pso_state": {
+      "direction": "incoming",
+      "amount": 180000,
+      "status": "pending",
+      "months_overdue": 7,
+      "source_scheme": "ex-spouse-SIPP",
+      "receiving_scheme": "AJ Bell SIPP"
+    },
+    "maintenance_state": {
+      "annual_outflow": 12000,
+      "years_remaining": 3.3,
+      "total_remaining": 39600,
+      "end_trigger": "child-18th-birthday-2029-08-20"
+    },
+    "custody_split": {
+      "primary_carer": "ex-spouse",
+      "this_individual_pct": 40,
+      "ex_spouse_pct": 60
+    },
+    "stale_nomination_ids": ["life-1"],
+    "stale_nomination_risk": "high",
+    "rnrb_status": {
+      "available": true,
+      "direct_descendant_confirmed": true,
+      "note": "RNRB available — direct descendant child qualifies; divorce does not remove RNRB eligibility"
+    },
+    "emergency_fund_state": {
+      "target_months": 3,
+      "target_amount": 21600,
+      "current_amount": 12500,
+      "pct_of_target": 0.58,
+      "gap": 9100
+    },
+    "rebuilding_trajectory": {
+      "pre_divorce_isa_balance": 65000,
+      "liquidated_for": "legal-costs-and-property-buyout",
+      "current_isa_balance": 28000,
+      "monthly_rebuild_rate": 500,
+      "projected_restore_date": "2030-06"
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [52, 64],
+      "confidence": "medium",
+      "confidence_reason": "PSO pending adds uncertainty to capital dimension; stale nomination unresolved; maintenance obligation reduces cashflow score",
+      "dimensions": {
+        "behaviour": {"range": [55, 68], "confidence": "medium"},
+        "capital": {"range": [40, 58], "confidence": "low", "note": "PSO pending adds range uncertainty; wealth below pre-divorce level"},
+        "tax": {"range": [58, 70], "confidence": "high"},
+        "protection": {"range": [30, 45], "confidence": "medium", "note": "IP in place; life policy stale nomination reduces score"},
+        "cashflow": {"range": [45, 60], "confidence": "medium", "note": "Maintenance outflow £12k/yr reduces discretionary cashflow; emergency fund below target"},
+        "debt": {"range": [50, 65], "confidence": "high", "note": "Mortgage remortgaged post-divorce; personal loan active; manageable but rebuilding"},
+        "estate": {"range": [40, 55], "confidence": "medium", "note": "Stale nomination on life policy is primary concern; RNRB available"}
+      }
+    },
+    "risk_score": {
+      "value_range": [48, 60],
+      "confidence": "medium"
+    },
+    "net_worth": {
+      "value_range": [305000, 495000],
+      "confidence": "medium",
+      "pso_scenarios": {
+        "excluding_pso": [305000, 325000],
+        "including_pso_on_transfer": [480000, 500000]
+      },
+      "staleness_flags": [],
+      "excluded_assets": [],
+      "note": "Wide range driven by £180k PSO pending transfer; engine shows both scenarios"
+    },
+    "iht_projection": {
+      "value_range": [0, 0],
+      "confidence": "high",
+      "explanation": "Even including PSO, estate well below NRB + RNRB combined; no IHT exposure",
+      "exemption_flags": ["rnrb-direct-descendant-available"]
+    },
+    "cost_of_inaction": {
+      "value_range": [500, 5000],
+      "confidence": "medium",
+      "explanation": "Primary: PSO transfer overdue — administrative delay costs potential investment growth on £180k (at 5% pa = £9k/yr). Secondary: stale life nomination — risk of proceeds entering estate or going to ex-spouse in error."
+    },
+    "financial_profile_cell": "II-B",
+    "archetype_classification": "21 uk-divorced-consolidation",
+    "apq_items_expected": [
+      "pso-transfer-chase-7-months-overdue",
+      "life-insurance-nomination-update-ex-spouse-stale",
+      "emergency-fund-below-3-month-target",
+      "maintenance-cashflow-model-end-date-2029",
+      "isa-rebuild-trajectory-review",
+      "personal-loan-early-repayment-consideration",
+      "mortgage-rate-review-2028",
+      "pension-consolidation-legacy-dc-pot"
+    ]
+  }
+}

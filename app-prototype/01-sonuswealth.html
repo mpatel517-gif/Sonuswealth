@@ -1,0 +1,2327 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Sonuswealth — full app prototype</title>
+<style>
+/* ===================================================================
+   SONUSWEALTH — full app prototype (5 tabs in one HTML)
+   Theme = current DESIGN.md untouched
+   Grammar = RetireWise V9 from 2 months ago
+   ALL static — no engine, no API. Founder-evaluable shape only.
+   =================================================================== */
+
+@font-face {
+  font-family: 'Inter var';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+  --space-lg: 16px; --space-xl: 20px; --space-2xl: 28px; --space-3xl: 40px;
+  --r-xs: 6px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+
+  --fs-label: 11px;
+  --fs-small: 13px;
+  --fs-body: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-hero: 28px;
+  --fs-hero-lg: 36px;
+}
+
+/* DARK theme = Mathematical Resonance */
+.theme-dark {
+  --c-bg: #051424;
+  --c-bg2: #0c1119;
+  --c-surface: #122131;
+  --c-surface2: #1a2a3d;
+  --c-surface3: #273647;
+  --c-text: #d4e4fa;
+  --c-text2: #a9b5c8;
+  --c-text3: #8793a7;
+  --c-acc: #5ddbc2;
+  --c-acc-soft: rgba(93,219,194,0.14);
+  --c-acc-line: rgba(93,219,194,0.32);
+  --c-acc2: #7aa7ff;
+  --c-acc3: #ff6f7d;
+  --c-acc3-soft: rgba(255,111,125,0.12);
+  --c-gold: #ffbd59;
+  --c-gold-soft: rgba(255,189,89,0.12);
+  --c-violet: #ba8cff;
+  --c-hairline: rgba(255,255,255,0.06);
+  --c-hairline-strong: rgba(255,255,255,0.12);
+  --grad-card: linear-gradient(180deg, rgba(18,33,49,.86), rgba(9,20,36,.92));
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.25);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* LIGHT theme = Digital Sterling */
+.theme-light {
+  --c-bg: #faf9fc;
+  --c-bg2: #f3f1f7;
+  --c-surface: #ffffff;
+  --c-surface2: #fbfaff;
+  --c-surface3: #f5f3fa;
+  --c-text: #1a1c1e;
+  --c-text2: #4a4f57;
+  --c-text3: #7c828c;
+  --c-acc: #1c3fe7;
+  --c-acc-soft: rgba(28,63,231,0.08);
+  --c-acc-line: rgba(28,63,231,0.28);
+  --c-acc2: #4a6ee0;
+  --c-acc3: #ba1a1a;
+  --c-acc3-soft: rgba(186,26,26,0.08);
+  --c-gold: #b96d00;
+  --c-gold-soft: rgba(185,109,0,0.10);
+  --c-violet: #6c2dc7;
+  --c-hairline: rgba(0,0,0,0.06);
+  --c-hairline-strong: rgba(0,0,0,0.12);
+  --grad-card: linear-gradient(180deg, #ffffff, #fbfaff);
+  --shadow-sm: 0 1px 2px rgba(10,20,36,0.05);
+  --shadow-md: 0 2px 7px rgba(10,20,36,0.07);
+  --inset-card: inset 0 1px 0 rgba(255,255,255,1);
+}
+
+html, body {
+  font-family: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: #0a0a0d;
+  padding: 24px 16px 56px;
+  min-height: 100vh;
+}
+
+/* ============================================================
+   PAGE CHROME (probe only — not in production)
+   ============================================================ */
+.probe-bar {
+  max-width: 1100px;
+  margin: 0 auto var(--space-xl);
+  padding: 14px 18px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Inter var', sans-serif;
+  color: #b5b8bf;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.probe-bar h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.2px;
+}
+.probe-bar small { font-size: 11px; color: #6e7280; }
+.probe-bar__controls { display: flex; gap: 8px; }
+.toggle {
+  padding: 7px 14px;
+  background: #1f2128;
+  border: 1px solid #2e3036;
+  border-radius: var(--r-pill);
+  color: #d4d7de;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toggle.active { background: #5ddbc2; color: #0a0a0d; border-color: transparent; }
+
+.frames {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+}
+@media (max-width: 980px) { .frames { grid-template-columns: 1fr; } }
+
+.frame {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+  position: relative;
+}
+
+.frame-tag {
+  padding: 12px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--c-text3);
+  border-bottom: 1px solid var(--c-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.frame-tag small { font-weight: 500; letter-spacing: 0.4px; text-transform: none; }
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+
+.app {
+  background: var(--c-bg);
+  color: var(--c-text);
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  min-height: 760px;
+}
+
+.topbar {
+  padding: 18px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--c-hairline);
+  gap: 12px;
+}
+.topbar__logo {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--c-text);
+}
+.topbar__logo span { color: var(--c-acc); }
+.persona-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--c-surface2);
+  color: var(--c-text2);
+  border: 1px solid var(--c-hairline-strong);
+}
+.icon-row { display: flex; gap: 6px; }
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--c-surface2);
+  border: 1px solid var(--c-hairline);
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--c-text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabs {
+  position: relative;
+  min-height: 700px;
+  padding-bottom: 84px;
+}
+
+.tab { display: none; padding: var(--space-md) var(--space-lg) var(--space-2xl); }
+.tab.active { display: flex; flex-direction: column; gap: var(--space-md); }
+
+/* Bottom nav */
+.bnav {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 72px;
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-hairline);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 10px;
+}
+.bnav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--c-text3);
+}
+.bnav__icon { font-size: 20px; line-height: 1; }
+.bnav__lbl { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+.bnav__item.active { color: var(--c-acc); }
+
+/* ============================================================
+   SHARED V9 GRAMMAR — every card uses these primitives
+   ============================================================ */
+
+.section-hdr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-xs) var(--space-xs);
+}
+.section-hdr__title {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--c-text3);
+}
+.section-hdr__action {
+  font-size: var(--fs-small);
+  color: var(--c-acc);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+}
+.card--flat { padding: 0; overflow: hidden; }
+
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+.card__eyebrow {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--c-text3);
+  margin-bottom: 3px;
+}
+.card__title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+.card__chev {
+  color: var(--c-text3);
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.card__brief {
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--c-text2);
+}
+.card__brief strong { color: var(--c-text); font-weight: 700; }
+.card__brief em {
+  font-style: normal;
+  color: var(--c-acc);
+  font-weight: 700;
+}
+.card__brief .fig {
+  color: var(--c-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mode pill */
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc-soft);
+  border: 1px solid var(--c-acc-line);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--c-acc);
+  flex-shrink: 0;
+}
+.mode-pill::before {
+  content: '';
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+}
+.mode-pill--today {
+  background: transparent;
+  border-color: var(--c-hairline-strong);
+  color: var(--c-text3);
+}
+.mode-pill--today::before { background: var(--c-text3); }
+
+/* Drillable row primitive (V9's bs-row) */
+.row {
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 150ms ease-out;
+}
+.row:hover { transform: translateY(-1px); }
+.row__icon {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  background: var(--c-surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.row__body { flex: 1; min-width: 0; }
+.row__name {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--c-text);
+  line-height: 1.25;
+}
+.row__sub {
+  font-size: 11px;
+  color: var(--c-text3);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.row__right { text-align: right; flex-shrink: 0; }
+.row__val {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+.row__delta { font-size: 10px; font-weight: 700; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.row__delta--up { color: var(--c-acc); }
+.row__delta--dn { color: var(--c-acc3); }
+.row__delta--gold { color: var(--c-gold); }
+.row__chev { color: var(--c-text3); font-size: 16px; flex-shrink: 0; }
+
+/* Total bar */
+.total-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--c-surface2);
+  border-radius: var(--r-md);
+  font-weight: 700;
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+}
+.total-bar--hero {
+  background: var(--c-acc);
+  color: var(--c-bg);
+  font-size: var(--fs-md);
+}
+.theme-light .total-bar--hero { color: #fff; }
+.total-bar--alert { background: var(--c-acc3-soft); color: var(--c-acc3); border: 1px solid var(--c-acc3); }
+.total-bar--win { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); }
+
+/* Subgroup label */
+.group-lbl {
+  padding: var(--space-md) var(--space-xs) 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--c-text3);
+}
+
+/* Sub-tab pills */
+.subtabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 var(--space-md);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.subtabs::-webkit-scrollbar { display: none; }
+.subtab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-pill);
+  color: var(--c-text3);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+}
+.subtab.active {
+  background: var(--c-acc);
+  color: var(--c-bg);
+  border-color: transparent;
+}
+.theme-light .subtab.active { color: #fff; }
+.subsection { display: none; flex-direction: column; gap: var(--space-md); }
+.subsection.active { display: flex; }
+
+/* CTA button */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  background: var(--c-acc);
+  color: var(--c-bg);
+  border: none;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+}
+.theme-light .cta { color: #fff; }
+.cta::after { content: ' →'; }
+.cta--ghost {
+  background: transparent;
+  color: var(--c-acc);
+  border: 1px solid var(--c-acc-line);
+}
+
+/* ============================================================
+   TAB 1 — HOME
+   ============================================================ */
+
+/* Masthead */
+.mast {
+  padding: var(--space-md) var(--space-xs) var(--space-sm);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.mast__greet {
+  font-size: var(--fs-small);
+  color: var(--c-text3);
+}
+.mast__name {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--c-text);
+  line-height: 1.15;
+  margin-top: 2px;
+}
+
+/* Anchor row (3 numbers) */
+.anchors {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: var(--space-md);
+}
+.anchor { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.anchor + .anchor { padding-left: var(--space-md); border-left: 1px solid var(--c-hairline); }
+.anchor__label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--c-text3);
+}
+.anchor__value {
+  font-size: var(--fs-hero);
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+.anchor__value sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text3);
+  vertical-align: baseline;
+  margin-left: 1px;
+}
+.anchor__value--answer { color: var(--c-acc); }
+.anchor__value--gold { color: var(--c-gold); }
+.anchor__value--alert { color: var(--c-acc3); }
+.anchor__delta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-gold);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+/* Radar */
+.radar {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 280px;
+  margin: var(--space-sm) auto;
+}
+.radar svg { width: 100%; height: 100%; display: block; }
+.r-ring { fill: none; stroke: var(--c-hairline); stroke-width: 1; }
+.r-ring--outer { stroke: var(--c-hairline-strong); }
+.r-axis { stroke: var(--c-hairline); stroke-width: 1; }
+.r-polygon {
+  fill: var(--c-acc-soft);
+  stroke: var(--c-acc);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.r-node { fill: var(--c-surface); stroke-width: 1.5; }
+.r-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  fill: var(--c-text3);
+  text-transform: uppercase;
+}
+.r-center { fill: var(--c-surface); stroke: var(--c-hairline-strong); stroke-width: 1; }
+.r-score {
+  font-size: 26px;
+  font-weight: 800;
+  fill: var(--c-acc);
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+  dominant-baseline: central;
+  letter-spacing: -0.8px;
+}
+.r-score-lbl {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  fill: var(--c-text3);
+  text-anchor: middle;
+}
+
+/* Priority Action */
+.priority {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md), var(--inset-card);
+}
+.priority__pre {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--c-gold);
+  margin-bottom: var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.priority__pre::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--c-gold);
+}
+.priority__headline {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--c-text);
+  letter-spacing: -0.3px;
+  margin-bottom: var(--space-sm);
+}
+.priority__why {
+  font-size: var(--fs-small);
+  color: var(--c-text2);
+  line-height: 1.55;
+  margin-bottom: var(--space-md);
+}
+.priority__why .fig { color: var(--c-gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Plan progress */
+.plan-card { /* uses .card base */ }
+.plan-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+.plan-horizon {
+  font-size: var(--fs-small);
+  color: var(--c-text3);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bar-bg {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--c-surface2);
+  overflow: hidden;
+  margin-bottom: var(--space-sm);
+}
+.bar-fill {
+  height: 100%;
+  background: var(--c-acc);
+  border-radius: 4px;
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.plan-meta { display: flex; justify-content: space-between; font-size: var(--fs-small); }
+.plan-pct { font-weight: 800; color: var(--c-acc); font-variant-numeric: tabular-nums; }
+.plan-pct sub { font-size: 11px; font-weight: 600; color: var(--c-text3); margin-left: 4px; }
+.plan-note { color: var(--c-text2); }
+
+/* Insight (alert) card */
+.insight {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm), var(--inset-card);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.insight__badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.insight__badge--alert { background: var(--c-acc3-soft); color: var(--c-acc3); border: 1px solid var(--c-acc3); }
+.insight__badge--warn { background: var(--c-gold-soft); color: var(--c-gold); border: 1px solid var(--c-gold); }
+.insight__badge--info { background: var(--c-acc-soft); color: var(--c-acc); border: 1px solid var(--c-acc-line); }
+.insight__body { flex: 1; min-width: 0; }
+.insight__title { font-size: var(--fs-small); font-weight: 700; color: var(--c-text); line-height: 1.4; margin-bottom: 2px; }
+.insight__sub { font-size: 12px; color: var(--c-text2); line-height: 1.5; }
+.insight__chev { color: var(--c-text3); font-size: 16px; flex-shrink: 0; }
+
+/* ============================================================
+   TAB 2 — MY MONEY
+   ============================================================ */
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+.kpi {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: var(--space-md) var(--space-lg);
+  box-shadow: var(--shadow-sm), var(--inset-card);
+  cursor: pointer;
+}
+.kpi--acc { background: var(--c-acc); border-color: transparent; color: var(--c-bg); }
+.theme-light .kpi--acc { color: #fff; }
+.kpi--alert .kpi__val { color: var(--c-acc3); }
+.kpi__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--c-text3);
+  margin-bottom: 4px;
+}
+.kpi--acc .kpi__label { color: rgba(255,255,255,0.7); }
+.theme-light .kpi--acc .kpi__label { color: rgba(255,255,255,0.85); }
+.kpi__val {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.kpi--acc .kpi__val { color: #fff; }
+.kpi__sub {
+  font-size: 11px;
+  color: var(--c-text3);
+  margin-top: 2px;
+}
+.kpi--acc .kpi__sub { color: rgba(255,255,255,0.7); }
+
+/* Income table */
+.table-card {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md), var(--inset-card);
+}
+.table-hdr {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--c-surface2);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text3);
+}
+.table-hdr > div:not(:first-child) { text-align: right; }
+.table-group-lbl {
+  padding: 8px 14px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text3);
+  background: var(--c-bg2);
+}
+.table-row {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--c-hairline);
+  font-size: 13px;
+  cursor: pointer;
+}
+.table-row > div:not(:first-child) { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.table-row--total {
+  background: var(--c-surface2);
+  font-weight: 800;
+}
+.table-row--surplus { color: var(--c-acc); }
+.table-row--deficit { color: var(--c-acc3); }
+.table-row__key { color: var(--c-text2); font-size: 12px; }
+
+/* ============================================================
+   TAB 3 — TAX & ESTATE
+   ============================================================ */
+
+.tax-hero {
+  background: var(--c-acc);
+  margin: 0 calc(-1 * var(--space-lg)) var(--space-md);
+  padding: var(--space-xl);
+  color: var(--c-bg);
+  position: relative;
+}
+.theme-light .tax-hero { color: #fff; }
+.tax-hero__lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.tax-hero__val {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+.tax-hero__sub { font-size: 12px; opacity: 0.8; line-height: 1.4; }
+
+/* IHT estate flow */
+.estate-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--c-hairline);
+  font-size: 13px;
+  cursor: pointer;
+}
+.estate-row span:first-child { color: var(--c-text2); font-size: 12px; }
+.estate-row span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; }
+.estate-row--total { background: var(--c-acc3-soft); }
+.estate-row--total span { color: var(--c-acc3); font-weight: 800; }
+.estate-row--total span:last-child { font-size: 16px; }
+.estate-row--new { border-left: 3px solid var(--c-acc3); padding-left: 11px; }
+.estate-row--save { background: var(--c-acc-soft); }
+.estate-row--save span { color: var(--c-acc); font-weight: 800; }
+.estate-row__note { font-size: 10px; color: var(--c-text3); margin-top: 2px; }
+
+/* Gift tracker */
+.gift-prog-bg { background: var(--c-surface2); border-radius: 4px; height: 8px; margin-bottom: 6px; overflow: hidden; }
+.gift-prog-bar { height: 100%; background: var(--c-gold); border-radius: 4px; transition: width 1s; }
+.gift-dates { display: flex; justify-content: space-between; font-size: 10px; color: var(--c-text3); margin-bottom: var(--space-md); }
+.gift-dates strong { color: var(--c-gold); font-weight: 700; }
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm), var(--inset-card);
+}
+.toggle-row__lbl { font-size: 14px; font-weight: 700; color: var(--c-text); }
+.toggle-row__sub { font-size: 11px; color: var(--c-text3); margin-top: 2px; }
+.toggle-sw {
+  width: 44px; height: 24px;
+  border-radius: 12px;
+  background: var(--c-surface3);
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle-sw.on { background: var(--c-acc); }
+.toggle-sw::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-sw.on::after { transform: translateX(20px); }
+
+/* ============================================================
+   TAB 4 — PLAN (Risk + Timeline + Action queue)
+   ============================================================ */
+
+.plan-hero {
+  background: var(--c-acc);
+  margin: 0 calc(-1 * var(--space-lg)) var(--space-md);
+  padding: var(--space-xl);
+  color: var(--c-bg);
+}
+.theme-light .plan-hero { color: #fff; }
+
+.action-row {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm), var(--inset-card);
+  cursor: pointer;
+}
+.action-row--critical { border-left: 4px solid var(--c-acc3); padding-left: 11px; }
+.action-row--high { border-left: 4px solid var(--c-gold); padding-left: 11px; }
+.action-row--med { border-left: 4px solid var(--c-acc); padding-left: 11px; }
+
+.action-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.action-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--c-surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.action-title { flex: 1; font-size: 14px; font-weight: 700; color: var(--c-text); line-height: 1.3; }
+.action-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: var(--r-pill);
+  letter-spacing: 0.5px;
+}
+.action-tag--critical { background: var(--c-acc3-soft); color: var(--c-acc3); }
+.action-tag--high { background: var(--c-gold-soft); color: var(--c-gold); }
+.action-tag--med { background: var(--c-acc-soft); color: var(--c-acc); }
+.action-detail { font-size: 12px; color: var(--c-text2); line-height: 1.5; }
+.action-foot {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--c-hairline);
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.action-impact { color: var(--c-acc); font-weight: 700; }
+.action-when { color: var(--c-text3); }
+
+/* Timeline */
+.tl-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+.tl-dot {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.tl-dot--alert { background: var(--c-acc3-soft); color: var(--c-acc3); }
+.tl-dot--warn { background: var(--c-gold-soft); color: var(--c-gold); }
+.tl-dot--info { background: var(--c-acc-soft); color: var(--c-acc); }
+.tl-date { font-size: 11px; font-weight: 700; color: var(--c-acc); margin-bottom: 2px; }
+.tl-title { font-size: 14px; font-weight: 700; color: var(--c-text); line-height: 1.3; margin-bottom: 2px; }
+.tl-sub { font-size: 12px; color: var(--c-text2); line-height: 1.4; }
+
+/* Risk dimensions */
+.risk-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.risk-tile {
+  background: var(--grad-card);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  padding: 12px;
+  box-shadow: var(--shadow-sm), var(--inset-card);
+}
+.risk-tile__lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--c-text3); }
+.risk-tile__val { font-size: 18px; font-weight: 800; margin: 4px 0; font-variant-numeric: tabular-nums; }
+.risk-tile__val--low { color: var(--c-acc); }
+.risk-tile__val--mid { color: var(--c-gold); }
+.risk-tile__val--high { color: var(--c-acc3); }
+.risk-tile__sub { font-size: 11px; color: var(--c-text2); line-height: 1.4; }
+
+/* ============================================================
+   TAB 5 — ASK SONU
+   ============================================================ */
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 60px);
+  padding-bottom: 0;
+}
+.ask__chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: var(--space-sm) 0;
+}
+.ask__chips::-webkit-scrollbar { display: none; }
+.ask__chip {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-pill);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.msgs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--space-md) 0;
+}
+.msg {
+  max-width: 88%;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+.msg--user {
+  background: var(--c-acc);
+  color: var(--c-bg);
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  font-weight: 600;
+}
+.theme-light .msg--user { color: #fff; }
+.msg--bot {
+  background: var(--c-surface);
+  color: var(--c-text);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--c-hairline);
+}
+.msg strong { font-weight: 700; }
+.msg em { font-style: normal; color: var(--c-acc); font-weight: 700; }
+.msg-disc {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--c-hairline);
+  font-size: 10px;
+  color: var(--c-text3);
+}
+
+.compose {
+  display: flex;
+  gap: 8px;
+  padding: var(--space-sm) 0 var(--space-md);
+  align-items: flex-end;
+  border-top: 1px solid var(--c-hairline);
+  margin-top: auto;
+}
+.compose__in {
+  flex: 1;
+  padding: 11px 14px;
+  background: var(--c-surface2);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--r-md);
+  color: var(--c-text);
+  font-family: inherit;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  max-height: 80px;
+}
+.compose__send {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--c-acc);
+  color: var(--c-bg);
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 800;
+}
+.theme-light .compose__send { color: #fff; }
+
+/* FCA boundary footer */
+.fca-foot {
+  padding: var(--space-md) var(--space-xs) 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--c-text3);
+  text-align: center;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Probe page chrome -->
+<div class="probe-bar">
+  <div>
+    <h1>Sonuswealth — app prototype</h1>
+    <small>5 tabs · current DESIGN.md · V9 grammar · static (no engine)</small>
+  </div>
+  <div class="probe-bar__controls">
+    <button class="toggle active" id="t-dark" onclick="setTheme('dark')">Dark</button>
+    <button class="toggle" id="t-light" onclick="setTheme('light')">Light</button>
+  </div>
+</div>
+
+<div class="frames" id="frames">
+
+<!-- =================================================================
+     APP FRAME — duplicated for dark + light view side-by-side
+     ================================================================= -->
+<div class="frame theme-dark">
+  <div class="frame-tag"><span>Dark — Mathematical Resonance</span><small>consumer mobile</small></div>
+  <div class="app" data-app="left">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="topbar__logo">Sonus<span>wealth</span></div>
+        <span class="persona-pill">Dima · 32</span>
+      </div>
+      <div class="icon-row">
+        <button class="icon-btn" title="Notifications">🔔</button>
+        <button class="icon-btn" title="Settings">⚙</button>
+      </div>
+    </header>
+
+    <div class="tabs">
+
+      <!-- ========== TAB 1: HOME ========== -->
+      <section class="tab active" data-tab="home">
+        <header class="mast">
+          <div>
+            <p class="mast__greet">Good evening,</p>
+            <h1 class="mast__name">Dima · Mon 13 May</h1>
+          </div>
+          <span class="mode-pill mode-pill--today">Today</span>
+        </header>
+
+        <section class="anchors">
+          <div class="anchor">
+            <span class="anchor__label">Net worth</span>
+            <span class="anchor__value">£487K</span>
+            <span class="anchor__delta">↑ £8.2K · 7d</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Score</span>
+            <span class="anchor__value anchor__value--answer">60<sub>/100</sub></span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Risk</span>
+            <span class="anchor__value anchor__value--gold">4.2<sub>/7</sub></span>
+          </div>
+        </section>
+
+        <article class="card">
+          <header class="card__head">
+            <div>
+              <p class="card__eyebrow">Your wealth shape</p>
+              <h2 class="card__title">7 dimensions · drag to test what-if</h2>
+            </div>
+            <span class="card__chev">›</span>
+          </header>
+          <div class="radar">
+            <svg viewBox="0 0 280 280" aria-hidden="true">
+              <circle class="r-ring" cx="140" cy="140" r="34"/>
+              <circle class="r-ring" cx="140" cy="140" r="68"/>
+              <circle class="r-ring" cx="140" cy="140" r="102"/>
+              <circle class="r-ring r-ring--outer" cx="140" cy="140" r="118"/>
+
+              <line class="r-axis" x1="140" y1="140" x2="140" y2="22"/>
+              <line class="r-axis" x1="140" y1="140" x2="255.0" y2="81.7"/>
+              <line class="r-axis" x1="140" y1="140" x2="252.8" y2="194.8"/>
+              <line class="r-axis" x1="140" y1="140" x2="166.2" y2="256.4"/>
+              <line class="r-axis" x1="140" y1="140" x2="113.8" y2="256.4"/>
+              <line class="r-axis" x1="140" y1="140" x2="27.2" y2="194.8"/>
+              <line class="r-axis" x1="140" y1="140" x2="25.0" y2="81.7"/>
+
+              <polygon class="r-polygon" points="140,56 210.1,102.4 204.2,176.8 180.8,219.6 99.2,219.6 64.2,178.7 81.1,101.9"/>
+
+              <text class="r-label" x="140" y="14" text-anchor="middle">Habits</text>
+              <text class="r-label" x="267" y="80" text-anchor="middle">Own</text>
+              <text class="r-label" x="265" y="201" text-anchor="middle">Tax</text>
+              <text class="r-label" x="166" y="272" text-anchor="middle">Safety</text>
+              <text class="r-label" x="114" y="272" text-anchor="middle">Flow</text>
+              <text class="r-label" x="14" y="201" text-anchor="middle">Debt</text>
+              <text class="r-label" x="13" y="80" text-anchor="middle">Legacy</text>
+
+              <circle class="r-node" cx="140" cy="56" r="5" stroke="#4d8eff"/><circle cx="140" cy="56" r="2.3" fill="#4d8eff"/>
+              <circle class="r-node" cx="210.1" cy="102.4" r="5" stroke="#00e5a8"/><circle cx="210.1" cy="102.4" r="2.3" fill="#00e5a8"/>
+              <circle class="r-node" cx="204.2" cy="176.8" r="5" stroke="#ffb347"/><circle cx="204.2" cy="176.8" r="2.3" fill="#ffb347"/>
+              <circle class="r-node" cx="180.8" cy="219.6" r="5" stroke="#ff6b6b"/><circle cx="180.8" cy="219.6" r="2.3" fill="#ff6b6b"/>
+              <circle class="r-node" cx="99.2" cy="219.6" r="5" stroke="#34c759"/><circle cx="99.2" cy="219.6" r="2.3" fill="#34c759"/>
+              <circle class="r-node" cx="64.2" cy="178.7" r="5" stroke="#af52de"/><circle cx="64.2" cy="178.7" r="2.3" fill="#af52de"/>
+              <circle class="r-node" cx="81.1" cy="101.9" r="5" stroke="#ff9500"/><circle cx="81.1" cy="101.9" r="2.3" fill="#ff9500"/>
+
+              <circle class="r-center" cx="140" cy="140" r="26"/>
+              <text class="r-score" x="140" y="138">60</text>
+              <text class="r-score-lbl" x="140" y="156">Score</text>
+            </svg>
+          </div>
+          <p class="card__brief">
+            You hold <span class="fig">£487K</span> across pensions, ISAs, and the home. Of that, <span class="fig">£73K</span> sits in tax shelters; <span class="fig">£18,200</span> of this year's ISA allowance is still on the table. <strong>Safety net</strong> is the chart point that wants attention — <em>one protection review</em> would lift it 6 points.
+          </p>
+        </article>
+
+        <article class="priority">
+          <p class="priority__pre">This month · 1 thing</p>
+          <h2 class="priority__headline">Use £20,000 ISA allowance before 5 April 2027</h2>
+          <p class="priority__why">
+            You hold <span class="fig">£145K</span> in cash earning taxable interest. Moving £20K into your ISA shelters all future growth — <span class="fig">~£900/yr</span> tax saved, compounding tax-free.
+          </p>
+          <button class="cta">Show me how</button>
+        </article>
+
+        <article class="card plan-card">
+          <header class="plan-head">
+            <div>
+              <p class="card__eyebrow">Plan progress</p>
+              <h2 class="card__title">First-home deposit · £75K target</h2>
+            </div>
+            <span class="plan-horizon">July 2029</span>
+          </header>
+          <div class="bar-bg"><div class="bar-fill" style="width:24%"></div></div>
+          <div class="plan-meta">
+            <span class="plan-pct">24%<sub>£18K of £75K</sub></span>
+            <span class="plan-note">On course</span>
+          </div>
+        </article>
+
+        <div class="section-hdr">
+          <span class="section-hdr__title">Active insights</span>
+          <span class="section-hdr__action">See all 5 →</span>
+        </div>
+
+        <article class="insight">
+          <span class="insight__badge insight__badge--alert">High</span>
+          <div class="insight__body">
+            <p class="insight__title">Safety net is your lowest dim today</p>
+            <p class="insight__sub">8/16 · Income protection + critical illness review closes most of the gap</p>
+          </div>
+          <span class="insight__chev">›</span>
+        </article>
+        <article class="insight">
+          <span class="insight__badge insight__badge--warn">Med</span>
+          <div class="insight__body">
+            <p class="insight__title">£3,000 CGT allowance available</p>
+            <p class="insight__sub">Commodity portfolio has unrealised gains ~£18.4K · Bed-and-ISA crystallises tax-free</p>
+          </div>
+          <span class="insight__chev">›</span>
+        </article>
+        <article class="insight">
+          <span class="insight__badge insight__badge--info">Watch</span>
+          <div class="insight__body">
+            <p class="insight__title">Pension rules change April 2027</p>
+            <p class="insight__sub">351 days · Model scenarios early in Tax & Estate engine</p>
+          </div>
+          <span class="insight__chev">›</span>
+        </article>
+
+        <p class="fca-foot">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</p>
+      </section>
+
+
+      <!-- ========== TAB 2: MY MONEY ========== -->
+      <section class="tab" data-tab="money">
+        <div class="subtabs">
+          <button class="subtab active" data-sub="balance" onclick="setSub(this,'balance')">Balance Sheet</button>
+          <button class="subtab" data-sub="income" onclick="setSub(this,'income')">Income</button>
+          <button class="subtab" data-sub="portfolio" onclick="setSub(this,'portfolio')">Portfolio</button>
+        </div>
+
+        <!-- BALANCE SHEET -->
+        <div class="subsection active" data-section="balance">
+          <div class="kpi-row">
+            <div class="kpi kpi--acc">
+              <p class="kpi__label">Net worth</p>
+              <p class="kpi__val">£487K</p>
+              <p class="kpi__sub">↑ £8.2K this week</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi__label">Tax-sheltered</p>
+              <p class="kpi__val">£73K</p>
+              <p class="kpi__sub">15% of total</p>
+            </div>
+          </div>
+
+          <div class="group-lbl">Assets</div>
+          <div class="row">
+            <div class="row__icon">🏠</div>
+            <div class="row__body">
+              <div class="row__name">Primary residence</div>
+              <div class="row__sub">Joint · Your share: £150K for IHT</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£300K</div>
+              <div class="row__delta row__delta--up">↑ £4.2K (3m)</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">🏦</div>
+            <div class="row__body">
+              <div class="row__name">Workplace pension</div>
+              <div class="row__sub">Vanguard · Salary sacrifice 8%</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£32K</div>
+              <div class="row__delta row__delta--up">↑ £680 (1m)</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">📊</div>
+            <div class="row__body">
+              <div class="row__name">Stocks &amp; Shares ISA</div>
+              <div class="row__sub">Vanguard · LifeStrategy 60</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£28K</div>
+              <div class="row__delta row__delta--up">↑ £420 (1m)</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">📈</div>
+            <div class="row__body">
+              <div class="row__name">Investment portfolio (GIA)</div>
+              <div class="row__sub">Trading 212 · 5 holdings</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£12K</div>
+              <div class="row__delta row__delta--gold">↑ £1.8K (gain)</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">💷</div>
+            <div class="row__body">
+              <div class="row__name">Cash &amp; deposits</div>
+              <div class="row__sub">3 accounts · Avg 4.5%</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£145K</div>
+              <div class="row__delta row__delta--up">↑ £540 (interest)</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="total-bar"><span>Total assets</span><span>£517K</span></div>
+
+          <div class="group-lbl">Liabilities</div>
+          <div class="row">
+            <div class="row__icon">🏠</div>
+            <div class="row__body">
+              <div class="row__name">Joint mortgage</div>
+              <div class="row__sub">Nationwide · 4.2% · 22 yrs left</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£30K</div>
+              <div class="row__delta">Your share</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="total-bar"><span>Total liabilities</span><span>£30K</span></div>
+
+          <div class="group-lbl">Net worth</div>
+          <div class="total-bar total-bar--hero"><span>Net worth</span><span>£487K</span></div>
+
+          <p class="fca-foot">Values updated April 2026 · Verify with your providers</p>
+        </div>
+
+        <!-- INCOME -->
+        <div class="subsection" data-section="income">
+          <div class="kpi-row">
+            <div class="kpi">
+              <p class="kpi__label">Annual income</p>
+              <p class="kpi__val">£68.4K</p>
+              <p class="kpi__sub">After tax · Take-home</p>
+            </div>
+            <div class="kpi kpi--alert">
+              <p class="kpi__label">Effective tax rate</p>
+              <p class="kpi__val">28.4%</p>
+              <p class="kpi__sub">↑ 1.2% vs last year</p>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="table-hdr"><div>Item</div><div>Monthly</div><div>Annual</div></div>
+            <div class="table-group-lbl">Income</div>
+            <div class="table-row">
+              <div class="table-row__key">Salary (gross)</div>
+              <div>£7,917</div>
+              <div>£95K</div>
+            </div>
+            <div class="table-row">
+              <div class="table-row__key">Cash interest (4.5%)</div>
+              <div>£544</div>
+              <div>£6,525</div>
+            </div>
+            <div class="table-row">
+              <div class="table-row__key">Portfolio dividends</div>
+              <div>£30</div>
+              <div>£360</div>
+            </div>
+            <div class="table-row table-row--total">
+              <div>Gross income</div>
+              <div>£8,491</div>
+              <div>£101.9K</div>
+            </div>
+            <div class="table-group-lbl">Tax &amp; deductions</div>
+            <div class="table-row">
+              <div class="table-row__key">Income tax</div>
+              <div>£1,929</div>
+              <div>£23.1K</div>
+            </div>
+            <div class="table-row">
+              <div class="table-row__key">NI</div>
+              <div>£633</div>
+              <div>£7.6K</div>
+            </div>
+            <div class="table-row">
+              <div class="table-row__key">Pension (salary sacrifice)</div>
+              <div>£250</div>
+              <div>£3.0K</div>
+            </div>
+            <div class="table-row table-row--total">
+              <div>Net take-home</div>
+              <div>£5,679</div>
+              <div>£68.2K</div>
+            </div>
+            <div class="table-group-lbl">Spending</div>
+            <div class="table-row">
+              <div class="table-row__key">Living costs (est.)</div>
+              <div>£3,800</div>
+              <div>£45.6K</div>
+            </div>
+            <div class="table-row">
+              <div class="table-row__key">Deposit savings</div>
+              <div>£1,500</div>
+              <div>£18K</div>
+            </div>
+            <div class="table-row table-row--total table-row--surplus">
+              <div>Annual surplus</div>
+              <div>£379</div>
+              <div>£4,540</div>
+            </div>
+          </div>
+          <p class="fca-foot">Income tax modelling only · Verify with HMRC self-assessment</p>
+        </div>
+
+        <!-- PORTFOLIO -->
+        <div class="subsection" data-section="portfolio">
+          <div class="card">
+            <header class="card__head">
+              <div>
+                <p class="card__eyebrow">Investment portfolio</p>
+                <h2 class="card__title">Trading 212 · GIA</h2>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:var(--c-text);font-variant-numeric:tabular-nums">£12,420</div>
+                <div style="font-size:11px;font-weight:700;color:var(--c-acc);font-variant-numeric:tabular-nums">+£1,820 · +17.2%</div>
+              </div>
+            </header>
+            <p class="card__brief">
+              5 commodity-focused ETFs · gains of <span class="fig">£1,820</span> are within your <em>£3,000 CGT allowance</em> for this year. Bed-and-ISA crystallises tax-free.
+            </p>
+          </div>
+
+          <div class="row">
+            <div class="row__icon">🥇</div>
+            <div class="row__body">
+              <div class="row__name">SGLN · iShares Physical Gold</div>
+              <div class="row__sub">42% of portfolio · +24.1% (1y)</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£5,200</div>
+              <div class="row__delta row__delta--up">↑ £1,010</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">🥈</div>
+            <div class="row__body">
+              <div class="row__name">SSLN · iShares Physical Silver</div>
+              <div class="row__sub">22% of portfolio · +31.7% (1y)</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£2,720</div>
+              <div class="row__delta row__delta--up">↑ £655</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">🪙</div>
+            <div class="row__body">
+              <div class="row__name">COPG · Copper Miners</div>
+              <div class="row__sub">15% of portfolio · +8.2% (1y)</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£1,860</div>
+              <div class="row__delta row__delta--up">↑ £140</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">☢️</div>
+            <div class="row__body">
+              <div class="row__name">URNP · Uranium</div>
+              <div class="row__sub">12% of portfolio · −4.3% (1y)</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£1,490</div>
+              <div class="row__delta row__delta--dn">↓ £67</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">⚡</div>
+            <div class="row__body">
+              <div class="row__name">URNG · Uranium &amp; Nuclear</div>
+              <div class="row__sub">9% of portfolio · +6.1% (1y)</div>
+            </div>
+            <div class="row__right">
+              <div class="row__val">£1,150</div>
+              <div class="row__delta row__delta--up">↑ £82</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+
+          <p class="fca-foot">Portfolio tracking only · Past performance not indicative of future returns</p>
+        </div>
+      </section>
+
+
+      <!-- ========== TAB 3: TAX & ESTATE ========== -->
+      <section class="tab" data-tab="tax">
+        <div class="subtabs">
+          <button class="subtab active" data-sub="iht" onclick="setSub(this,'iht')">IHT</button>
+          <button class="subtab" data-sub="incometax" onclick="setSub(this,'incometax')">Income tax</button>
+          <button class="subtab" data-sub="cgt" onclick="setSub(this,'cgt')">CGT</button>
+          <button class="subtab" data-sub="gifts" onclick="setSub(this,'gifts')">Gifts</button>
+        </div>
+
+        <!-- IHT -->
+        <div class="subsection active" data-section="iht">
+          <div class="tax-hero">
+            <p class="tax-hero__lbl">Inheritance tax · Post-2027</p>
+            <p class="tax-hero__val">£72K</p>
+            <p class="tax-hero__sub">What your estate would owe if you did nothing · ↑ £52K vs pre-2027 rules</p>
+          </div>
+
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-row__lbl">Include pension in estate</div>
+              <div class="toggle-row__sub">Post-April 2027 rules (proposed)</div>
+            </div>
+            <div class="toggle-sw on"></div>
+          </div>
+
+          <div class="section-hdr">
+            <span class="section-hdr__title">Estate breakdown</span>
+            <span class="section-hdr__action">Full calc →</span>
+          </div>
+
+          <div class="table-card">
+            <div class="estate-row">
+              <span>Residence (your share)</span>
+              <span>£150,000</span>
+            </div>
+            <div class="estate-row estate-row--new">
+              <span>Pension (post-2027)<div class="estate-row__note">Enters estate 6 April 2027</div></span>
+              <span>£32,000</span>
+            </div>
+            <div class="estate-row">
+              <span>ISA</span>
+              <span>£28,000</span>
+            </div>
+            <div class="estate-row">
+              <span>Portfolio (GIA)</span>
+              <span>£12,000</span>
+            </div>
+            <div class="estate-row">
+              <span>Cash · own name</span>
+              <span>£50,000</span>
+            </div>
+            <div class="estate-row">
+              <span>Tax-free allowance (NRB)<div class="estate-row__note">Frozen to 2030</div></span>
+              <span>−£325,000</span>
+            </div>
+            <div class="estate-row">
+              <span>Residence NRB<div class="estate-row__note">Home to descendants</div></span>
+              <span>−£175,000</span>
+            </div>
+            <div class="estate-row estate-row--total">
+              <span>Taxable estate</span>
+              <span>£0</span>
+            </div>
+            <div class="estate-row estate-row--save">
+              <span>Below threshold today</span>
+              <span>£0 IHT</span>
+            </div>
+          </div>
+
+          <article class="card" style="background:var(--c-acc3-soft);border-color:var(--c-acc3)">
+            <header class="card__head">
+              <div>
+                <p class="card__eyebrow" style="color:var(--c-acc3)">Watch · 18 years out</p>
+                <h2 class="card__title">If wealth doubles, IHT becomes real</h2>
+              </div>
+            </header>
+            <p class="card__brief">
+              At <span class="fig">£487K</span> today you're below the £500K personal threshold. By age 50 with continued saving + property growth, expect to cross it. Plan now, not when the bill arrives.
+            </p>
+          </article>
+
+          <p class="fca-foot">IHT modelling only · Rules subject to change · Not regulated advice</p>
+        </div>
+
+        <!-- INCOME TAX -->
+        <div class="subsection" data-section="incometax">
+          <div class="tax-hero">
+            <p class="tax-hero__lbl">Income tax this year</p>
+            <p class="tax-hero__val">£23.1K</p>
+            <p class="tax-hero__sub">Higher-rate taxpayer · Effective rate 28.4%</p>
+          </div>
+
+          <div class="card">
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Where you sit on the bands</h3>
+            <div style="display:flex;height:24px;border-radius:6px;overflow:hidden;margin-bottom:8px">
+              <div style="width:12%;background:var(--c-acc);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">0%</div>
+              <div style="width:38%;background:var(--c-gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">20%</div>
+              <div style="width:50%;background:var(--c-acc3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">40%</div>
+            </div>
+            <div style="position:relative;height:18px;margin-bottom:8px">
+              <div style="position:absolute;left:76%;transform:translateX(-50%);font-size:10px;font-weight:800;color:var(--c-acc)">▲ You</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--c-text3)">
+              <span>£0</span>
+              <span>£12.5K PA</span>
+              <span>£50K BRT</span>
+              <span>£125K ART</span>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="row__icon">💰</div>
+            <div class="row__body">
+              <div class="row__name">Salary sacrifice into pension</div>
+              <div class="row__sub">Currently 8% · Could go higher</div>
+            </div>
+            <div class="row__right"><div class="row__val">£3K/yr</div><div class="row__delta row__delta--up">Saves £1.2K tax</div></div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">📊</div>
+            <div class="row__body">
+              <div class="row__name">ISA — move taxed interest in</div>
+              <div class="row__sub">£145K cash earning £6.5K taxable</div>
+            </div>
+            <div class="row__right"><div class="row__val">£20K</div><div class="row__delta row__delta--up">Saves £900/yr</div></div>
+            <div class="row__chev">›</div>
+          </div>
+
+          <p class="fca-foot">Income tax modelling only · Verify with your payslips and HMRC</p>
+        </div>
+
+        <!-- CGT -->
+        <div class="subsection" data-section="cgt">
+          <div class="tax-hero">
+            <p class="tax-hero__lbl">Capital gains tax</p>
+            <p class="tax-hero__val">£0</p>
+            <p class="tax-hero__sub">Allowance £3,000 · Used £0 · Available all year</p>
+          </div>
+
+          <div class="card">
+            <header class="card__head">
+              <div>
+                <p class="card__eyebrow">Bed-and-ISA opportunity</p>
+                <h2 class="card__title">£1,820 gains can crystallise tax-free</h2>
+              </div>
+            </header>
+            <p class="card__brief">
+              Your <span class="fig">£12K</span> commodity portfolio sits in a taxable wrapper (GIA). Selling now and rebuying inside your ISA uses <em>£1,820 of your £3,000 allowance</em>, costs zero CGT, and future growth becomes permanently tax-free.
+            </p>
+            <button class="cta" style="margin-top:12px">Walk me through</button>
+          </div>
+
+          <div class="section-hdr">
+            <span class="section-hdr__title">Simulator · what if I sell</span>
+          </div>
+          <div class="row">
+            <div class="row__icon">🥇</div>
+            <div class="row__body">
+              <div class="row__name">Sell SGLN gold position</div>
+              <div class="row__sub">Gain £1,010 · Tax £0 (within allowance)</div>
+            </div>
+            <div class="row__right"><div class="row__val">£5,200</div></div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">🥈</div>
+            <div class="row__body">
+              <div class="row__name">Sell SSLN silver</div>
+              <div class="row__sub">Gain £655 · Tax £0 (within allowance)</div>
+            </div>
+            <div class="row__right"><div class="row__val">£2,720</div></div>
+            <div class="row__chev">›</div>
+          </div>
+
+          <p class="fca-foot">CGT modelling only · Verify calculations with your accountant</p>
+        </div>
+
+        <!-- GIFTS -->
+        <div class="subsection" data-section="gifts">
+          <div class="tax-hero" style="background:var(--c-gold)">
+            <p class="tax-hero__lbl">7-year gift clock</p>
+            <p class="tax-hero__val">£0</p>
+            <p class="tax-hero__sub">No gifts recorded · Annual allowance £3,000 unused this year</p>
+          </div>
+
+          <div class="card">
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:10px">Annual allowances · use or lose</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+              <div style="background:var(--c-acc-soft);border-radius:var(--r-md);padding:12px;text-align:center">
+                <div style="font-size:10px;font-weight:700;color:var(--c-text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Annual exemption</div>
+                <div style="font-size:22px;font-weight:800;color:var(--c-acc)">£3,000</div>
+                <div style="font-size:10px;color:var(--c-text3);margin-top:2px">Per person · Resets April</div>
+              </div>
+              <div style="background:var(--c-acc-soft);border-radius:var(--r-md);padding:12px;text-align:center">
+                <div style="font-size:10px;font-weight:700;color:var(--c-text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Small gift</div>
+                <div style="font-size:22px;font-weight:800;color:var(--c-acc)">£250</div>
+                <div style="font-size:10px;color:var(--c-text3);margin-top:2px">Per recipient · Unlimited</div>
+              </div>
+            </div>
+            <p class="card__brief">
+              <strong>Carry forward:</strong> If unused last year, you can gift up to <span class="fig">£6,000</span> this year. Immediate IHT exemption · no 7-year clock needed.
+            </p>
+          </div>
+
+          <div class="section-hdr">
+            <span class="section-hdr__title">Other gift types</span>
+          </div>
+          <div class="row">
+            <div class="row__icon">💝</div>
+            <div class="row__body">
+              <div class="row__name">Regular gifts from income</div>
+              <div class="row__sub">No limit if from surplus income · powerful exemption</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">⏳</div>
+            <div class="row__body">
+              <div class="row__name">PETs · 7-year clock</div>
+              <div class="row__sub">Larger gifts · taper from year 3</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+          <div class="row">
+            <div class="row__icon">⚖️</div>
+            <div class="row__body">
+              <div class="row__name">Gifts into trust</div>
+              <div class="row__sub">Chargeable lifetime transfer · specialist advice</div>
+            </div>
+            <div class="row__chev">›</div>
+          </div>
+
+          <p class="fca-foot">Gift tracking only · Rules subject to change · Not regulated advice</p>
+        </div>
+      </section>
+
+
+      <!-- ========== TAB 4: PLAN ========== -->
+      <section class="tab" data-tab="plan">
+        <div class="subtabs">
+          <button class="subtab active" data-sub="actions" onclick="setSub(this,'actions')">Actions</button>
+          <button class="subtab" data-sub="timeline" onclick="setSub(this,'timeline')">Timeline</button>
+          <button class="subtab" data-sub="risk" onclick="setSub(this,'risk')">Risk</button>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="subsection active" data-section="actions">
+          <div class="plan-hero">
+            <p style="font-size:10px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.7);text-transform:uppercase">Action Priority Queue</p>
+            <p style="font-size:32px;font-weight:800;color:#fff;margin:4px 0;letter-spacing:-0.8px">6 actions</p>
+            <p style="font-size:12px;color:rgba(255,255,255,.7)">Ranked by financial impact · Tap any to act now</p>
+          </div>
+
+          <article class="action-row action-row--critical">
+            <div class="action-head">
+              <div class="action-icon">📊</div>
+              <div class="action-title">Use £20,000 of ISA allowance</div>
+              <div class="action-tag action-tag--critical">High</div>
+            </div>
+            <div class="action-detail">Move £20K from cash savings into ISA · interest inside ISA is permanently tax-free</div>
+            <div class="action-foot">
+              <span class="action-impact">↑ £900/yr tax saved</span>
+              <span class="action-when">Easy · This week</span>
+            </div>
+          </article>
+
+          <article class="action-row action-row--critical">
+            <div class="action-head">
+              <div class="action-icon">🛡</div>
+              <div class="action-title">Review safety net (protection)</div>
+              <div class="action-tag action-tag--critical">High</div>
+            </div>
+            <div class="action-detail">Safety net is your lowest dim (8/16) · income protection + critical illness review</div>
+            <div class="action-foot">
+              <span class="action-impact">↑ 6 points on Score</span>
+              <span class="action-when">Medium · This month</span>
+            </div>
+          </article>
+
+          <article class="action-row action-row--high">
+            <div class="action-head">
+              <div class="action-icon">🥇</div>
+              <div class="action-title">Use £3,000 CGT allowance · bed-and-ISA</div>
+              <div class="action-tag action-tag--high">Med</div>
+            </div>
+            <div class="action-detail">Crystallise £1,820 of unrealised commodity gains tax-free · future growth in ISA permanently tax-free</div>
+            <div class="action-foot">
+              <span class="action-impact">↑ £150/yr tax saved (compounds)</span>
+              <span class="action-when">Easy · Before 5 April</span>
+            </div>
+          </article>
+
+          <article class="action-row action-row--high">
+            <div class="action-head">
+              <div class="action-icon">💷</div>
+              <div class="action-title">Increase salary sacrifice 8% → 12%</div>
+              <div class="action-tag action-tag--high">Med</div>
+            </div>
+            <div class="action-detail">As a higher-rate taxpayer, this saves 42% (IT + NI) on each extra pound. Saves £1.6K/yr.</div>
+            <div class="action-foot">
+              <span class="action-impact">↑ £1.6K/yr tax saved</span>
+              <span class="action-when">Easy · HR portal</span>
+            </div>
+          </article>
+
+          <article class="action-row action-row--med">
+            <div class="action-head">
+              <div class="action-icon">📝</div>
+              <div class="action-title">Write a basic will</div>
+              <div class="action-tag action-tag--med">Watch</div>
+            </div>
+            <div class="action-detail">Currently no will on file · default intestacy rules may not match your wishes</div>
+            <div class="action-foot">
+              <span class="action-impact">Estate readiness +18 pts</span>
+              <span class="action-when">Medium · This quarter</span>
+            </div>
+          </article>
+
+          <article class="action-row action-row--med">
+            <div class="action-head">
+              <div class="action-icon">📈</div>
+              <div class="action-title">Diversify beyond commodities</div>
+              <div class="action-tag action-tag--med">Watch</div>
+            </div>
+            <div class="action-detail">100% commodity portfolio is concentration risk · global equity sleeve evens it out</div>
+            <div class="action-foot">
+              <span class="action-impact">↓ portfolio risk band 1 step</span>
+              <span class="action-when">Medium · This year</span>
+            </div>
+          </article>
+
+          <p class="fca-foot">Action ranking · Verify each step with a qualified IFA</p>
+        </div>
+
+        <!-- TIMELINE -->
+        <div class="subsection" data-section="timeline">
+          <div class="card">
+            <header class="card__head">
+              <div>
+                <p class="card__eyebrow">Timeline · what's ahead</p>
+                <h2 class="card__title">Key dates &amp; milestones</h2>
+              </div>
+            </header>
+          </div>
+
+          <div class="tl-item">
+            <div class="tl-dot tl-dot--alert">⚠</div>
+            <div>
+              <div class="tl-date">6 April 2027 · 351 days</div>
+              <div class="tl-title">Pension IHT rules change</div>
+              <div class="tl-sub">DC pensions enter estate · Plan your contribution rate now</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot tl-dot--warn">📅</div>
+            <div>
+              <div class="tl-date">31 Jan 2027 · 273 days</div>
+              <div class="tl-title">Self-assessment deadline</div>
+              <div class="tl-sub">2025/26 return · Online return + payment due</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot tl-dot--info">📊</div>
+            <div>
+              <div class="tl-date">6 April 2026 · 23 days</div>
+              <div class="tl-title">New tax year · ISA allowance resets</div>
+              <div class="tl-sub">Fresh £20,000 allowance · Use it or lose it</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot tl-dot--info">🏠</div>
+            <div>
+              <div class="tl-date">July 2029 · 3.2 years</div>
+              <div class="tl-title">First-home target date</div>
+              <div class="tl-sub">£75K deposit · Currently 24% there</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot tl-dot--info">🎯</div>
+            <div>
+              <div class="tl-date">Annual · every year</div>
+              <div class="tl-title">CGT allowance · Bed-and-ISA</div>
+              <div class="tl-sub">Crystallise £3K gains tax-free each tax year</div>
+            </div>
+          </div>
+
+          <p class="fca-foot">Schedule tracking only · Dates subject to regulatory change</p>
+        </div>
+
+        <!-- RISK -->
+        <div class="subsection" data-section="risk">
+          <div class="tax-hero" style="background:var(--c-gold)">
+            <p class="tax-hero__lbl">Risk score</p>
+            <p class="tax-hero__val">4.2 / 7</p>
+            <p class="tax-hero__sub">Moderate · Within plan band · 7 dimensions tracked</p>
+          </div>
+
+          <div class="section-hdr">
+            <span class="section-hdr__title">7 risk dimensions</span>
+            <span class="section-hdr__action">Methodology →</span>
+          </div>
+
+          <div class="risk-grid">
+            <div class="risk-tile">
+              <div class="risk-tile__lbl">Concentration</div>
+              <div class="risk-tile__val risk-tile__val--high">6 / 7</div>
+              <div class="risk-tile__sub">100% commodities in GIA · diversify</div>
+            </div>
+            <div class="risk-tile">
+              <div class="risk-tile__lbl">Sequence risk</div>
+              <div class="risk-tile__val risk-tile__val--mid">4 / 7</div>
+              <div class="risk-tile__sub">Long horizon · early dips recoverable</div>
+            </div>
+            <div class="risk-tile">
+              <div class="risk-tile__lbl">Liquidity</div>
+              <div class="risk-tile__val risk-tile__val--low">2 / 7</div>
+              <div class="risk-tile__sub">£145K cash · 38 months runway</div>
+            </div>
+            <div class="risk-tile">
+              <div class="risk-tile__lbl">Inflation</div>
+              <div class="risk-tile__val risk-tile__val--mid">4 / 7</div>
+              <div class="risk-tile__sub">Cash-heavy · real-terms erosion risk</div>
+            </div>
+            <div class="risk-tile">
+              <div class="risk-tile__lbl">Single-event</div>
+              <div class="risk-tile__val risk-tile__val--high">5 / 7</div>
+              <div class="risk-tile__sub">No income protection · key gap</div>
+            </div>
+            <div class="risk-tile">
+              <div class="risk-tile__lbl">Regulatory</div>
+              <div class="risk-tile__val risk-tile__val--mid">4 / 7</div>
+              <div class="risk-tile__sub">2027 pension rules · monitor</div>
+            </div>
+          </div>
+
+          <article class="card" style="margin-top:8px;background:var(--c-acc3-soft);border-color:var(--c-acc3)">
+            <header class="card__head">
+              <div>
+                <p class="card__eyebrow" style="color:var(--c-acc3)">Highest risk dimension</p>
+                <h2 class="card__title">Concentration · 100% commodities</h2>
+              </div>
+            </header>
+            <p class="card__brief">
+              Your <span class="fig">£12K</span> GIA portfolio is entirely in commodity ETFs (gold, silver, copper, uranium). A 30% commodity crash would cost <span class="fig">£3,600</span> overnight. A global equity sleeve cuts this in half.
+            </p>
+            <button class="cta" style="margin-top:8px">Model diversification</button>
+          </article>
+
+          <p class="fca-foot">Risk scoring · Verify allocations with a qualified IFA</p>
+        </div>
+      </section>
+
+
+      <!-- ========== TAB 5: ASK SONU ========== -->
+      <section class="tab" data-tab="ask">
+        <div class="card" style="margin-bottom:0">
+          <header class="card__head" style="margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:var(--r-sm);background:var(--c-acc-soft);display:flex;align-items:center;justify-content:center;font-size:18px">🦉</div>
+              <div>
+                <p class="card__eyebrow" style="margin-bottom:1px">Ask Sonu</p>
+                <h2 class="card__title" style="font-size:14px">Information &amp; guidance · Not advice</h2>
+              </div>
+            </div>
+          </header>
+        </div>
+
+        <div class="ask">
+          <div class="ask__chips">
+            <button class="ask__chip">What's my CGT position?</button>
+            <button class="ask__chip">Should I increase salary sacrifice?</button>
+            <button class="ask__chip">Bed-and-ISA walkthrough</button>
+            <button class="ask__chip">Plan a will</button>
+          </div>
+
+          <div class="msgs">
+            <div class="msg msg--bot">
+              Hello Dima. Three things stand out this week:
+              <br><br>
+              <strong>1.</strong> Your <em>£20,000 ISA allowance</em> resets in 23 days. Moving £20K from cash savings shelters all future growth from tax.
+              <br><br>
+              <strong>2.</strong> Your commodity portfolio has <em>£1,820 of unrealised gains</em> — well within this year's £3,000 CGT allowance. Bed-and-ISA crystallises tax-free.
+              <br><br>
+              <strong>3.</strong> <strong>Safety net</strong> is your lowest dim today (8/16). Income protection + critical illness cover would close most of the gap.
+              <br><br>
+              What would you like to explore?
+              <div class="msg-disc">Information &amp; guidance only · Not regulated financial advice · Always verify with a qualified FCA-regulated IFA</div>
+            </div>
+
+            <div class="msg msg--user">
+              How does the bed-and-ISA work step by step?
+            </div>
+
+            <div class="msg msg--bot">
+              <strong>Bed-and-ISA — 3 steps:</strong>
+              <br><br>
+              <strong>1.</strong> Sell your gold &amp; silver positions in Trading 212 (gain: ~£1,665). Within £3,000 CGT allowance — zero tax.
+              <br><br>
+              <strong>2.</strong> Withdraw proceeds (~£7,920) to your bank account.
+              <br><br>
+              <strong>3.</strong> Buy the same ETFs inside your Vanguard ISA. All future growth permanently tax-free.
+              <br><br>
+              Total time: about 5 working days for settlement. Need any of these steps in more detail?
+              <div class="msg-disc">Information &amp; guidance only · Not regulated financial advice</div>
+            </div>
+          </div>
+
+          <div class="compose">
+            <textarea class="compose__in" placeholder="Ask Sonu…" rows="1"></textarea>
+            <button class="compose__send">→</button>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /tabs -->
+
+    <!-- BOTTOM NAV -->
+    <nav class="bnav">
+      <button class="bnav__item active" data-nav="home" onclick="setTab(this,'home')">
+        <span class="bnav__icon">⌂</span>
+        <span class="bnav__lbl">Home</span>
+      </button>
+      <button class="bnav__item" data-nav="money" onclick="setTab(this,'money')">
+        <span class="bnav__icon">💰</span>
+        <span class="bnav__lbl">My Money</span>
+      </button>
+      <button class="bnav__item" data-nav="tax" onclick="setTab(this,'tax')">
+        <span class="bnav__icon">📑</span>
+        <span class="bnav__lbl">Tax &amp; Estate</span>
+      </button>
+      <button class="bnav__item" data-nav="plan" onclick="setTab(this,'plan')">
+        <span class="bnav__icon">📅</span>
+        <span class="bnav__lbl">Plan</span>
+      </button>
+      <button class="bnav__item" data-nav="ask" onclick="setTab(this,'ask')">
+        <span class="bnav__icon">🦉</span>
+        <span class="bnav__lbl">Ask Sonu</span>
+      </button>
+    </nav>
+
+  </div><!-- /app -->
+</div><!-- /frame -->
+
+
+<!-- DUPLICATE FRAME FOR LIGHT THEME (same markup, theme-light class) -->
+<!-- Hidden in mobile view; visible side-by-side on wider screens -->
+<div class="frame theme-light" id="frame-light">
+  <div class="frame-tag"><span>Light — Digital Sterling</span><small>IFA laptop</small></div>
+  <div class="app" data-app="right">
+    <!-- Mirror of left frame, theme-light applied via parent class -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="topbar__logo">Sonus<span>wealth</span></div>
+        <span class="persona-pill">Dima · 32</span>
+      </div>
+      <div class="icon-row">
+        <button class="icon-btn">🔔</button>
+        <button class="icon-btn">⚙</button>
+      </div>
+    </header>
+    <div class="tabs">
+      <section class="tab active" data-tab="home">
+        <header class="mast">
+          <div>
+            <p class="mast__greet">Tuesday morning,</p>
+            <h1 class="mast__name">Dima · 14 May 2026</h1>
+          </div>
+          <span class="mode-pill mode-pill--today">Today</span>
+        </header>
+
+        <section class="anchors">
+          <div class="anchor">
+            <span class="anchor__label">Net worth</span>
+            <span class="anchor__value">£487K</span>
+            <span class="anchor__delta">↑ £8.2K · 7d</span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Score</span>
+            <span class="anchor__value anchor__value--answer">60<sub>/100</sub></span>
+          </div>
+          <div class="anchor">
+            <span class="anchor__label">Risk</span>
+            <span class="anchor__value anchor__value--gold">4.2<sub>/7</sub></span>
+          </div>
+        </section>
+
+        <article class="card">
+          <header class="card__head">
+            <div>
+              <p class="card__eyebrow">Your wealth shape</p>
+              <h2 class="card__title">7 dimensions · drag to test what-if</h2>
+            </div>
+            <span class="card__chev">›</span>
+          </header>
+          <div class="radar">
+            <svg viewBox="0 0 280 280" aria-hidden="true">
+              <circle class="r-ring" cx="140" cy="140" r="34"/>
+              <circle class="r-ring" cx="140" cy="140" r="68"/>
+              <circle class="r-ring" cx="140" cy="140" r="102"/>
+              <circle class="r-ring r-ring--outer" cx="140" cy="140" r="118"/>
+              <line class="r-axis" x1="140" y1="140" x2="140" y2="22"/>
+              <line class="r-axis" x1="140" y1="140" x2="255.0" y2="81.7"/>
+              <line class="r-axis" x1="140" y1="140" x2="252.8" y2="194.8"/>
+              <line class="r-axis" x1="140" y1="140" x2="166.2" y2="256.4"/>
+              <line class="r-axis" x1="140" y1="140" x2="113.8" y2="256.4"/>
+              <line class="r-axis" x1="140" y1="140" x2="27.2" y2="194.8"/>
+              <line class="r-axis" x1="140" y1="140" x2="25.0" y2="81.7"/>
+              <polygon class="r-polygon" points="140,56 210.1,102.4 204.2,176.8 180.8,219.6 99.2,219.6 64.2,178.7 81.1,101.9"/>
+              <text class="r-label" x="140" y="14" text-anchor="middle">Habits</text>
+              <text class="r-label" x="267" y="80" text-anchor="middle">Own</text>
+              <text class="r-label" x="265" y="201" text-anchor="middle">Tax</text>
+              <text class="r-label" x="166" y="272" text-anchor="middle">Safety</text>
+              <text class="r-label" x="114" y="272" text-anchor="middle">Flow</text>
+              <text class="r-label" x="14" y="201" text-anchor="middle">Debt</text>
+              <text class="r-label" x="13" y="80" text-anchor="middle">Legacy</text>
+              <circle class="r-node" cx="140" cy="56" r="5" stroke="#3260c0"/><circle cx="140" cy="56" r="2.3" fill="#3260c0"/>
+              <circle class="r-node" cx="210.1" cy="102.4" r="5" stroke="#00875a"/><circle cx="210.1" cy="102.4" r="2.3" fill="#00875a"/>
+              <circle class="r-node" cx="204.2" cy="176.8" r="5" stroke="#c2802d"/><circle cx="204.2" cy="176.8" r="2.3" fill="#c2802d"/>
+              <circle class="r-node" cx="180.8" cy="219.6" r="5" stroke="#c43e3e"/><circle cx="180.8" cy="219.6" r="2.3" fill="#c43e3e"/>
+              <circle class="r-node" cx="99.2" cy="219.6" r="5" stroke="#2a7a3d"/><circle cx="99.2" cy="219.6" r="2.3" fill="#2a7a3d"/>
+              <circle class="r-node" cx="64.2" cy="178.7" r="5" stroke="#6a36a0"/><circle cx="64.2" cy="178.7" r="2.3" fill="#6a36a0"/>
+              <circle class="r-node" cx="81.1" cy="101.9" r="5" stroke="#a35a08"/><circle cx="81.1" cy="101.9" r="2.3" fill="#a35a08"/>
+              <circle class="r-center" cx="140" cy="140" r="26"/>
+              <text class="r-score" x="140" y="138">60</text>
+              <text class="r-score-lbl" x="140" y="156">Score</text>
+            </svg>
+          </div>
+          <p class="card__brief">
+            You hold <span class="fig">£487K</span> across pensions, ISAs, and the home. Of that, <span class="fig">£73K</span> sits in tax shelters; <span class="fig">£18,200</span> of this year's ISA allowance is still on the table. <strong>Safety net</strong> is the chart point that wants attention — <em>one protection review</em> would lift it 6 points.
+          </p>
+        </article>
+
+        <article class="priority">
+          <p class="priority__pre">This month · 1 thing</p>
+          <h2 class="priority__headline">Use £20,000 ISA allowance before 5 April 2027</h2>
+          <p class="priority__why">
+            You hold <span class="fig">£145K</span> in cash earning taxable interest. Moving £20K into your ISA shelters all future growth — <span class="fig">~£900/yr</span> tax saved.
+          </p>
+          <button class="cta">Show me how</button>
+        </article>
+
+        <article class="card plan-card">
+          <header class="plan-head">
+            <div>
+              <p class="card__eyebrow">Plan progress</p>
+              <h2 class="card__title">First-home deposit · £75K target</h2>
+            </div>
+            <span class="plan-horizon">July 2029</span>
+          </header>
+          <div class="bar-bg"><div class="bar-fill" style="width:24%"></div></div>
+          <div class="plan-meta">
+            <span class="plan-pct">24%<sub>£18K of £75K</sub></span>
+            <span class="plan-note">On course</span>
+          </div>
+        </article>
+
+        <div class="section-hdr">
+          <span class="section-hdr__title">Active insights</span>
+          <span class="section-hdr__action">See all 5 →</span>
+        </div>
+
+        <article class="insight">
+          <span class="insight__badge insight__badge--alert">High</span>
+          <div class="insight__body">
+            <p class="insight__title">Safety net is your lowest dim today</p>
+            <p class="insight__sub">8/16 · Income protection + critical illness review closes most of the gap</p>
+          </div>
+          <span class="insight__chev">›</span>
+        </article>
+        <article class="insight">
+          <span class="insight__badge insight__badge--warn">Med</span>
+          <div class="insight__body">
+            <p class="insight__title">£3,000 CGT allowance available</p>
+            <p class="insight__sub">Commodity portfolio has unrealised gains ~£18.4K</p>
+          </div>
+          <span class="insight__chev">›</span>
+        </article>
+        <article class="insight">
+          <span class="insight__badge insight__badge--info">Watch</span>
+          <div class="insight__body">
+            <p class="insight__title">Pension rules change April 2027</p>
+            <p class="insight__sub">351 days · Model scenarios early</p>
+          </div>
+          <span class="insight__chev">›</span>
+        </article>
+
+        <p class="fca-foot">Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response</p>
+      </section>
+
+      <!-- Light frame: other tabs reuse same markup pattern, omitted here for brevity but functional via tab switching -->
+      <section class="tab" data-tab="money">
+        <div style="padding:40px 20px;text-align:center;color:var(--c-text3)">
+          <div style="font-size:32px;margin-bottom:8px">💰</div>
+          <div style="font-size:14px;font-weight:700;color:var(--c-text);margin-bottom:4px">My Money tab — same markup as dark frame</div>
+          <div style="font-size:12px;line-height:1.5">Identical structure rendered in light theme · See dark frame for full content</div>
+        </div>
+      </section>
+      <section class="tab" data-tab="tax">
+        <div style="padding:40px 20px;text-align:center;color:var(--c-text3)">
+          <div style="font-size:32px;margin-bottom:8px">📑</div>
+          <div style="font-size:14px;font-weight:700;color:var(--c-text);margin-bottom:4px">Tax &amp; Estate tab — same markup as dark frame</div>
+          <div style="font-size:12px;line-height:1.5">Identical structure rendered in light theme</div>
+        </div>
+      </section>
+      <section class="tab" data-tab="plan">
+        <div style="padding:40px 20px;text-align:center;color:var(--c-text3)">
+          <div style="font-size:32px;margin-bottom:8px">📅</div>
+          <div style="font-size:14px;font-weight:700;color:var(--c-text);margin-bottom:4px">Plan tab — same markup as dark frame</div>
+          <div style="font-size:12px;line-height:1.5">Identical structure rendered in light theme</div>
+        </div>
+      </section>
+      <section class="tab" data-tab="ask">
+        <div style="padding:40px 20px;text-align:center;color:var(--c-text3)">
+          <div style="font-size:32px;margin-bottom:8px">🦉</div>
+          <div style="font-size:14px;font-weight:700;color:var(--c-text);margin-bottom:4px">Ask Sonu tab — same markup as dark frame</div>
+          <div style="font-size:12px;line-height:1.5">Identical structure rendered in light theme</div>
+        </div>
+      </section>
+    </div>
+    <nav class="bnav">
+      <button class="bnav__item active" data-nav="home" onclick="setTab(this,'home')"><span class="bnav__icon">⌂</span><span class="bnav__lbl">Home</span></button>
+      <button class="bnav__item" data-nav="money" onclick="setTab(this,'money')"><span class="bnav__icon">💰</span><span class="bnav__lbl">My Money</span></button>
+      <button class="bnav__item" data-nav="tax" onclick="setTab(this,'tax')"><span class="bnav__icon">📑</span><span class="bnav__lbl">Tax &amp; Estate</span></button>
+      <button class="bnav__item" data-nav="plan" onclick="setTab(this,'plan')"><span class="bnav__icon">📅</span><span class="bnav__lbl">Plan</span></button>
+      <button class="bnav__item" data-nav="ask" onclick="setTab(this,'ask')"><span class="bnav__icon">🦉</span><span class="bnav__lbl">Ask Sonu</span></button>
+    </nav>
+  </div>
+</div>
+
+</div><!-- /frames -->
+
+<script>
+function setTab(btn, name){
+  // Scope: find the parent app, switch tab + bnav within only that app
+  const app = btn.closest('.app');
+  if(!app) return;
+  app.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  app.querySelectorAll('.bnav__item').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+}
+
+function setSub(btn, name){
+  const tab = btn.closest('.tab');
+  if(!tab) return;
+  tab.querySelectorAll('.subtab').forEach(s => s.classList.toggle('active', s.dataset.sub === name));
+  tab.querySelectorAll('.subsection').forEach(s => s.classList.toggle('active', s.dataset.section === name));
+}
+
+function setTheme(name){
+  document.getElementById('t-dark').classList.toggle('active', name === 'dark');
+  document.getElementById('t-light').classList.toggle('active', name === 'light');
+  // Both frames always show side-by-side; this toggle is informational only
+  // (the dark frame stays dark, light frame stays light — they're the comparison)
+}
+</script>
+
+</body>
+</html>

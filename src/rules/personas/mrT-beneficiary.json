@@ -1,0 +1,429 @@
+{
+  "fixture_id": "mrT-beneficiary",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK beneficiary at Transition life stage (age 60 — anchor archetype 44). Inherited from deceased spouse 8 months ago (August 2025). Q-B9-1 ASSUMPTION: Option A applied — beneficiary IS a distinct group archetype (5 archetypes 41-45) with own financial profile, not a modifier. Exercises: inherited pension drawdown (successor drawdown; 2-year designation window expires August 2027); ISA Additional Permitted Subscription (APS — valid for surviving spouse, £50k additional allowance); BPR-inherited AIM shares (holding-period tacking from deceased spouse's acquisition date); pre/post-FA2026 DC pension IHT comparison (inherited pension pre-activation = different regime question); own-estate IHT step-change post-inheritance; second-death planning. Tests engine handling of inheritance event, windfall NW increase, and resulting planning obligations.",
+  "fixture_anchor_archetype": "44",
+  "archetypes_exercised": ["41", "42", "43", "44", "45"],
+  "q_b9_1_assumption": "Option-A: beneficiary IS a group archetype (5 archetypes, own financial profile)",
+  "q_b9_1_note": "If Q-B9-1 resolves as Option B (modifier only), this fixture requires structural review: archetypes_exercised reduces and fixture_purpose reframed. Flag for update at Q-B9-1 decision point.",
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-beneficiary-primary",
+    "name": "Ms T Beneficiary",
+    "dob": "1966-04-23",
+    "gender": "F",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "employed-part-time",
+    "employer": "Synthetic Consulting Ltd",
+    "gross_salary": 32000,
+    "income_band": "basic-rate",
+    "income_note": "Reduced hours post-bereavement; was full-time at £55k; income reduction was 8 months ago",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 28,
+    "life_stage": "transition",
+    "age_at_fixture_date": 60,
+    "bereavement_date": "2025-08-12",
+    "months_since_bereavement": 8.4,
+    "inheritance_event_id": "inheritance-2025-aug"
+  },
+
+  "deceased_spouse_entity": {
+    "id": "mrT-beneficiary-deceased-spouse",
+    "name": "Mr T Beneficiary (deceased)",
+    "dob": "1964-02-14",
+    "dob_note": "Deceased was 61 at death — under 75; pension passed tax-free to beneficiary",
+    "date_of_death": "2025-08-12",
+    "age_at_death": 61,
+    "over_75_at_death": false,
+    "pension_tax_free_on_death": true,
+    "pension_tax_free_note": "Deceased under 75 at death; nominated beneficiary inherits drawdown fund tax-free; income drawn taxed at beneficiary's marginal rate",
+    "estate_administered": true,
+    "probate_granted": "2025-12-01"
+  },
+
+  "relationships": [
+    {
+      "id": "marriage-1",
+      "type": "widowed",
+      "partner_entity_ref": "mrT-beneficiary-deceased-spouse",
+      "start_date": "1998-07-25",
+      "end_date": "2025-08-12",
+      "end_reason": "death",
+      "tnrb_inherited_pct": 100,
+      "trnrb_inherited_pct": 100,
+      "spousal_exemption_utilised_on_first_death": true,
+      "children_from_relationship": 2
+    }
+  ],
+
+  "children": [
+    {"id": "child-1", "name": "Child A", "dob": "2000-04-10", "age": 26, "dependent": false},
+    {"id": "child-2", "name": "Child B", "dob": "2003-09-22", "age": 22, "dependent": false}
+  ],
+
+  "inheritance_event": {
+    "id": "inheritance-2025-aug",
+    "type": "spousal-inheritance",
+    "date": "2025-08-12",
+    "components": [
+      {
+        "type": "inherited-sipp-drawdown",
+        "asset_id": "sipp-inherited",
+        "amount": 340000,
+        "designation_window_opens": "2025-08-12",
+        "designation_window_closes": "2027-08-12",
+        "designation_months_remaining": 15.7,
+        "status": "designation-in-progress",
+        "action_required": "Must formally designate into successor drawdown by August 2027; if missed, funds paid as lump sum subject to tax"
+      },
+      {
+        "type": "isa-aps",
+        "amount": 50000,
+        "aps_allowance_total": 50000,
+        "aps_used": 0,
+        "aps_remaining": 50000,
+        "aps_deadline": "2028-08-12,",
+        "aps_note": "3-year window to use APS; can use up to £50k additional ISA subscription above normal £20k annual limit; not yet used — APQ item",
+        "asset_id": "isa-aps-allowance"
+      },
+      {
+        "type": "bpr-aim-portfolio-inherited",
+        "asset_id": "aim-portfolio-inherited",
+        "amount": 65000,
+        "deceased_acquisition_date": "2021-06-15",
+        "holding_period_tack_note": "BPR tacking rule: beneficiary inherits deceased's holding period; deceased held >2 years (4.2 years); BPR relief at 100% immediately available to beneficiary without separate 2-year qualifying period",
+        "bpr_eligible_at_death_of_beneficiary": true,
+        "bpr_relief_pct": 100,
+        "tack_date": "2021-06-15",
+        "engine_note": "Engine must apply holding-period tacking from deceased's acquisition date, not beneficiary's inheritance date; this is a critical engine test for BPR-inherited assets"
+      },
+      {
+        "type": "residuary-estate-cash",
+        "amount": 85000,
+        "received_date": "2025-12-15",
+        "asset_id": "estate-cash-received"
+      }
+    ]
+  },
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-own",
+        "owner": "mrT-beneficiary-primary",
+        "type": "SIPP",
+        "provider": "AJ Bell",
+        "balance": 210000,
+        "contribution_monthly_personal": 200,
+        "contribution_monthly_employer": 0,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.005,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [
+            {"name": "Child A", "pct": 50},
+            {"name": "Child B", "pct": 50}
+          ],
+          "date_set": "2026-01-15",
+          "stale": false,
+          "note": "Updated post-bereavement to name children as nominees"
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "sipp-inherited",
+        "owner": "mrT-beneficiary-primary",
+        "type": "inherited-sipp-successor-drawdown",
+        "original_owner": "mrT-beneficiary-deceased-spouse",
+        "provider": "Vanguard",
+        "balance": 340000,
+        "designation_status": "in-progress",
+        "designation_deadline": "2027-08-12",
+        "designation_months_remaining": 15.7,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.004,
+        "tax_treatment_on_death_of_beneficiary": {
+          "if_beneficiary_dies_under_75": "passes tax-free to next nominee",
+          "if_beneficiary_dies_over_75": "passes to nominee but taxed at nominee's marginal rate",
+          "fa2026_note": "Post-FA2026 activation (6 Apr 2027): inherited pension may enter IHT estate on this individual's death depending on whether new rules apply retrospectively to inherited funds — UNCERTAINTY; engine must model both regimes"
+        },
+        "post_fa2026_uncertainty": true,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [
+            {"name": "Child A", "pct": 50},
+            {"name": "Child B", "pct": 50}
+          ],
+          "date_set": "2026-01-20",
+          "stale": false
+        },
+        "last_valuation_date": "2026-04-15"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-own",
+        "owner": "mrT-beneficiary-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Hargreaves Lansdown",
+        "balance": 85000,
+        "contribution_current_tax_year": 15000,
+        "aps_allowance_in_addition": 50000,
+        "aps_used_this_year": 0,
+        "annual_limit_with_aps": 70000,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-20",
+        "engine_note": "APS allowance of £50k can be used in addition to standard £20k annual limit; not yet used; APQ item: use APS before 3-year window closes August 2028"
+      },
+      {
+        "id": "aim-portfolio-inherited",
+        "owner": "mrT-beneficiary-primary",
+        "type": "AIM-portfolio-BPR",
+        "provider": "Octopus AIM IHT Service",
+        "balance": 65000,
+        "original_owner": "mrT-beneficiary-deceased-spouse",
+        "deceased_acquisition_date": "2021-06-15",
+        "inheritance_date": "2025-08-12",
+        "holding_period_tack_from": "2021-06-15",
+        "holding_period_years_tacked": 4.9,
+        "bpr_qualifying": true,
+        "bpr_relief_pct": 100,
+        "bpr_eligible_at_death": true,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.015,
+        "last_valuation_date": "2026-04-18",
+        "engine_test_note": "CRITICAL engine test: BPR must use deceased's acquisition date (2021-06-15) not beneficiary's inheritance date (2025-08-12) for 2-year holding period; tacking confirms immediately eligible"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "main-residence",
+        "type": "main-residence",
+        "value": 520000,
+        "purchase_price": 380000,
+        "purchase_date": "2012-05-18",
+        "mortgage_id": null,
+        "mortgage_note": "Mortgage paid off using life insurance proceeds (separate policy held by deceased — not in this fixture)",
+        "ownership": "sole",
+        "became_sole_owner": "2025-08-12",
+        "previous_ownership": "joint",
+        "last_valuation_date": "2026-02-15"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "current-1",
+        "type": "current-account",
+        "provider": "First Direct",
+        "balance": 12000,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "savings-1",
+        "type": "savings",
+        "provider": "NS&I",
+        "balance": 45000,
+        "interest_rate": 0.045,
+        "last_valuation_date": "2026-04-22",
+        "includes_estate_cash": true,
+        "estate_cash_amount": 35000,
+        "estate_cash_note": "£35k of savings balance is estate residuary cash received Dec 2025; remainder was pre-existing savings"
+      },
+      {
+        "id": "estate-cash-received",
+        "type": "savings",
+        "provider": "Nationwide",
+        "balance": 50000,
+        "last_valuation_date": "2026-04-22",
+        "source": "estate-residuary",
+        "source_date": "2025-12-15"
+      }
+    ]
+  },
+
+  "liabilities": [],
+
+  "protection": [
+    {
+      "id": "life-1",
+      "type": "life-insurance",
+      "owner": "mrT-beneficiary-primary",
+      "cover_amount": 200000,
+      "premium_monthly": 48,
+      "term_years": 15,
+      "start_date": "2022-04-01",
+      "trust_status": "in-trust-verified",
+      "trust_beneficiaries": ["child-1", "child-2"],
+      "note": "Own life policy; not deceased spouse's; set up during marriage; now critical for estate planning given larger estate post-inheritance"
+    }
+  ],
+
+  "gifts_and_trusts": [
+    {
+      "id": "pet-1",
+      "type": "PET",
+      "donor": "mrT-beneficiary-primary",
+      "amount": 10000,
+      "date": "2026-02-10",
+      "recipient_id": "child-1",
+      "purpose": "Post-inheritance wealth redistribution to children",
+      "years_elapsed": 0.2,
+      "within_annual_exemption": false,
+      "annual_exemption_offset": 3000,
+      "chargeable_amount": 7000,
+      "note": "First PET post-inheritance; 7-year clock starts Feb 2026"
+    }
+  ],
+
+  "events": [
+    {"date": "1998-07-25", "type": "relationship-start", "relationship": "married"},
+    {"date": "2000-04-10", "type": "child-birth", "child_id": "child-1"},
+    {"date": "2003-09-22", "type": "child-birth", "child_id": "child-2"},
+    {"date": "2012-05-18", "type": "property-purchase", "asset_id": "main-residence", "amount": 380000, "jointly": true},
+    {"date": "2022-04-01", "type": "protection-start", "policy_id": "life-1", "in_trust_from_outset": true},
+    {"date": "2025-08-12", "type": "spouse-death", "deceased_ref": "mrT-beneficiary-deceased-spouse", "age_at_death": 61, "tnrb_inherited": true, "trnrb_inherited": true},
+    {"date": "2025-08-12", "type": "inherited-pension-event", "asset_id": "sipp-inherited", "amount": 340000, "tax_free_death_benefit": true, "designation_window_opens": "2025-08-12"},
+    {"date": "2025-08-12", "type": "isa-aps-trigger", "aps_amount": 50000, "aps_window_closes": "2028-08-12"},
+    {"date": "2025-08-12", "type": "bpr-aim-inherited", "asset_id": "aim-portfolio-inherited", "amount": 65000, "tack_date": "2021-06-15"},
+    {"date": "2025-08-15", "type": "employment-hours-reduced", "new_gross_salary": 32000, "previous_gross_salary": 55000, "reason": "bereavement-adjustment"},
+    {"date": "2025-12-01", "type": "probate-granted"},
+    {"date": "2025-12-15", "type": "estate-cash-received", "asset_id": "estate-cash-received", "amount": 85000},
+    {"date": "2026-01-15", "type": "pension-nomination-update", "pension_id": "sipp-own", "nominees": ["child-1", "child-2"]},
+    {"date": "2026-01-20", "type": "pension-nomination-set", "pension_id": "sipp-inherited", "nominees": ["child-1", "child-2"]},
+    {"date": "2026-02-10", "type": "gift-given", "gift_id": "pet-1", "amount": 10000},
+    {"date": "2026-02-15", "type": "property-valuation", "asset_id": "main-residence", "amount": 520000, "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
+    {"date": "2027-08-12", "type": "designation-window-deadline", "asset_id": "sipp-inherited", "status": "future-action-required", "engine_action": "countdown-APQ-active"}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "inheritance_event.components[0].designation_months_remaining", "expected_behaviour": "15.7 months remaining on designation window; engine shows countdown; if window missed, lump sum paid gross and taxed — significant cost; engine generates high-urgency APQ with deadline date"},
+      {"location": "assets.pensions[1].post_fa2026_uncertainty", "expected_behaviour": "Inherited pension FA2026 treatment uncertain — new rules from April 2027 may or may not catch inherited-pre-activation funds; engine models two scenarios: (A) not in IHT estate, (B) in IHT estate; shows range on IHT projection"},
+      {"location": "individual.gross_salary", "expected_behaviour": "Income reduced post-bereavement from £55k to £32k; cashflow engine uses £32k current but flags income reduction event; pension contribution capacity reduced; engine shows both current and prior-year income for context"}
+    ],
+    "fp5": [
+      {"location": "inheritance_event.components[1].aps_used", "expected_behaviour": "APS allowance £50k unused; 3-year window to Aug 2028; engine generates APQ: 'Use ISA APS £50k before Aug 2028'; if not used, allowance lapses — cannot reclaim; high priority at tax efficiency dimension"},
+      {"location": "inheritance_event.components[2].holding_period_tack_note", "expected_behaviour": "BPR tacking rule must use deceased's acquisition date not inheritance date; engine asserts tack from 2021-06-15; if engine incorrectly uses 2025-08-12 it would show 2-year qualifying period still running — this is a regression test for BPR engine logic"}
+    ]
+  },
+
+  "archetype_specific": {
+    "q_b9_1_applied": "Option-A",
+    "beneficiary_archetype_profile": "surviving-spouse-significant-inheritance",
+    "inheritance_summary": {
+      "inherited_pension": 340000,
+      "isa_aps_allowance": 50000,
+      "bpr_shares": 65000,
+      "estate_cash": 85000,
+      "total_inheritance_value": 540000
+    },
+    "designation_window_state": {
+      "asset": "sipp-inherited",
+      "deadline": "2027-08-12",
+      "months_remaining": 15.7,
+      "urgency": "high",
+      "consequence_of_missing": "Lump sum paid gross subject to income tax at marginal rate on full £340k — estimated tax cost at basic rate £68k, higher rate £136k"
+    },
+    "aps_state": {
+      "allowance": 50000,
+      "used": 0,
+      "remaining": 50000,
+      "deadline": "2028-08-12",
+      "urgency": "medium"
+    },
+    "bpr_tack_state": {
+      "asset": "aim-portfolio-inherited",
+      "tack_from": "2021-06-15",
+      "effective_holding_period_years": 4.9,
+      "bpr_immediately_qualifying": true
+    },
+    "transferable_allowances_inherited": {
+      "tnrb_pct": 100,
+      "tnrb_amount": 325000,
+      "trnrb_pct": 100,
+      "trnrb_amount": 175000,
+      "combined_nrb_available": 650000,
+      "combined_rnrb_available": 350000,
+      "total_available": 1000000
+    },
+    "own_estate_iht_post_inheritance": {
+      "estate_value_estimate": 1327000,
+      "combined_nrb_and_rnrb": 1000000,
+      "estimated_iht_exposure": 130800,
+      "fa2026_scenario_inherited_pension_in_estate": 266800,
+      "note": "Inheritance significantly increased estate above thresholds; IHT planning now urgently required"
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [65, 76],
+      "confidence": "medium",
+      "confidence_reason": "Designation window countdown; APS unused; FA2026 uncertainty on inherited pension; income reduction post-bereavement; otherwise well-structured",
+      "dimensions": {
+        "behaviour": {"range": [62, 75], "confidence": "medium", "note": "ISA contributing; pension nominations updated; PET started — good signals post-bereavement"},
+        "capital": {"range": [72, 84], "confidence": "medium", "note": "Significant inheritance; net worth substantially increased; inherited pension uncertain"},
+        "tax": {"range": [58, 72], "confidence": "medium", "note": "APS unused (tax efficiency gap); designation window risk; FA2026 pension uncertainty"},
+        "protection": {"range": [65, 78], "confidence": "high", "note": "Life in trust; no outstanding liabilities; mortgage cleared"},
+        "cashflow": {"range": [55, 68], "confidence": "medium", "note": "Income reduced to £32k; no liabilities; estate cash provides buffer"},
+        "debt": {"range": [92, 100], "confidence": "high", "note": "No liabilities; mortgage paid off; clean balance sheet"},
+        "estate": {"range": [45, 60], "confidence": "low", "note": "Estate now materially above thresholds post-inheritance; IHT planning required urgently; transferable allowances help but insufficient"}
+      }
+    },
+    "risk_score": {
+      "value_range": [60, 73],
+      "confidence": "medium"
+    },
+    "net_worth": {
+      "value_range": [1250000, 1420000],
+      "confidence": "medium",
+      "confidence_reason": "Inherited pension value certain; APS not yet deployed; FA2026 scenario adds uncertainty to IHT-adjusted net worth",
+      "staleness_flags": [],
+      "excluded_assets": [],
+      "note": "Includes own SIPP £210k + inherited SIPP £340k + own ISA £85k + AIM portfolio £65k + property £520k + cash £107k"
+    },
+    "iht_projection": {
+      "value_range_scenario_a_pension_excluded": [65000, 120000],
+      "value_range_scenario_b_pension_included_fa2026": [195000, 260000],
+      "confidence": "low",
+      "confidence_reason": "FA2026 uncertainty on inherited pension; two-regime modelling required",
+      "scenario_ranges": {
+        "current_regime_pension_excluded": [65000, 120000],
+        "post_fa2026_pension_included": [195000, 260000]
+      },
+      "exemption_flags": ["tnrb-100pct-inherited", "trnrb-100pct-inherited", "bpr-aim-portfolio-100pct", "life-in-trust", "direct-descendants-children-rnrb"]
+    },
+    "cost_of_inaction": {
+      "value_range": [68000, 200000],
+      "confidence": "medium",
+      "explanation": "Primary: inherited pension designation window — missing Aug 2027 deadline forces lump sum payout with income tax at marginal rate on £340k (cost £68k-£136k). Secondary: APS £50k unused — each year lapsed loses ISA tax shelter on £50k. Tertiary: FA2026 activation April 2027 — may bring inherited pension into IHT estate; mitigation window open now."
+    },
+    "financial_profile_cell": "IV-B",
+    "archetype_classification": "44 uk-beneficiary-transition",
+    "apq_items_expected": [
+      "inherited-pension-designation-deadline-aug-2027-urgent",
+      "isa-aps-50k-unused-use-before-aug-2028",
+      "fa2026-inherited-pension-iht-regime-review",
+      "estate-iht-above-threshold-planning-required",
+      "iht-planning-gifting-programme-pet-strategy",
+      "income-reduction-pension-contribution-review",
+      "bpr-aim-portfolio-holding-period-confirm-tack",
+      "second-death-estate-plan-review"
+    ]
+  }
+}

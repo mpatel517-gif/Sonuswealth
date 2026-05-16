@@ -1,0 +1,363 @@
+{
+  "id": "d",
+  "name": "Hermione Granger",
+  "displayName": "Hermione Granger · IFA",
+  "type": "ifa",
+  "isIFA": true,
+  "lifeStage": 0,
+  "lifeStageName": "N/A",
+  "dataLastUpdated": "2026-04-19",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+  "practiceDetails": {
+    "firmName": "Granger Financial Planning Ltd",
+    "fcaNumber": "FCA-GFP-4421",
+    "aum": 14200000,
+    "activeClients": 24,
+    "alertClients": 4
+  },
+  "clients": [
+    "a",
+    "b",
+    "c",
+    "e"
+  ],
+  "totalAUA": 14200000,
+  "totalAtRiskIHT": 2180000,
+  "clientSummary": [
+    {
+      "id": "a",
+      "name": "Bruce Wayne",
+      "finioScore": 0,
+      "riskScore": 0,
+      "finioScoreLabel": "Established",
+      "riskScoreLabel": "Managed",
+      "urgentActions": 1,
+      "coiAmount": 340000,
+      "lastReview": "2026-01-15",
+      "reviewDue": "2026-07-15"
+    },
+    {
+      "id": "b",
+      "name": "Fred & Wilma",
+      "finioScore": 0,
+      "riskScore": 0,
+      "finioScoreLabel": "Established",
+      "riskScoreLabel": "Managed",
+      "urgentActions": 2,
+      "coiAmount": 194000,
+      "lastReview": "2025-11-20",
+      "reviewDue": "2026-05-20"
+    },
+    {
+      "id": "c",
+      "name": "Tony Stark",
+      "finioScore": 0,
+      "riskScore": 0,
+      "finioScoreLabel": "Optimised",
+      "riskScoreLabel": "Protected",
+      "urgentActions": 1,
+      "coiAmount": 114000,
+      "lastReview": "2026-02-10",
+      "reviewDue": "2026-08-10"
+    },
+    {
+      "id": "e",
+      "name": "Willy Wonka",
+      "finioScore": 0,
+      "riskScore": 0,
+      "finioScoreLabel": "Exceptional",
+      "riskScoreLabel": "Resilient",
+      "urgentActions": 1,
+      "coiAmount": 244000,
+      "lastReview": "2026-03-01",
+      "reviewDue": "2026-09-01"
+    }
+  ],
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 0,
+      "monthlyPayment": 0,
+      "rateType": "none",
+      "rate": 0,
+      "remainingYears": 0
+    },
+    "otherLoans": [
+      {
+        "type": "student_loan_plan2",
+        "outstanding": 28400,
+        "monthlyPayment": 180,
+        "rateType": "variable",
+        "rate": 0.073,
+        "note": "Plan 2 student loan — threshold-based repayment"
+      }
+    ]
+  },
+  "dependants": [],
+  "willStatus": "none",
+  "lpaStatus": "neither",
+  "guardianNamed": false,
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "3-6",
+    "q12_income_protection": "partly",
+    "q13_income_sources": "two",
+    "d6_nominations_complete": "all",
+    "d6_will_current": "no",
+    "confidenceLevel": "medium"
+  },
+  "assets": {
+    "sipp": {
+      "total": 48000,
+      "growth": 0.06,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "name": "Granger FP Group Pension",
+          "value": 22000,
+          "type": "Workplace DC",
+          "provider": "Nest",
+          "charge": 0.003,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2024-09-01"
+        },
+        {
+          "name": "Previous employer pension (Ministry of Magic)",
+          "value": 14000,
+          "type": "Workplace DC",
+          "provider": "Legal & General",
+          "charge": 0.0065,
+          "chargeIsEstimate": true,
+          "transferEligible": true,
+          "nominationDate": "2022-03-15"
+        },
+        {
+          "name": "Personal SIPP (opened 2025)",
+          "value": 12000,
+          "type": "SIPP",
+          "provider": "Vanguard",
+          "charge": 0.0015,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2025-08-01"
+        }
+      ]
+    },
+    "isa": {
+      "value": 18000,
+      "growth": 0.07
+    },
+    "residence": {
+      "value": 0,
+      "ownership": "none",
+      "ownershipShare": 0
+    },
+    "portfolio": {
+      "value": 0,
+      "growth": 0.07,
+      "bpr": false
+    },
+    "cash": {
+      "total": 14000,
+      "own": 14000,
+      "rate": 0.046
+    },
+    "trustGifts": null,
+    "protection": {
+      "lifeInsurance": {
+        "exists": false,
+        "amount": 0,
+        "inTrust": false,
+        "premium": 0
+      },
+      "criticalIllness": {
+        "exists": false,
+        "amount": 0,
+        "premium": 0
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": {
+        "exists": false,
+        "amount": 0
+      },
+      "keyPerson": {
+        "exists": false,
+        "amount": 0
+      },
+      "shareholderProtection": {
+        "exists": false
+      }
+    }
+  },
+  "income": {
+    "statePension": {
+      "annual": 11973,
+      "startAge": 67
+    },
+    "employment": 52000,
+    "dividends": 8000,
+    "rentalIncome": 0,
+    "overseasIncome": 0
+  },
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "353 days",
+      "headline": "4 clients — pension IHT exposure unaddressed",
+      "context": "Bruce Wayne, Fred & Wilma, Tony Stark, Willy Wonka all have DC/SIPP pensions entering estate April 2027.",
+      "action": "Schedule drawdown review calls for all four",
+      "screen": "home",
+      "lifeStage": 0
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "This month",
+      "headline": "Fred & Wilma — review overdue by 5 months",
+      "context": "Last reviewed November 2025. Life insurance not in trust flagged but not actioned.",
+      "action": "Schedule urgent review call",
+      "screen": "home",
+      "lifeStage": 0
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "Before 5 April",
+      "headline": "Tony Stark — £11,200 pay optimisation not actioned",
+      "context": "Year-end approaching. Pay structure review needed before 5 April.",
+      "action": "Send pay optimisation report",
+      "screen": "home",
+      "lifeStage": 0
+    },
+    {
+      "level": "info",
+      "colour": "#34C759",
+      "badge": "POSITIVE",
+      "days": "This month",
+      "headline": "Willy Wonka — BPR structures confirmed",
+      "context": "Wonka Company BPR qualification reviewed and confirmed for 2026.",
+      "action": "File review notes",
+      "screen": "home",
+      "lifeStage": 0
+    }
+  ],
+  "aiSuggestions": [
+    "Which clients need a review call before April 2027?",
+    "What is the aggregate IHT exposure across my client book?",
+    "Which client has the biggest Wealth Score improvement opportunity?",
+    "Show me all clients who have not reviewed pension nominations in 3+ years"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Strong habits for stage 1. You have nominations on all three pension pots.",
+      "action": "Keep reviewing your fresh pension nominations annually.",
+      "future": "Behaviour habits formed early compound for 40+ years — this is your biggest long-term edge."
+    },
+    "capital": {
+      "risk": "At £80k vs a retirement target around £560k — at 28, this is exactly where you should be.",
+      "action": "Prioritise consolidating the three pension pots. Open an ISA for first-home savings.",
+      "future": "Starting early with compound growth is the single biggest advantage over later starters."
+    },
+    "tax": {
+      "risk": "Basic-rate taxpayer. Auto-enrolment pension in place, but ISA unused.",
+      "action": "Use this year's £20,000 ISA allowance — any contribution counts. Consolidate three pensions into one.",
+      "future": "Consistent ISA contributions over 30+ years sit in a wrapper that never faces CGT or dividend tax."
+    },
+    "protection": {
+      "risk": "No protection cover. As the sole earner carrying a £28k student loan, you carry all the risk.",
+      "action": "Income protection is the layer to set up first — it replaces income if you can't work.",
+      "future": "Single-earner households with debt need income protection more than any other cover type."
+    },
+    "cashflow": {
+      "risk": "£14k cash gives you about 3 months runway. Below the 6-month resilience threshold.",
+      "action": "Build cash reserve to 6 months (~£28k) before new ISA contributions.",
+      "future": "A solid cash buffer is what lets you invest for the long term without being forced to sell in a downturn."
+    },
+    "debt": {
+      "risk": "£28,400 Plan 2 student loan at 7.3% variable. Servicing is threshold-based, not scheduled.",
+      "action": "Don't overpay a Plan 2 student loan — it's a graduate tax, not a mortgage.",
+      "future": "Plan 2 loans are written off after 30 years. Overpaying often destroys value."
+    },
+    "estate": {
+      "risk": "No will, no LPA, no refresh on two of three pension nominations.",
+      "action": "Make a will this year. The cost is low, the exposure is not.",
+      "future": "Estate basics done early means you never have to think about them again in your peak-earning years."
+    }
+  },
+
+  "plans": [
+    { "id": "plan-first-home", "type": "retirement", "label": "First home deposit by 30",
+      "target": { "date": "2028-04-01", "depositTarget": 55000 },
+      "target_display": null,
+      "monthlyContribution": 850, "lastReviewedAt": "2026-01-15", "status": "active", "createdAt": "2024-09-01" },
+    { "id": "plan-pension", "type": "retirement", "label": "Build pension pot to £250k by 40",
+      "target": { "date": "2038-04-01", "pensionTarget": 250000 },
+      "target_display": null,
+      "monthlyContribution": 280, "lastReviewedAt": "2026-02-01", "status": "active", "createdAt": "2024-04-01" },
+    { "id": "plan-first-will", "type": "estate", "label": "Write first will and register LPA",
+      "target": { "willStatus": "current", "lpaStatus": "both" },
+      "target_display": null,
+      "lastReviewedAt": "2025-08-20", "status": "active", "createdAt": "2025-08-20" },
+    { "id": "plan-partnership", "type": "tax", "label": "Partnership track by 32",
+      "target": { "date": "2030-04-01", "salaryTarget": 145000 },
+      "target_display": null,
+      "lastReviewedAt": "2026-03-10", "status": "active", "createdAt": "2025-06-01" }
+  ],
+
+  "scenarios": [
+    { "id": "scen-buy-2027", "name": "Buy property in 2027 (early)",
+      "createdAt": "2026-02-22",
+      "changedFields": { "purchaseYear": 2027, "deposit": 38000 },
+      "deltaResults": { "netWorthAt35": -28000, "mortgageRate": 0.058 },
+      "status": "saved" },
+    { "id": "scen-partnership", "name": "Make partnership in 2029",
+      "createdAt": "2026-04-01",
+      "changedFields": { "partnershipYear": 2029, "newSalary": 165000 },
+      "deltaResults": { "netWorthAt35": 95000, "annualSavings": 28000 },
+      "status": "saved" },
+    { "id": "scen-increase-pension", "name": "Increase pension to 12% of salary",
+      "createdAt": "2026-05-05",
+      "changedFields": { "pensionContributionPct": 0.12 },
+      "deltaResults": { "pensionAt65": 480000, "thisYearTaxSaved": 2100 },
+      "status": "saved" }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 32000 }, { "date": "2025-07-01", "value": 33500 },
+      { "date": "2025-08-01", "value": 35200 }, { "date": "2025-09-01", "value": 37000 },
+      { "date": "2025-10-01", "value": 38800 }, { "date": "2025-11-01", "value": 40700 },
+      { "date": "2025-12-01", "value": 42500 }, { "date": "2026-01-01", "value": 44300 },
+      { "date": "2026-02-01", "value": 46100 }, { "date": "2026-03-01", "value": 48000 },
+      { "date": "2026-04-01", "value": 50100 }, { "date": "2026-05-01", "value": 52000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 38 }, { "date": "2025-07-01", "score": 39 },
+      { "date": "2025-08-01", "score": 40 }, { "date": "2025-09-01", "score": 41 },
+      { "date": "2025-10-01", "score": 42 }, { "date": "2025-11-01", "score": 43 },
+      { "date": "2025-12-01", "score": 44 }, { "date": "2026-01-01", "score": 45 },
+      { "date": "2026-02-01", "score": 46 }, { "date": "2026-03-01", "score": 47 },
+      { "date": "2026-04-01", "score": 48 }, { "date": "2026-05-01", "score": 49 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 38 }, { "date": "2025-07-01", "score": 39 },
+      { "date": "2025-08-01", "score": 40 }, { "date": "2025-09-01", "score": 41 },
+      { "date": "2025-10-01", "score": 42 }, { "date": "2025-11-01", "score": 43 },
+      { "date": "2025-12-01", "score": 44 }, { "date": "2026-01-01", "score": 44 },
+      { "date": "2026-02-01", "score": 45 }, { "date": "2026-03-01", "score": 45 },
+      { "date": "2026-04-01", "score": 46 }, { "date": "2026-05-01", "score": 46 }
+    ]
+  }
+}

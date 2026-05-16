@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bodyGrad" x1="30" y1="30" x2="90" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7dffcf"/>
+      <stop offset="1" stop-color="#20c7ff"/>
+    </linearGradient>
+    <linearGradient id="wingGrad" x1="10" y1="60" x2="50" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#20c7ff" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#7dffcf" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="eyeGrad" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#f8fcff"/>
+      <stop offset="1" stop-color="#c8e8ff"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#7dffcf" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Body -->
+  <ellipse cx="60" cy="80" rx="28" ry="32" fill="url(#bodyGrad)" filter="url(#glow)"/>
+
+  <!-- Left wing -->
+  <path d="M32 75 Q14 68 18 95 Q30 100 38 90Z" fill="url(#wingGrad)"/>
+  <!-- Right wing -->
+  <path d="M88 75 Q106 68 102 95 Q90 100 82 90Z" fill="url(#wingGrad)"/>
+
+  <!-- Head -->
+  <ellipse cx="60" cy="50" rx="22" ry="20" fill="url(#bodyGrad)"/>
+
+  <!-- Left ear tuft -->
+  <path d="M42 34 L38 22 L48 30Z" fill="#20c7ff"/>
+  <!-- Right ear tuft -->
+  <path d="M78 34 L82 22 L72 30Z" fill="#20c7ff"/>
+
+  <!-- Left eye ring -->
+  <circle cx="50" cy="50" r="9" fill="#07111f" stroke="#7dffcf" stroke-width="1.5"/>
+  <!-- Right eye ring -->
+  <circle cx="70" cy="50" r="9" fill="#07111f" stroke="#7dffcf" stroke-width="1.5"/>
+
+  <!-- Left eye iris -->
+  <circle cx="50" cy="50" r="6" fill="url(#eyeGrad)"/>
+  <!-- Right eye iris -->
+  <circle cx="70" cy="50" r="6" fill="url(#eyeGrad)"/>
+
+  <!-- Left pupil -->
+  <circle cx="51" cy="50" r="3" fill="#07111f"/>
+  <!-- Right pupil -->
+  <circle cx="71" cy="50" r="3" fill="#07111f"/>
+
+  <!-- Left eye glint -->
+  <circle cx="52.5" cy="47.5" r="1.2" fill="white" opacity="0.9"/>
+  <!-- Right eye glint -->
+  <circle cx="72.5" cy="47.5" r="1.2" fill="white" opacity="0.9"/>
+
+  <!-- Beak -->
+  <path d="M57 56 L60 62 L63 56Z" fill="#f8fcff" opacity="0.85"/>
+
+  <!-- Chest pattern — subtle lighter patch -->
+  <ellipse cx="60" cy="90" rx="14" ry="16" fill="white" opacity="0.08"/>
+
+  <!-- Feet -->
+  <path d="M50 110 L46 116M50 110 L50 116M50 110 L54 116" stroke="#20c7ff" stroke-width="2" stroke-linecap="round"/>
+  <path d="M70 110 L66 116M70 110 L70 116M70 110 L74 116" stroke="#20c7ff" stroke-width="2" stroke-linecap="round"/>
+</svg>

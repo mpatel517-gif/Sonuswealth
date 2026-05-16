@@ -1,0 +1,413 @@
+/* ═══════════════════════════════════════════════════════════════
+   SONUSWEALTH DESIGN TOKENS — refined-fintech layer
+   Layered ON TOP of index.css. Adds:
+     · Tinted chip backgrounds (low-contrast, semantic)
+     · Stronger text colours for chip text
+     · Spacing rhythm + radii + refined card shadows
+     · Pill / chip / tab / card / hero / eyebrow / progress / mono utilities
+
+   Naming: every utility prefixed `sw-` (sonuswealth) to avoid collisions.
+   The reduced-motion overrides live in animations.css and apply equally
+   to any transitions defined here.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Tinted chip backgrounds (low-contrast, semantic) ─────────── */
+  --c-tint-mint:      rgba(0, 229, 168, 0.10);
+  --c-tint-mint-2:    rgba(0, 229, 168, 0.18);   /* hover */
+  --c-tint-blue:      rgba(77, 142, 255, 0.10);
+  --c-tint-blue-2:    rgba(77, 142, 255, 0.18);
+  --c-tint-coral:     rgba(255, 107, 107, 0.10);
+  --c-tint-coral-2:   rgba(255, 107, 107, 0.18);
+  --c-tint-amber:     rgba(255, 179, 71, 0.10);
+  --c-tint-amber-2:   rgba(255, 179, 71, 0.18);
+  --c-tint-violet:    rgba(175, 82, 222, 0.10);
+  --c-tint-violet-2:  rgba(175, 82, 222, 0.18);
+  --c-tint-neutral:   rgba(255, 255, 255, 0.04);
+  --c-tint-neutral-2: rgba(255, 255, 255, 0.08);
+
+  /* ── Stronger text colours for chip text ─────────────────────── */
+  --c-mint-text:   #5DEACA;
+  --c-blue-text:   #7AA5FF;
+  --c-coral-text:  #FF8A8A;
+  --c-amber-text:  #FFC988;
+  --c-violet-text: #C788F5;
+
+  /* ── Spacing rhythm ──────────────────────────────────────────── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  20px;
+  --space-2xl: 28px;
+  --space-3xl: 40px;
+
+  /* ── Radii ───────────────────────────────────────────────────── */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   20px;
+  --r-pill: 999px;
+
+  /* ── Card surface (refined) ──────────────────────────────────── */
+  --shadow-card-sm: 0 1px 2px rgba(0,0,0,0.20),  0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-card-md: 0 4px 12px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-card-lg: 0 12px 32px rgba(0,0,0,0.32), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* Light-mode overrides — same tokens, lighter values */
+[data-theme="light"] {
+  --c-tint-mint:      rgba(52, 199, 89, 0.12);
+  --c-tint-mint-2:    rgba(52, 199, 89, 0.20);
+  --c-tint-blue:      rgba(0, 122, 255, 0.10);
+  --c-tint-blue-2:    rgba(0, 122, 255, 0.18);
+  --c-tint-coral:     rgba(255, 59, 48, 0.10);
+  --c-tint-coral-2:   rgba(255, 59, 48, 0.18);
+  --c-tint-amber:     rgba(255, 149, 0, 0.10);
+  --c-tint-amber-2:   rgba(255, 149, 0, 0.18);
+  --c-tint-violet:    rgba(175, 82, 222, 0.10);
+  --c-tint-violet-2:  rgba(175, 82, 222, 0.18);
+  --c-tint-neutral:   rgba(60, 60, 67, 0.06);
+  --c-tint-neutral-2: rgba(60, 60, 67, 0.12);
+
+  --c-mint-text:   #1D6B45;
+  --c-blue-text:   #0058CA;
+  --c-coral-text:  #C0271F;
+  --c-amber-text:  #B36800;
+  --c-violet-text: #6E2C9C;
+
+  --shadow-card-sm: 0 1px 2px rgba(0,0,0,0.05),  0 0 0 1px rgba(60,60,67,0.06);
+  --shadow-card-md: 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(60,60,67,0.08);
+  --shadow-card-lg: 0 12px 32px rgba(0,0,0,0.10), 0 0 0 1px rgba(60,60,67,0.10);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PILL / CHIP UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1.4;
+  white-space: nowrap;
+  background: var(--c-tint-neutral);
+  color: var(--c-text2);
+  border: 1px solid transparent;
+  transition: background var(--dur-fast, 200ms),
+              border-color var(--dur-fast, 200ms),
+              color var(--dur-fast, 200ms);
+}
+.sw-chip:hover { background: var(--c-tint-neutral-2); }
+
+.sw-chip-mint    { background: var(--c-tint-mint);    color: var(--c-mint-text); }
+.sw-chip-mint:hover    { background: var(--c-tint-mint-2); }
+
+.sw-chip-blue    { background: var(--c-tint-blue);    color: var(--c-blue-text); }
+.sw-chip-blue:hover    { background: var(--c-tint-blue-2); }
+
+.sw-chip-coral   { background: var(--c-tint-coral);   color: var(--c-coral-text); }
+.sw-chip-coral:hover   { background: var(--c-tint-coral-2); }
+
+.sw-chip-amber   { background: var(--c-tint-amber);   color: var(--c-amber-text); }
+.sw-chip-amber:hover   { background: var(--c-tint-amber-2); }
+
+.sw-chip-violet  { background: var(--c-tint-violet);  color: var(--c-violet-text); }
+.sw-chip-violet:hover  { background: var(--c-tint-violet-2); }
+
+.sw-chip-outline { background: transparent; border-color: currentColor; }
+
+/* Wrapper-unresolved badge — spec §2.1 D-WRAPPER-FIRST-1. Dashed border on a
+   neutral surface signals "needs data" without alarm-level coral/amber. */
+.sw-chip-warn {
+  background: transparent;
+  color: var(--c-text2);
+  border: 1px dashed var(--c-text3);
+}
+.sw-chip-warn:hover {
+  background: var(--c-tint-neutral);
+  border-color: var(--c-text2);
+  color: var(--c-text);
+}
+
+.sw-chip-sm { padding: 3px 8px;  font-size: 10px; }
+.sw-chip-lg { padding: 6px 12px; font-size: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   GHOST TAB — Actual / Forecast / Plan / Scenario
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-tab-ghost {
+  background: transparent;
+  border: none;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text3);
+  cursor: pointer;
+  border-radius: var(--r-md);
+  transition: color var(--dur-fast, 200ms),
+              background var(--dur-fast, 200ms);
+}
+.sw-tab-ghost:hover {
+  color: var(--c-text2);
+  background: var(--c-tint-neutral);
+}
+.sw-tab-ghost.is-active {
+  color: var(--c-text);
+  background: var(--c-tint-neutral-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REFINED CARD
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-card {
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-card-sm);
+}
+.sw-card-elevated { box-shadow: var(--shadow-card-md); }
+.sw-card-hero     { box-shadow: var(--shadow-card-lg); }
+
+/* ═══════════════════════════════════════════════════════════════
+   HERO NUMBER
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-hero {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.0;
+  color: var(--c-text);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.sw-hero-md { font-size: 32px; letter-spacing: -1px; }
+.sw-hero-sm { font-size: 24px; letter-spacing: -0.5px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION LABEL — uppercase eyebrow
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--c-text3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESS BAR — thin, end-rounded
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+[data-theme="light"] .sw-bar {
+  background: rgba(60, 60, 67, 0.10);
+}
+.sw-bar > .fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition: width var(--dur-normal, 350ms) var(--ease-out-cubic, cubic-bezier(0.33, 1, 0.68, 1));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CODE-STYLE MONO BADGE
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-mono-badge {
+  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  background: var(--c-tint-mint);
+  color: var(--c-mint-text);
+  border-radius: var(--r-sm);
+  display: inline-block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TILE PRIMITIVE  (Stitch tile — the building block of every screen)
+
+   Replaces the old flat `.sw-card`. Uses the theme-aware `--card-bg`
+   gradient + inset top-edge highlight + diffuse ambient shadow.
+   Three sizes (hero / default / mini) + interactive variant.
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-tile {
+  position: relative;
+  background: var(--card-bg, var(--c-surface));
+  border: 1px solid var(--c-border);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: var(--shadow-card-sm);
+  transition:
+    transform var(--dur-fast, 200ms) var(--ease-out-cubic, cubic-bezier(0.33,1,0.68,1)),
+    box-shadow var(--dur-fast, 200ms) var(--ease-out-cubic, cubic-bezier(0.33,1,0.68,1)),
+    border-color var(--dur-fast, 200ms) ease;
+}
+/* Inset top-edge sheen + bottom hairline (Stitch glass-morphism cue) */
+.sw-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: var(--tile-inset, inset 0 1px 0 rgba(255,255,255,0.06));
+}
+
+.sw-tile-hero {
+  border-radius: 26px;
+  padding: 18px;
+  min-height: 192px;
+  box-shadow: var(--shadow-card-lg);
+}
+.sw-tile-mini {
+  border-radius: 17px;
+  padding: 10px;
+  min-height: 72px;
+  box-shadow: var(--shadow-card-sm);
+}
+.sw-tile-flat {
+  background: var(--c-tint-neutral);
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: none;
+}
+.sw-tile-flat::after { content: none; }
+
+/* Interactive tile — hover lifts, press scales (mobile + desktop) */
+.sw-tile-interactive { cursor: pointer; }
+.sw-tile-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-md);
+  border-color: var(--c-border2);
+}
+.sw-tile-interactive:active {
+  transform: scale(0.99);
+  box-shadow: var(--shadow-card-sm);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AMBIENT CONFIDENCE  (§13.11 magic — top-edge glow signals
+   data freshness without a label. Pure visual weather.)
+
+   Apply `.sw-ambient-conf-{fresh|aging|stale}` to any `.sw-tile`.
+   Confidence comes from engine `metric.confidence` field.
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-ambient-conf-fresh::before,
+.sw-ambient-conf-aging::before,
+.sw-ambient-conf-stale::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  filter: blur(0.5px);
+  opacity: 0.85;
+  transition: background var(--dur-slow, 600ms) ease, opacity var(--dur-slow, 600ms) ease;
+}
+.sw-ambient-conf-fresh::before { background: var(--c-acc); }       /* bright mint */
+.sw-ambient-conf-aging::before { background: var(--c-gold); opacity: 0.55; }
+.sw-ambient-conf-stale::before { background: var(--c-coral); opacity: 0.45; }
+
+/* ═══════════════════════════════════════════════════════════════
+   QUIET MILESTONES  (§13.10 magic — discreet 24h glow on a tile
+   when a milestone has just been crossed. No confetti, no modal.)
+
+   Engine sets `milestone_crossed` event with a 24-hour TTL; the
+   component adds `.sw-milestone-glow` to the tile during that
+   window. Glow cycles slowly to be discovered, never demanded.
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes sw-quiet-glow {
+  0%, 100% { box-shadow: var(--shadow-card-sm), 0 0 0 0 rgba(45,242,195,0); }
+  50%      { box-shadow: var(--shadow-card-md), 0 0 24px 4px rgba(45,242,195,0.18); }
+}
+@keyframes sw-quiet-glow-light {
+  0%, 100% { box-shadow: var(--shadow-card-sm), 0 0 0 0 rgba(0,168,132,0); }
+  50%      { box-shadow: var(--shadow-card-md), 0 0 24px 4px rgba(0,168,132,0.20); }
+}
+.sw-milestone-glow {
+  animation: sw-quiet-glow 6s ease-in-out infinite;
+}
+[data-theme="light"] .sw-milestone-glow {
+  animation-name: sw-quiet-glow-light;
+}
+.sw-milestone-glow::before {
+  /* faint celebration spark in the top-right corner */
+  content: '✦';
+  position: absolute;
+  top: 8px; right: 12px;
+  font-size: 10px;
+  color: var(--c-acc);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WHISPER RIBBON  (§13.7 magic — non-urgent notifications as
+   ambient ticker text. Premium = no nagging badge dots.)
+
+   Renders under the screen header. Multiple whispers cycle
+   automatically; first whisper visible, rest queue.
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-whisper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  padding: 0 14px;
+  font-size: 11px;
+  color: var(--c-text2);
+  background: var(--c-tint-neutral);
+  border-bottom: 1px solid var(--c-border);
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  cursor: pointer;
+  transition: background var(--dur-fast, 200ms) ease;
+}
+.sw-whisper:hover { background: var(--c-tint-neutral-2); color: var(--c-text); }
+.sw-whisper-icon {
+  font-size: 10px;
+  color: var(--c-acc);
+  flex-shrink: 0;
+}
+.sw-whisper-text {
+  flex: 1;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.sw-whisper-cta {
+  font-size: 11px;
+  color: var(--c-acc);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+/* Whisper fade-in + cycle */
+@keyframes sw-whisper-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sw-whisper-enter {
+  animation: sw-whisper-in var(--dur-normal, 350ms) var(--ease-out-cubic, cubic-bezier(0.33,1,0.68,1)) both;
+}

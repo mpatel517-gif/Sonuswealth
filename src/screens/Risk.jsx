@@ -1,0 +1,1645 @@
+﻿// ─────────────────────────────────────────────────────────────────────────────
+// Risk.jsx — Risk full-page surface (Wave 2 Agent I refactor + polish pass)
+//
+// Spec: 2-Product-risk-layer-v1_6.md (§2.2 zone map)
+// Architectural note (§1.1, D-ARCH-2): Risk is canonically an OVERLAY, not a
+// tab. Both surfaces are kept consistent during transition. The full-page
+// variant renders the same zone set as RiskOverlay.jsx — sourced from the same
+// shared building blocks below.
+//
+// Polish layer (this revision):
+//   · Ring fill: 1500ms with elastic settle, counter-up via <Num animate />
+//   · 5×5 cells, 7-dim rows, shock cards, take-action cards, what-helps rows,
+//     D6 sub-chips → entry stagger via <RevealStagger>
+//   · History line: <DrawSVG> on mount
+//   · Setback chip: pulse-glow when triggered
+//   · Life-event banner: slide-in from top
+//   · Floating + button: sw-lift sw-press, halo on idle
+//   · Plan anchor: pulse-glow when no plan committed
+//   · Cards: sw-lift, chips/buttons: sw-press; design-token classes everywhere
+//
+// Zone coverage (full page = overlay):
+//   Z0  — X25 hero caption + X22 breadcrumb
+//   Z1  — Risk Score ring + Setback chip (D-RISK-18) + Confidence chip (level)
+//   Z2  — 5×5 cross-map (Invention 19 · CrossMap5x5)
+//   Z3  — 7-dimension breakdown (DimRow with D6 sub-chips · D-RISK-D6-SUBSCORING)
+//   Z4  — Protection gap card
+//   Z5  — Shock scenarios from runShock() (engine recompute, no hardcoded delta)
+//   Z6  — Confidence card
+//   Z7  — Life-event re-open prompts (lifeEventPaths)
+//   Z8  — Risk score history (calcRiskHistory · own picker, distinct from X28)
+//   Z9  — Take Action top 3 (calcAPQ filtered/sorted by riskScore impact)
+//   Z10 — Universal "+" Add Protection floating button
+//   Z11 — "What would help most" lens (whatWouldHelpMost)
+//   Z12 — X28 protection plan anchor (always rendered · D-RISK-20-ALL-USERS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useState, useEffect } from 'react'
+import {
+  fmt, netWorth, calcFQ, fqBand,
+  calcRisk, riskBand, financialProfile,
+  calcAPQ, planFor,
+  calcRiskHistory,
+  riskShockSuite, whatWouldHelpMost as engineWhatHelpsMost, lifeEventPaths,
+} from '../engine/fq-calculator.js'
+import { BRAND } from '../config/brand.js'
+// TripleAnchor intentionally NOT used on Risk — spec §2.3 + §2.7 D-ANCHOR-2
+// invert the hierarchy here (Risk primary, Wealth + NW secondary). The shared
+// TripleAnchor renders NW-dominant for every other tab, so Risk uses a local
+// RiskPrimaryAnchor block instead. (`fmt` is already imported above.)
+import {
+  CrossMap5x5, DiffBadge, ExplainerChip,
+  Num, FadeInOnMount, RevealStagger, DrawSVG,
+  // X28TopBar deliberately not imported — spec §33c O-RISK-17 bans X28 on Risk.
+} from '../components/shared/index.js'
+import ProtectionGap from '../components/Risk/ProtectionGap.jsx'
+
+// ── Engine-band → CrossMap5x5 prop mapper ─────────────────────────────────
+const FQ_NAME_MAP = {
+  exposed:'foundation', exception:'foundation', foundation:'foundation',
+  building:'building',  established:'established',
+  optimised:'growing',  optimized:'growing', growing:'growing',
+  exceptional:'exceptional',
+}
+const RS_NAME_MAP = {
+  exposed:'vulnerable', vulnerable:'vulnerable',
+  cautious:'cautious',  managed:'managed',
+  protected:'protected', resilient:'resilient',
+}
+const mapFqBand   = (n='') => FQ_NAME_MAP[String(n).toLowerCase()] || 'building'
+const mapRiskBand = (n='') => RS_NAME_MAP[String(n).toLowerCase()] || 'cautious'
+
+// ── Risk dimension config ─────────────────────────────────────────────────
+const DIMS = [
+  { key:'incomeRes',        label:'Income Resilience',     max:20, icon:'◈' },
+  { key:'liquidity',        label:'Liquidity Buffer',      max:18, icon:'◉' },
+  { key:'protCov',          label:'Protection Coverage',   max:18, icon:'◐' },
+  { key:'debtVuln',         label:'Debt Vulnerability',    max:15, icon:'⚖' },
+  { key:'concRisk',         label:'Concentration Risk',    max:12, icon:'◎' },
+  { key:'depExp',           label:'Dependency Exposure',   max:10, icon:'◑' },
+  { key:'behaviouralTrack', label:'Behavioural Track',     max:7,  icon:'◷' },
+]
+const RISK_DIM_DESCRIPTIONS = {
+  incomeRes:        'How resilient your income is — number of sources, stability, and what happens if the primary source stops.',
+  liquidity:        'Whether you hold enough accessible cash to absorb a shock without selling investments.',
+  protCov:          'How well protected you are against loss of income, death, or serious illness.',
+  debtVuln:         'Whether your debt level amplifies your financial risks — leverage, debt service, and rate exposure.',
+  concRisk:         'Whether your wealth and income are over-concentrated in a single asset, employer, or asset class.',
+  depExp:           'Whether people who depend on you would be provided for — will, nominations, LPA, guardian.',
+  behaviouralTrack: 'Your demonstrated financial behaviour on the platform over time. Starts at zero — earns through action.',
+}
+
+// ── Dim bar colour by % of max ────────────────────────────────────────────
+function dimColor(score, max) {
+  const pct = score / (max || 1)
+  if (pct >= 0.80) return 'var(--c-success)'
+  if (pct >= 0.60) return 'var(--c-accent)'
+  if (pct >= 0.40) return 'var(--c-warning)'
+  if (pct >= 0.20) return 'var(--c-danger)'
+  return 'var(--c-danger)'
+}
+
+// ── D6 Dependency-Exposure sub-scoring (D-RISK-D6-SUBSCORING) ─────────────
+function d6SubScores(entity) {
+  const a    = entity.assets   || {}
+  const prot = a.protection    || {}
+  const dependants = entity.dependants?.length || 0
+  const will =
+    entity.willStatus === 'current' ? 6 :
+    entity.willStatus === 'basic' || entity.willStatus === 'outdated' ? 3 : 0
+  const lpa =
+    entity.lpaStatus === 'both' ? 6 :
+    entity.lpaStatus === 'financial_only' || entity.lpaStatus === 'health_only' ? 3 : 0
+  const noms = entity.nominationsStatus === 'all' ? 6 :
+               entity.nominationsStatus === 'partial' ? 3 : 0
+  const life = prot.lifeInsurance?.exists
+    ? (prot.lifeInsurance?.inTrust ? 6 : 3)
+    : (dependants === 0 ? 6 : 0)
+  const guard = dependants === 0 ? 6
+              : entity.guardianStatus === 'formal' ? 6
+              : entity.guardianStatus === 'informal' ? 3 : 0
+  return [
+    { key:'will',      label:'Will',          v: will  },
+    { key:'lpa',       label:'Power of attorney', v: lpa },
+    { key:'noms',      label:'Nominations',   v: noms  },
+    { key:'trust',     label:'Life-in-trust', v: life  },
+    { key:'guardian',  label:'Guardian',      v: guard },
+  ]
+}
+
+// ── Animated ring gauge (1500ms elastic settle + counter-up) ──────────────
+function RiskRing({ score, band }) {
+  const R = 80, CIRC = 2 * Math.PI * R
+  const [fill, setFill] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => setFill(score), 80)
+    return () => clearTimeout(t)
+  }, [score])
+
+  return (
+    <svg viewBox="0 0 200 200" width="200" height="200" style={{ overflow:'visible' }}>
+      {[0.2,0.4,0.6,0.8].map(r => (
+        <circle key={r} cx={100} cy={100} r={r*(R-4)} fill="none"
+          stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />
+      ))}
+      <circle cx={100} cy={100} r={R} fill="none"
+        stroke="rgba(255,255,255,0.08)" strokeWidth="14" />
+      <circle cx={100} cy={100} r={R} fill="none"
+        stroke={band.colour} strokeWidth="14" strokeLinecap="round"
+        strokeDasharray={`${(fill/100)*CIRC} ${CIRC}`}
+        strokeDashoffset={CIRC * 0.25}
+        style={{ transition:'stroke-dasharray 1500ms cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+      />
+      <foreignObject x="40" y="68" width="120" height="48">
+        <div style={{
+          width:'100%', height:'100%', display:'flex',
+          alignItems:'center', justifyContent:'center',
+          fontFamily:'DM Sans, sans-serif',
+          fontSize:38, fontWeight:900, color:'var(--c-text)',
+          letterSpacing:-2, lineHeight:1,
+        }}>
+          <Num value={score} format="score" animate />
+        </div>
+      </foreignObject>
+      <text x={100} y={120} textAnchor="middle"
+        fontSize="11" fontWeight="700" fill={band.colour}
+        fontFamily="DM Sans, sans-serif">
+        {band.name}
+      </text>
+      <text x={100} y={136} textAnchor="middle"
+        fontSize="11" fill="var(--c-text3)"
+        fontFamily="DM Sans, sans-serif">
+        Risk Score
+      </text>
+    </svg>
+  )
+}
+
+// ── Confidence chip — semantic level only (§8.1) ──────────────────────────
+function ConfBadge({ level }) {
+  const cls = level === 'high'   ? 'sw-chip sw-chip-sm sw-chip-blue'
+             : level === 'medium' ? 'sw-chip sw-chip-sm sw-chip-amber'
+             :                      'sw-chip sw-chip-sm sw-chip-coral'
+  const label = level === 'high'   ? 'High confidence'
+               : level === 'medium' ? 'Medium confidence'
+               :                      'Low confidence'
+  return <span className={cls}>{label}</span>
+}
+
+// ── Setback chip (D-RISK-18) — pulse-glow when triggered ──────────────────
+function SetbackChip({ entity }) {
+  try {
+    const hist = calcRiskHistory(entity, '1mo')?.points || []
+    if (hist.length < 2) return null
+    const start = hist[0].score, end = hist[hist.length - 1].score
+    const drop = start - end
+    if (drop >= 5) {
+      return (
+        <span className="sw-pulse-glow" style={{
+          display:'inline-block', borderRadius:100,
+          color:'var(--c-danger)',
+        }}>
+          <DiffBadge value={-drop}>Setback</DiffBadge>
+        </span>
+      )
+    }
+  } catch {}
+  return null
+}
+
+// ── AI chip (RISK-AI-1..8) — dispatches sonus:ask custom event ────────────
+// Catalogue of chip → seed question. Keeps copy close to where it surfaces so
+// the chip label and the question Ask Sonu opens with stay aligned.
+const RISK_AI_QUESTIONS = {
+  'RISK-AI-1': 'Walk me through my Risk Score — what are the biggest drivers right now?',
+  'RISK-AI-2': 'Where am I most exposed if income stopped tomorrow?',
+  'RISK-AI-3': 'For this scenario, what would I actually do in the first 30 days?',
+  'RISK-AI-4': 'Is my protection coverage roughly right for my situation?',
+  'RISK-AI-5': 'What is the cheapest single move that improves my Risk Score?',
+  'RISK-AI-6': 'I had a life event — which Risk dimensions should I re-check?',
+  'RISK-AI-7': 'Explain my Dependency Exposure sub-scores in plain English.',
+  'RISK-AI-8': 'Of the recommended actions, which one should I do first and why?',
+}
+function AskChip({ id = 'RISK-AI-1', label = 'Ask Sonu' }) {
+  const open = (e) => {
+    e.stopPropagation()
+    const question = RISK_AI_QUESTIONS[id] || label
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('sonus:ask', {
+        detail: { question, seed: { surface: 'risk', chipId: id } },
+      }))
+    }
+  }
+  return (
+    <button
+      data-ai-chip={id}
+      className="sw-chip sw-chip-sm sw-chip-mint sw-chip-outline sw-press"
+      style={{ marginLeft:8, cursor:'pointer' }}
+      onClick={open}
+    >
+      ⌘ {label}
+    </button>
+  )
+}
+
+// ── Financial profile cell (elevated card, hero band-name) ────────────────
+function ProfileCell({ profile }) {
+  if (!profile) return null
+  return (
+    <FadeInOnMount delay={120}>
+      <div className="card sw-card-elevated sw-lift" style={{
+        marginBottom:12, textAlign:'center',
+        background:'linear-gradient(180deg, rgba(45,242,195,0.04), var(--c-surface))',
+        borderColor:'rgba(45,242,195,0.18)',
+      }}>
+        <div className="sw-eyebrow" style={{ marginBottom:8 }}>
+          {BRAND.financialProfile}
+        </div>
+        <div className="sw-hero-md" style={{ marginBottom:8, color:'var(--c-text)' }}>
+          {(profile.profileName || '').replace(/ \/ /g, ' · ')}
+        </div>
+        <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.55 }}>
+          {profile.profileImplication}
+        </div>
+      </div>
+    </FadeInOnMount>
+  )
+}
+
+// ── Dimension row with progress bar (sw-bar) ──────────────────────────────
+// CRIT 1.3 — D7 Behavioural Track is hardcoded 0 in the engine. Rendering
+// "0/7" in danger-red implies a measured failure; reality is "no history yet".
+// We special-case D7 here so the row reads "Building track record — needs 90
+// days" in a neutral grey, not a red 0.
+function DimRow({ dimCfg, score, entity, onTap }) {
+  const isBTRBuilding = dimCfg.key === 'behaviouralTrack' && score === 0
+  const pct   = Math.round((score / dimCfg.max) * 100)
+  const color = isBTRBuilding ? 'var(--c-text3)' : dimColor(score, dimCfg.max)
+  // Stagger the fill animation so it doesn't fire instantly with mount
+  const [w, setW] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => setW(pct), 120)
+    return () => clearTimeout(t)
+  }, [pct])
+  return (
+    <div onClick={() => onTap(dimCfg)} className="sw-press" style={{
+      display:'flex', alignItems:'center', gap:10,
+      padding:'10px 0', borderBottom:'1px solid var(--c-sep)',
+      cursor:'pointer',
+    }}>
+      <div style={{ width:7, height:7, borderRadius:'50%',
+        background:color, flexShrink:0 }} />
+      <div style={{ fontSize:13, color:'var(--c-text2)', width:140, flexShrink:0 }}>
+        {dimCfg.label}
+      </div>
+      {isBTRBuilding ? (
+        <div style={{
+          flex:1, fontSize:11, color:'var(--c-text3)', fontStyle:'italic',
+          lineHeight:1.3,
+        }}>
+          Building track record — needs 90 days of activity
+        </div>
+      ) : (
+        <div className="sw-bar" style={{ flex:1 }}>
+          <div className="fill" style={{
+            width:`${w}%`, background:color,
+            transition:'width 800ms cubic-bezier(0.16, 1, 0.3, 1)',
+          }} />
+        </div>
+      )}
+      <div style={{ fontSize:13, fontWeight:700, color, width:36,
+        textAlign:'right', flexShrink:0 }}>
+        {isBTRBuilding ? '—' : `${score}/${dimCfg.max}`}
+      </div>
+      <div style={{ fontSize:14, color:'var(--c-text3)', flexShrink:0 }}>›</div>
+    </div>
+  )
+}
+
+// ── 7-dimension panel with 3-view toggle (Radar · Orbit · Bars) ────────────
+// Spec v1.6: per-dim breakdown should be viewable as heptagonal radar, orbiting
+// nodes, or stacked bars. Bars is the default for accessibility; Radar makes
+// strong/weak shape obvious at a glance; Orbit gives each dim equal visual
+// weight regardless of score.
+function DimensionsPanel({ dims, risk, entity, onTap }) {
+  const [view, setView] = useState('bars')
+  const items = dims.map(d => ({
+    ...d,
+    score: risk.dims?.[d.key] || 0,
+    pct:   Math.round(((risk.dims?.[d.key] || 0) / d.max) * 100),
+  }))
+  // Band colour drives the radar polygon stroke + tinted fill so the shape
+  // reads as "vulnerable/cautious/protected/resilient" at a glance instead
+  // of always lying mint-green. (CRIT 1.5 — radar-green half-fix.)
+  const bandColour = risk.band?.colour || riskBand(risk.total).colour
+  return (
+    <div className="card sw-lift">
+      <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Resilience</div>
+      <div className="card-title" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <span>Resilience Dimensions</span>
+        <ExplainerChip id="RISK-1" />
+      </div>
+      <div role="tablist" style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))',
+        gap: 4, padding: 4, margin: '8px 0 12px',
+        border: '1px solid var(--c-sep)', borderRadius: 14,
+        background: 'var(--c-surface2)',
+      }}>
+        {['radar', 'orbit', 'bars'].map(v => {
+          const active = view === v
+          return (
+            <button key={v} role="tab" aria-selected={active}
+              onClick={() => setView(v)}
+              className="sw-press"
+              style={{
+                minHeight: 30, border: 0, borderRadius: 10, cursor: 'pointer',
+                background: active ? 'var(--c-surface)' : 'transparent',
+                color: active ? 'var(--c-text)' : 'var(--c-text3)',
+                fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                boxShadow: active ? '0 4px 12px rgba(0,0,0,0.10)' : 'none',
+              }}>{v}</button>
+          )
+        })}
+      </div>
+      {view === 'radar' && <RadarHeptaView items={items} onTap={onTap} bandColour={bandColour} />}
+      {view === 'orbit' && <OrbitView items={items} onTap={onTap} />}
+      {view === 'bars'  && (
+        <RevealStagger interval={60}>
+          {dims.map(d => (
+            <DimRow key={d.key} dimCfg={d}
+              score={risk.dims?.[d.key] || 0}
+              entity={entity} onTap={onTap} />
+          ))}
+        </RevealStagger>
+      )}
+    </div>
+  )
+}
+
+// Hex / CSS-var → rgba helper. Falls back to the raw colour for fill so
+// CSS vars still render (browsers ignore an invalid rgba and use stroke).
+function bandFillAlpha(colour, alpha = 0.18) {
+  if (!colour) return `rgba(0,229,168,${alpha})`
+  const c = String(colour).trim()
+  // #RGB or #RRGGBB
+  const hex = c.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
+  if (hex) {
+    let h = hex[1]
+    if (h.length === 3) h = h.split('').map(x => x + x).join('')
+    const r = parseInt(h.slice(0, 2), 16)
+    const g = parseInt(h.slice(2, 4), 16)
+    const b = parseInt(h.slice(4, 6), 16)
+    return `rgba(${r},${g},${b},${alpha})`
+  }
+  // rgb(r,g,b) → rgba
+  const rgb = c.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i)
+  if (rgb) return `rgba(${rgb[1]},${rgb[2]},${rgb[3]},${alpha})`
+  // CSS var or unknown → use color-mix so it scales with theme
+  return `color-mix(in srgb, ${c} ${Math.round(alpha * 100)}%, transparent)`
+}
+
+// Radar view — heptagonal SVG. 7 spokes at 360/7°; polygon at score fraction.
+// `bandColour` drives stroke + tinted fill so a vulnerable persona sees a red
+// polygon, not the old hard-coded mint.
+function RadarHeptaView({ items, onTap, bandColour = 'var(--c-acc)' }) {
+  const SIZE = 280, CX = SIZE / 2, CY = SIZE / 2, R = SIZE * 0.34
+  const angles = items.map((_, i) => (Math.PI * 2 * (i / items.length)) - Math.PI / 2)
+  const guidePolys = [0.25, 0.5, 0.75, 1].map(s => (
+    items.map((_, i) => {
+      const a = angles[i]
+      return `${(CX + Math.cos(a) * R * s).toFixed(1)},${(CY + Math.sin(a) * R * s).toFixed(1)}`
+    }).join(' ')
+  ))
+  const polyPts = items.map((d, i) => {
+    const frac = d.max ? (d.score / d.max) : 0
+    const a = angles[i]
+    return `${(CX + Math.cos(a) * R * frac).toFixed(1)},${(CY + Math.sin(a) * R * frac).toFixed(1)}`
+  }).join(' ')
+  return (
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" style={{ display: 'block' }}>
+      {guidePolys.map((p, i) => (
+        <polygon key={i} points={p} fill="none"
+          stroke="var(--c-sep)" strokeWidth="0.5" opacity="0.55" />
+      ))}
+      {items.map((_, i) => {
+        const a = angles[i]
+        return <line key={i}
+          x1={CX} y1={CY}
+          x2={(CX + Math.cos(a) * R).toFixed(1)}
+          y2={(CY + Math.sin(a) * R).toFixed(1)}
+          stroke="var(--c-sep)" strokeWidth="0.5" opacity="0.5" />
+      })}
+      <polygon points={polyPts}
+        className="sw-stroke-draw"
+        fill={bandFillAlpha(bandColour, 0.18)} stroke={bandColour} strokeWidth="2"
+        strokeDasharray="600"
+        style={{
+          '--sw-draw-len': '600',
+          filter: `drop-shadow(0 0 12px ${bandFillAlpha(bandColour, 0.45)})`,
+        }} />
+      {items.map((d, i) => {
+        const a = angles[i]
+        const cx = CX + Math.cos(a) * R * (d.max ? d.score / d.max : 0)
+        const cy = CY + Math.sin(a) * R * (d.max ? d.score / d.max : 0)
+        const lx = CX + Math.cos(a) * (R + 24)
+        const ly = CY + Math.sin(a) * (R + 24)
+        const color = dimColor(d.score, d.max)
+        return (
+          <g key={d.key} style={{ cursor: 'pointer' }}
+            onClick={() => onTap?.(d)}>
+            <circle cx={cx} cy={cy} r="4" fill={color} />
+            <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
+              fontSize="9" fontWeight="700" fill="var(--c-text2)"
+              fontFamily="DM Sans,sans-serif">
+              {d.label.split(' ')[0]}
+            </text>
+            <text x={lx} y={ly + 10} textAnchor="middle" dominantBaseline="middle"
+              fontSize="9" fill="var(--c-text3)" fontFamily="DM Sans,sans-serif">
+              {d.pct}%
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+// Orbit view — 7 nodes positioned around a centre cap showing total/100.
+function OrbitView({ items, onTap }) {
+  const PCT_R = 36  // node ring radius as % of container
+  const total = items.reduce((s, d) => s + d.score, 0)
+  return (
+    <div style={{
+      position: 'relative', width: '100%', aspectRatio: '1/1',
+      maxWidth: 280, margin: '0 auto',
+    }}>
+      {[20, 32, 46].map(p => (
+        <div key={p} style={{
+          position: 'absolute', inset: `${p}%`,
+          border: '1px solid var(--c-sep)', borderRadius: '50%', opacity: 0.5,
+        }} />
+      ))}
+      <div style={{
+        position: 'absolute', left: '50%', top: '50%',
+        transform: 'translate(-50%,-50%)',
+        width: '36%', height: '36%', display: 'grid', placeItems: 'center',
+        textAlign: 'center', border: '1px solid var(--c-sep)',
+        borderRadius: '50%', background: 'var(--c-surface)',
+        padding: 4,
+      }}>
+        {/* HIGH 1.4 — centre no longer says "78/100" (duplicate of ring).
+            Label as composite of the 7 dimensions so it reads as a sum. */}
+        <div>
+          <div style={{ fontSize: 9, color: 'var(--c-text3)', fontWeight: 700, letterSpacing: 0.4 }}>
+            COMPOSITE
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', lineHeight: 1 }}>
+            {total}
+          </div>
+          <div style={{ fontSize: 8, color: 'var(--c-text3)', marginTop: 1, lineHeight: 1.2 }}>
+            sum of 7 dims
+          </div>
+        </div>
+      </div>
+      {items.map((d, i) => {
+        const a = (Math.PI * 2 * (i / items.length)) - Math.PI / 2
+        const x = 50 + PCT_R * Math.cos(a)
+        const y = 50 + PCT_R * Math.sin(a)
+        const color = dimColor(d.score, d.max)
+        return (
+          <button key={d.key} onClick={() => onTap?.(d)}
+            className="sw-press"
+            style={{
+              position: 'absolute', left: `${x}%`, top: `${y}%`,
+              transform: 'translate(-50%,-50%)',
+              width: 64, padding: '6px 4px',
+              border: `1px solid ${color}55`, borderRadius: 14,
+              background: 'var(--c-surface)', cursor: 'pointer',
+              display: 'grid', placeItems: 'center', gap: 2,
+              fontSize: 10, color,
+            }}>
+            <strong style={{ fontSize: 14, fontWeight: 800, lineHeight: 1 }}>{d.pct}</strong>
+            <span style={{ fontSize: 9, color: 'var(--c-text2)', textAlign: 'center', lineHeight: 1.1 }}>
+              {d.label.split(' ')[0]}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── D6 questionnaire — 5 questions feeding dependency-exposure sub-scores ──
+// Spec: Risk Layer v1.6 — D6 input flow + life-event re-open matrix (16 event
+// subtypes, deferred). This wave delivers the multi-step input UI and fires a
+// `risk_questionnaire_committed` event with all 5 answers. Engine consumption
+// of the event (mapping answers into entity.willStatus / lpaStatus / etc.) is
+// follow-up engine work — out of scope here.
+const D6_QUESTIONS = [
+  {
+    id: 'willStatus',
+    title: 'Is your will up to date?',
+    sub: 'Updated within the last 5 years, reflects current wishes, names current executors.',
+    options: [
+      { value: 'current', label: 'Yes — current and reviewed', tone: 'good' },
+      { value: 'basic',   label: 'Have one, may be outdated',  tone: 'warn' },
+      { value: 'none',    label: 'No will / not sure',         tone: 'bad'  },
+    ],
+  },
+  {
+    id: 'lpaStatus',
+    title: 'Do you have a Power of Attorney (LPA)?',
+    sub: 'A LPA lets someone you trust act for you if you lose capacity. Two types: property + finance, and health + welfare.',
+    options: [
+      { value: 'both',            label: 'Yes — both types in place',    tone: 'good' },
+      { value: 'financial_only',  label: 'Property + finance only',       tone: 'warn' },
+      { value: 'health_only',     label: 'Health + welfare only',         tone: 'warn' },
+      { value: 'none',            label: 'No LPA in place',               tone: 'bad'  },
+    ],
+  },
+  {
+    id: 'nominationsStatus',
+    title: 'Are pension and death-benefit nominations recorded?',
+    sub: 'Nominations tell your pension or insurance provider who should receive the funds. Without one, decisions fall to the scheme trustees.',
+    options: [
+      { value: 'all',     label: 'All providers have nominations',  tone: 'good' },
+      { value: 'partial', label: 'Some recorded, some missing',     tone: 'warn' },
+      { value: 'none',    label: 'None recorded / unsure',          tone: 'bad'  },
+    ],
+  },
+  {
+    id: 'lifeInTrust',
+    title: 'Is your life cover written in trust?',
+    sub: 'Life insurance written in trust pays out faster and stays outside the estate for inheritance tax. Most people skip this step.',
+    options: [
+      { value: 'in_trust', label: 'Yes — written in trust',     tone: 'good' },
+      { value: 'exists',   label: 'I have cover but not in trust', tone: 'warn' },
+      { value: 'none',     label: 'No life cover',              tone: 'bad'  },
+    ],
+  },
+  {
+    id: 'guardianStatus',
+    title: 'Are guardians named for any dependants?',
+    sub: 'Anyone who relies on you financially or for care. If you have no dependants, the answer is automatically "fully covered".',
+    options: [
+      { value: 'formal',         label: 'Yes — named in will',            tone: 'good' },
+      { value: 'informal',       label: 'Informal arrangement only',      tone: 'warn' },
+      { value: 'none',           label: 'No guardians named',             tone: 'bad'  },
+      { value: 'no_dependants',  label: 'No dependants',                  tone: 'good' },
+    ],
+  },
+]
+
+function D6Questionnaire({ entity, onClose, onCommit }) {
+  const [step, setStep] = useState(0)
+  const [answers, setAnswers] = useState(() => ({
+    willStatus:        entity.willStatus || null,
+    lpaStatus:         entity.lpaStatus || null,
+    nominationsStatus: entity.nominationsStatus || null,
+    lifeInTrust:       entity.assets?.protection?.lifeInsurance?.inTrust ? 'in_trust'
+                     : entity.assets?.protection?.lifeInsurance?.exists  ? 'exists'
+                     : null,
+    guardianStatus:    entity.guardianStatus || (entity.dependants?.length ? null : 'no_dependants'),
+  }))
+  const q = D6_QUESTIONS[step]
+  const total = D6_QUESTIONS.length
+  const picked = answers[q.id]
+  const complete = D6_QUESTIONS.every(qq => answers[qq.id] != null)
+
+  function pick(v) {
+    setAnswers(a => ({ ...a, [q.id]: v }))
+  }
+  function next() {
+    if (step < total - 1) setStep(s => s + 1)
+  }
+  function back() {
+    if (step > 0) setStep(s => s - 1)
+  }
+  function submit() {
+    onCommit?.({
+      type: 'risk_questionnaire_committed',
+      ts: Date.now(),
+      correlation_id: `risk-d6-${Date.now()}`,
+      payload: { source: 'D6', answers },
+    })
+    onClose?.()
+  }
+
+  return (
+    <div className="sheet-overlay">
+      <div className="sheet-backdrop" onClick={onClose} />
+      <div className="sheet-panel sw-fade-in-up" style={{ maxHeight:'88vh', overflowY:'auto' }}>
+        <div className="sheet-handle" />
+
+        {/* Progress strip */}
+        <div style={{
+          display:'flex', gap:4, marginBottom:16,
+        }}>
+          {D6_QUESTIONS.map((_, i) => (
+            <div key={i} style={{
+              flex:1, height:3, borderRadius:100,
+              background: i <= step ? 'var(--c-acc)' : 'var(--c-surface2)',
+              transition:'background .25s',
+            }} />
+          ))}
+        </div>
+
+        <div className="sw-eyebrow" style={{ marginBottom:6 }}>
+          Step {step + 1} of {total} · D6 questionnaire
+        </div>
+        <div style={{
+          fontSize:17, fontWeight:800, color:'var(--c-text)', marginBottom:8,
+          letterSpacing:-0.1,
+        }}>
+          {q.title}
+        </div>
+        <div style={{ fontSize:12, color:'var(--c-text3)', lineHeight:1.6, marginBottom:16 }}>
+          {q.sub}
+        </div>
+
+        {/* Options */}
+        <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
+          {q.options.map(o => {
+            const active = picked === o.value
+            const toneBorder = o.tone === 'good' ? 'rgba(0,229,168,0.45)'
+                             : o.tone === 'warn' ? 'rgba(255,179,71,0.45)'
+                             : 'rgba(255,111,125,0.45)'
+            const toneBg = o.tone === 'good' ? 'rgba(0,229,168,0.10)'
+                         : o.tone === 'warn' ? 'rgba(255,179,71,0.10)'
+                         : 'rgba(255,111,125,0.10)'
+            return (
+              <button key={o.value} onClick={() => pick(o.value)}
+                className="sw-press"
+                style={{
+                  textAlign:'left', cursor:'pointer',
+                  padding:'12px 14px', borderRadius:12,
+                  background: active ? toneBg : 'var(--c-surface2)',
+                  border: active ? `1.5px solid ${toneBorder}` : '1px solid var(--c-sep)',
+                  color:'var(--c-text)', fontSize:14, fontWeight: active ? 700 : 500,
+                  display:'flex', alignItems:'center', gap:10,
+                }}>
+                <span style={{
+                  width:18, height:18, borderRadius:'50%',
+                  border: `2px solid ${active ? toneBorder : 'var(--c-sep)'}`,
+                  background: active ? toneBorder : 'transparent',
+                  flexShrink:0,
+                }} />
+                {o.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Nav buttons */}
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={back} disabled={step === 0} className="sw-press"
+            style={{
+              padding:'10px 16px', fontSize:13, fontWeight:700,
+              background:'transparent', color:'var(--c-text3)',
+              border:'1px solid var(--c-border)', borderRadius:100,
+              cursor: step === 0 ? 'not-allowed' : 'pointer',
+              opacity: step === 0 ? 0.5 : 1,
+            }}>
+            Back
+          </button>
+          {step < total - 1 ? (
+            <button onClick={next} disabled={!picked} className="sw-press"
+              style={{
+                flex:1, padding:'10px 16px', fontSize:13, fontWeight:700,
+                background:'var(--c-acc)', color:'var(--c-bg)',
+                border:'none', borderRadius:100,
+                cursor: !picked ? 'not-allowed' : 'pointer',
+                opacity: !picked ? 0.5 : 1,
+              }}>
+              Next →
+            </button>
+          ) : (
+            <button onClick={submit} disabled={!complete} className="sw-press"
+              style={{
+                flex:1, padding:'10px 16px', fontSize:13, fontWeight:800,
+                background:'var(--c-acc)', color:'var(--c-bg)',
+                border:'none', borderRadius:100,
+                cursor: !complete ? 'not-allowed' : 'pointer',
+                opacity: !complete ? 0.5 : 1,
+              }}>
+              Submit answers
+            </button>
+          )}
+          <button onClick={onClose} className="sw-press"
+            style={{
+              padding:'10px 16px', fontSize:13, fontWeight:700,
+              background:'transparent', color:'var(--c-text3)',
+              border:'1px solid var(--c-border)', borderRadius:100,
+              cursor:'pointer',
+            }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── D6 Sub-chip row (staggered fan-in inside DimSheet) ────────────────────
+function D6SubChips({ entity, onCommit }) {
+  const subs = d6SubScores(entity)
+  const [qOpen, setQOpen] = useState(false)
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div className="sw-eyebrow" style={{ marginBottom:8 }}>
+        Sub-score breakdown · D-RISK-D6-SUBSCORING
+      </div>
+      <RevealStagger interval={50} style={{
+        display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:6,
+      }}>
+        {subs.map(s => (
+          <div key={s.key} style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            padding:'6px 10px', borderRadius:8,
+            background:'var(--c-surface2)',
+            border:'1px solid var(--c-sep)',
+          }}>
+            <span style={{ fontSize:12, color:'var(--c-text2)' }}>{s.label}</span>
+            <span style={{ fontSize:12, fontWeight:700,
+              color: s.v === 6 ? 'var(--c-success)' : s.v === 3 ? 'var(--c-warning)' : 'var(--c-danger)' }}>
+              {s.v === 6 ? '✓' : s.v === 3 ? '◐' : '○'} {s.v}/6
+            </span>
+          </div>
+        ))}
+      </RevealStagger>
+      <button onClick={() => setQOpen(true)} className="sw-press"
+        style={{
+          marginTop:10, width:'100%',
+          padding:'10px 14px', fontSize:12, fontWeight:700,
+          background:'var(--c-acc)', color:'var(--c-bg)',
+          border:'none', borderRadius:100, cursor:'pointer',
+          letterSpacing:0.4,
+        }}>
+        Update answers — 60-second questionnaire →
+      </button>
+      {qOpen && (
+        <D6Questionnaire
+          entity={entity}
+          onClose={() => setQOpen(false)}
+          onCommit={onCommit}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Dimension detail sheet ────────────────────────────────────────────────
+function DimSheet({ dimCfg, score, entity, onClose, onCommit }) {
+  if (!dimCfg) return null
+  const pct   = Math.round((score / dimCfg.max) * 100)
+  const color = dimColor(score, dimCfg.max)
+  return (
+    <div className="sheet-overlay">
+      <div className="sheet-backdrop" onClick={onClose} />
+      <div className="sheet-panel sw-fade-in-up">
+        <div className="sheet-handle" />
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+          <div style={{ width:44, height:44, borderRadius:12,
+            background:`${color}22`, display:'flex', alignItems:'center',
+            justifyContent:'center', fontSize:20 }}>
+            {dimCfg.icon}
+          </div>
+          <div>
+            <div style={{ fontSize:17, fontWeight:800, color:'var(--c-text)' }}>
+              {dimCfg.label}
+            </div>
+            <div style={{ fontSize:13, color, fontWeight:600, marginTop:2 }}>
+              {score}/{dimCfg.max} · {pct}% of maximum
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize:14, color:'var(--c-text2)', lineHeight:1.7,
+          marginBottom:16 }}>
+          {RISK_DIM_DESCRIPTIONS[dimCfg.key]}
+        </div>
+
+        {dimCfg.key === 'depExp' && <D6SubChips entity={entity} onCommit={onCommit} />}
+
+        {dimCfg.key === 'behaviouralTrack' && (
+          <div style={{ background:'rgba(255,179,71,.08)',
+            border:'1px solid rgba(255,179,71,.25)', borderRadius:12,
+            padding:12, marginBottom:16 }}>
+            <div style={{ fontSize:13, color:'var(--c-warning)', fontWeight:700,
+              marginBottom:4 }}>
+              How to earn points
+            </div>
+            <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.6 }}>
+              Complete APQ actions, update profile after life events, respond to deadline prompts, upload documents when asked. Points accumulate over time — not immediately.
+            </div>
+          </div>
+        )}
+        <button onClick={onClose} className="sw-press" style={{ width:'100%',
+          background:'var(--c-acc2)', color:'var(--c-bg)', border:'none',
+          borderRadius:100, padding:'13px 0', fontSize:14,
+          fontWeight:700, cursor:'pointer' }}>
+          Got it
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Shock card (uses runShock engine output, animated counter-up on expand) ─
+function ShockCard({ shock }) {
+  const [open, setOpen] = useState(false)
+  const colour =
+    shock.rsDelta <= -10 ? 'var(--c-danger)' :
+    shock.rsDelta <= -5  ? 'var(--c-danger)' :
+    shock.rsDelta <= -2  ? 'var(--c-warning)' : 'var(--c-warning)'
+
+  return (
+    <div onClick={() => setOpen(!open)} className="sw-lift sw-press" style={{
+      background:'var(--c-surface)', border:'1px solid var(--c-sep)',
+      borderLeft:`4px solid ${colour}`, borderRadius:'0 14px 14px 0',
+      padding:'12px 14px', marginBottom:8, cursor:'pointer',
+    }}>
+      <div style={{ display:'flex', alignItems:'center',
+        justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, flex:1 }}>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:'var(--c-text)' }}>
+              {shock.label}
+            </div>
+            <div style={{ fontSize:11, color:colour, marginTop:1, display:'flex',
+              alignItems:'baseline', gap:4, flexWrap:'wrap' }}>
+              <span>Risk</span>
+              {open ? <Num value={shock.rsBefore} format="score" animate /> : <strong>{shock.rsBefore}</strong>}
+              <span>→</span>
+              {open ? <Num value={shock.rsAfter} format="score" animate /> : <strong>{shock.rsAfter}</strong>}
+              <span>({shock.rsDelta >= 0 ? '+' : ''}{shock.rsDelta})</span>
+              <span>· Wealth</span>
+              {open ? <Num value={shock.fqBefore} format="score" animate /> : <strong>{shock.fqBefore}</strong>}
+              <span>→</span>
+              {open ? <Num value={shock.fqAfter} format="score" animate /> : <strong>{shock.fqAfter}</strong>}
+              {shock.nwDelta !== 0 && <span>· NW {shock.nwDelta < 0 ? '−' : '+'}{fmt(Math.abs(shock.nwDelta))}</span>}
+            </div>
+          </div>
+          <AskChip id="RISK-AI-3" label="What would I do?" />
+        </div>
+        <span style={{ color:'var(--c-text3)', fontSize:14,
+          transform: open ? 'rotate(90deg)' : 'none',
+          transition:'transform .2s' }}>›</span>
+      </div>
+      {open && (
+        <div className="sw-fade-in" style={{ marginTop:12, paddingTop:12,
+          borderTop:'1px solid var(--c-sep)' }}>
+          <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.55 }}>
+            {shock.description}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Score history chart (Z8) — line draws in via DrawSVG ──────────────────
+const HISTORY_PICKERS = [
+  { id:'1mo', label:'1mo' },
+  { id:'3mo', label:'3mo' },
+  { id:'6mo', label:'6mo' },
+  { id:'12mo', label:'12mo' },
+]
+
+function RiskHistory({ entity }) {
+  const [range, setRange] = useState('3mo')
+  let series = []
+  try { series = calcRiskHistory(entity, range)?.points || [] } catch { series = [] }
+  if (series.length === 0) return null
+  const W = 320, H = 80, pL = 8, pR = 8, pT = 8, pB = 8
+  const pw = W - pL - pR, ph = H - pT - pB
+  const px = i => pL + (i / (Math.max(series.length - 1, 1))) * pw
+  const py = v => pT + ph - (v / 100) * ph
+  const path = series.map((p, i) =>
+    `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(p.score).toFixed(1)}`
+  ).join(' ')
+  const start = series[0].score, end = series[series.length - 1].score
+  const delta = end - start
+
+  return (
+    <div className="card sw-lift">
+      <div style={{ display:'flex', alignItems:'center',
+        justifyContent:'space-between', marginBottom:8 }}>
+        <div className="card-title" style={{ marginBottom:0 }}>
+          Score History <span className="sw-eyebrow" style={{ marginLeft:4 }}>· always live</span>
+        </div>
+        <div style={{ display:'flex', background:'var(--c-surface2)',
+          borderRadius:100, padding:3, gap:2 }}>
+          {HISTORY_PICKERS.map(p => (
+            <button key={p.id} onClick={() => setRange(p.id)}
+              className="sw-press"
+              style={{
+                background: range === p.id ? 'var(--c-acc)' : 'transparent',
+                color: range === p.id ? 'var(--c-bg)' : 'var(--c-text2)',
+                border:'none', cursor:'pointer',
+                padding:'4px 10px', borderRadius:100,
+                fontSize:11, fontWeight:700,
+              }}>{p.label}</button>
+          ))}
+        </div>
+      </div>
+      <DrawSVG key={range} duration={1000}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block' }}>
+          <path d={path} fill="none"
+            stroke={delta >= 0 ? 'var(--c-acc)' : 'var(--c-danger)'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx={px(series.length - 1).toFixed(1)} cy={py(end).toFixed(1)} r="3"
+            fill={delta >= 0 ? 'var(--c-acc)' : 'var(--c-danger)'} />
+        </svg>
+      </DrawSVG>
+      <div style={{ display:'flex', justifyContent:'space-between',
+        marginTop:6, fontSize:11 }}>
+        <span style={{ color:'var(--c-text3)' }}>
+          {range} ago: <strong style={{ color:'var(--c-text)' }}>{start}</strong>
+        </span>
+        <span style={{ color:'var(--c-text3)' }}>
+          Today: <strong style={{ color:'var(--c-text)' }}>{end}</strong>
+        </span>
+        <span style={{ fontWeight:700,
+          color: delta >= 0 ? 'var(--c-acc)' : 'var(--c-danger)' }}>
+          {delta >= 0 ? '+' : ''}{delta}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Take Action top-3 (Z9) — staggered cards ──────────────────────────────
+function TakeAction({ entity, onAct }) {
+  let actions = []
+  try { actions = calcAPQ(entity) || [] } catch { actions = [] }
+  const top = actions
+    .filter(a => (a.impact?.riskScore || 0) > 0)
+    .sort((a, b) => (b.impact?.riskScore || 0) - (a.impact?.riskScore || 0))
+    .slice(0, 3)
+  if (top.length === 0) return null
+
+  return (
+    <div className="card sw-lift">
+      <div className="card-title" style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span>Take Action — top 3 for Risk</span>
+        <AskChip id="RISK-AI-8" label="Which to prioritise?" />
+      </div>
+      <RevealStagger interval={80}>
+        {top.map((a, i) => (
+          <div key={a.id} onClick={() => onAct?.(a)} className="sw-press" style={{
+            display:'flex', alignItems:'center', gap:10,
+            padding:'10px 0', cursor:'pointer',
+            borderBottom: i < top.length - 1 ? '1px solid var(--c-sep)' : 'none',
+          }}>
+            <div style={{ width:24, height:24, borderRadius:'50%',
+              background:`${a.colour}33`, color:a.colour,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:12, fontWeight:700, flexShrink:0 }}>{i+1}</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'var(--c-text)' }}>
+                {a.title}
+              </div>
+              <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2,
+                lineHeight:1.4 }}>
+                {a.detail}
+              </div>
+            </div>
+            <span className="sw-chip sw-chip-sm sw-chip-mint" style={{ flexShrink:0 }}>
+              +{a.impact.riskScore}
+            </span>
+          </div>
+        ))}
+      </RevealStagger>
+    </div>
+  )
+}
+
+// ── "What would help most" lens (Z11) — staggered table rows ──────────────
+function WhatHelpsMost({ entity }) {
+  const [shockId, setShockId] = useState('job_loss')
+  const SHOCKS = [
+    { id:'job_loss',    label:'Job loss' },
+    { id:'illness',     label:'Illness' },
+    { id:'market_fall', label:'Market −30%' },
+    { id:'rate_rise',   label:'Rate +2%' },
+    { id:'death',       label:'Death' },
+  ]
+  let result = null
+  try { result = engineWhatHelpsMost(entity, shockId) } catch { result = null }
+  const mits = result?.mitigations || []
+
+  return (
+    <div className="card sw-lift">
+      <div className="card-title" style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span>What would help most</span>
+        <ExplainerChip id="RISK-1" />
+      </div>
+      <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
+        {SHOCKS.map(s => (
+          <button key={s.id} onClick={() => setShockId(s.id)}
+            className="sw-press"
+            style={{
+              fontSize:11, fontWeight:700,
+              background: shockId === s.id ? 'var(--c-acc)' : 'var(--c-surface2)',
+              color:      shockId === s.id ? 'var(--c-bg)'      : 'var(--c-text2)',
+              border:'1px solid var(--c-sep)',
+              borderRadius:100, padding:'4px 10px', cursor:'pointer',
+            }}>{s.label}</button>
+        ))}
+      </div>
+      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+        <thead>
+          <tr style={{ color:'var(--c-text3)', textAlign:'left' }}>
+            <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, cursor:'pointer' }}>Action</th>
+            <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, textAlign:'right', cursor:'pointer' }}>Effort</th>
+            <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, textAlign:'right', cursor:'pointer' }}>Δ Risk</th>
+          </tr>
+        </thead>
+        <tbody key={shockId}>
+          {mits.slice(0, 5).map((m, i) => (
+            <tr key={m.action} className="sw-fade-in-up"
+              style={{
+                borderTop:'1px solid var(--c-sep)',
+                animationDelay: `${i * 50}ms`,
+              }}>
+              <td style={{ padding:'8px', color:'var(--c-text)' }}>
+                <div style={{ fontWeight:700 }}>#{i+1} {m.action.replace(/_/g, ' ')}</div>
+                <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2 }}>
+                  {m.description}
+                </div>
+              </td>
+              <td style={{ padding:'8px', textAlign:'right',
+                color:'var(--c-text2)' }}>{m.effort}</td>
+              <td style={{ padding:'8px', textAlign:'right',
+                fontWeight:700,
+                color: m.rsDeltaImprovement > 0 ? 'var(--c-acc)' : 'var(--c-text3)' }}>
+                {m.rsDeltaImprovement > 0 ? '+' : ''}{m.rsDeltaImprovement}
+              </td>
+            </tr>
+          ))}
+          {mits.length === 0 && (
+            <tr><td colSpan={3} style={{ padding:'12px',
+              textAlign:'center', color:'var(--c-text3)' }}>
+              No improvements available for this shock.
+            </td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Life-event banner (Z7) — slides in from top ───────────────────────────
+function LifeEventBanner({ entity }) {
+  let events = []
+  try { events = lifeEventPaths(entity) || [] } catch { events = [] }
+  if (!events || events.length === 0) return null
+  return (
+    <div className="card sw-lift" style={{
+      borderColor:'rgba(255,179,71,.30)',
+      animation:'rk-life-slide-down 400ms cubic-bezier(0.16, 1, 0.3, 1) both',
+    }}>
+      <style>{`
+        @keyframes rk-life-slide-down {
+          from { opacity: 0; transform: translateY(-12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div className="card-title" style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span>Life event detected — review your risk profile</span>
+        <AskChip id="RISK-AI-6" label="What should I review?" />
+      </div>
+      <div style={{ fontSize:12, color:'var(--c-text2)', lineHeight:1.55 }}>
+        {events.length} prompt{events.length === 1 ? '' : 's'} pending. Tap to re-answer affected dimensions.
+      </div>
+    </div>
+  )
+}
+
+// ── Protection plan anchor (Z12) — pulse-glow when no plan committed ──────
+function ProtectionPlanCard({ entity }) {
+  const plan = (() => { try { return planFor(entity, 'protection') } catch { return null } })()
+  if (plan) {
+    return (
+      <div className="card sw-lift" style={{ borderColor:'var(--c-acc)' }}>
+        <div className="card-title">Active Protection Plan</div>
+        <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.55 }}>
+          You have an active protection plan in place. Last updated:{' '}
+          {plan.lastUpdated || '—'}. Coverage gaps and renewals are reviewed
+          against this anchor.
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="card sw-lift sw-pulse-glow" style={{ borderColor:'var(--c-sep)' }}>
+      <div className="card-title">Protection Plan</div>
+      <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.55,
+        marginBottom:10 }}>
+        No protection plan committed yet. Building one anchors your future
+        gap-tracking and X28 plan-vs-actual variance views.
+      </div>
+      <button
+        onClick={() => {
+          // Hand off to Timeline tab with a protection-plan seed. Dashboard
+          // doesn't yet listen for `?planType=protection` on hash, so this
+          // also dispatches a navigation event for any listener wired later.
+          if (typeof window !== 'undefined') {
+            try {
+              window.dispatchEvent(new CustomEvent('sonus:navigate', {
+                detail: { tab: 'plan', planType: 'protection' },
+              }))
+            } catch {}
+            try {
+              window.location.hash = '#tab=plan&planType=protection'
+            } catch {}
+          }
+        }}
+        className="sw-press"
+        style={{
+          background:'var(--c-acc2)', color:'var(--c-bg)', border:'none',
+          borderRadius:100, padding:'9px 16px',
+          fontSize:12, fontWeight:700, cursor:'pointer' }}>
+        Start a protection plan →
+      </button>
+      <div style={{ fontSize:10, color:'var(--c-text3)', marginTop:8 }}>
+        Opens the Timeline tab with a protection-plan seed. Full builder ships in Phase 2.
+      </div>
+    </div>
+  )
+}
+
+// ── Universal "+" Add Protection (Z10) ────────────────────────────────────
+// MED 2.3 — Will / LPA / Nominations are estate-readiness (D6 Dependency
+// Exposure), not protection coverage (D3). Splitting the sheet into two
+// labelled sections so the dimensions stay honest.
+const COVERAGE_TYPES = [
+  { id:'life',    label:'Life cover',           icon:'⚖' },
+  { id:'ip',      label:'Income protection',    icon:'◐' },
+  { id:'cic',     label:'Critical illness',     icon:'◉' },
+]
+const ESTATE_TYPES = [
+  { id:'will',    label:'Will',                 icon:'▣' },
+  { id:'lpa',     label:'Lasting power of attorney', icon:'◑' },
+  { id:'noms',    label:'Nominations',          icon:'◈' },
+]
+
+function UniversalAdd({ open, onClose, onPick }) {
+  if (!open) return null
+  const tileBtn = (t) => (
+    <button key={t.id} onClick={() => onPick?.(t.id)}
+      className="sw-press sw-lift"
+      style={{
+        display:'flex', alignItems:'center', gap:10,
+        padding:'12px 14px', borderRadius:14,
+        background:'var(--c-surface2)',
+        border:'1px solid var(--c-sep)',
+        cursor:'pointer', textAlign:'left',
+      }}>
+      <span style={{ fontSize:20 }}>{t.icon}</span>
+      <span style={{ fontSize:13, fontWeight:700,
+        color:'var(--c-text)' }}>{t.label}</span>
+    </button>
+  )
+  return (
+    <div className="sheet-overlay">
+      <div className="sheet-backdrop" onClick={onClose} />
+      <div className="sheet-panel sw-fade-in-up" style={{ maxHeight:'88vh', overflowY:'auto' }}>
+        <div className="sheet-handle" />
+        <div style={{ fontSize:17, fontWeight:800, color:'var(--c-text)',
+          marginBottom:14 }}>Add to your safety net</div>
+
+        {/* D3 — Protection coverage */}
+        <div className="sw-eyebrow" style={{ marginBottom:8 }}>
+          Protection coverage · D3
+        </div>
+        <div style={{ fontSize:11, color:'var(--c-text3)', marginBottom:10,
+          lineHeight:1.45 }}>
+          Insurance products that pay out on loss of income, serious illness, or death.
+        </div>
+        <RevealStagger interval={40} style={{ display:'grid',
+          gridTemplateColumns:'repeat(2, 1fr)', gap:8, marginBottom:18 }}>
+          {COVERAGE_TYPES.map(tileBtn)}
+        </RevealStagger>
+
+        {/* D6 — Estate readiness */}
+        <div className="sw-eyebrow" style={{ marginBottom:8 }}>
+          Estate readiness · D6
+        </div>
+        <div style={{ fontSize:11, color:'var(--c-text3)', marginBottom:10,
+          lineHeight:1.45 }}>
+          Documents that direct what happens to your wealth and care if you can't.
+        </div>
+        <RevealStagger interval={40} style={{ display:'grid',
+          gridTemplateColumns:'repeat(2, 1fr)', gap:8 }}>
+          {ESTATE_TYPES.map(tileBtn)}
+        </RevealStagger>
+
+        <div style={{ fontSize:10, color:'var(--c-text3)', marginTop:12,
+          marginBottom:8, lineHeight:1.4 }}>
+          Document storage and policy capture ship in Phase 2 — picking now seeds a "coming next" follow-up on the Timeline.
+        </div>
+
+        <button onClick={onClose} className="sw-press" style={{ width:'100%', marginTop:6,
+          background:'var(--c-surface2)', color:'var(--c-text2)',
+          border:'1px solid var(--c-sep)',
+          borderRadius:100, padding:'11px 0', fontSize:13,
+          fontWeight:700, cursor:'pointer' }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function FloatingAddButton({ onTap }) {
+  return (
+    <button onClick={onTap} aria-label="Add protection"
+      className="sw-lift sw-press sw-pulse-glow"
+      style={{
+        position:'fixed', right:20, bottom:24, zIndex:120,
+        width:60, height:60, borderRadius:'50%',
+        background:'var(--c-acc)',
+        color:'var(--c-bg)',
+        border:'none', cursor:'pointer',
+        fontSize:30, fontWeight:800, lineHeight:1,
+        boxShadow:'0 6px 24px rgba(45,242,195,.35), 0 2px 8px rgba(0,0,0,.4)',
+      }}>+</button>
+  )
+}
+
+// ── Z0: X25 hero caption + X22 breadcrumb (elevated card, hero typography) ─
+function X25Header({ originLabel = 'Home', onBack }) {
+  const [collapsed, setCollapsed] = useState(false)
+  return (
+    <div style={{ marginBottom:14 }}>
+      {/* X22 breadcrumb */}
+      <button onClick={onBack} className="sw-press" style={{
+        background:'none', border:'none', cursor:'pointer',
+        display:'flex', alignItems:'center', gap:6,
+        color:'var(--c-acc)', fontSize:12, fontWeight:600,
+        padding:'4px 0', marginBottom:8,
+      }}>
+        <span style={{ fontSize:14 }}>←</span> {originLabel}
+      </button>
+
+      {collapsed ? (
+        <button onClick={() => setCollapsed(false)} className="sw-chip sw-chip-sm sw-chip-mint sw-press">
+          ? What is this?
+        </button>
+      ) : (
+        <FadeInOnMount>
+          <div className="sw-card sw-card-elevated" style={{
+            position:'relative',
+            background:'linear-gradient(135deg, rgba(45,242,195,0.06), var(--c-surface))',
+            borderLeft:'3px solid var(--c-acc)',
+            padding:'14px 18px',
+          }}>
+            <button onClick={() => setCollapsed(true)} className="sw-press" style={{
+              position:'absolute', right:10, top:10,
+              background:'none', border:'none', cursor:'pointer',
+              color:'var(--c-text3)', fontSize:14,
+            }}>×</button>
+            <div style={{
+              fontSize:18, fontWeight:700, color:'var(--c-text)',
+              fontStyle:'italic', marginBottom:6, letterSpacing:-0.3,
+              lineHeight:1.3, paddingRight:20,
+              fontFamily:'Georgia, "Times New Roman", serif',
+            }}>
+              "If something went wrong tomorrow — would I survive it financially?"
+            </div>
+            <div style={{ fontSize:12, color:'var(--c-text2)', lineHeight:1.5 }}>
+              See where you're resilient, where you're exposed, and what a shock
+              to each would mean in pounds.
+            </div>
+          </div>
+        </FadeInOnMount>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reusable composed body — renders all zones. Used by Risk.jsx full-page
+// surface AND by RiskOverlay sheet variant.
+// `suppressPrimaryRing` — when the parent (Risk full page) already renders the
+// sticky Risk-primary anchor at the top, hide the Z1 ring card here to avoid
+// the 4×-on-page score-78 duplication called out in HIGH 3.1.
+// ─────────────────────────────────────────────────────────────────────────────
+export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
+  const [activeDim, setActiveDim] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
+
+  const risk = calcRisk(entity)
+  const fq   = calcFQ(entity)
+
+  let profile = null
+  try { profile = financialProfile(entity) } catch {}
+
+  let shocks = []
+  try {
+    const suite = riskShockSuite(entity)
+    shocks = Object.values(suite || {})
+  } catch { shocks = [] }
+
+  return (
+    <>
+      {/* Z1: Ring + Setback chip + Confidence chip — elevated card.
+          Suppressed on the full-page Risk surface because RiskPrimaryAnchor
+          already renders the sticky primary ring + ConfBadge + SetbackChip. */}
+      {!suppressPrimaryRing && (
+        <FadeInOnMount delay={40}>
+          <div className="card sw-card-elevated" style={{
+            display:'flex', flexDirection:'column',
+            alignItems:'center', marginBottom:12,
+            padding:'18px 16px',
+          }}>
+            <RiskRing score={risk.total} band={risk.band || riskBand(risk.total)} />
+            <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:6,
+              flexWrap:'wrap', justifyContent:'center' }}>
+              <ConfBadge level={risk.confidenceLevel || 'low'} />
+              <SetbackChip entity={entity} />
+              <ExplainerChip id="HOME-2" />
+            </div>
+          </div>
+        </FadeInOnMount>
+      )}
+
+      {/* Compact profile cell — elevated, hero band-name */}
+      <ProfileCell profile={profile} />
+
+      {/* Z2: 5×5 cross-map — staggered cells fan in */}
+      <FadeInOnMount delay={180}>
+        <div className="sw-eyebrow" style={{ marginBottom:6, marginLeft:4 }}>
+          Financial Profile Map
+        </div>
+        <CrossMap5x5
+          fqBand={mapFqBand(fq.band?.name)}
+          riskBand={mapRiskBand(risk.band?.name)}
+          onCellTap={(cell) => onDrillMetric?.(`crossmap:${cell?.fq || ''}-${cell?.risk || ''}`)}
+        />
+      </FadeInOnMount>
+
+      {/* Z3: 7-dimension breakdown — 3-view toggle (Radar · Orbit · Bars) */}
+      <DimensionsPanel
+        dims={DIMS}
+        risk={risk}
+        entity={entity}
+        onTap={setActiveDim}
+      />
+
+      {/* Z4: Protection gap card */}
+      <ProtectionGap entity={entity} />
+
+      {/* Z5: Shock scenarios — staggered cards */}
+      <div className="card sw-lift">
+        <div className="sw-eyebrow" style={{ marginBottom:8 }}>Stress Tests</div>
+        <div className="card-title" style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <span>Shock Scenarios — recomputed by engine</span>
+          <AskChip id="RISK-AI-3" label="What if?" />
+        </div>
+        {shocks.length === 0 ? (
+          <div style={{ fontSize:12, color:'var(--c-text3)' }}>
+            No shock results available — engine returned empty.
+          </div>
+        ) : (
+          <RevealStagger interval={70}>
+            {shocks.map(s => <ShockCard key={s.shockId} shock={s} />)}
+          </RevealStagger>
+        )}
+      </div>
+
+      {/* Z7: Life events — slide-in from top */}
+      <LifeEventBanner entity={entity} />
+
+      {/* Z8: History (own picker, line draws in) */}
+      <RiskHistory entity={entity} />
+
+      {/* Z9: Take Action top 3 — staggered.
+          onAct wires the row click to a navigation/ask event so it's no
+          longer a silent affordance. Dashboard or any listener can route. */}
+      <TakeAction
+        entity={entity}
+        onAct={(a) => {
+          if (typeof window === 'undefined') return
+          // Prefer drill if the action has a dimension key
+          if (a?.dimension && typeof onDrillMetric === 'function') {
+            onDrillMetric(`risk:${a.dimension}`)
+            return
+          }
+          try {
+            window.dispatchEvent(new CustomEvent('sonus:action', {
+              detail: { source: 'risk-take-action', action: a },
+            }))
+          } catch {}
+        }}
+      />
+
+      {/* Z11: What would help most lens — staggered rows */}
+      <WhatHelpsMost entity={entity} />
+
+      {/* Z12: Protection plan anchor (always rendered, pulses if no plan) */}
+      <ProtectionPlanCard entity={entity} />
+
+      {/* Dimension detail sheet */}
+      {activeDim && (
+        <DimSheet
+          dimCfg={activeDim}
+          score={risk.dims?.[activeDim.key] || 0}
+          entity={entity}
+          onClose={() => setActiveDim(null)}
+          onCommit={onCommit}
+        />
+      )}
+
+      {/* Z10: Universal "+" Add Protection */}
+      <FloatingAddButton onTap={() => setAddOpen(true)} />
+      <UniversalAdd
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onPick={(id) => { setAddOpen(false); onAddProtection?.(id) }}
+      />
+    </>
+  )
+}
+
+// ── Risk-primary anchor (spec §2.3 + §2.7 D-ANCHOR-2) ─────────────────────
+// On the Risk tab the hierarchy inverts: Risk Score is the hero (large, left),
+// with Wealth Score + Net Worth as smaller, secondary tiles on the right.
+// Sticks under the breadcrumb on scroll so the ring stays visible while the
+// user drills through the dimensions, stress tests, and history below.
+function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
+  const band = risk.band || riskBand(risk.total)
+  return (
+    <div
+      data-risk-anchor="primary"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 60,
+        // Frosted backing so content scrolling under it stays legible.
+        background: 'color-mix(in srgb, var(--c-bg) 88%, transparent)',
+        backdropFilter: 'blur(10px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(10px) saturate(140%)',
+        borderBottom: '1px solid var(--c-sep)',
+        padding: '10px 16px 12px',
+        marginBottom: 14,
+        marginLeft: -16,
+        marginRight: -16,
+      }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        gap: 10,
+      }}>
+        {/* Primary — Risk ring (large, left, ~60% width) */}
+        <div className="card sw-card-elevated" style={{
+          flex: '1 1 60%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '12px 12px 14px',
+          borderColor: `${band.colour}55`,
+          background: `linear-gradient(180deg, color-mix(in srgb, ${band.colour} 6%, var(--c-surface)), var(--c-surface))`,
+        }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 4, color: band.colour }}>
+            Safety score · primary
+          </div>
+          <RiskRing score={risk.total} band={band} />
+          <div style={{
+            display: 'flex', gap: 6, alignItems: 'center', marginTop: 4,
+            flexWrap: 'wrap', justifyContent: 'center',
+          }}>
+            <ConfBadge level={risk.confidenceLevel || 'low'} />
+            <SetbackChip entity={entity} />
+            <ExplainerChip id="HOME-2" />
+          </div>
+        </div>
+
+        {/* Secondary — Wealth + Net Worth stacked, small (right, ~40% width) */}
+        <div style={{
+          flex: '1 1 40%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          minWidth: 0,
+        }}>
+          <SecondaryTile
+            label="Health score"
+            value={fq.total}
+            band={fq.band || fqBand(fq.total)}
+            onTap={() => onDrillMetric?.('wealthScore')}
+          />
+          <SecondaryTile
+            label="You own"
+            value={fmt(nw)}
+            isMoney
+            onTap={() => onDrillMetric?.('netWorth')}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SecondaryTile({ label, value, band, isMoney = false, onTap }) {
+  return (
+    <button
+      onClick={onTap}
+      className="sw-card sw-lift sw-press"
+      style={{
+        flex: 1,
+        textAlign: 'left',
+        background: 'var(--c-surface)',
+        border: `1px solid ${band ? `${band.colour}33` : 'var(--c-border2)'}`,
+        borderRadius: 'var(--r-md, 12px)',
+        padding: '8px 10px',
+        cursor: onTap ? 'pointer' : 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        minWidth: 0,
+        minHeight: 56,
+      }}>
+      <div className="sw-eyebrow" style={{
+        marginBottom: 2, fontSize: 9, letterSpacing: 0.3,
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize: isMoney ? 16 : 20,
+        fontWeight: 800,
+        color: band ? band.colour : 'var(--c-text)',
+        lineHeight: 1.1,
+        letterSpacing: -0.4,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {value}
+      </div>
+      {band && (
+        <div style={{
+          fontSize: 9, color: 'var(--c-text3)', marginTop: 2,
+          textTransform: 'capitalize',
+        }}>
+          {band.name}
+        </div>
+      )}
+    </button>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Default export — full-page Risk surface.
+// ─────────────────────────────────────────────────────────────────────────────
+export default function Risk({ entity, onHome, originLabel = 'Home', onDrillMetric, onCommit }) {
+  const risk = calcRisk(entity)
+  const fq   = calcFQ(entity)
+  const nw   = netWorth(entity)
+
+  // No X28 state on Risk — see spec §33c O-RISK-17. RiskHistory carries its
+  // own 1/3/6/12 mo selector for change-over-time.
+
+  return (
+    <div className="screen">
+      {/* X28 top-bar deliberately OMITTED on Risk.
+          Spec §33c O-RISK-17 explicitly bans X28 on Risk: temporal-view
+          framings (FY / RY / TY12) don't map onto a point-in-time resilience
+          score. The local Risk History card (Z8) carries its own 1/3/6/12 mo
+          picker for change-over-time, which is the only temporal cut that
+          makes sense here. */}
+
+      {/* Z0: X22 breadcrumb + X25 hero caption */}
+      <X25Header originLabel={originLabel} onBack={onHome} />
+
+      {/* Risk-primary anchor — sticky. Spec §2.3 + §2.7 D-ANCHOR-2:
+          Risk Score primary (left/large), Wealth + NW secondary (right/small).
+          Inverse hierarchy from Home/MyMoney's TripleAnchor. */}
+      <RiskPrimaryAnchor
+        entity={entity}
+        risk={risk}
+        fq={fq}
+        nw={nw}
+        onDrillMetric={onDrillMetric}
+      />
+
+      {/* All zones (Z1 ring suppressed — primary anchor already shows it) */}
+      <RiskBody
+        entity={entity}
+        onDrillMetric={onDrillMetric}
+        onCommit={onCommit}
+        suppressPrimaryRing
+      />
+
+      <p className="disclaimer">
+        {BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}
+      </p>
+    </div>
+  )
+}

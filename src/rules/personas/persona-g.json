@@ -1,0 +1,436 @@
+{
+  "id": "g",
+  "name": "Priya Sharma",
+  "displayName": "Priya Sharma · 38",
+  "type": "individual",
+  "isIFA": false,
+  "lifeStage": 2,
+  "lifeStageName": "Accumulation",
+  "lifeStageAge": "30–45",
+  "hasBusiness": false,
+  "isCouple": false,
+  "hasTrust": false,
+  "hasDBPension": false,
+  "isHigherRateTaxpayer": true,
+  "age": 38,
+  "targetIncome": 95000,
+  "dataLastUpdated": "2026-04-19",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": "IN-OPEN",
+    "dtaaActive": true,
+    "dtaaJurisdictions": [
+      "UK",
+      "India"
+    ],
+    "note": "Fields marked OPEN require India bundle to compute correctly"
+  },
+  "crossBorderContext": {
+    "ukTaxResident": true,
+    "indianNRI": true,
+    "nreAccount": true,
+    "nroAccount": true,
+    "indianInvestmentsVisible": true,
+    "nriRemittanceActive": true,
+    "dtaaReliefClaimed": false,
+    "dtaaReliefClaimableOn": [
+      "NRE interest income",
+      "Indian capital gains",
+      "EPF maturity"
+    ],
+    "nomineeVsBeneficiaryNote": "OPEN: In India, pension/EPF nominees are custodians not inheritors — estate planning implication differs from UK. Flagged for India bundle.",
+    "indianSuccessionActNote": "OPEN: Indian Succession Act applies to Indian assets. Will in UK may not cover Indian assets automatically."
+  },
+  "drawdown": 0,
+  "assets": {
+    "sipp": {
+      "total": 82000,
+      "growth": 0.06,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "name": "Current employer DC (Tech Corp UK)",
+          "value": 58000,
+          "type": "Workplace DC",
+          "provider": "Scottish Widows",
+          "charge": 0.0025,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2024-06-15"
+        },
+        {
+          "name": "Previous employer DC (Infosys UK)",
+          "value": 24000,
+          "type": "Workplace DC",
+          "provider": "Aviva",
+          "charge": 0.0055,
+          "chargeIsEstimate": true,
+          "transferEligible": true,
+          "nominationDate": "2021-09-01"
+        }
+      ]
+    },
+    "isa": {
+      "value": 64000,
+      "growth": 0.06
+    },
+    "residence": {
+      "value": 580000,
+      "ownership": "sole",
+      "ownershipShare": 1.0,
+      "address": "42 Whitmore Road, London N1"
+    },
+    "portfolio": {
+      "value": 0,
+      "growth": 0.06,
+      "bpr": false
+    },
+    "cash": {
+      "total": 20000,
+      "own": 20000,
+      "rate": 0.043
+    },
+    "indianAssets": {
+      "epf": {
+        "value_inr": 1850000,
+        "value_gbp_approx": 17400,
+        "provider": "EPFO",
+        "nominationDate": "2018-03-01",
+        "nomineeNote": "OPEN: nominee is custodian not inheritor under Indian law"
+      },
+      "nreAccount": {
+        "value_gbp": 28000,
+        "bank": "HDFC Bank (NRE)",
+        "interestRate": 0.065,
+        "dtaaExemptInIndia": true,
+        "taxableInUK": true,
+        "note": "NRE interest exempt in India; taxable in UK under DTAA Article 11"
+      },
+      "nroAccount": {
+        "value_gbp": 8400,
+        "bank": "HDFC Bank (NRO)",
+        "interestRate": 0.055,
+        "taxWithheld_india_pct": 0.3,
+        "dtaaRelief_uk_credit": true,
+        "note": "OPEN: 30% TDS withheld in India; DTAA credit claimable in UK self-assessment — not yet claimed"
+      },
+      "mutualFunds": {
+        "value_inr": 620000,
+        "value_gbp_approx": 5830,
+        "type": "ELSS + Balanced",
+        "provider": "HDFC Mutual Fund",
+        "note": "OPEN: Indian CGT rules differ from UK; gains reportable in UK under DTAA"
+      }
+    },
+    "trustGifts": null,
+    "protection": {
+      "lifeInsurance": {
+        "exists": false,
+        "amount": 0,
+        "inTrust": false,
+        "premium": 0
+      },
+      "criticalIllness": {
+        "exists": false,
+        "amount": 0,
+        "premium": 0
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": {
+        "exists": false,
+        "amount": 0
+      },
+      "keyPerson": {
+        "exists": false,
+        "amount": 0
+      },
+      "shareholderProtection": {
+        "exists": false
+      },
+      "indianLICPolicy": {
+        "exists": true,
+        "value_inr": 5000000,
+        "value_gbp_approx": 47000,
+        "note": "OPEN: LIC term plan — nominee in India. UK estate treatment under DTAA is OPEN."
+      }
+    }
+  },
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 380000,
+      "monthlyPayment": 1820,
+      "rateType": "fixed",
+      "rate": 0.044,
+      "remainingYears": 28
+    },
+    "otherLoans": []
+  },
+  "dependants": [
+    {
+      "type": "parent",
+      "age": 64,
+      "financiallyDependent": true,
+      "location": "India",
+      "note": "OPEN: cross-border dependency support — India bundle required for full impact"
+    },
+    {
+      "type": "parent",
+      "age": 61,
+      "financiallyDependent": false
+    }
+  ],
+  "willStatus": "none",
+  "lpaStatus": "neither",
+  "guardianNamed": false,
+  "income": {
+    "statePension": {
+      "annual": 11973,
+      "startAge": 67
+    },
+    "employment": 95000,
+    "dividends": 0,
+    "rentalIncome": 0,
+    "overseasIncome": 3800,
+    "overseasIncomeNote": "OPEN: NRE interest £28k * 6.5% = ~£1,820 + NRO interest ~£460 + estimated remittance income. DTAA Article 11 applies. Full computation requires India bundle."
+  },
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "3-6",
+    "q12_income_protection": "no",
+    "q13_income_sources": "two",
+    "d6_nominations_complete": "some",
+    "d6_will_current": "no",
+    "confidenceLevel": "medium"
+  },
+  "openItems": [
+    {
+      "ref": "OPEN-G1",
+      "dimension": "D3",
+      "description": "Indian LIC policy — UK estate treatment unclear without India bundle. Not counted in protection coverage score.",
+      "resolution": "India bundle · future sprint"
+    },
+    {
+      "ref": "OPEN-G2",
+      "dimension": "D5",
+      "description": "NRE/NRO/EPF/MF concentration in INR assets creates currency and jurisdiction concentration risk not modelled by UK-only engine.",
+      "resolution": "India bundle · future sprint"
+    },
+    {
+      "ref": "OPEN-G3",
+      "dimension": "D6",
+      "description": "Indian EPF nominee is custodian not inheritor — dependency exposure scoring for Indian assets cannot be computed without India bundle.",
+      "resolution": "India bundle · future sprint"
+    },
+    {
+      "ref": "OPEN-G4",
+      "dimension": "Tax",
+      "description": "DTAA Article 11 NRO TDS credit not yet claimed in self-assessment. Potential refund of 30% withholding tax on NRO interest.",
+      "resolution": "India bundle · flag to user in APQ"
+    },
+    {
+      "ref": "OPEN-G5",
+      "dimension": "Tax",
+      "description": "Indian mutual fund gains (ELSS + Balanced) reportable in UK under DTAA but not currently declared.",
+      "resolution": "India bundle · flag to user in APQ"
+    }
+  ],
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "No date",
+      "headline": "No will — Indian and UK assets both unprotected",
+      "context": "No will in place. UK intestacy applies to UK assets. Indian Succession Act applies to India assets. A UK will may not cover India assets — two separate instruments may be needed.",
+      "action": "Speak to a cross-border estate solicitor",
+      "screen": "money",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "No date",
+      "headline": "No life or income protection — mortgage at risk",
+      "context": "£380k mortgage, financially dependent parent in India, no protection of any kind. A UK income protection policy does not cover India-based obligations.",
+      "action": "Review protection needs — UK and India separately",
+      "screen": "money",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "Self-assessment",
+      "headline": "DTAA tax credit not claimed — NRO account",
+      "context": "India withheld 30% tax on your NRO interest. You can claim a DTAA credit in UK self-assessment — potential refund.",
+      "action": "Amend self-assessment or raise with tax adviser",
+      "screen": "money",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "No date",
+      "headline": "Old Aviva pension — no beneficiary, high charges",
+      "context": "£24k from Infosys UK role. Nomination is 5 years old. Transfer and update nomination.",
+      "action": "Transfer to current scheme and renominate",
+      "screen": "money",
+      "lifeStage": 2
+    },
+    {
+      "level": "medium",
+      "colour": "#007AFF",
+      "badge": "OPPORTUNITY",
+      "days": "This tax year",
+      "headline": "Higher-rate taxpayer — pension underfunded vs allowance",
+      "context": "£95k salary with 40% relief. Current contributions well below £60k annual allowance.",
+      "action": "Review pension contribution rate",
+      "screen": "money",
+      "lifeStage": 2
+    }
+  ],
+  "timeline": [
+    {
+      "dot": "📋",
+      "bg": "#FFF3F3",
+      "date": "This year",
+      "title": "Write UK will",
+      "sub": "UK intestacy rules apply today. India assets need separate instrument."
+    },
+    {
+      "dot": "🇮🇳",
+      "bg": "#FFF8E8",
+      "date": "This year",
+      "title": "India bundle available",
+      "sub": "Full NRE/NRO/EPF/DTAA computation unlocks when India bundle loads"
+    },
+    {
+      "dot": "🏦",
+      "bg": "#E8F7EF",
+      "date": "Age 55",
+      "title": "Earliest pension access",
+      "sub": "UK NMPA rises to 57 in 2028"
+    },
+    {
+      "dot": "🏛",
+      "bg": "#EEF2FF",
+      "date": "Age 67",
+      "title": "State pension begins",
+      "sub": "£11,973/yr — reduces drawdown requirement"
+    }
+  ],
+  "aiSuggestions": [
+    "Do I need a separate will for my Indian assets and my UK assets?",
+    "How does the DTAA between UK and India affect the tax I pay on my NRO account interest?",
+    "Should I consolidate my Indian EPF into a UK pension when I have the option?",
+    "What UK life insurance amount do I need given my mortgage and my parent in India?"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Engaged on both sides of the DTAA. Nominations current on your active pension.",
+      "action": "Review the Aviva (Infosys) pension nomination — it's five years old.",
+      "future": "Cross-border users benefit more than most from annual reviews — rules change in two jurisdictions at once."
+    },
+    "capital": {
+      "risk": "At roughly £800k total (UK + Indian assets) vs a £1.9m target you're on pace for stage 2.",
+      "action": "Higher-rate taxpayer — current pension contributions are well below the £60k annual allowance.",
+      "future": "At 38 with 29 years of compounding ahead, maximising higher-rate pension relief is the single biggest lever."
+    },
+    "tax": {
+      "risk": "Higher-rate taxpayer with pension underused. DTAA credit on NRO interest not claimed.",
+      "action": "Amend self-assessment for the NRO DTAA credit. Increase pension contributions to use 40% relief.",
+      "future": "Using higher-rate relief during UK residency years is worth more than anything the India bundle will unlock."
+    },
+    "protection": {
+      "risk": "No UK life, critical illness or income protection. £380k mortgage plus a financially dependent parent in India.",
+      "action": "UK life and income protection first. The Indian LIC term plan stays separate.",
+      "future": "Cross-border dependants need protection in both jurisdictions — UK IPCs don't pay out for India obligations."
+    },
+    "cashflow": {
+      "risk": "£20k cash gives about 2.5 months of spending runway. Below the resilience threshold.",
+      "action": "Build emergency fund to 6 months (~£48k) before maxing pension contributions.",
+      "future": "Cross-border income resilience needs extra buffer — DTAA refunds and NRE/NRO flows aren't instant."
+    },
+    "debt": {
+      "risk": "£380k mortgage at 4.4% fixed. No student loan, no consumer debt.",
+      "action": "No debt action needed. Mortgage rate is fine at current pricing.",
+      "future": "A single well-priced mortgage on a London property is usually the best debt you'll ever take."
+    },
+    "estate": {
+      "risk": "No will, no LPA. UK intestacy applies to UK assets; Indian Succession Act applies to India assets.",
+      "action": "Speak to a cross-border estate solicitor. UK and India likely need separate instruments.",
+      "future": "Cross-border estates without wills create the most painful probate cases — solved cheaply by acting now."
+    }
+  },
+
+  "plans": [
+    { "id": "plan-ukin-retirement", "type": "retirement", "label": "Split UK + India retirement assets by 55",
+      "target": { "date": "2042-04-01", "ukPensionTarget": 800000, "indiaAssetsTarget": 1200000 },
+      "target_display": null,
+      "monthlyContribution": 1100, "lastReviewedAt": "2025-11-30", "status": "active", "createdAt": "2024-04-01" },
+    { "id": "plan-fig-trf", "type": "tax", "label": "Complete FIG/TRF assessment",
+      "target": { "figAssessed": true, "trfStrategy": "phased" },
+      "target_display": null,
+      "lastReviewedAt": "2025-09-12", "status": "active", "createdAt": "2025-04-06" },
+    { "id": "plan-cross-will", "type": "estate", "label": "Dual-jurisdiction wills (UK + India)",
+      "target": { "ukWill": true, "indiaWill": true },
+      "target_display": null,
+      "lastReviewedAt": "2024-10-15", "status": "stale", "createdAt": "2024-10-15" },
+    { "id": "plan-family-gift", "type": "gift", "label": "Annual gift to parents in India",
+      "target": { "annualGiftGbp": 5000 },
+      "target_display": null,
+      "lastReviewedAt": "2026-04-01", "status": "active", "createdAt": "2023-04-01" }
+  ],
+
+  "scenarios": [
+    { "id": "scen-return-india", "name": "Return to India in 2030",
+      "createdAt": "2026-02-14",
+      "changedFields": { "returnYear": 2030, "ukTaxResidency": "non-resident-post-2030" },
+      "deltaResults": { "ukTaxAt60": -180000, "indiaTaxAt60": 220000, "netDelta": 40000 },
+      "status": "saved" },
+    { "id": "scen-sell-uk-prop", "name": "Sell UK BTL before returning to India",
+      "createdAt": "2026-03-22",
+      "changedFields": { "ukPropertyDisposalYear": 2029 },
+      "deltaResults": { "cgtUk": 28000, "liquidReleased": 245000 },
+      "status": "saved" },
+    { "id": "scen-qrops", "name": "Transfer SIPP to QROPS pre-departure",
+      "createdAt": "2026-04-30",
+      "changedFields": { "qropsTransferYear": 2029, "qropsValue": 320000 },
+      "deltaResults": { "ukTaxOnDrawdown": -65000, "transferFee": 8000 },
+      "status": "saved" }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 2120000 }, { "date": "2025-07-01", "value": 2138000 },
+      { "date": "2025-08-01", "value": 2152000 }, { "date": "2025-09-01", "value": 2168000 },
+      { "date": "2025-10-01", "value": 2182000 }, { "date": "2025-11-01", "value": 2195000 },
+      { "date": "2025-12-01", "value": 2208000 }, { "date": "2026-01-01", "value": 2218000 },
+      { "date": "2026-02-01", "value": 2225000 }, { "date": "2026-03-01", "value": 2232000 },
+      { "date": "2026-04-01", "value": 2237000 }, { "date": "2026-05-01", "value": 2240000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 46 }, { "date": "2025-07-01", "score": 46 },
+      { "date": "2025-08-01", "score": 47 }, { "date": "2025-09-01", "score": 47 },
+      { "date": "2025-10-01", "score": 48 }, { "date": "2025-11-01", "score": 48 },
+      { "date": "2025-12-01", "score": 49 }, { "date": "2026-01-01", "score": 49 },
+      { "date": "2026-02-01", "score": 49 }, { "date": "2026-03-01", "score": 50 },
+      { "date": "2026-04-01", "score": 50 }, { "date": "2026-05-01", "score": 50 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 41 }, { "date": "2025-07-01", "score": 41 },
+      { "date": "2025-08-01", "score": 42 }, { "date": "2025-09-01", "score": 42 },
+      { "date": "2025-10-01", "score": 43 }, { "date": "2025-11-01", "score": 43 },
+      { "date": "2025-12-01", "score": 43 }, { "date": "2026-01-01", "score": 44 },
+      { "date": "2026-02-01", "score": 44 }, { "date": "2026-03-01", "score": 44 },
+      { "date": "2026-04-01", "score": 45 }, { "date": "2026-05-01", "score": 45 }
+    ]
+  }
+}

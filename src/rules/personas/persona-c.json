@@ -1,0 +1,349 @@
+{
+  "id": "c",
+  "name": "Tony Stark",
+  "displayName": "Tony Stark · 48",
+  "type": "business",
+  "isIFA": false,
+  "lifeStage": 3,
+  "lifeStageName": "Consolidation",
+  "lifeStageAge": "45–55",
+  "hasBusiness": true,
+  "isCouple": false,
+  "hasTrust": false,
+  "isHigherRateTaxpayer": true,
+  "age": 48,
+  "targetIncome": 95000,
+  "dataLastUpdated": "2026-04-19",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+  "drawdown": 0,
+  "company": {
+    "name": "Stark Industries UK Ltd",
+    "employees": 6,
+    "corporationTaxRate": 0.25,
+    "yearEnd": "2026-03-31",
+    "profits": 480000,
+    "bprQualifying": true,
+    "companyValue": 1400000
+  },
+  "payOptimisation": {
+    "currentSplit": {
+      "salary": 50270,
+      "dividends": 74730,
+      "pensionEmployer": 30000,
+      "totalExtraction": 155000
+    },
+    "optimisedSplit": {
+      "salary": 12570,
+      "dividends": 42430,
+      "pensionEmployer": 60000,
+      "totalExtraction": 115000
+    },
+    "taxSavingOptimised": 11200,
+    "niSavingOptimised": 6400
+  },
+  "assets": {
+    "sipp": {
+      "total": 380000,
+      "growth": 0.07,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "name": "Stark Industries SSAS",
+          "value": 280000,
+          "type": "SSAS",
+          "provider": "Self-administered",
+          "charge": 0.0025,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2025-02-01"
+        },
+        {
+          "name": "Previous employer DC (MIT Tech)",
+          "value": 100000,
+          "type": "Workplace DC",
+          "provider": "Legal & General",
+          "charge": 0.006,
+          "chargeIsEstimate": true,
+          "transferEligible": true,
+          "nominationDate": "2020-11-01"
+        }
+      ]
+    },
+    "isa": {
+      "value": 220000,
+      "growth": 0.07
+    },
+    "residence": {
+      "value": 1100000,
+      "ownership": "sole",
+      "ownershipShare": 1.0,
+      "address": "Stark Tower, Canary Wharf, London E14"
+    },
+    "portfolio": {
+      "value": 1400000,
+      "growth": 0.08,
+      "ret": 0.08,
+      "bpr": true,
+      "description": "Stark Industries UK Ltd — BPR qualifying"
+    },
+    "cash": {
+      "total": 125000,
+      "own": 125000,
+      "rate": 0.048
+    },
+    "trustGifts": null,
+    "protection": {
+      "lifeInsurance": {
+        "exists": true,
+        "amount": 600000,
+        "inTrust": true,
+        "premium": 2640
+      },
+      "criticalIllness": {
+        "exists": false,
+        "amount": 0,
+        "premium": 0
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": {
+        "exists": true,
+        "amount": 500000
+      },
+      "keyPerson": {
+        "exists": true,
+        "amount": 1400000
+      },
+      "shareholderProtection": {
+        "exists": true
+      }
+    }
+  },
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 0,
+      "monthlyPayment": 0,
+      "rateType": "none",
+      "rate": 0,
+      "remainingYears": 0
+    },
+    "otherLoans": []
+  },
+  "dependants": [],
+  "willStatus": "current",
+  "lpaStatus": "financial_only",
+  "guardianNamed": false,
+  "income": {
+    "statePension": {
+      "annual": 11973,
+      "startAge": 67
+    },
+    "employment": 50270,
+    "dividends": 74730,
+    "rentalIncome": 0,
+    "overseasIncome": 0
+  },
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "over-6",
+    "q12_income_protection": "partly",
+    "q13_income_sources": "three-or-more",
+    "d6_nominations_complete": "all",
+    "d6_will_current": "yes",
+    "confidenceLevel": "medium"
+  },
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "353 days",
+      "headline": "SSAS pension enters estate April 2027",
+      "context": "£380k SSAS/DC pension will be subject to IHT from 6 April 2027.",
+      "action": "Model employer contribution vs personal SIPP strategy",
+      "screen": "tax",
+      "lifeStage": 3
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "Year-end",
+      "headline": "Salary/dividend/pension split — £11,200 saving",
+      "context": "Current extraction costs £11,200 more in tax than the optimised split. Review before 5 April.",
+      "action": "Model optimised pay structure",
+      "screen": "money",
+      "lifeStage": 3
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "Ongoing",
+      "headline": "No critical illness cover — business risk",
+      "context": "Business owner with no CI cover. A serious illness could affect both personal income and business continuity.",
+      "action": "Review CI requirements with protection adviser",
+      "screen": "money",
+      "lifeStage": 3
+    },
+    {
+      "level": "info",
+      "colour": "#34C759",
+      "badge": "POSITIVE",
+      "days": "Active",
+      "headline": "Business Property Relief — BPR qualifying",
+      "context": "Stark Industries UK Ltd qualifies for 100% IHT relief. Review annually.",
+      "action": "Confirm BPR status with adviser",
+      "screen": "tax",
+      "lifeStage": 3
+    }
+  ],
+  "timeline": [
+    {
+      "dot": "⏳",
+      "bg": "#FFF3F3",
+      "date": "6 April 2027",
+      "title": "SSAS enters estate",
+      "sub": "Review employer pension vs personal SIPP split"
+    },
+    {
+      "dot": "📊",
+      "bg": "#EEF2FF",
+      "date": "Year-end",
+      "title": "Pay optimisation review",
+      "sub": "£11,200 saving available on extraction strategy"
+    },
+    {
+      "dot": "🏛",
+      "bg": "#EEF2FF",
+      "date": "6 April 2026",
+      "title": "ISA allowance resets",
+      "sub": "£20,000 available — max before tax year end"
+    },
+    {
+      "dot": "🏗",
+      "bg": "#E8F7EF",
+      "date": "Age 55 (2033)",
+      "title": "NMPA — earliest access",
+      "sub": "Earliest pension access rises to age 57 in 2028"
+    }
+  ],
+  "aiSuggestions": [
+    "What is the optimal salary / dividend / pension split for this tax year?",
+    "How much does using employer contributions instead of personal pension save in tax?",
+    "How does BPR interact with my IHT position if I die before the business qualifies?",
+    "What CI cover amount is appropriate for a business owner at my income level?"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Habits are sharp. Active on pension extraction and tax planning.",
+      "action": "Keep reviewing the salary/dividend/pension split at each year-end.",
+      "future": "In peak-earning years, good habits compound tax savings year after year."
+    },
+    "capital": {
+      "risk": "At £3.2m (excluding business) vs a £1.9m retirement target you are well ahead.",
+      "action": "Review whether your retirement target should move up given the business value.",
+      "future": "A well-funded pension means BPR business value can pass to heirs without needing to be sold."
+    },
+    "tax": {
+      "risk": "Current salary/dividend/pension extraction costs £11,200 more in tax than the optimised split.",
+      "action": "Shift £20k–£30k of extraction from dividends into employer pension contributions before 5 April.",
+      "future": "In peak-earning years, unused employer pension allowance is the biggest tax lever you have."
+    },
+    "protection": {
+      "risk": "Life cover in trust — strong. Critical illness missing — a serious illness would hit income and business.",
+      "action": "Review critical illness cover as a business owner. Key Person cover is already in place.",
+      "future": "Full protection layers keep family and business continuity intact if something goes wrong."
+    },
+    "cashflow": {
+      "risk": "£125k cash gives you over 2 years of personal runway at current spending.",
+      "action": "Consider the balance between personal cash reserve and business working capital.",
+      "future": "Separating personal resilience from business cashflow keeps founders out of crises."
+    },
+    "debt": {
+      "risk": "Personally debt-free. Clean sheet.",
+      "action": "No debt action needed personally.",
+      "future": "Keeping personal finances unleveraged while the business grows keeps your options open."
+    },
+    "estate": {
+      "risk": "SSAS enters the estate April 2027. Company is BPR-qualifying — £1.4m shielded from IHT.",
+      "action": "Confirm BPR status annually. Model SSAS drawdown vs carry-forward ahead of year-end.",
+      "future": "BPR plus SSAS gives business owners the most tax-efficient intergenerational transfer available."
+    }
+  },
+
+  "plans": [
+    { "id": "plan-business-exit", "type": "retirement", "label": "Exit Stark Industries at 55",
+      "target": { "date": "2033-04-01", "exitValuation": 22000000 },
+      "target_display": null,
+      "monthlyContribution": 0, "lastReviewedAt": "2025-12-01", "status": "active", "createdAt": "2024-01-15" },
+    { "id": "plan-retirement", "type": "retirement", "label": "Full retirement at 60",
+      "target": { "date": "2038-04-01", "annualIncome": 350000 },
+      "target_display": null,
+      "monthlyContribution": 4000, "lastReviewedAt": "2025-12-01", "status": "active", "createdAt": "2023-04-01" },
+    { "id": "plan-estate", "type": "estate", "label": "Maximise BPR + use both NRBs across generations",
+      "target": { "ihtCap": 200000, "bprQualifyingValue": 8500000 },
+      "target_display": null,
+      "lastReviewedAt": "2025-09-22", "status": "active", "createdAt": "2024-06-01" },
+    { "id": "plan-corp-pension", "type": "tax", "label": "Corporate pension contribution maximised annually",
+      "target": { "annualEmployerContribution": 60000 },
+      "target_display": null,
+      "lastReviewedAt": "2026-01-10", "status": "active", "createdAt": "2024-04-06" },
+    { "id": "plan-share-scheme", "type": "tax", "label": "Phased EMI exercise + sell pattern",
+      "target": { "exerciseSchedule": "phased-quarterly" },
+      "target_display": null,
+      "lastReviewedAt": "2025-11-04", "status": "active", "createdAt": "2024-09-01" }
+  ],
+
+  "scenarios": [
+    { "id": "scen-exit-55", "name": "Exit Stark at 55 (£22m valuation)",
+      "createdAt": "2026-03-02",
+      "changedFields": { "exitYear": 2033, "exitProceeds": 22000000 },
+      "deltaResults": { "netWorthAt75": 4800000, "ihtExposure": -800000, "probabilityOfSuccess": 0.97 },
+      "status": "saved" },
+    { "id": "scen-ipo", "name": "IPO event 2030 (£40m valuation)",
+      "createdAt": "2026-04-09",
+      "changedFields": { "ipoYear": 2030, "founderShareValue": 18000000 },
+      "deltaResults": { "netWorthAt75": 12000000, "ihtExposureAfterBPR": 1200000 },
+      "status": "saved" },
+    { "id": "scen-ssas-top-up", "name": "Top up SSAS via 3yr carry-forward",
+      "createdAt": "2026-05-03",
+      "changedFields": { "ssasContributionOneOff": 180000 },
+      "deltaResults": { "corporationTaxSaved": 45000, "netWorthAt75": 240000 },
+      "status": "saved" }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 17100000 }, { "date": "2025-07-01", "value": 17280000 },
+      { "date": "2025-08-01", "value": 17420000 }, { "date": "2025-09-01", "value": 17580000 },
+      { "date": "2025-10-01", "value": 17720000 }, { "date": "2025-11-01", "value": 17860000 },
+      { "date": "2025-12-01", "value": 17980000 }, { "date": "2026-01-01", "value": 18080000 },
+      { "date": "2026-02-01", "value": 18180000 }, { "date": "2026-03-01", "value": 18270000 },
+      { "date": "2026-04-01", "value": 18350000 }, { "date": "2026-05-01", "value": 18400000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 68 }, { "date": "2025-07-01", "score": 68 },
+      { "date": "2025-08-01", "score": 69 }, { "date": "2025-09-01", "score": 70 },
+      { "date": "2025-10-01", "score": 70 }, { "date": "2025-11-01", "score": 71 },
+      { "date": "2025-12-01", "score": 72 }, { "date": "2026-01-01", "score": 72 },
+      { "date": "2026-02-01", "score": 72 }, { "date": "2026-03-01", "score": 73 },
+      { "date": "2026-04-01", "score": 73 }, { "date": "2026-05-01", "score": 73 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 64 }, { "date": "2025-07-01", "score": 65 },
+      { "date": "2025-08-01", "score": 66 }, { "date": "2025-09-01", "score": 66 },
+      { "date": "2025-10-01", "score": 67 }, { "date": "2025-11-01", "score": 67 },
+      { "date": "2025-12-01", "score": 67 }, { "date": "2026-01-01", "score": 68 },
+      { "date": "2026-02-01", "score": 68 }, { "date": "2026-03-01", "score": 68 },
+      { "date": "2026-04-01", "score": 68 }, { "date": "2026-05-01", "score": 68 }
+    ]
+  }
+}

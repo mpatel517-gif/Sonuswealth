@@ -1,0 +1,437 @@
+{
+  "fixture_id": "mrT-sole-trader",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK sole trader at Accumulation life stage (age 40 — anchor archetype 29). Self-employed IT consultant. Exercises self-assessment income calculation, Class 4 NI (main and additional rate bands), voluntary Class 3 NI to maintain state pension record (Class 2 abolished April 2024), payments on account (Jan + Jul), prior-year trading loss carry-forward offsetting current-year profits, MTD-ITSA registered, BPR on sole-trader business assets (trading designation), SIPP contribution within relevant-earnings cap. Partner employed (asymmetric income). Tests engine handling of self-employed entity shape distinct from PAYE.",
+  "fixture_anchor_archetype": "29",
+  "archetypes_exercised": ["28", "29", "30", "31"],
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-sole-trader-primary",
+    "name": "Mr T Sole Trader",
+    "dob": "1986-04-23",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "self-employed",
+    "trade_name": "T Consulting",
+    "trade_description": "IT systems consulting and implementation",
+    "trading_since": "2018-04-06",
+    "mtd_itsa_registered": true,
+    "mtd_itsa_registration_date": "2024-04-06",
+    "turnover_current_year": 85000,
+    "allowable_expenses_current_year": 18000,
+    "net_profit_current_year": 67000,
+    "prior_year_loss_carried_forward": 8500,
+    "prior_year_loss_reason": "2022/23 slow year — client insolvency; loss relief carried forward under s.64 ITA 2007",
+    "taxable_profit_after_loss_relief": 58500,
+    "relevant_earnings_for_pension": 58500,
+    "income_band": "higher-rate",
+    "adjusted_net_income": 58500,
+    "gross_salary": null,
+    "gross_salary_note": "Not applicable — self-employed; income is trading profit",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 14,
+    "life_stage": "accumulation",
+    "payments_on_account": {
+      "poa_1_due": "2026-01-31",
+      "poa_1_amount": 7400,
+      "poa_1_paid": true,
+      "poa_2_due": "2026-07-31",
+      "poa_2_amount": 7400,
+      "poa_2_paid": false,
+      "balancing_payment_due": "2027-01-31",
+      "balancing_payment_estimate": 1800,
+      "engine_note": "POA 2 unpaid at fixture date; cashflow engine must flag as committed upcoming outflow; balancing payment estimate subject to final profit calc"
+    },
+    "ni_class_4": {
+      "main_rate_band": {"from": 12570, "to": 50270, "rate": 0.06, "liability_estimate": 2262},
+      "additional_rate_band": {"from": 50270, "to": null, "rate": 0.02, "profit_in_band": 8230, "liability_estimate": 165},
+      "total_class_4_estimate": 2427,
+      "note": "Class 4 NI on taxable profit after loss relief (£58,500); both rate bands fire"
+    },
+    "ni_class_3_voluntary": {
+      "paying": true,
+      "weekly_amount": 17.45,
+      "annual_cost": 908,
+      "reason": "Class 2 NI abolished April 2024; paying voluntary Class 3 to maintain state pension qualifying year; 14 years accrued, target 35 for full pension",
+      "years_to_full_pension_at_current_accrual": 21
+    }
+  },
+
+  "partner": {
+    "id": "mrT-sole-trader-partner",
+    "name": "Ms T Sole Trader",
+    "dob": "1987-08-10",
+    "gender": "F",
+    "residency_status": "UK-resident",
+    "employment_status": "employed",
+    "employer": "Synthetic NHS Trust",
+    "gross_salary": 42000,
+    "income_band": "basic-rate",
+    "state_pension_accrued_years": 9
+  },
+
+  "relationships": [
+    {
+      "id": "marriage-1",
+      "type": "married",
+      "partner_entity_ref": "mrT-sole-trader-partner",
+      "start_date": "2015-09-05",
+      "end_date": null,
+      "pso_applicable": false,
+      "children_from_relationship": 0
+    }
+  ],
+
+  "business": {
+    "id": "t-consulting",
+    "business_type": "sole-trader",
+    "trade_name": "T Consulting",
+    "trading_status": "active",
+    "trading_since": "2018-04-06",
+    "turnover_current_year": 85000,
+    "allowable_expenses": 18000,
+    "net_profit": 67000,
+    "business_assets": [
+      {"type": "equipment", "description": "Laptops, servers, specialist hardware", "value": 8500, "aua": "2024-04-10"},
+      {"type": "ip-and-contracts", "description": "Contractual relationships and methodologies", "value_estimate": 45000, "valuation_basis": "sole-trader-estimate"},
+      {"type": "debtors", "description": "Outstanding invoices at fixture date", "value": 12000, "due_within_30_days": 12000}
+    ],
+    "bpr_qualifying": true,
+    "bpr_type": "unincorporated-trading-business",
+    "bpr_relief_pct": 100,
+    "bpr_holding_period_years": 8.1,
+    "bpr_eligible_at_death": true,
+    "bpr_note": "Sole trader business passes as qualifying business property under s.105(1)(b) IHTA 1984 at 100% relief if held as going concern at death; IP/contracts/goodwill included",
+    "incorporation_consideration": "pending",
+    "incorporation_note": "At current profits, director salary/dividend structure could save ~£3,500/yr vs sole trader; threshold crossed but founder has not incorporated — APQ item"
+  },
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-primary",
+        "owner": "mrT-sole-trader-primary",
+        "type": "SIPP",
+        "provider": "Vanguard",
+        "balance": 88000,
+        "contribution_current_year_personal": 15000,
+        "contribution_monthly_note": "Annual lump sum contribution; not monthly; paid April after SA return confirms profit figure",
+        "relevant_earnings_cap": 58500,
+        "contribution_within_cap": true,
+        "annual_allowance": 60000,
+        "annual_allowance_used": 15000,
+        "carry_forward_available": 22000,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.004,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Ms T Sole Trader", "pct": 100}],
+          "date_set": "2022-04-10",
+          "stale": false
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "sipp-partner",
+        "owner": "mrT-sole-trader-partner",
+        "type": "occupational-DC",
+        "provider": "NEST",
+        "balance": 32000,
+        "contribution_monthly_employer": 142,
+        "contribution_monthly_personal": 142,
+        "growth_rate_assumption": 0.045,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-10"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-ss-primary",
+        "owner": "mrT-sole-trader-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Hargreaves Lansdown",
+        "balance": 42000,
+        "contribution_current_tax_year": 12000,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.0035,
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "isa-ss-partner",
+        "owner": "mrT-sole-trader-partner",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 18000,
+        "contribution_current_tax_year": 5000,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-20"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "main-residence",
+        "type": "main-residence",
+        "value": 385000,
+        "purchase_price": 295000,
+        "purchase_date": "2017-06-15",
+        "mortgage_id": "mortgage-primary",
+        "ownership": "joint",
+        "ownership_split": {"mrT-sole-trader-primary": 0.5, "mrT-sole-trader-partner": 0.5},
+        "last_valuation_date": "2026-02-10"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "business-current",
+        "owner": "mrT-sole-trader-primary",
+        "type": "current-account-business",
+        "provider": "Tide",
+        "balance": 22000,
+        "last_valuation_date": "2026-04-22",
+        "note": "Business account; excludes personal current; debtors £12k expected in within 30 days"
+      },
+      {
+        "id": "joint-savings",
+        "owner": "joint",
+        "type": "savings",
+        "provider": "Marcus",
+        "balance": 28000,
+        "interest_rate": 0.042,
+        "last_valuation_date": "2026-04-22",
+        "includes_tax_reserve": true,
+        "tax_reserve_amount": 14800,
+        "tax_reserve_note": "~50% of savings earmarked as SA tax reserve (POA2 £7,400 + balancing payment estimate £1,800 + buffer); engine ring-fences this from discretionary savings score"
+      },
+      {
+        "id": "personal-current",
+        "owner": "joint",
+        "type": "current-account",
+        "provider": "First Direct",
+        "balance": 6200,
+        "last_valuation_date": "2026-04-22"
+      }
+    ]
+  },
+
+  "liabilities": [
+    {
+      "id": "mortgage-primary",
+      "type": "residential-mortgage",
+      "lender": "HSBC",
+      "outstanding_balance": 210000,
+      "original_balance": 237000,
+      "interest_rate": 0.041,
+      "rate_type": "fixed-until-2029",
+      "term_remaining_years": 20,
+      "monthly_payment": 1290,
+      "secured_on": "main-residence",
+      "jointly_held": true
+    },
+    {
+      "id": "tax-liability-current-year",
+      "type": "tax-liability-accrued",
+      "description": "Self-assessment tax liability current year (accrued but not yet due)",
+      "estimated_income_tax": 14250,
+      "estimated_class_4_ni": 2427,
+      "estimated_class_3_voluntary_ni": 908,
+      "total_estimated_tax_liability": 17585,
+      "less_poa_already_paid": 7400,
+      "net_outstanding_liability": 10185,
+      "due_dates": {"poa_2": "2026-07-31", "balancing_payment": "2027-01-31"},
+      "engine_note": "Engine must model SA liability as accrued liability even before due date; reduces effective free cashflow; covered by tax-reserve in savings"
+    }
+  ],
+
+  "protection": [
+    {
+      "id": "life-joint",
+      "type": "life-insurance-joint-first-death",
+      "provider": "Legal & General",
+      "cover_amount": 300000,
+      "premium_monthly": 26,
+      "term_years": 25,
+      "start_date": "2017-07-01",
+      "trust_status": "in-trust-verified",
+      "trust_beneficiaries": ["mrT-sole-trader-partner"]
+    },
+    {
+      "id": "ip-primary",
+      "type": "income-protection",
+      "owner": "mrT-sole-trader-primary",
+      "cover_monthly": 3500,
+      "cover_basis": "agreed-value",
+      "deferred_period_weeks": 13,
+      "premium_monthly": 68,
+      "start_date": "2020-09-01",
+      "self_employed_clause": "agreed-value-policy-not-indemnity",
+      "note": "Agreed value IP critical for self-employed; indemnity-based policy would require current-year trading profit proof — agreed value avoids this for volatile income"
+    }
+  ],
+
+  "gifts_and_trusts": [
+    {
+      "id": "pet-1",
+      "type": "PET",
+      "donor": "mrT-sole-trader-primary",
+      "amount": 6000,
+      "date": "2025-01-15",
+      "recipient": "Sister",
+      "years_elapsed": 1.3,
+      "within_annual_exemption": false,
+      "annual_exemption_offset": 3000,
+      "chargeable_amount": 3000
+    }
+  ],
+
+  "events": [
+    {"date": "2015-09-05", "type": "relationship-start", "relationship": "married"},
+    {"date": "2017-06-15", "type": "property-purchase", "asset_id": "main-residence", "amount": 295000, "jointly": true},
+    {"date": "2018-04-06", "type": "self-employment-start", "trade": "T Consulting"},
+    {"date": "2022-04-10", "type": "pension-nomination-set", "pension_id": "sipp-primary"},
+    {"date": "2022-09-01", "type": "trading-loss", "tax_year": "2022-23", "loss_amount": 8500, "loss_reason": "client-insolvency", "relief_claimed": "carry-forward-s64"},
+    {"date": "2024-04-06", "type": "mtd-itsa-registration", "asset_id": "t-consulting"},
+    {"date": "2024-04-06", "type": "class-2-ni-abolition", "action": "switched-to-voluntary-class-3"},
+    {"date": "2025-01-15", "type": "gift-given", "gift_id": "pet-1", "amount": 6000},
+    {"date": "2026-01-31", "type": "self-assessment-poa-1-paid", "amount": 7400},
+    {"date": "2026-02-10", "type": "property-valuation", "asset_id": "main-residence", "amount": 385000, "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
+    {"date": "2026-04-15", "type": "sipp-contribution-annual", "pension_id": "sipp-primary", "amount": 15000, "basis": "relevant-earnings-£58500"},
+    {"date": "2026-07-31", "type": "poa-2-due", "amount": 7400, "status": "upcoming", "cashflow_flag": true}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "individual.turnover_current_year", "expected_behaviour": "Self-employed income variable year-to-year; engine uses current year £85k as base with prior-year range (2022/23 loss year evidence of volatility); cashflow and capital dimensions use range projection, not point estimate"},
+      {"location": "business.business_assets[1].value_estimate", "expected_behaviour": "IP/goodwill value is self-reported; confidence = low; BPR relief applies regardless of valuation precision but net worth range reflects uncertainty"},
+      {"location": "liabilities[1].total_estimated_tax_liability", "expected_behaviour": "SA liability is estimate pre-final-return; engine models as accrued liability; actual may differ ±15%; ring-fences tax reserve in savings vs discretionary savings"}
+    ],
+    "fp5": [
+      {"location": "individual.payments_on_account.poa_2_paid", "expected_behaviour": "POA2 £7,400 due 31 Jul 2026 unpaid at fixture date; engine flags as upcoming committed cashflow outflow; if missed, 5% surcharge applies after 30 days — engine notes penalty risk if not calendared"},
+      {"location": "individual.ni_class_3_voluntary.paying", "expected_behaviour": "Voluntary Class 3 NI is optional; engine models as current commitment; if user stops, state pension accrual pauses; projected full pension date shifts — sensitivity noted"}
+    ]
+  },
+
+  "archetype_specific": {
+    "self_employment_profile": true,
+    "income_structure": {
+      "turnover": 85000,
+      "allowable_expenses": 18000,
+      "gross_profit": 67000,
+      "prior_year_loss_relief": 8500,
+      "taxable_profit": 58500,
+      "relevant_earnings": 58500
+    },
+    "ni_summary": {
+      "class_4_total": 2427,
+      "class_3_voluntary_annual": 908,
+      "class_2_abolished": true,
+      "class_2_abolition_date": "2026-04-06"
+    },
+    "payments_on_account_state": {
+      "poa_1_paid": true,
+      "poa_2_upcoming_jul_2026": 7400,
+      "balancing_payment_jan_2027_estimate": 1800,
+      "total_outstanding_tax_flow": 9200
+    },
+    "loss_relief_state": {
+      "loss_amount": 8500,
+      "relief_claimed_under": "s.64 ITA 2007 carry-forward",
+      "applied_to_current_year": true,
+      "remaining_loss": 0
+    },
+    "mtd_itsa_state": {
+      "registered": true,
+      "quarterly_updates_required": true,
+      "digital_records": "maintained",
+      "compliance_status": "compliant"
+    },
+    "bpr_business_state": {
+      "qualifying": true,
+      "type": "s.105(1)(b)-unincorporated-trading-business",
+      "relief_pct": 100,
+      "holding_period_years": 8.1,
+      "estimated_business_value": 53000,
+      "iht_relief_if_held_at_death": 53000,
+      "caveat": "BPR requires business to be continuing as going concern at death; cessation of trading voids relief"
+    },
+    "incorporation_decision": {
+      "status": "not-yet-incorporated",
+      "estimated_annual_saving_if_incorporated": 3500,
+      "threshold_crossed": true,
+      "recommendation": "APQ item: review incorporation at this profit level"
+    },
+    "pension_efficiency": {
+      "annual_allowance": 60000,
+      "used": 15000,
+      "carry_forward_available": 22000,
+      "headroom_this_year": 45000,
+      "note": "Significant unused annual allowance; carry forward opportunity if profits increase or one-off contribution desired"
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [62, 74],
+      "confidence": "medium",
+      "confidence_reason": "Self-employed income variable; SA liability as accrued; BPR business valuation uncertain; otherwise well-structured",
+      "dimensions": {
+        "behaviour": {"range": [65, 78], "confidence": "medium", "note": "Good ISA and pension contribution discipline; carry-forward awareness"},
+        "capital": {"range": [58, 72], "confidence": "medium", "note": "BPR assets add value but uncertain valuation"},
+        "tax": {"range": [62, 75], "confidence": "medium", "note": "MTD compliant; POA on track; loss relief applied; incorporation opportunity open"},
+        "protection": {"range": [68, 80], "confidence": "high", "note": "Agreed-value IP in place (self-employed appropriate); joint life in trust"},
+        "cashflow": {"range": [55, 70], "confidence": "low", "note": "Variable income; POA2 upcoming; tax reserve held — cashflow model wide range"},
+        "debt": {"range": [65, 78], "confidence": "high", "note": "Mortgage only; no consumer debt; manageable"},
+        "estate": {"range": [55, 68], "confidence": "medium", "note": "BPR qualifying; life in trust; PET small; overall solid"}
+      }
+    },
+    "risk_score": {
+      "value_range": [58, 70],
+      "confidence": "medium"
+    },
+    "net_worth": {
+      "value_range": [340000, 400000],
+      "confidence": "medium",
+      "staleness_flags": [],
+      "excluded_assets": [],
+      "business_value_note": "Business value included at £53k (IP + debtors + equipment); wide range due to self-assessment",
+      "tax_reserve_exclusion_note": "£14,800 SA tax reserve ring-fenced; excluded from discretionary savings in financial profile"
+    },
+    "iht_projection": {
+      "value_range": [0, 0],
+      "confidence": "high",
+      "explanation": "Estate below combined NRB + RNRB; BPR on business assets further reduces; life insurance in trust excluded",
+      "exemption_flags": ["bpr-sole-trader-business-100pct", "joint-life-in-trust", "spousal-exemption-available"]
+    },
+    "cost_of_inaction": {
+      "value_range": [0, 8000],
+      "confidence": "medium",
+      "explanation": "Primary: incorporation not yet done — estimated £3,500/yr tax saving foregone each year of delay. Secondary: carry-forward pension allowance — £22,000 unused; each year missed is compounding lost."
+    },
+    "financial_profile_cell": "II-B",
+    "archetype_classification": "29 uk-sole-trader-accumulation",
+    "apq_items_expected": [
+      "incorporation-review-profit-threshold-crossed",
+      "poa-2-jul-2026-cashflow-calendar",
+      "carry-forward-pension-allowance-22k-unused",
+      "class-3-ni-voluntary-continue-confirm",
+      "bpr-business-assets-valuation-document",
+      "mtd-itsa-quarterly-update-q1-due",
+      "partner-pension-loading-basic-rate-efficiency",
+      "loss-relief-exhausted-no-further-carry"
+    ]
+  }
+}

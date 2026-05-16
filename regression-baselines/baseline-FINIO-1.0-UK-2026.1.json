@@ -1,0 +1,345 @@
+{
+  "version": "FINIO-1.0-UK-2026.1",
+  "generated": "2026-04-19",
+  "scoringVersion": "RISK-1.0",
+  "taxRulesVersion": "UK-2026.1",
+  "note": "Locked baseline \u2014 all 7 personas. Source of truth for regression testing (Part 14).",
+  "personas": {
+    "a": {
+      "name": "Bruce Wayne",
+      "age": 62,
+      "fqScore": 47,
+      "fqBand": "Established",
+      "riskScore": 56,
+      "riskBand": "Managed",
+      "profile": "Solid and balanced",
+      "fqDims": {
+        "behaviour": 19,
+        "capital": 14,
+        "tax": 11,
+        "protection": 0,
+        "cashflow": 14,
+        "debt": 10,
+        "estate": 5
+      },
+      "riskDims": {
+        "incomeRes": 8,
+        "liquidity": 18,
+        "protCov": 0,
+        "debtVuln": 15,
+        "concRisk": 6,
+        "depExp": 9,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "b": {
+      "name": "Fred & Wilma",
+      "age": 64,
+      "fqScore": 43,
+      "fqBand": "Established",
+      "riskScore": 60,
+      "riskBand": "Protected",
+      "profile": "Solid and protected",
+      "fqDims": {
+        "behaviour": 17,
+        "capital": 14,
+        "tax": 9,
+        "protection": 5,
+        "cashflow": 14,
+        "debt": 10,
+        "estate": 0
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 18,
+        "protCov": 5,
+        "debtVuln": 15,
+        "concRisk": 9,
+        "depExp": 1,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "c": {
+      "name": "Tony Stark",
+      "age": 48,
+      "fqScore": 78,
+      "fqBand": "Optimised",
+      "riskScore": 79,
+      "riskBand": "Protected",
+      "profile": "Strong and protected",
+      "fqDims": {
+        "behaviour": 19,
+        "capital": 14,
+        "tax": 5,
+        "protection": 10,
+        "cashflow": 14,
+        "debt": 10,
+        "estate": 8
+      },
+      "riskDims": {
+        "incomeRes": 16,
+        "liquidity": 18,
+        "protCov": 10,
+        "debtVuln": 15,
+        "concRisk": 11,
+        "depExp": 9,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "d": {
+      "name": "Hermione Granger",
+      "age": 28,
+      "fqScore": 49,
+      "fqBand": "Established",
+      "riskScore": 53,
+      "riskBand": "Managed",
+      "profile": "Solid and balanced",
+      "fqDims": {
+        "behaviour": 19,
+        "capital": 3,
+        "tax": 6,
+        "protection": 0,
+        "cashflow": 12,
+        "debt": 10,
+        "estate": 0
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 15,
+        "protCov": 3,
+        "debtVuln": 8,
+        "concRisk": 6,
+        "depExp": 9,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "e": {
+      "name": "Willy Wonka",
+      "age": 78,
+      "fqScore": 100,
+      "fqBand": "Exceptional",
+      "riskScore": 82,
+      "riskBand": "Resilient",
+      "profile": "Fully aligned",
+      "fqDims": {
+        "behaviour": 20,
+        "capital": 18,
+        "tax": 14,
+        "protection": 14,
+        "cashflow": 16,
+        "debt": 10,
+        "estate": 18
+      },
+      "riskDims": {
+        "incomeRes": 16,
+        "liquidity": 15,
+        "protCov": 14,
+        "debtVuln": 15,
+        "concRisk": 12,
+        "depExp": 10,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "f-22": {
+      "name": "Anna Finch",
+      "age": 22,
+      "fqScore": 50,
+      "fqBand": "Established",
+      "riskScore": 26,
+      "riskBand": "Vulnerable",
+      "profile": "Solid progress, underprotected",
+      "fqDims": {
+        "behaviour": 18,
+        "capital": 3,
+        "tax": 6,
+        "protection": 0,
+        "cashflow": 12,
+        "debt": 10,
+        "estate": 0
+      },
+      "riskDims": {
+        "incomeRes": 8,
+        "liquidity": 3,
+        "protCov": 0,
+        "debtVuln": 0,
+        "concRisk": 6,
+        "depExp": 9,
+        "behaviouralTrack": 0
+      },
+      "confidence": "low"
+    },
+    "f-32": {
+      "name": "Anna Finch",
+      "age": 32,
+      "fqScore": 64,
+      "fqBand": "Optimised",
+      "riskScore": 32,
+      "riskBand": "Vulnerable",
+      "profile": "Strong position, underprotected",
+      "fqDims": {
+        "behaviour": 18,
+        "capital": 7,
+        "tax": 6,
+        "protection": 5,
+        "cashflow": 12,
+        "debt": 10,
+        "estate": 4
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 7,
+        "protCov": 5,
+        "debtVuln": 0,
+        "concRisk": 8,
+        "depExp": 0,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "f-45": {
+      "name": "Anna Finch",
+      "age": 45,
+      "fqScore": 89,
+      "fqBand": "Exceptional",
+      "riskScore": 66,
+      "riskBand": "Protected",
+      "profile": "Peak position, well defended",
+      "fqDims": {
+        "behaviour": 18,
+        "capital": 7,
+        "tax": 7,
+        "protection": 15,
+        "cashflow": 12,
+        "debt": 10,
+        "estate": 13
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 7,
+        "protCov": 18,
+        "debtVuln": 12,
+        "concRisk": 9,
+        "depExp": 8,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "f-58": {
+      "name": "Anna Finch",
+      "age": 58,
+      "fqScore": 85,
+      "fqBand": "Exceptional",
+      "riskScore": 73,
+      "riskBand": "Protected",
+      "profile": "Peak position, well defended",
+      "fqDims": {
+        "behaviour": 18,
+        "capital": 12,
+        "tax": 7,
+        "protection": 15,
+        "cashflow": 13,
+        "debt": 10,
+        "estate": 4
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 11,
+        "protCov": 18,
+        "debtVuln": 13,
+        "concRisk": 9,
+        "depExp": 10,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "f-72": {
+      "name": "Anna Finch",
+      "age": 72,
+      "fqScore": 100,
+      "fqBand": "Exceptional",
+      "riskScore": 85,
+      "riskBand": "Resilient",
+      "profile": "Fully aligned",
+      "fqDims": {
+        "behaviour": 19,
+        "capital": 14,
+        "tax": 14,
+        "protection": 12,
+        "cashflow": 16,
+        "debt": 10,
+        "estate": 6
+      },
+      "riskDims": {
+        "incomeRes": 20,
+        "liquidity": 18,
+        "protCov": 11,
+        "debtVuln": 15,
+        "concRisk": 9,
+        "depExp": 10,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "f-89": {
+      "name": "Anna Finch",
+      "age": 89,
+      "fqScore": 100,
+      "fqBand": "Exceptional",
+      "riskScore": 61,
+      "riskBand": "Protected",
+      "profile": "Peak position, well defended",
+      "fqDims": {
+        "behaviour": 20,
+        "capital": 16,
+        "tax": 16,
+        "protection": 0,
+        "cashflow": 16,
+        "debt": 10,
+        "estate": 17
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 18,
+        "protCov": 0,
+        "debtVuln": 15,
+        "concRisk": 6,
+        "depExp": 10,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    },
+    "g": {
+      "name": "Priya Sharma",
+      "age": 38,
+      "fqScore": 57,
+      "fqBand": "Established",
+      "riskScore": 29,
+      "riskBand": "Vulnerable",
+      "profile": "Solid progress, underprotected",
+      "fqDims": {
+        "behaviour": 19,
+        "capital": 7,
+        "tax": 7,
+        "protection": 0,
+        "cashflow": 12,
+        "debt": 10,
+        "estate": 0
+      },
+      "riskDims": {
+        "incomeRes": 12,
+        "liquidity": 7,
+        "protCov": 0,
+        "debtVuln": 5,
+        "concRisk": 4,
+        "depExp": 1,
+        "behaviouralTrack": 0
+      },
+      "confidence": "medium"
+    }
+  }
+}

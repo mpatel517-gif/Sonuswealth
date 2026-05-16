@@ -1,0 +1,1035 @@
+{
+  "fixture_id": "mrT-core",
+  "fixture_version": "2.0",
+  "fixture_date": "2026-05-12",
+  "fixture_purpose": "All-domain canonical regression fixture. Deliberately maximalist: populates every spec'd domain (A-X per MyMoney v2.7) with at least one realistic instance so screens render fully and engine paths can be regression-tested. Character: single director age 35, accumulation life-stage with director-domain unlock. Not a realistic persona — a QA artefact.",
+  "fixture_anchor_archetype": "02",
+  "archetypes_exercised": ["01", "02", "03", "04", "05", "06", "07"],
+  "v2_0_changes": "Full Phase 2 Batch A rewrite. Shape switched to Bruce app schema with spec-array overlays so MyMoney row-builders render every domain. Added: BTL property, EIS/SEIS/VCT, onshore+offshore bonds, business_assets, share_schemes, alternatives, companies, directors_loan, family_obligations, general_insurance, business_insurance, full income object (5 types), full protection (4 types), willStatus current + both LPAs, plans[], scenarios[], trajectories.{netWorthHistory, scoreHistory, riskHistory}.",
+
+  "id": "mrt",
+  "name": "Mr T Core",
+  "displayName": "Mr T · 35 · all-domain canonical",
+  "type": "individual",
+  "isIFA": false,
+  "lifeStage": 2,
+  "lifeStageName": "Accumulation",
+  "lifeStageAge": "25–40",
+  "hasBusiness": true,
+  "isCouple": false,
+  "hasTrust": true,
+  "hasDBPension": true,
+  "isHigherRateTaxpayer": true,
+  "age": 35,
+  "targetIncome": 60000,
+  "dataLastUpdated": "2026-05-12",
+  "rulesVersion": "UK-2026.1",
+  "drawdown": 0,
+  "persona": { "flags": ["director"] },
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+
+  "individual": {
+    "id": "mrT-core-primary",
+    "name": "Mr T Core",
+    "dob": "1991-04-23",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "director",
+    "employer": "Synthetic Tech Ltd",
+    "gross_salary": 12570,
+    "income_band": "higher-rate",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 13,
+    "life_stage": "accumulation"
+  },
+
+  "assets": {
+    "sipp": {
+      "total": 167500,
+      "growth": 0.05,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "id": "sipp-aj-bell",
+          "name": "AJ Bell SIPP",
+          "value": 92400,
+          "type": "SIPP",
+          "provider": "AJ Bell",
+          "charge": 0.004,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2024-11-14",
+          "growth_rate_assumption": 0.05
+        },
+        {
+          "id": "ssas-pension",
+          "name": "Synthetic Tech SSAS",
+          "value": 48700,
+          "type": "SSAS",
+          "provider": "Self-administered",
+          "charge": 0.0075,
+          "chargeIsEstimate": true,
+          "transferEligible": false,
+          "nominationDate": "2025-02-01",
+          "loanToCompany": 25000,
+          "growth_rate_assumption": 0.045
+        },
+        {
+          "id": "dc-pot-legacy-aviva",
+          "name": "Aviva Workplace DC (legacy)",
+          "value": 12900,
+          "type": "Workplace DC",
+          "provider": "Aviva",
+          "charge": 0.0065,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2019-06-01",
+          "from_employer": "First Employer (2014-2019)",
+          "growth_rate_assumption": 0.045
+        },
+        {
+          "id": "dc-pot-legacy-nest",
+          "name": "Nest Workplace DC (legacy)",
+          "value": 13500,
+          "type": "Workplace DC",
+          "provider": "Nest",
+          "charge": 0.005,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2022-04-01",
+          "from_employer": "Second Employer (2019-2022)",
+          "growth_rate_assumption": 0.05
+        }
+      ]
+    },
+    "pensions": [
+      {
+        "id": "db-deferred-railway",
+        "name": "Railway Pensions DB (deferred)",
+        "scheme_name": "Railway Pensions",
+        "type": "occupational-DB",
+        "provider": "Railway Pensions",
+        "status": "deferred",
+        "accrual_years": 2,
+        "projected_annual_pension": 1200,
+        "cetv": 38000,
+        "balance": 38000,
+        "normal_retirement_age": 65
+      }
+    ],
+    "investments": [
+      {
+        "id": "isa-ss-vanguard",
+        "type": "stocks-and-shares-ISA",
+        "name": "Vanguard ISA",
+        "provider": "Vanguard",
+        "balance": 38400,
+        "value": 38400,
+        "contribution_current_tax_year": 8500,
+        "growth_rate_assumption": 0.06,
+        "last_valuation_date": "2026-05-01",
+        "verified_by_user": true
+      },
+      {
+        "id": "isa-cash-barclays",
+        "type": "cash-ISA",
+        "name": "Barclays Cash ISA",
+        "provider": "Barclays",
+        "balance": 8200,
+        "value": 8200,
+        "interest_rate": 0.046,
+        "contribution_current_tax_year": 2000,
+        "last_valuation_date": "2026-05-01",
+        "verified_by_user": true
+      },
+      {
+        "id": "gia-ii",
+        "type": "GIA",
+        "name": "Interactive Investor GIA",
+        "provider": "Interactive Investor",
+        "balance": 24800,
+        "value": 24800,
+        "cost_base": 19400,
+        "embedded_gain": 5400,
+        "growth_rate_assumption": 0.055,
+        "last_valuation_date": "2026-05-01"
+      },
+      {
+        "id": "eis-1",
+        "type": "EIS",
+        "name": "Octopus Titan EIS 2024",
+        "provider": "Octopus",
+        "balance": 15000,
+        "value": 15000,
+        "income_tax_relief_claimed": 4500,
+        "growth_rate_assumption": 0.08,
+        "minimum_hold_years": 3,
+        "year_purchased": 2024,
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "seis-1",
+        "type": "SEIS",
+        "name": "SyndicateRoom SEIS Fund",
+        "provider": "SyndicateRoom",
+        "balance": 8000,
+        "value": 8000,
+        "income_tax_relief_claimed": 4000,
+        "growth_rate_assumption": 0.12,
+        "minimum_hold_years": 3,
+        "year_purchased": 2025,
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "vct-1",
+        "type": "VCT",
+        "name": "Octopus AIM VCT",
+        "provider": "Octopus",
+        "balance": 12500,
+        "value": 12500,
+        "income_tax_relief_claimed": 3750,
+        "growth_rate_assumption": 0.06,
+        "minimum_hold_years": 5,
+        "year_purchased": 2023,
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "bond-onshore",
+        "type": "BOND_ON",
+        "name": "Pru Onshore Bond",
+        "provider": "Prudential",
+        "balance": 22000,
+        "value": 22000,
+        "growth_rate_assumption": 0.04,
+        "withdrawal_5pct_used_pct": 0.4,
+        "last_valuation_date": "2026-04-30"
+      },
+      {
+        "id": "bond-offshore",
+        "type": "BOND_OFF",
+        "name": "Quilter Offshore Bond",
+        "provider": "Quilter International",
+        "balance": 18500,
+        "value": 18500,
+        "growth_rate_assumption": 0.045,
+        "withdrawal_5pct_used_pct": 0.2,
+        "last_valuation_date": "2026-04-30"
+      },
+      {
+        "id": "crypto-eth",
+        "type": "crypto",
+        "name": "Ethereum",
+        "asset": "ETH",
+        "holdings": 2.4,
+        "last_price_gbp": 2150,
+        "balance_gbp": 5160,
+        "balance": 5160,
+        "value": 5160,
+        "cost_base": 3200,
+        "last_valuation_date": "2026-05-10"
+      },
+      {
+        "id": "crypto-btc",
+        "type": "crypto",
+        "name": "Bitcoin",
+        "asset": "BTC",
+        "holdings": 0.08,
+        "last_price_gbp": 51000,
+        "balance_gbp": 4080,
+        "balance": 4080,
+        "value": 4080,
+        "cost_base": 2900,
+        "last_valuation_date": "2026-05-10"
+      },
+      {
+        "id": "pe-fund-1",
+        "type": "private-equity",
+        "name": "Vintage 2023 PE Co-invest",
+        "provider": "Schroders Capital",
+        "balance": 10000,
+        "value": 10000,
+        "estimated_value": 11400,
+        "vintage": 2023,
+        "drawdown_pct": 0.6,
+        "last_valuation_date": "2026-03-31"
+      }
+    ],
+    "isa": { "value": 46600, "growth": 0.06 },
+    "portfolio": { "value": 24800, "growth": 0.055, "ret": 0.08, "bpr": false },
+    "residence": {
+      "value": 385000,
+      "ownership": "sole",
+      "ownershipShare": 1.0,
+      "address": "Flat 7 · 14 Pencaer Street · London E14",
+      "purchase_price": 318000,
+      "purchase_date": "2020-08-10"
+    },
+    "property": [
+      {
+        "id": "btl-manchester",
+        "address": "23 Oldham Road · Manchester M40",
+        "label": "Manchester BTL",
+        "use": "buy-to-let",
+        "value": 198000,
+        "value_gbp": 198000,
+        "purchase_price": 165000,
+        "purchase_date": "2022-03-15",
+        "ownership": "sole",
+        "beneficial_interest_this_individual": 1.0,
+        "mortgage_id": "mortgage-btl",
+        "monthly_rent": 1250,
+        "annual_rent": 15000,
+        "s24_position": "fully-restricted",
+        "last_valuation_date": "2026-02-12"
+      }
+    ],
+    "rental_portfolio": {
+      "properties": [],
+      "annual_gross_rent": 15000,
+      "annual_net_rent_after_s24": 9800
+    },
+    "cash": {
+      "total": 28500,
+      "own": 28500,
+      "rate": 0.045
+    },
+    "bank": [
+      {
+        "id": "current-monzo",
+        "account_name": "Monzo Current",
+        "bank": "Monzo",
+        "type": "current-account",
+        "balance": 6200,
+        "balance_gbp": 6200,
+        "last_valuation_date": "2026-05-10"
+      },
+      {
+        "id": "savings-chase",
+        "account_name": "Chase Saver",
+        "bank": "Chase",
+        "type": "savings",
+        "balance": 14800,
+        "balance_gbp": 14800,
+        "interest_rate": 0.0455,
+        "last_valuation_date": "2026-05-10"
+      },
+      {
+        "id": "emergency-marcus",
+        "account_name": "Marcus Emergency Fund",
+        "bank": "Marcus by GS",
+        "type": "savings",
+        "balance": 7500,
+        "balance_gbp": 7500,
+        "interest_rate": 0.0425,
+        "last_valuation_date": "2026-05-10"
+      }
+    ],
+    "trustGifts": {
+      "each": 3000,
+      "total": 3000,
+      "date": "2023-01-10",
+      "numChildren": 0,
+      "trustType": "PET",
+      "history": [
+        {
+          "id": "pet-1",
+          "type": "PET",
+          "amount": 3000,
+          "date": "2023-01-10",
+          "recipient": "Sister",
+          "years_elapsed": 3.3,
+          "within_annual_exemption": true
+        },
+        {
+          "id": "pet-2",
+          "type": "PET",
+          "amount": 25000,
+          "date": "2024-09-15",
+          "recipient": "Sister",
+          "years_elapsed": 1.6,
+          "within_annual_exemption": false
+        }
+      ]
+    },
+    "protection": {
+      "lifeInsurance": {
+        "exists": true,
+        "amount": 350000,
+        "inTrust": true,
+        "premium": 28,
+        "provider": "Legal & General",
+        "term_years": 30,
+        "start_date": "2022-05-01"
+      },
+      "criticalIllness": {
+        "exists": true,
+        "amount": 150000,
+        "premium": 42,
+        "provider": "Aviva"
+      },
+      "incomeProtection": {
+        "exists": true,
+        "monthlyBenefit": 3250,
+        "premium": 64,
+        "provider": "Royal London",
+        "deferred_period_weeks": 13,
+        "cover_pct_of_salary": 0.5
+      },
+      "relevantLifePlan": {
+        "exists": true,
+        "amount": 400000,
+        "premium": 22,
+        "provider": "Legal & General",
+        "via_company": true
+      },
+      "keyPerson": {
+        "exists": true,
+        "amount": 250000,
+        "premium": 38,
+        "provider": "Aviva"
+      },
+      "shareholderProtection": {
+        "exists": false
+      }
+    },
+    "other": []
+  },
+
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 215000,
+      "monthlyPayment": 1189,
+      "rateType": "fixed-until-2028",
+      "rate": 0.039,
+      "remainingYears": 25
+    },
+    "otherLoans": [
+      {
+        "id": "btl-mortgage",
+        "type": "buy-to-let-mortgage",
+        "lender": "Paragon",
+        "outstanding": 124000,
+        "outstanding_balance": 124000,
+        "monthly_payment": 580,
+        "interest_rate": 0.054,
+        "apr": 0.054,
+        "rate_type": "fixed-until-2027",
+        "secured_on": "btl-manchester"
+      },
+      {
+        "id": "student-loan",
+        "type": "student-loan-plan-2",
+        "outstanding_balance": 15800,
+        "outstanding": 15800,
+        "interest_rate": 0.074,
+        "apr": 0.074,
+        "repayment_from_salary_monthly": 108
+      },
+      {
+        "id": "credit-card",
+        "type": "credit-card",
+        "lender": "Amex",
+        "outstanding_balance": 1850,
+        "outstanding": 1850,
+        "credit_limit": 8000,
+        "apr": 0.247,
+        "interest_rate": 0.247,
+        "monthly_payment": 75
+      }
+    ]
+  },
+
+  "business_assets": [
+    {
+      "id": "synthetic-tech-equity",
+      "name": "Synthetic Tech Ltd equity stake",
+      "value": 145000,
+      "value_gbp": 145000,
+      "qualifies_for_bpr": true,
+      "qualifies_for_apr": false,
+      "qualifies_for_badr": true,
+      "shareholding_pct": 1.0,
+      "trading_status": "trading",
+      "incorporation_date": "2019-04-01"
+    }
+  ],
+
+  "share_schemes": [
+    {
+      "id": "emi-options-2023",
+      "scheme_type": "EMI",
+      "employer": "Previous Employer",
+      "estimated_value": 18000,
+      "value_gbp": 18000,
+      "vesting_status": "partially-vested",
+      "exercise_price": 1.5,
+      "vested_count": 8000,
+      "unvested_count": 12000
+    }
+  ],
+
+  "companies": [
+    {
+      "id": "synthetic-tech-ltd",
+      "name": "Synthetic Tech Ltd",
+      "role": "Sole director",
+      "shareholding_pct": 1.0,
+      "share_value_gbp": 145000,
+      "value": 145000,
+      "trading_status": "trading",
+      "annual_turnover": 220000,
+      "annual_profit_after_tax": 78000
+    }
+  ],
+
+  "directors_loan": {
+    "balance": 18500,
+    "in_credit": true,
+    "company_id": "synthetic-tech-ltd",
+    "note": "Director has lent £18.5k to the company; counts as a credit on the balance sheet"
+  },
+
+  "alternatives": [
+    {
+      "id": "wine-collection",
+      "name": "Fine wine collection (LiveTrade)",
+      "type": "wine",
+      "value": 8400,
+      "value_gbp": 8400,
+      "last_valuation_date": "2025-12-01"
+    }
+  ],
+
+  "general_insurance": [
+    {
+      "id": "home-insurance",
+      "type": "home-buildings-contents",
+      "provider": "Aviva",
+      "cover_amount": 450000,
+      "premium_annual": 320
+    },
+    {
+      "id": "motor-insurance",
+      "type": "motor-comprehensive",
+      "provider": "Direct Line",
+      "cover_amount": 24000,
+      "premium_annual": 680
+    },
+    {
+      "id": "travel-insurance",
+      "type": "travel-annual",
+      "provider": "Post Office",
+      "cover_amount": 10000,
+      "premium_annual": 85
+    }
+  ],
+
+  "business_insurance": [
+    {
+      "id": "pi-insurance",
+      "type": "professional-indemnity",
+      "provider": "Hiscox",
+      "cover_amount": 1000000,
+      "premium_annual": 480
+    },
+    {
+      "id": "cyber-insurance",
+      "type": "cyber",
+      "provider": "Hiscox",
+      "cover_amount": 250000,
+      "premium_annual": 240
+    }
+  ],
+
+  "family_obligations": [
+    {
+      "id": "parent-care-contribution",
+      "label": "Monthly contribution toward parent care",
+      "type": "elderly-parent-support",
+      "annual_cost": 6000
+    }
+  ],
+
+  "benefits": [],
+
+  "dependants": [
+    {
+      "id": "sister",
+      "type": "sibling",
+      "name": "Sister",
+      "age": 32,
+      "financiallyDependent": false,
+      "annual_cost": 0
+    }
+  ],
+
+  "willStatus": "current",
+  "lpaStatus": "both",
+  "guardianNamed": false,
+  "nominationsStatus": "all",
+
+  "income": {
+    "statePension": {
+      "annual": 11502,
+      "startAge": 67
+    },
+    "employment": 12570,
+    "directorSalary": 12570,
+    "directorDividends": 38000,
+    "dividends": 38000,
+    "rentalIncome": 15000,
+    "rentalIncomeNet": 9800,
+    "interest": 1850,
+    "overseasIncome": 0,
+    "total_annual_gross": 67420,
+    "ani": 56800,
+    "marginal_rate": 0.40,
+    "allowance_use": {
+      "isa": 0.525,
+      "pension_aa": 0.31,
+      "cgt_aea": 0.0,
+      "dividend_allowance": 1.0
+    }
+  },
+
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "3-6",
+    "q12_income_protection": "yes",
+    "q13_income_sources": "three-or-more",
+    "d6_nominations_complete": "all",
+    "d6_will_current": "yes",
+    "d6_lpa_status": "both",
+    "d6_life_in_trust": "in_trust",
+    "d6_guardian_status": "no_dependants",
+    "confidenceLevel": "high"
+  },
+
+  "etfs": [
+    { "ticker": "VWRL", "name": "Vanguard FTSE All-World",        "val": "£24,800", "pct": "+12.4%", "up": true  },
+    { "ticker": "VUKE", "name": "Vanguard FTSE 100",              "val": "£8,200",  "pct": "+6.1%",  "up": true  },
+    { "ticker": "INRG", "name": "iShares Clean Energy",           "val": "£3,100",  "pct": "+7.1%",  "up": true  },
+    { "ticker": "SGLN", "name": "iShares Physical Gold",          "val": "£2,500",  "pct": "+18.4%", "up": true  },
+    { "ticker": "VMID", "name": "Vanguard FTSE 250",              "val": "£1,900",  "pct": "-2.8%",  "up": false }
+  ],
+
+  "plans": [
+    {
+      "id": "plan-retirement",
+      "type": "retirement",
+      "label": "Retire at 60 with £2.5m net worth",
+      "target": { "date": "2051-04-01", "netWorth": 2500000, "monthlyIncome": 5000, "age": 60 },
+      "target_display": 2500000,
+      "monthlyContribution": 1500,
+      "lastReviewedAt": "2025-09-15",
+      "status": "active",
+      "createdAt": "2024-04-01"
+    },
+    {
+      "id": "plan-estate",
+      "type": "estate",
+      "label": "Zero IHT exposure within 5 years",
+      "target": { "ihtCap": 0, "rnrbUsed": true, "bprPositioning": 145000 },
+      "target_display": null,
+      "lastReviewedAt": "2025-12-10",
+      "status": "active",
+      "createdAt": "2024-09-01"
+    },
+    {
+      "id": "plan-gift",
+      "type": "gift",
+      "label": "Use £3k annual allowance + carry-forward",
+      "target": { "annualAllowance": 3000, "carryForwardUsed": true },
+      "target_display": null,
+      "lastReviewedAt": "2025-04-06",
+      "status": "active",
+      "createdAt": "2023-04-06"
+    },
+    {
+      "id": "plan-tax",
+      "type": "tax",
+      "label": "Max ISA + use carry-forward AA",
+      "target": { "isaUsedPct": 1.0, "pensionAaUsedPct": 0.8, "carryForwardUsed": true },
+      "target_display": null,
+      "lastReviewedAt": "2025-11-20",
+      "status": "active",
+      "createdAt": "2024-04-06"
+    },
+    {
+      "id": "plan-protection",
+      "type": "protection",
+      "label": "Close protection gap to under £50k",
+      "target": { "gapAmount": 50000 },
+      "target_display": null,
+      "lastReviewedAt": "2025-08-01",
+      "status": "active",
+      "createdAt": "2022-05-01"
+    }
+  ],
+
+  "scenarios": [
+    {
+      "id": "scen-retire-50",
+      "name": "Retire at 50 (earliest exit)",
+      "createdAt": "2026-03-12",
+      "changedFields": { "retirementAge": 50, "monthlyContribution": 2400 },
+      "deltaResults": {
+        "netWorthAt75": -180000,
+        "probabilityOfSuccess": 0.61,
+        "fundedRatio": 0.84,
+        "ihtExposure": 0
+      },
+      "status": "saved"
+    },
+    {
+      "id": "scen-sell-btl",
+      "name": "Sell BTL in 2027",
+      "createdAt": "2026-04-18",
+      "changedFields": { "btlDisposal": { "year": 2027, "proceeds_after_cgt": 71500 } },
+      "deltaResults": {
+        "netWorthAt75": -42000,
+        "probabilityOfSuccess": 0.89,
+        "fundedRatio": 1.04,
+        "ihtExposure": -198000
+      },
+      "status": "saved"
+    },
+    {
+      "id": "scen-sipp-max",
+      "name": "Top up SIPP to MPAA limit",
+      "createdAt": "2026-05-01",
+      "changedFields": { "annualSippContribution": 10000 },
+      "deltaResults": {
+        "netWorthAt75": 165000,
+        "probabilityOfSuccess": 0.93,
+        "fundedRatio": 1.18,
+        "ihtExposure": 66000
+      },
+      "status": "saved"
+    },
+    {
+      "id": "scen-corporate-pension",
+      "name": "Switch dividend take to corporate pension contribution",
+      "createdAt": "2026-05-09",
+      "changedFields": { "directorDividends": 16000, "employerPensionContribution": 22000 },
+      "deltaResults": {
+        "netWorthAt75": 230000,
+        "probabilityOfSuccess": 0.95,
+        "fundedRatio": 1.22,
+        "ihtExposure": 88000
+      },
+      "status": "saved"
+    }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 412000 },
+      { "date": "2025-07-01", "value": 421500 },
+      { "date": "2025-08-01", "value": 428400 },
+      { "date": "2025-09-01", "value": 433200 },
+      { "date": "2025-10-01", "value": 441800 },
+      { "date": "2025-11-01", "value": 447600 },
+      { "date": "2025-12-01", "value": 455100 },
+      { "date": "2026-01-01", "value": 459400 },
+      { "date": "2026-02-01", "value": 462800 },
+      { "date": "2026-03-01", "value": 471200 },
+      { "date": "2026-04-01", "value": 478500 },
+      { "date": "2026-05-01", "value": 484000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 54 },
+      { "date": "2025-07-01", "score": 55 },
+      { "date": "2025-08-01", "score": 56 },
+      { "date": "2025-09-01", "score": 57 },
+      { "date": "2025-10-01", "score": 58 },
+      { "date": "2025-11-01", "score": 59 },
+      { "date": "2025-12-01", "score": 60 },
+      { "date": "2026-01-01", "score": 60 },
+      { "date": "2026-02-01", "score": 61 },
+      { "date": "2026-03-01", "score": 62 },
+      { "date": "2026-04-01", "score": 63 },
+      { "date": "2026-05-01", "score": 64 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 52 },
+      { "date": "2025-07-01", "score": 53 },
+      { "date": "2025-08-01", "score": 55 },
+      { "date": "2025-09-01", "score": 57 },
+      { "date": "2025-10-01", "score": 58 },
+      { "date": "2025-11-01", "score": 59 },
+      { "date": "2025-12-01", "score": 60 },
+      { "date": "2026-01-01", "score": 61 },
+      { "date": "2026-02-01", "score": 62 },
+      { "date": "2026-03-01", "score": 63 },
+      { "date": "2026-04-01", "score": 64 },
+      { "date": "2026-05-01", "score": 65 }
+    ]
+  },
+
+  "events": [
+    { "date": "2014-09-01", "type": "employment-start", "detail": "First Employer" },
+    { "date": "2019-04-01", "type": "company-incorporation", "company_id": "synthetic-tech-ltd" },
+    { "date": "2020-08-10", "type": "property-purchase", "asset_id": "main-residence", "amount": 318000 },
+    { "date": "2022-03-15", "type": "property-purchase", "asset_id": "btl-manchester", "amount": 165000 },
+    { "date": "2022-05-01", "type": "protection-start", "policy_id": "life-1" },
+    { "date": "2023-01-10", "type": "gift-given", "gift_id": "pet-1", "amount": 3000 },
+    { "date": "2023-11-14", "type": "pension-nomination-set", "pension_id": "sipp-aj-bell" },
+    { "date": "2024-09-15", "type": "gift-given", "gift_id": "pet-2", "amount": 25000 },
+    { "date": "2025-09-15", "type": "plan-reviewed", "plan_id": "plan-retirement" },
+    { "date": "2026-03-12", "type": "scenario-saved", "scenario_id": "scen-retire-50" },
+    { "date": "2026-04-18", "type": "scenario-saved", "scenario_id": "scen-sell-btl" },
+    { "date": "2026-05-01", "type": "scenario-saved", "scenario_id": "scen-sipp-max" },
+    { "date": "2026-05-09", "type": "scenario-saved", "scenario_id": "scen-corporate-pension" }
+  ],
+
+  "alerts": [
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "365 days",
+      "headline": "SIPP enters estate April 2027",
+      "context": "£167k SIPP becomes subject to IHT from 6 April 2027. Plan ahead.",
+      "action": "Model drawdown strategy",
+      "screen": "tax",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "OPPORTUNITY",
+      "days": "Month 17 of 84",
+      "headline": "PET clock active — £25k gifted Sep 2024",
+      "context": "Taper relief begins September 2027.",
+      "action": "Review gift tracker",
+      "screen": "tax",
+      "lifeStage": 2
+    },
+    {
+      "level": "medium",
+      "colour": "#007AFF",
+      "badge": "OPPORTUNITY",
+      "days": "This tax year",
+      "headline": "Carry-forward AA available",
+      "context": "Director salary at £12,570 leaves £47,430 of unused pension AA for this year + 3 years carry-forward.",
+      "action": "Top up SIPP via company contribution",
+      "screen": "money",
+      "lifeStage": 2
+    },
+    {
+      "level": "medium",
+      "colour": "#007AFF",
+      "badge": "OPPORTUNITY",
+      "days": "Before 5 April",
+      "headline": "ISA allowance partially used",
+      "context": "£10,500 of £20,000 ISA allowance unused this tax year.",
+      "action": "Top up ISA",
+      "screen": "money",
+      "lifeStage": 2
+    }
+  ],
+
+  "timeline": [
+    { "dot": "⏳", "bg": "#FFF3F3", "date": "6 April 2027",   "title": "SIPP enters estate",          "sub": "£167k SIPP subject to IHT if not addressed" },
+    { "dot": "🎁", "bg": "#FFF8E8", "date": "September 2031", "title": "Gift clock fully IHT-free",   "sub": "7-year clock completes on £25k gifted Sep 2024" },
+    { "dot": "🏦", "bg": "#E8F7EF", "date": "Age 67",         "title": "State pension begins",        "sub": "£11,502/yr forecast" },
+    { "dot": "🎯", "bg": "#EEF4FF", "date": "Age 60 · 2051",   "title": "Retirement plan target",      "sub": "£2.5m NW · £5k/mo income" }
+  ],
+
+  "estate": {
+    "will": { "exists": true, "date": "2024-03-10", "solicitor": "Taylor Wessing LLP" },
+    "lpa": { "exists": true, "property_and_affairs": true, "health_and_welfare": true, "registered_date": "2023-11-05" },
+    "trust": { "exists": true, "type": "Discretionary", "trustees": ["Mr T Core", "Sister"] },
+    "expression_of_wishes": { "exists": true },
+    "nominations_complete": true
+  },
+
+  "documents": [
+    {
+      "id": "doc-will-001",
+      "type": "will",
+      "name": "Last Will and Testament — T Core 2024.pdf",
+      "uploaded_at": "2024-03-12T09:14:00Z",
+      "date": "12 Mar 2024",
+      "size_kb": 284,
+      "size": "284 KB",
+      "solicitor": "Taylor Wessing LLP",
+      "notes": "Executed with two witnesses. Residuary estate to sister."
+    },
+    {
+      "id": "doc-lpa-property-001",
+      "type": "lpa_property",
+      "name": "LPA Property and Financial Affairs — T Core.pdf",
+      "uploaded_at": "2023-11-08T14:22:00Z",
+      "date": "8 Nov 2023",
+      "size_kb": 196,
+      "size": "196 KB",
+      "registered_with": "Office of the Public Guardian",
+      "notes": "Registered OPG ref LP1F. Attorneys: Sister."
+    },
+    {
+      "id": "doc-lpa-health-001",
+      "type": "lpa_health",
+      "name": "LPA Health and Welfare — T Core.pdf",
+      "uploaded_at": "2023-11-08T14:25:00Z",
+      "date": "8 Nov 2023",
+      "size_kb": 188,
+      "size": "188 KB",
+      "registered_with": "Office of the Public Guardian",
+      "notes": "Registered OPG ref LP1H. Life-sustaining treatment: donor decides."
+    },
+    {
+      "id": "doc-eow-sipp-001",
+      "type": "expression_of_wishes",
+      "name": "Expression of Wishes — AJ Bell SIPP 2024.pdf",
+      "uploaded_at": "2024-11-16T11:05:00Z",
+      "date": "16 Nov 2024",
+      "size_kb": 112,
+      "size": "112 KB",
+      "linked_asset": "sipp-aj-bell",
+      "notes": "100% to Sister. Reviewed after pension IHT rule change announcement."
+    },
+    {
+      "id": "doc-trust-deed-001",
+      "type": "trust_deed",
+      "name": "Discretionary Trust Deed — Synthetic Tech 2022.pdf",
+      "uploaded_at": "2022-06-03T10:00:00Z",
+      "date": "3 Jun 2022",
+      "size_kb": 432,
+      "size": "432 KB",
+      "trustees": ["Mr T Core", "Sister"],
+      "notes": "Life policy written into discretionary trust. Removes £350k from estate."
+    },
+    {
+      "id": "doc-nomination-aviva-001",
+      "type": "nomination",
+      "name": "Pension Nomination — Aviva Workplace DC 2023.pdf",
+      "uploaded_at": "2023-06-15T09:48:00Z",
+      "date": "15 Jun 2023",
+      "size_kb": 98,
+      "size": "98 KB",
+      "linked_asset": "dc-pot-legacy-aviva",
+      "notes": "Beneficiary: Sister 100%. Provider: Aviva. Review due on consolidation."
+    }
+  ],
+
+  "aiSuggestions": [
+    "How much could I save on tax by switching director dividends to corporate pension?",
+    "Should I sell the BTL before the 2028 fixed rate ends?",
+    "What's my probability of retiring at 50 with my current trajectory?",
+    "How does my protection compare to my income obligations?"
+  ],
+
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Strong habits. Nominations current, both LPAs in place, life cover in trust.",
+      "action": "Annual review on direct debits and savings rates.",
+      "future": "Consistent behaviour compounds — the foundation under every other dimension."
+    },
+    "capital": {
+      "risk": "£484k NW at 35 puts you comfortably ahead for accumulation. Director company stake is concentrated risk.",
+      "action": "Review director-stake concentration as a % of NW annually.",
+      "future": "Being ahead at this stage means optionality on every later decision."
+    },
+    "tax": {
+      "risk": "ISA half-used. Carry-forward AA mostly unused. Director route to pension under-utilised.",
+      "action": "Top up SIPP via corporate contribution. Use remaining ISA allowance before 5 April.",
+      "future": "Tax efficiency at 35 compounds for 30+ years before drawdown."
+    },
+    "protection": {
+      "risk": "All four core protection types in place (life · CI · IP · relevant life). Strong position.",
+      "action": "Review CI cover relative to income obligations every 2 years.",
+      "future": "Comprehensive cover removes early-death risk from the wealth plan entirely."
+    },
+    "cashflow": {
+      "risk": "£28k cash is 5 months of essentials — at the lower bound for a director.",
+      "action": "Build emergency fund to 6 months given variable dividend income.",
+      "future": "Cash buffer protects against forced asset sales in market downturns."
+    },
+    "debt": {
+      "risk": "BTL mortgage at 5.4% is the highest-rate exposure. Credit card cleared monthly.",
+      "action": "Consider remortgaging BTL in 2027 when fixed rate ends.",
+      "future": "Debt servicing under 25% of net income — healthy."
+    },
+    "estate": {
+      "risk": "SIPP enters estate April 2027. PET clocks active on £28k gifted. BPR-qualifying business stake provides relief.",
+      "action": "Plan SIPP drawdown sequence ahead of April 2027.",
+      "future": "Combined RNRB + NRB + BPR positions estate well below IHT threshold at current NW."
+    }
+  },
+
+  "archetype_specific": {
+    "lifestage_snapshot": "accumulation",
+    "pension_consolidation_candidates": ["dc-pot-legacy-aviva", "dc-pot-legacy-nest"],
+    "lisa_state": null,
+    "lisa_eligibility_reason": "Out-of-stage: past Foundation life stage",
+    "single_estate_marker": true,
+    "director_marker": true,
+    "btl_landlord_marker": true
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [60, 70],
+      "confidence": "high",
+      "confidence_downgrade_reasons": [],
+      "dimensions": {
+        "behaviour": { "range": [70, 80], "confidence": "high" },
+        "capital":   { "range": [62, 72], "confidence": "high" },
+        "tax":       { "range": [55, 68], "confidence": "high" },
+        "protection":{ "range": [75, 85], "confidence": "high" },
+        "cashflow":  { "range": [60, 72], "confidence": "high" },
+        "debt":      { "range": [55, 68], "confidence": "high" },
+        "estate":    { "range": [65, 75], "confidence": "high" }
+      }
+    },
+    "risk_score": {
+      "value_range": [60, 72],
+      "confidence": "high",
+      "dimensions_to_populate_in_session_3": "7 RISK-1.0 dimensions per s07 spec"
+    },
+    "net_worth": {
+      "value_range": [475000, 495000],
+      "point_estimate_explanation": "fixture-controlled — should compute to ~£484k",
+      "confidence": "high",
+      "staleness_flags": [],
+      "excluded_assets": [],
+      "excluded_asset_reasons": {}
+    },
+    "iht_projection": {
+      "value_range": [0, 8000],
+      "confidence": "high",
+      "explanation": "Estate ~£484k less BPR-qualifying £145k = £339k taxable, below NRB£325k + RNRB£175k = £500k allowance. Marginal exposure only."
+    },
+    "cost_of_inaction": {
+      "value_range": [3000, 8000],
+      "confidence": "high",
+      "explanation": "CoI driven by unused AA carry-forward + partial ISA + protection gap review cycle"
+    },
+    "financial_profile_cell": "III-B",
+    "archetype_classification": "02 uk-single-accumulation-director",
+    "apq_items_expected": [
+      "carry-forward-aa-unused",
+      "isa-allowance-partial",
+      "btl-fixed-rate-ending-2027",
+      "sipp-iht-2027-deadline",
+      "pension-consolidation-opportunity",
+      "emergency-fund-below-6mo",
+      "ci-cover-review-due"
+    ]
+  }
+}

@@ -1,0 +1,440 @@
+{
+  "id": "a",
+  "name": "Bruce Wayne",
+  "displayName": "Bruce Wayne · 62",
+  "type": "individual",
+  "isIFA": false,
+  "lifeStage": 5,
+  "lifeStageName": "Decumulation",
+  "lifeStageAge": "65–75",
+  "hasBusiness": false,
+  "isCouple": false,
+  "hasTrust": true,
+  "hasDBPension": false,
+  "isHigherRateTaxpayer": false,
+  "age": 62,
+  "targetIncome": 120000,
+  "dataLastUpdated": "2026-04-19",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+  "drawdown": 0,
+  "assets": {
+    "sipp": {
+      "total": 850000,
+      "growth": 0.05,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "name": "Vanguard SIPP",
+          "value": 420000,
+          "type": "SIPP",
+          "provider": "Vanguard",
+          "charge": 0.0015,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2025-01-10"
+        },
+        {
+          "name": "Hargreaves Lansdown SIPP",
+          "value": 280000,
+          "type": "SIPP",
+          "provider": "Hargreaves Lansdown",
+          "charge": 0.0045,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2025-03-22"
+        },
+        {
+          "name": "Wayne Enterprises DC (legacy)",
+          "value": 150000,
+          "type": "Workplace DC",
+          "provider": "Aviva",
+          "charge": 0.0065,
+          "chargeIsEstimate": true,
+          "transferEligible": true,
+          "nominationDate": "2019-06-01"
+        }
+      ]
+    },
+    "isa": {
+      "value": 420000,
+      "growth": 0.05
+    },
+    "residence": {
+      "value": 1800000,
+      "ownership": "sole",
+      "ownershipShare": 1.0,
+      "address": "12 Chester Square, London SW1W"
+    },
+    "portfolio": {
+      "value": 380000,
+      "growth": 0.05,
+      "ret": 0.141,
+      "bpr": false
+    },
+    "cash": {
+      "total": 180000,
+      "own": 180000,
+      "rate": 0.045
+    },
+    "trustGifts": {
+      "each": 250000,
+      "total": 500000,
+      "date": "2024-02-14",
+      "numChildren": 2,
+      "trustType": "Discretionary"
+    },
+    "protection": {
+      "lifeInsurance": {
+        "exists": false,
+        "amount": 0,
+        "inTrust": false,
+        "premium": 0
+      },
+      "criticalIllness": {
+        "exists": false,
+        "amount": 0,
+        "premium": 0
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": {
+        "exists": false,
+        "amount": 0
+      },
+      "keyPerson": {
+        "exists": false,
+        "amount": 0
+      },
+      "shareholderProtection": {
+        "exists": false
+      }
+    }
+  },
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 0,
+      "monthlyPayment": 0,
+      "rateType": "none",
+      "rate": 0,
+      "remainingYears": 0
+    },
+    "otherLoans": []
+  },
+  "dependants": [
+    {
+      "type": "child",
+      "age": 28,
+      "financiallyDependent": false
+    },
+    {
+      "type": "child",
+      "age": 25,
+      "financiallyDependent": false
+    }
+  ],
+  "willStatus": "current",
+  "lpaStatus": "neither",
+  "guardianNamed": false,
+  "income": {
+    "statePension": {
+      "annual": 11973,
+      "startAge": 67
+    },
+    "employment": 0,
+    "dividends": 0,
+    "rentalIncome": 0,
+    "overseasIncome": 0
+  },
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "over-6",
+    "q12_income_protection": "no",
+    "q13_income_sources": "one",
+    "d6_nominations_complete": "some",
+    "d6_will_current": "yes",
+    "confidenceLevel": "medium"
+  },
+  "etfs": [
+    {
+      "ticker": "VWRL",
+      "name": "Vanguard FTSE All-World",
+      "val": "£148,000",
+      "pct": "+12.4%",
+      "up": true
+    },
+    {
+      "ticker": "SGLN",
+      "name": "iShares Physical Gold",
+      "val": "£86,200",
+      "pct": "+18.4%",
+      "up": true
+    },
+    {
+      "ticker": "INRG",
+      "name": "iShares Clean Energy",
+      "val": "£74,600",
+      "pct": "+7.1%",
+      "up": true
+    },
+    {
+      "ticker": "URNP",
+      "name": "Sprott Uranium Miners",
+      "val": "£41,300",
+      "pct": "+31.7%",
+      "up": true
+    },
+    {
+      "ticker": "VMID",
+      "name": "Vanguard FTSE 250",
+      "val": "£29,900",
+      "pct": "-2.8%",
+      "up": false
+    }
+  ],
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "353 days",
+      "headline": "Pension enters estate April 2027",
+      "context": "£850k SIPP becomes subject to IHT from 6 April 2027. Model drawdown now.",
+      "action": "Model drawdown options",
+      "screen": "tax",
+      "lifeStage": 5
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "No date",
+      "headline": "No life insurance on a £3.6m estate",
+      "context": "Trust funded but estate unprotected on early death.",
+      "action": "Review protection needs",
+      "screen": "money",
+      "lifeStage": 5
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "No date",
+      "headline": "No Lasting Power of Attorney",
+      "context": "No LPA in place. At 62 with a complex estate this is a material gap.",
+      "action": "Instruct solicitor",
+      "screen": "money",
+      "lifeStage": 5
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "Month 26 of 84",
+      "headline": "Trust gift clock — £500k gifted Feb 2024",
+      "context": "Taper relief begins February 2027.",
+      "action": "Review gift tracker",
+      "screen": "tax",
+      "lifeStage": 5
+    },
+    {
+      "level": "medium",
+      "colour": "#007AFF",
+      "badge": "OPPORTUNITY",
+      "days": "This tax year",
+      "headline": "£3,000 CGT allowance — use or lose",
+      "context": "Bed-and-ISA saves future CGT on unrealised gains.",
+      "action": "CGT planner",
+      "screen": "money",
+      "lifeStage": 5
+    }
+  ],
+  "timeline": [
+    {
+      "dot": "⏳",
+      "bg": "#FFF3F3",
+      "date": "6 April 2027",
+      "title": "SIPP enters estate",
+      "sub": "£850k SIPP subject to IHT if not addressed"
+    },
+    {
+      "dot": "🎁",
+      "bg": "#FFF8E8",
+      "date": "February 2031",
+      "title": "Trust gifts fully IHT-free",
+      "sub": "7-year clock completes on £500k gifted Feb 2024"
+    },
+    {
+      "dot": "🏦",
+      "bg": "#E8F7EF",
+      "date": "Age 67",
+      "title": "State pension begins",
+      "sub": "£11,973/yr — reduces drawdown requirement"
+    }
+  ],
+  "aiSuggestions": [
+    "What is my cost of inaction if I don't start drawdown before April 2027?",
+    "Show me three drawdown strategies and their IHT impact",
+    "Should I consolidate my three pensions before drawing down?",
+    "What LPA and protection does a £3.6m estate need?"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Strong habits. Your nominations are current and your trust gifts are in motion.",
+      "action": "Keep reviewing direct debits and cash interest rates annually.",
+      "future": "Consistent behaviour compounds over decades — the foundation everything else sits on."
+    },
+    "capital": {
+      "risk": "At £3.6m vs a retirement number around £2.4m you are comfortably ahead.",
+      "action": "Review your retirement income target once a year as your situation evolves.",
+      "future": "Being ahead of your number gives you flexibility on drawdown timing and amount."
+    },
+    "tax": {
+      "risk": "Drawdown not started. SIPP entering the estate in under a year is the biggest tax decision on the table.",
+      "action": "Start SIPP drawdown. Use this year's £20,000 ISA allowance and £3,000 CGT allowance via Bed-and-ISA.",
+      "future": "Every year of unused allowances is a permanent loss — they don't carry forward."
+    },
+    "protection": {
+      "risk": "No life cover on a £3.6m estate. Your family is exposed on early death.",
+      "action": "Set up life insurance written into a discretionary trust — stays outside the estate for IHT.",
+      "future": "Life insurance in trust means your family gets the full amount. Outside trust, 40% of it goes to HMRC."
+    },
+    "cashflow": {
+      "risk": "£180k cash gives you over 4 years of spending runway. Strong.",
+      "action": "Consider whether cash above 24 months of expenses should be moved into an ISA.",
+      "future": "Strong cashflow means you never have to sell investments at the wrong time."
+    },
+    "debt": {
+      "risk": "Debt-free. No action needed on this dimension.",
+      "action": "Continue to avoid new debt in decumulation.",
+      "future": "Remaining debt-free through retirement preserves more of your estate."
+    },
+    "estate": {
+      "risk": "SIPP enters the estate 6 April 2027. Cost of inaction based on current data: £340,000.",
+      "action": "Start pension drawdown now. Review pension nominations and confirm your will is current.",
+      "future": "Starting drawdown before April 2027 reduces both your SIPP pot and your IHT exposure at the same time."
+    }
+  },
+
+  "plans": [
+    {
+      "id": "plan-drawdown",
+      "type": "retirement",
+      "label": "Start phased SIPP drawdown before April 2027",
+      "target": { "date": "2027-04-05", "monthlyDrawdown": 8000, "tfcStrategy": "phased" },
+      "target_display": null,
+      "monthlyContribution": 0,
+      "lastReviewedAt": "2025-11-12",
+      "status": "active",
+      "createdAt": "2025-04-01"
+    },
+    {
+      "id": "plan-estate",
+      "type": "estate",
+      "label": "Reduce IHT exposure to near-zero by age 70",
+      "target": { "ihtCap": 50000, "rnrbUsed": true, "trustGiftsPlanned": 750000 },
+      "target_display": null,
+      "lastReviewedAt": "2025-02-14",
+      "status": "stale",
+      "createdAt": "2024-02-14"
+    },
+    {
+      "id": "plan-protection",
+      "type": "protection",
+      "label": "Add £1m life cover in trust",
+      "target": { "lifeCoverInTrust": 1000000 },
+      "target_display": null,
+      "lastReviewedAt": "2024-09-01",
+      "status": "stale",
+      "createdAt": "2024-09-01"
+    },
+    {
+      "id": "plan-tax",
+      "type": "tax",
+      "label": "Use ISA + CGT allowance fully each year",
+      "target": { "isaUsedPct": 1.0, "cgtAeaUsedPct": 1.0 },
+      "target_display": null,
+      "lastReviewedAt": "2026-03-15",
+      "status": "active",
+      "createdAt": "2024-04-06"
+    }
+  ],
+
+  "scenarios": [
+    {
+      "id": "scen-drawdown-now",
+      "name": "Start drawdown immediately (March 2026)",
+      "createdAt": "2026-03-08",
+      "changedFields": { "drawdownStart": "2026-03-01", "annualDraw": 95000 },
+      "deltaResults": { "ihtAt75": -180000, "netWorthAt85": -120000, "probabilityOfSuccess": 0.96 },
+      "status": "saved"
+    },
+    {
+      "id": "scen-downsize",
+      "name": "Downsize residence to £900k flat",
+      "createdAt": "2026-04-22",
+      "changedFields": { "residenceProceeds": 880000, "newResidenceCost": 920000 },
+      "deltaResults": { "liquidReleased": -40000, "ihtAt75": 0, "netWorthAt85": 0 },
+      "status": "saved"
+    },
+    {
+      "id": "scen-extra-gift",
+      "name": "Make additional £500k gift to trust",
+      "createdAt": "2026-04-30",
+      "changedFields": { "additionalTrustGift": 500000 },
+      "deltaResults": { "ihtAt75": -200000, "liquidPostGift": -500000, "probabilityOfSuccess": 0.91 },
+      "status": "saved"
+    }
+  ],
+
+  "trajectories": {
+    "netWorthHistory": [
+      { "date": "2025-06-01", "value": 3450000 },
+      { "date": "2025-07-01", "value": 3478000 },
+      { "date": "2025-08-01", "value": 3495000 },
+      { "date": "2025-09-01", "value": 3512000 },
+      { "date": "2025-10-01", "value": 3534000 },
+      { "date": "2025-11-01", "value": 3551000 },
+      { "date": "2025-12-01", "value": 3567000 },
+      { "date": "2026-01-01", "value": 3582000 },
+      { "date": "2026-02-01", "value": 3598000 },
+      { "date": "2026-03-01", "value": 3612000 },
+      { "date": "2026-04-01", "value": 3624000 },
+      { "date": "2026-05-01", "value": 3630000 }
+    ],
+    "scoreHistory": [
+      { "date": "2025-06-01", "score": 44 },
+      { "date": "2025-07-01", "score": 44 },
+      { "date": "2025-08-01", "score": 45 },
+      { "date": "2025-09-01", "score": 45 },
+      { "date": "2025-10-01", "score": 46 },
+      { "date": "2025-11-01", "score": 46 },
+      { "date": "2025-12-01", "score": 46 },
+      { "date": "2026-01-01", "score": 47 },
+      { "date": "2026-02-01", "score": 47 },
+      { "date": "2026-03-01", "score": 47 },
+      { "date": "2026-04-01", "score": 47 },
+      { "date": "2026-05-01", "score": 47 }
+    ],
+    "riskHistory": [
+      { "date": "2025-06-01", "score": 52 },
+      { "date": "2025-07-01", "score": 53 },
+      { "date": "2025-08-01", "score": 53 },
+      { "date": "2025-09-01", "score": 54 },
+      { "date": "2025-10-01", "score": 54 },
+      { "date": "2025-11-01", "score": 55 },
+      { "date": "2025-12-01", "score": 55 },
+      { "date": "2026-01-01", "score": 55 },
+      { "date": "2026-02-01", "score": 56 },
+      { "date": "2026-03-01", "score": 56 },
+      { "date": "2026-04-01", "score": 56 },
+      { "date": "2026-05-01", "score": 56 }
+    ]
+  }
+}

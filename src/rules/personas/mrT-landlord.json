@@ -1,0 +1,481 @@
+{
+  "fixture_id": "mrT-landlord",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK portfolio landlord at Consolidation life stage (age 50 — anchor archetype 38). Employed with rental portfolio as second income. Exercises Section 24 finance cost restriction (mortgage interest not deductible; basic-rate credit only), SDLT additional-dwelling surcharge history on each BTL acquisition, CGT on residential property disposal (with AEA), FHL transitional rules post-April-2025 regime-end (FHL sold in 2025/26 before preferred regime ended), PPR relief testing on former-home-converted-to-let, and incorporation consideration (not yet incorporated). Portfolio: 3 current BTL properties (2 residential, 1 HMO) + 1 FHL disposed in 2025/26. Rental income pushes total income into higher-rate band triggering Section 24 pain.",
+  "fixture_anchor_archetype": "38",
+  "archetypes_exercised": ["37", "38", "39", "40"],
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-landlord-primary",
+    "name": "Mr T Landlord",
+    "dob": "1976-04-23",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "employed",
+    "employer": "Synthetic Finance Ltd",
+    "gross_salary": 42000,
+    "income_band_salary_only": "basic-rate",
+    "rental_net_profit_after_expenses_excl_finance": 36800,
+    "total_income_pre_section24": 78800,
+    "income_band_total": "higher-rate",
+    "section_24_finance_cost": 28000,
+    "section_24_basic_rate_credit": 5600,
+    "taxable_income_actual": 78800,
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 20,
+    "life_stage": "consolidation",
+    "self_assessment_required": true
+  },
+
+  "partner": {
+    "id": "mrT-landlord-partner",
+    "name": "Mrs T Landlord",
+    "dob": "1978-11-03",
+    "gender": "F",
+    "residency_status": "UK-resident",
+    "employment_status": "employed-part-time",
+    "gross_salary": 28000,
+    "income_band": "basic-rate",
+    "state_pension_accrued_years": 14,
+    "rental_portfolio_owner": false
+  },
+
+  "relationships": [
+    {
+      "id": "marriage-1",
+      "type": "married",
+      "partner_entity_ref": "mrT-landlord-partner",
+      "start_date": "2005-04-22",
+      "end_date": null,
+      "pso_applicable": false,
+      "children_from_relationship": 2
+    }
+  ],
+
+  "children": [
+    {"id": "child-1", "name": "Child A", "dob": "2007-06-10", "age": 18, "dependent": false, "university_year": 1},
+    {"id": "child-2", "name": "Child B", "dob": "2010-09-15", "age": 15, "dependent": true}
+  ],
+
+  "rental_portfolio": {
+    "portfolio_summary": {
+      "current_properties": 3,
+      "disposed_properties_current_year": 1,
+      "total_gross_rent_current_year": 62400,
+      "total_finance_costs_current_year": 28000,
+      "total_other_allowable_expenses_current_year": 17600,
+      "net_rental_profit_before_section24_restriction": 44800,
+      "section_24_restriction": {
+        "finance_costs_restricted": 28000,
+        "basic_rate_credit_given": 5600,
+        "effective_tax_cost_vs_deductible": 5040,
+        "note": "At HR 40% tax rate, £28k interest would save £11,200 if fully deductible (pre-S24). Under S24, basic-rate credit £5,600 given. Effective cost = £11,200 - £5,600 = £5,600 extra tax vs pre-S24 regime."
+      }
+    },
+    "properties": [
+      {
+        "id": "btl-1",
+        "sub_type": "18A-residential-btl",
+        "description": "2-bed terrace, Manchester",
+        "status": "let",
+        "value": 185000,
+        "purchase_price": 130000,
+        "purchase_date": "2012-08-10",
+        "mortgage_id": "mortgage-btl-1",
+        "ownership": "sole",
+        "gross_rent_annual": 14400,
+        "void_months_per_year_estimate": 0.5,
+        "other_expenses_annual": 3200,
+        "sdlt_surcharge_paid": 3900,
+        "sdlt_surcharge_rate_at_purchase": 0.03,
+        "sdlt_surcharge_note": "3% SDLT surcharge applied at purchase as additional residential property; engine logs as sunk cost in acquisition history",
+        "last_valuation_date": "2026-01-20"
+      },
+      {
+        "id": "btl-2",
+        "sub_type": "18A-residential-btl",
+        "description": "3-bed semi, Leeds — former main home converted to let",
+        "status": "let",
+        "value": 265000,
+        "purchase_price": 195000,
+        "purchase_date": "2008-03-15",
+        "period_as_main_residence": {"from": "2008-03-15", "to": "2016-09-01", "years": 8.5},
+        "period_as_btl": {"from": "2016-09-01", "to_open_end": true, "years_to_date": 9.6},
+        "ppr_eligibility": {
+          "ppr_qualifying_period_years": 8.5,
+          "final_period_exemption_months": 9,
+          "estimated_ppr_exempt_fraction": 0.62,
+          "estimated_gain_if_sold": 70000,
+          "estimated_ppr_exempt_gain": 43400,
+          "estimated_chargeable_gain": 26600,
+          "engine_note": "PPR relief calc required on any disposal; final 9-month period adds to PPR-qualifying period; engine must model this correctly"
+        },
+        "mortgage_id": "mortgage-btl-2",
+        "ownership": "joint",
+        "ownership_split": {"mrT-landlord-primary": 0.5, "mrT-landlord-partner": 0.5},
+        "gross_rent_annual": 13200,
+        "other_expenses_annual": 3800,
+        "sdlt_surcharge_paid": 0,
+        "sdlt_surcharge_note": "Purchased as main residence in 2008; SDLT surcharge did not apply; engine records nil surcharge",
+        "last_valuation_date": "2026-01-20"
+      },
+      {
+        "id": "hmo-1",
+        "sub_type": "18B-hmo",
+        "description": "5-bed HMO, Sheffield — licensed",
+        "status": "let",
+        "value": 380000,
+        "purchase_price": 290000,
+        "purchase_date": "2018-05-20",
+        "hmo_licence_number": "SYK-HMO-2024-0821",
+        "hmo_licence_expiry": "2027-05-19",
+        "rooms_let": 5,
+        "gross_rent_annual": 34800,
+        "other_expenses_annual": 10600,
+        "mortgage_id": "mortgage-hmo-1",
+        "ownership": "sole",
+        "sdlt_surcharge_paid": 11700,
+        "sdlt_surcharge_rate_at_purchase": 0.03,
+        "last_valuation_date": "2026-01-20"
+      }
+    ],
+    "disposed_properties": [
+      {
+        "id": "fhl-1-disposed",
+        "sub_type": "18C-furnished-holiday-let",
+        "description": "FHL cottage, Cornwall — sold September 2025",
+        "status": "disposed",
+        "purchase_price": 148000,
+        "purchase_date": "2019-03-12",
+        "disposal_date": "2025-09-30",
+        "disposal_proceeds": 192000,
+        "allowable_acquisition_costs": 2200,
+        "allowable_disposal_costs": 3800,
+        "gain_before_relief": 37800,
+        "aei_allowable_improvements": 4000,
+        "net_gain": 38000,
+        "aea_applied": 3000,
+        "chargeable_gain": 35000,
+        "cgt_paid": 8400,
+        "cgt_rate_applied": 0.24,
+        "cgt_paid_date": "2026-01-31",
+        "fhl_regime_end": "2025-04-05",
+        "disposal_timing_note": "FHL regime ended 5 April 2025; sold in Sep 2025 post-regime-end; no BADR available (ceased to be FHL from April 2025); taxed as standard residential CGT at 24% HR rate",
+        "fhl_pre_regime_end_benefits_lost": ["BADR eligibility", "pension-contribution-relief-on-FHL-profit"],
+        "sdlt_surcharge_paid": 6640,
+        "sdlt_surcharge_rate_at_purchase": 0.03
+      }
+    ]
+  },
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-primary",
+        "owner": "mrT-landlord-primary",
+        "type": "SIPP",
+        "provider": "AJ Bell",
+        "balance": 165000,
+        "contribution_monthly_personal": 400,
+        "contribution_monthly_employer": 0,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.005,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Mrs T Landlord", "pct": 100}],
+          "date_set": "2021-06-10",
+          "stale": false
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "workplace-dc-partner",
+        "owner": "mrT-landlord-partner",
+        "type": "occupational-DC",
+        "provider": "Nest",
+        "balance": 52000,
+        "contribution_monthly_employer": 112,
+        "contribution_monthly_personal": 112,
+        "growth_rate_assumption": 0.045,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-10"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-ss-primary",
+        "owner": "mrT-landlord-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 42000,
+        "contribution_current_tax_year": 10000,
+        "growth_rate_assumption": 0.06,
+        "charges_percent": 0.003,
+        "last_valuation_date": "2026-04-20"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "main-residence",
+        "type": "main-residence",
+        "value": 520000,
+        "purchase_price": 420000,
+        "purchase_date": "2016-10-05",
+        "mortgage_id": "mortgage-main",
+        "ownership": "joint",
+        "ownership_split": {"mrT-landlord-primary": 0.5, "mrT-landlord-partner": 0.5},
+        "last_valuation_date": "2026-02-01"
+      },
+      {"$ref": "btl-1"},
+      {"$ref": "btl-2"},
+      {"$ref": "hmo-1"}
+    ],
+
+    "bank": [
+      {
+        "id": "joint-current",
+        "owner": "joint",
+        "type": "current-account",
+        "provider": "HSBC",
+        "balance": 12000,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "rental-reserve-savings",
+        "owner": "mrT-landlord-primary",
+        "type": "savings",
+        "provider": "Marcus",
+        "balance": 35000,
+        "interest_rate": 0.042,
+        "last_valuation_date": "2026-04-22",
+        "purpose": "Rental void and repair reserve + tax reserve for rental profits; earmarked; not fully discretionary"
+      }
+    ]
+  },
+
+  "liabilities": [
+    {
+      "id": "mortgage-main",
+      "type": "residential-mortgage",
+      "lender": "Nationwide",
+      "outstanding_balance": 285000,
+      "original_balance": 336000,
+      "interest_rate": 0.039,
+      "rate_type": "fixed-until-2028",
+      "term_remaining_years": 18,
+      "monthly_payment": 1680,
+      "secured_on": "main-residence",
+      "jointly_held": true
+    },
+    {
+      "id": "mortgage-btl-1",
+      "type": "btl-mortgage",
+      "lender": "The Mortgage Works",
+      "outstanding_balance": 105000,
+      "interest_rate": 0.047,
+      "rate_type": "fixed-until-2027",
+      "term_remaining_years": 14,
+      "monthly_payment_interest_only": 412,
+      "repayment_basis": "interest-only",
+      "secured_on": "btl-1",
+      "annual_interest_cost": 4935
+    },
+    {
+      "id": "mortgage-btl-2",
+      "type": "btl-mortgage",
+      "lender": "BM Solutions",
+      "outstanding_balance": 125000,
+      "interest_rate": 0.052,
+      "rate_type": "tracker",
+      "term_remaining_years": 11,
+      "monthly_payment_interest_only": 542,
+      "repayment_basis": "interest-only",
+      "secured_on": "btl-2",
+      "jointly_held": true,
+      "annual_interest_cost": 6500
+    },
+    {
+      "id": "mortgage-hmo-1",
+      "type": "btl-mortgage-commercial",
+      "lender": "Aldermore",
+      "outstanding_balance": 218000,
+      "interest_rate": 0.062,
+      "rate_type": "fixed-until-2026",
+      "rate_review_due": "2026-09-01",
+      "term_remaining_years": 17,
+      "monthly_payment_interest_only": 1126,
+      "repayment_basis": "interest-only",
+      "secured_on": "hmo-1",
+      "annual_interest_cost": 13512,
+      "rate_review_apq": "HMO mortgage rate fixed until Sep 2026; review approaching; stress-test remortgage at current market rates"
+    }
+  ],
+
+  "protection": [
+    {
+      "id": "life-joint",
+      "type": "life-insurance-joint-first-death",
+      "provider": "Legal & General",
+      "cover_amount": 450000,
+      "premium_monthly": 44,
+      "term_years": 25,
+      "start_date": "2016-11-01",
+      "trust_status": "in-trust-verified",
+      "trust_beneficiaries": ["child-1", "child-2"]
+    },
+    {
+      "id": "ip-primary",
+      "type": "income-protection",
+      "owner": "mrT-landlord-primary",
+      "cover_monthly": 2800,
+      "deferred_period_weeks": 13,
+      "premium_monthly": 48,
+      "start_date": "2016-11-01",
+      "cover_basis": "own-occupation",
+      "note": "Covers employed income only; rental income NOT covered by this policy — gap if disability prevents managing portfolio"
+    }
+  ],
+
+  "gifts_and_trusts": [],
+
+  "events": [
+    {"date": "2005-04-22", "type": "relationship-start", "relationship": "married"},
+    {"date": "2008-03-15", "type": "property-purchase", "asset_id": "btl-2", "amount": 195000, "note": "Purchased as main residence"},
+    {"date": "2012-08-10", "type": "property-purchase", "asset_id": "btl-1", "amount": 130000, "sdlt_surcharge": 3900},
+    {"date": "2016-09-01", "type": "main-residence-change", "from": "btl-2", "to": "main-residence", "btl-2-status-change": "former-main-home-now-let", "ppr-period-ceases": "2016-09-01"},
+    {"date": "2016-10-05", "type": "property-purchase", "asset_id": "main-residence", "amount": 420000, "sdlt_surcharge": 0, "note": "New main residence"},
+    {"date": "2018-05-20", "type": "property-purchase", "asset_id": "hmo-1", "amount": 290000, "sdlt_surcharge": 11700},
+    {"date": "2019-03-12", "type": "property-purchase", "asset_id": "fhl-1-disposed", "amount": 148000, "sdlt_surcharge": 6640},
+    {"date": "2025-04-05", "type": "fhl-regime-end", "note": "FHL special tax regime abolished; FHL properties now treated as standard residential BTL for CGT, NI, pension contributions"},
+    {"date": "2025-09-30", "type": "property-disposal", "asset_id": "fhl-1-disposed", "proceeds": 192000, "gain": 38000, "cgt_rate": 0.24},
+    {"date": "2026-01-31", "type": "cgt-paid", "asset_id": "fhl-1-disposed", "amount": 8400},
+    {"date": "2026-02-01", "type": "property-valuation-bulk", "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
+    {"date": "2026-09-01", "type": "hmo-mortgage-rate-review", "asset_id": "hmo-1", "status": "upcoming", "action_required": "remortgage review"}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "rental_portfolio.properties[0].value", "expected_behaviour": "BTL property valuations are periodic estimates; engine flags amber if >12 months since last valuation; range added to net worth confidence band"},
+      {"location": "liabilities[3].rate_review_due", "expected_behaviour": "HMO mortgage rate review Sep 2026; engine projects rate stress-test at current market rates; cashflow impact range added if rate increases 2% above current"},
+      {"location": "individual.rental_net_profit_after_expenses_excl_finance", "expected_behaviour": "Rental income variable (void periods, repairs); engine uses current-year figure with void-sensitivity range; cashflow and capital dimensions use range not point"}
+    ],
+    "fp5": [
+      {"location": "rental_portfolio.properties[1].ppr_eligibility", "expected_behaviour": "PPR claim on btl-2 depends on verifiable residency evidence; engine models PPR fraction from stated dates but flags as user-confirmed-required; if dates not evidenced, CGT calc uses nil PPR — engine shows both scenarios"},
+      {"location": "rental_portfolio.disposed_properties[0].fhl_pre_regime_end_benefits_lost", "expected_behaviour": "FHL regime ended April 2025; BADR no longer available post-disposal in Sept 2025; engine applies standard 24% HR CGT rate; confirms no BADR eligibility on FHL disposed post-regime-end"}
+    ]
+  },
+
+  "archetype_specific": {
+    "portfolio_type": "mixed-residential",
+    "sub_types_held": ["18A-residential-btl", "18B-hmo", "18C-fhl-disposed"],
+    "section_24_profile": {
+      "total_finance_costs": 28000,
+      "basic_rate_credit": 5600,
+      "effective_additional_tax_vs_pre_s24": 5600,
+      "total_income_for_section_24_restriction": 78800,
+      "higher_rate_taxpayer": true,
+      "s24_pain_level": "high"
+    },
+    "sdlt_surcharge_history": [
+      {"property": "btl-1", "amount": 3900, "year": 2012},
+      {"property": "btl-2", "amount": 0, "year": 2008, "note": "main residence at purchase"},
+      {"property": "hmo-1", "amount": 11700, "year": 2018},
+      {"property": "fhl-1-disposed", "amount": 6640, "year": 2019}
+    ],
+    "ppr_position": {
+      "btl_2_former_main_home": true,
+      "ppr_qualifying_years": 8.5,
+      "ppr_final_period_months": 9,
+      "ppr_fraction_estimate": 0.62
+    },
+    "fhl_transitional_state": {
+      "fhl_held_at_regime_end": false,
+      "fhl_disposed_after_regime_end": true,
+      "disposal_date": "2025-09-30",
+      "badr_not_applicable": true,
+      "post_regime_cgt_rate_applied": 0.24
+    },
+    "incorporation_consideration": {
+      "status": "not-yet-incorporated",
+      "threshold": "portfolio >4 properties or rental income >£50k often triggers review",
+      "estimated_complexity": "high",
+      "note": "CGT on transfer of properties to company would be significant at current gain levels; SDLT also applies on transfer; incorporation requires detailed modelling — APQ specialist review item"
+    },
+    "hmo_licence_state": {
+      "licensed": true,
+      "expiry": "2027-05-19",
+      "rooms": 5,
+      "renewal_required": "2027"
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [58, 70],
+      "confidence": "medium",
+      "confidence_reason": "S24 restriction compresses cashflow; HMO mortgage rate review upcoming; property valuations periodic; FHL disposal CGT paid but complex history",
+      "dimensions": {
+        "behaviour": {"range": [60, 72], "confidence": "medium"},
+        "capital": {"range": [62, 75], "confidence": "medium", "note": "Substantial property equity; SIPP growing; ISA building"},
+        "tax": {"range": [45, 62], "confidence": "medium", "note": "S24 creating significant tax drag; no incorporation structure; rental tax complexity penalises this dimension"},
+        "protection": {"range": [60, 72], "confidence": "high", "note": "Life in trust; IP covers employment; rental income gap in IP noted"},
+        "cashflow": {"range": [48, 62], "confidence": "low", "note": "S24 + upcoming HMO rate review + void sensitivity = wide cashflow range"},
+        "debt": {"range": [45, 60], "confidence": "high", "note": "High total debt across portfolio; all interest-only BTL mortgages; no capital repayment on BTL stack"},
+        "estate": {"range": [55, 68], "confidence": "medium", "note": "Property estate significant; RNRB available; life in trust helps"}
+      }
+    },
+    "risk_score": {
+      "value_range": [52, 65],
+      "confidence": "medium"
+    },
+    "net_worth": {
+      "value_range": [720000, 820000],
+      "confidence": "medium",
+      "property_equity": {
+        "main_residence": 235000,
+        "btl_1_equity": 80000,
+        "btl_2_equity_50pct_share": 70000,
+        "hmo_equity": 162000
+      },
+      "staleness_flags": ["btl-1-last-valued-jan-2026", "btl-2-last-valued-jan-2026", "hmo-1-last-valued-jan-2026"],
+      "excluded_assets": []
+    },
+    "iht_projection": {
+      "value_range": [90000, 165000],
+      "confidence": "medium",
+      "confidence_reason": "Property estate above combined NRB + RNRB at current values; life policy in trust excluded; precise position depends on final valuations",
+      "exemption_flags": ["life-in-trust", "rnrb-direct-descendants-available", "spousal-exemption-first-death"],
+      "note": "IHT exposure driven by property equity above NRB/RNRB thresholds; no BPR on residential property; incorporation could create BPR path but complex"
+    },
+    "cost_of_inaction": {
+      "value_range": [5000, 18000],
+      "confidence": "medium",
+      "explanation": "Primary: S24 costing ~£5,600/yr in extra tax vs pre-S24 regime — incorporation review could eliminate but triggers other costs. Secondary: HMO mortgage rate review Sep 2026 — if rates rise 2% = £4,360/yr extra cost unflagged."
+    },
+    "financial_profile_cell": "III-C",
+    "archetype_classification": "38 uk-landlord-consolidation",
+    "apq_items_expected": [
+      "section-24-tax-drag-incorporation-review",
+      "hmo-mortgage-rate-review-sep-2026",
+      "btl-mortgage-interest-only-repayment-strategy",
+      "hmo-licence-renewal-2027",
+      "ppr-evidence-btl-2-former-home-document",
+      "income-protection-rental-income-gap",
+      "property-valuation-refresh-all-btl",
+      "sipp-contribution-increase-capacity"
+    ]
+  }
+}

@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sonuswealth — The Standing Report · probe 03</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ===================================================================
+   PROBE 03 — "The Standing Report"
+   Sonuswealth as your fiduciary's monthly dispatch.
+
+   Bold commitments:
+   - Instrument Serif for hero numbers (characterful, low-contrast)
+   - Geist for body (Swiss, modern, restrained)
+   - Brass gold accent (not the cliché gold; warm-metal-on-dark)
+   - Electric cyan for diff (cool family, distinct from brass)
+   - Lacquer red for alert (rich, not fluorescent)
+   - Constellation radar — stars sized by score, no polygon fill,
+     center is empty (no number), score moves to its own ticker
+   - Paragraph-led card layout — fiduciary's letter, not metric tiles
+   =================================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: auto; }
+
+body {
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  background: #0a0a0d;
+  color: #aaa;
+  padding: 56px 24px;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell {
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.intro {
+  margin-bottom: 56px;
+  max-width: 780px;
+}
+
+.intro__kicker {
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #c0925a;
+  margin-bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.intro__kicker::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: #c0925a;
+}
+
+.intro h1 {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 52px;
+  font-weight: 400;
+  color: #ebe4d4;
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 20px;
+}
+
+.intro h1 em {
+  font-style: italic;
+  color: #c0925a;
+}
+
+.intro p {
+  font-family: 'Geist', sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: #9c9890;
+  margin-bottom: 10px;
+}
+
+.intro strong {
+  color: #ebe4d4;
+  font-weight: 500;
+}
+
+
+/* ===================================================================
+   Theme scaffolding (probe-only frame around each card)
+   =================================================================== */
+
+.frame {
+  border-radius: 24px;
+  padding: 0;
+  margin-bottom: 32px;
+  overflow: hidden;
+  position: relative;
+}
+
+.frame__head {
+  padding: 18px 24px 16px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--hairline, rgba(255,255,255,0.06));
+}
+
+.frame__head strong {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.frame__head span {
+  color: var(--text-3);
+}
+
+.frame__body {
+  padding: 56px 56px 64px;
+}
+
+@media (max-width: 720px) {
+  .frame__body { padding: 32px 20px 40px; }
+}
+
+
+/* ===================================================================
+   THEME — NOCTURNE (dark)
+   =================================================================== */
+
+.theme-nocturne {
+  --bg:        #0d1117;     /* near-black, slightly warm */
+  --surface:   #181c25;
+  --surface-2: #1f242f;
+  --surface-3: #2a3140;
+
+  --hairline:        rgba(235, 228, 212, 0.08);
+  --hairline-strong: rgba(235, 228, 212, 0.18);
+
+  --text:      #ebe4d4;     /* bone white — warm cast like aged paper */
+  --text-2:    #a59c89;
+  --text-3:    #6f6759;
+  --text-proj: #7f7768;
+
+  --acc:       #c0925a;     /* BRASS — answer register, warm-metal-on-dark */
+  --acc-soft:  rgba(192, 146, 90, 0.12);
+  --acc-line:  rgba(192, 146, 90, 0.32);
+  --acc-deep:  #a37840;
+
+  --diff:      #4fb8d4;     /* electric cyan — distinct family from brass */
+  --alert:     #c44535;     /* lacquer red — rich, not fluorescent */
+
+  --star-halo: rgba(192, 146, 90, 0.30);
+  --star-ring: rgba(192, 146, 90, 0.60);
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+
+/* ===================================================================
+   THEME — DAYBREAK (light)
+   =================================================================== */
+
+.theme-daybreak {
+  --bg:        #ece4d0;     /* warm bone paper — REAL paper warmth */
+  --surface:   #f3ecd9;
+  --surface-2: #e2d8be;
+  --surface-3: #d2c6a8;
+
+  --hairline:        rgba(26, 22, 16, 0.10);
+  --hairline-strong: rgba(26, 22, 16, 0.22);
+
+  --text:      #1a1610;     /* coffee ink — warmer than black */
+  --text-2:    #4f4636;
+  --text-3:    #847862;
+  --text-proj: #948866;
+
+  --acc:       #8e6638;     /* DEEP BRASS — darker for paper contrast */
+  --acc-soft:  rgba(142, 102, 56, 0.10);
+  --acc-line:  rgba(142, 102, 56, 0.32);
+  --acc-deep:  #6a4a26;
+
+  --diff:      #3a7a8a;     /* muted teal */
+  --alert:     #8a2c20;     /* deep lacquer red */
+
+  --star-halo: rgba(142, 102, 56, 0.25);
+  --star-ring: rgba(142, 102, 56, 0.60);
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+
+/* ===================================================================
+   THE CARD — "Standing Report" layout
+   =================================================================== */
+
+.report {
+  font-family: 'Geist', sans-serif;
+  color: var(--text);
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* Date stamp + addressee — feels like a real letter */
+.report__masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--hairline-strong);
+  margin-bottom: 36px;
+}
+
+.report__mast-left .label {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+
+.report__mast-left .title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.report__mast-left .title em {
+  font-style: italic;
+  color: var(--acc);
+}
+
+.report__mast-right {
+  text-align: right;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: var(--text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.report__mast-right .date {
+  color: var(--text-2);
+  font-size: 11.5px;
+}
+
+
+/* HERO row — the big number with horizon */
+
+.report__hero {
+  display: flex;
+  align-items: baseline;
+  gap: 32px;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+}
+
+.report__hero-figure {
+  font-family: 'Instrument Serif', serif;
+  font-size: 88px;
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -2.5px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.report__hero-figure .currency {
+  color: var(--text-3);
+  font-size: 68px;
+  font-style: italic;
+  margin-right: 4px;
+}
+
+.report__hero-meta {
+  flex: 1;
+  min-width: 200px;
+  padding-bottom: 8px;
+}
+
+.report__hero-meta .meta-label {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.report__hero-meta .meta-projection {
+  font-family: 'Instrument Serif', serif;
+  font-size: 19px;
+  font-style: italic;
+  color: var(--text-2);
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+.report__hero-meta .meta-projection .figure {
+  font-style: normal;
+  color: var(--acc);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.report__hero-meta .delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--diff);
+  font-variant-numeric: tabular-nums;
+}
+
+.report__hero-meta .delta::before {
+  content: '↑';
+  font-family: 'Instrument Serif', serif;
+  font-size: 16px;
+}
+
+
+/* BRIEF — the paragraph (this is the Warren-strong move) */
+
+.report__brief {
+  font-family: 'Geist', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-2);
+  margin-bottom: 48px;
+  max-width: 640px;
+}
+
+.report__brief .figure {
+  color: var(--acc);
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+}
+
+.report__brief strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+
+/* CONSTELLATION — the redesigned radar */
+
+.constellation {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto 56px;
+  aspect-ratio: 1;
+}
+
+.constellation svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.c-ring {
+  fill: none;
+  stroke: var(--hairline);
+  stroke-width: 0.5;
+  stroke-dasharray: 1 3;
+}
+
+.c-axis {
+  stroke: var(--hairline);
+  stroke-width: 0.5;
+}
+
+.c-thread {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+
+.c-label {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  fill: var(--text-3);
+}
+
+.c-label-score {
+  font-family: 'Instrument Serif', serif;
+  font-size: 14px;
+  font-weight: 400;
+  font-style: italic;
+  fill: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.c-star {
+  /* filled with dim identity color via inline style */
+}
+
+.c-halo {
+  fill: var(--star-halo);
+  filter: blur(8px);
+  opacity: 0.7;
+}
+
+.c-handle {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 0.5;
+  stroke-dasharray: 1 2;
+  opacity: 0.45;
+}
+
+.c-center {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.c-center-mark {
+  fill: var(--acc);
+}
+
+
+/* TICKERS — Wealth Score · Risk · Plan as 3 separate facts beneath constellation */
+
+.tickers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  padding: 24px 0;
+  border-top: 1px solid var(--hairline-strong);
+  border-bottom: 1px solid var(--hairline-strong);
+  margin-bottom: 36px;
+}
+
+.ticker {
+  padding: 0 24px;
+  border-right: 1px solid var(--hairline);
+}
+
+.ticker:last-child { border-right: 0; }
+
+.ticker__label {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+
+.ticker__value {
+  font-family: 'Instrument Serif', serif;
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ticker__value sup {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+.ticker--answer .ticker__value { color: var(--acc); }
+.ticker--answer .ticker__value sup { color: var(--text-3); }
+
+.ticker__sub {
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  .tickers { grid-template-columns: 1fr; gap: 0; padding: 0; border-bottom: 0; }
+  .ticker { border-right: 0; border-bottom: 1px solid var(--hairline); padding: 16px 0; }
+  .ticker:last-child { border-bottom: 0; }
+}
+
+
+/* CTA + signoff */
+
+.report__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.report__sig {
+  font-family: 'Instrument Serif', serif;
+  font-size: 17px;
+  font-style: italic;
+  color: var(--text-3);
+  line-height: 1.3;
+}
+
+.report__sig strong {
+  font-style: normal;
+  color: var(--text-2);
+  font-weight: 400;
+  display: block;
+  font-size: 13px;
+  font-family: 'Geist Mono', monospace;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.report__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 22px;
+  background: transparent;
+  color: var(--acc);
+  border: 1px solid var(--acc-line);
+  border-radius: 999px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.report__cta::after {
+  content: '→';
+  font-family: 'Instrument Serif', serif;
+  font-size: 18px;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.report__cta:hover {
+  background: var(--acc-soft);
+  transform: translateY(-1px);
+}
+
+
+/* Mode pill (corner of masthead — only when not Today) */
+.report__mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--acc);
+  padding: 5px 11px;
+  border: 1px solid var(--acc-line);
+  border-radius: 999px;
+}
+
+.report__mode-pill::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--acc);
+}
+
+
+/* --- Compare-style footer note --- */
+
+.note-strip {
+  margin-top: 80px;
+  padding: 32px 28px;
+  background: #14161c;
+  border: 1px solid #25272f;
+  border-radius: 16px;
+  font-family: 'Geist', sans-serif;
+  color: #aaa;
+}
+
+.note-strip h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: #fff;
+  margin-bottom: 18px;
+}
+
+.note-strip h2 em { color: #c0925a; font-style: italic; }
+
+.note-strip ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; font-size: 13.5px; line-height: 1.55; }
+.note-strip li { padding-left: 18px; position: relative; color: #c8c5bd; }
+.note-strip li::before { content: '·'; position: absolute; left: 0; top: -2px; color: #c0925a; font-size: 18px; }
+.note-strip li strong { color: #fff; font-weight: 500; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+@media (max-width: 720px) { .note-strip ul { grid-template-columns: 1fr; } }
+</style>
+</head>
+
+<body>
+
+<div class="shell">
+
+  <section class="intro">
+    <span class="intro__kicker">Probe 03 · single direction · radar redesigned</span>
+    <h1>The <em>Standing</em> Report.</h1>
+    <p>Sonuswealth as your fiduciary's monthly dispatch — not a dashboard. <strong>Instrument Serif</strong> for hero numbers, <strong>Geist</strong> for body, <strong>brass</strong> as the one signal color, <strong>electric cyan</strong> for diffs, <strong>lacquer red</strong> for alerts. The radar becomes a <strong>constellation</strong>: stars sized by dim score, no polygon fill, score moves out of the center entirely.</p>
+    <p style="color: #6f6759;">Two themes follow. Read the brief paragraph cold — that's the test.</p>
+  </section>
+
+
+  <!-- ============================================================
+       NOCTURNE — dark
+       ============================================================ -->
+  <div class="frame theme-nocturne">
+    <div class="frame__head">
+      <strong>Nocturne · dark</strong>
+      <span>consumer · mobile · bedside</span>
+    </div>
+    <div class="frame__body">
+
+      <article class="report">
+
+        <header class="report__masthead">
+          <div class="report__mast-left">
+            <p class="label">A standing report for</p>
+            <h1 class="title">Dima · <em>your wealth</em> · May</h1>
+          </div>
+          <div class="report__mast-right">
+            <div class="date">13 May 2026</div>
+            <div>No. 14 · monthly</div>
+          </div>
+        </header>
+
+        <div class="report__hero">
+          <div class="report__hero-figure"><span class="currency">£</span>487,200</div>
+          <div class="report__hero-meta">
+            <p class="meta-label">Net Worth · Today</p>
+            <p class="meta-projection">On your current course: <span class="figure">£612K</span> by 2031.</p>
+            <span class="delta">£8.2K this week</span>
+          </div>
+        </div>
+
+        <p class="report__brief">
+          You're holding wealth across pensions, ISAs, and the home worth a combined <span class="figure">£487K</span>. Of that, roughly <span class="figure">£73K</span> sits inside tax shelters; <span class="figure">£18,200</span> of this year's ISA allowance is still on the table. <strong>Safety net</strong> remains the one chart point that wants attention — a single protection review would change the shape below.
+        </p>
+
+        <div class="constellation">
+          <svg viewBox="0 0 480 480" aria-hidden="true">
+
+            <!-- Concentric altitude rings (dashed, very fine) -->
+            <circle class="c-ring" cx="240" cy="240" r="60"/>
+            <circle class="c-ring" cx="240" cy="240" r="120"/>
+            <circle class="c-ring" cx="240" cy="240" r="180"/>
+            <circle class="c-ring" cx="240" cy="240" r="200"/>
+
+            <!-- Axes (very fine) -->
+            <line class="c-axis" x1="240" y1="240" x2="240" y2="40"/>
+            <line class="c-axis" x1="240" y1="240" x2="435.0" y2="139.4"/>
+            <line class="c-axis" x1="240" y1="240" x2="431.0" y2="330.4"/>
+            <line class="c-axis" x1="240" y1="240" x2="284.5" y2="435.2"/>
+            <line class="c-axis" x1="240" y1="240" x2="195.5" y2="435.2"/>
+            <line class="c-axis" x1="240" y1="240" x2="49.0" y2="330.4"/>
+            <line class="c-axis" x1="240" y1="240" x2="45.0" y2="139.4"/>
+
+            <!-- Polygon thread (subtle brass, 60% opacity) — connects the stars -->
+            <!-- Score positions: 70%, 61%, 56%, 50%, 75%, 64%, 50% -->
+            <!-- Radii: 140, 122, 112, 100, 150, 128, 100 -->
+            <!-- (radius * cos/sin from center 240,240) -->
+            <polygon class="c-thread" points="
+              240,100
+              345.7,166.9
+              337.0,296.2
+              296.7,330.4
+              183.3,330.4
+              125.0,296.2
+              153.7,150.0
+            "/>
+
+            <!-- Labels — outer ring, mono -->
+            <text class="c-label" x="240" y="22" text-anchor="middle">Habits</text>
+            <text class="c-label" x="240" y="32" text-anchor="middle" dy="0">
+              <tspan class="c-label-score" dy="0">14/20</tspan>
+            </text>
+            <text class="c-label" x="450" y="120" text-anchor="middle">Own</text>
+            <text class="c-label-score" x="450" y="132" text-anchor="middle">11/18</text>
+            <text class="c-label" x="450" y="340" text-anchor="middle">Tax</text>
+            <text class="c-label-score" x="450" y="352" text-anchor="middle">10/18</text>
+            <text class="c-label" x="290" y="464" text-anchor="middle">Safety</text>
+            <text class="c-label-score" x="290" y="476" text-anchor="middle">8/16</text>
+            <text class="c-label" x="190" y="464" text-anchor="middle">Flow</text>
+            <text class="c-label-score" x="190" y="476" text-anchor="middle">12/16</text>
+            <text class="c-label" x="30" y="340" text-anchor="middle">Debt</text>
+            <text class="c-label-score" x="30" y="352" text-anchor="middle">9/14</text>
+            <text class="c-label" x="30" y="120" text-anchor="middle">Legacy</text>
+            <text class="c-label-score" x="30" y="132" text-anchor="middle">14/28</text>
+
+            <!-- Stars (size scales with score 0–100%; here 50–75% range; star radius 5–8px) -->
+            <!-- Star = soft halo + ring + solid dim-identity dot -->
+            <g>
+              <circle class="c-halo" cx="240" cy="100" r="14"/>
+              <circle class="c-handle" cx="240" cy="100" r="12"/>
+              <circle cx="240" cy="100" r="6.5" fill="#4d8eff" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="240" cy="100" r="2.5" fill="#ebe4d4" opacity="0.8"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="345.7" cy="166.9" r="12"/>
+              <circle class="c-handle" cx="345.7" cy="166.9" r="11"/>
+              <circle cx="345.7" cy="166.9" r="5.8" fill="#00e5a8" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="345.7" cy="166.9" r="2.2" fill="#ebe4d4" opacity="0.8"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="337.0" cy="296.2" r="11"/>
+              <circle class="c-handle" cx="337.0" cy="296.2" r="10"/>
+              <circle cx="337.0" cy="296.2" r="5.4" fill="#ffb347" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="337.0" cy="296.2" r="2.0" fill="#ebe4d4" opacity="0.8"/>
+            </g>
+            <g>
+              <!-- Safety net = lowest, slightly emphasized with subtle alert ring -->
+              <circle class="c-halo" cx="296.7" cy="330.4" r="11" style="fill: rgba(196, 69, 53, 0.35);"/>
+              <circle class="c-handle" cx="296.7" cy="330.4" r="11" stroke="var(--alert)" stroke-dasharray="2 2" opacity="0.7"/>
+              <circle cx="296.7" cy="330.4" r="5.0" fill="#ff6b6b" stroke="var(--alert)" stroke-width="1"/>
+              <circle cx="296.7" cy="330.4" r="2.0" fill="#ebe4d4" opacity="0.9"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="183.3" cy="330.4" r="13"/>
+              <circle class="c-handle" cx="183.3" cy="330.4" r="12"/>
+              <circle cx="183.3" cy="330.4" r="6.2" fill="#34c759" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="183.3" cy="330.4" r="2.3" fill="#ebe4d4" opacity="0.8"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="125.0" cy="296.2" r="12"/>
+              <circle class="c-handle" cx="125.0" cy="296.2" r="11"/>
+              <circle cx="125.0" cy="296.2" r="5.7" fill="#af52de" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="125.0" cy="296.2" r="2.1" fill="#ebe4d4" opacity="0.8"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="153.7" cy="150.0" r="11"/>
+              <circle class="c-handle" cx="153.7" cy="150.0" r="10"/>
+              <circle cx="153.7" cy="150.0" r="5.0" fill="#ff9500" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="153.7" cy="150.0" r="2.0" fill="#ebe4d4" opacity="0.8"/>
+            </g>
+
+            <!-- Center: empty mark — NO number. Just a compass cross. -->
+            <circle class="c-center" cx="240" cy="240" r="14"/>
+            <line x1="232" y1="240" x2="248" y2="240" stroke="var(--acc)" stroke-width="1" opacity="0.7"/>
+            <line x1="240" y1="232" x2="240" y2="248" stroke="var(--acc)" stroke-width="1" opacity="0.7"/>
+            <circle class="c-center-mark" cx="240" cy="240" r="1.5"/>
+          </svg>
+        </div>
+
+        <!-- Tickers -->
+        <div class="tickers">
+          <div class="ticker ticker--answer">
+            <p class="ticker__label">Wealth Score</p>
+            <p class="ticker__value">60<sup>/100</sup></p>
+            <p class="ticker__sub">Mid-band. Composed.</p>
+          </div>
+          <div class="ticker">
+            <p class="ticker__label">Risk</p>
+            <p class="ticker__value">4.2<sup>/7</sup></p>
+            <p class="ticker__sub">Moderate. Within plan band.</p>
+          </div>
+          <div class="ticker">
+            <p class="ticker__label">Plan progress</p>
+            <p class="ticker__value">24<sup>%</sup></p>
+            <p class="ticker__sub">First home · target July 2029.</p>
+          </div>
+        </div>
+
+        <footer class="report__foot">
+          <div class="report__sig">
+            <em>From the Sonuswealth desk,</em>
+            <strong>Compiled for Dima — 13 May</strong>
+          </div>
+          <button class="report__cta">Drill the chart</button>
+        </footer>
+
+      </article>
+
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       DAYBREAK — light
+       ============================================================ -->
+  <div class="frame theme-daybreak">
+    <div class="frame__head">
+      <strong>Daybreak · light</strong>
+      <span>IFA · laptop · office</span>
+    </div>
+    <div class="frame__body">
+
+      <article class="report">
+
+        <header class="report__masthead">
+          <div class="report__mast-left">
+            <p class="label">A standing report for</p>
+            <h1 class="title">Dima · <em>your wealth</em> · May</h1>
+          </div>
+          <div class="report__mast-right">
+            <div class="date">13 May 2026</div>
+            <div>No. 14 · monthly</div>
+          </div>
+        </header>
+
+        <div class="report__hero">
+          <div class="report__hero-figure"><span class="currency">£</span>487,200</div>
+          <div class="report__hero-meta">
+            <p class="meta-label">Net Worth · Today</p>
+            <p class="meta-projection">On your current course: <span class="figure">£612K</span> by 2031.</p>
+            <span class="delta">£8.2K this week</span>
+          </div>
+        </div>
+
+        <p class="report__brief">
+          You're holding wealth across pensions, ISAs, and the home worth a combined <span class="figure">£487K</span>. Of that, roughly <span class="figure">£73K</span> sits inside tax shelters; <span class="figure">£18,200</span> of this year's ISA allowance is still on the table. <strong>Safety net</strong> remains the one chart point that wants attention — a single protection review would change the shape below.
+        </p>
+
+        <div class="constellation">
+          <svg viewBox="0 0 480 480" aria-hidden="true">
+
+            <circle class="c-ring" cx="240" cy="240" r="60"/>
+            <circle class="c-ring" cx="240" cy="240" r="120"/>
+            <circle class="c-ring" cx="240" cy="240" r="180"/>
+            <circle class="c-ring" cx="240" cy="240" r="200"/>
+
+            <line class="c-axis" x1="240" y1="240" x2="240" y2="40"/>
+            <line class="c-axis" x1="240" y1="240" x2="435.0" y2="139.4"/>
+            <line class="c-axis" x1="240" y1="240" x2="431.0" y2="330.4"/>
+            <line class="c-axis" x1="240" y1="240" x2="284.5" y2="435.2"/>
+            <line class="c-axis" x1="240" y1="240" x2="195.5" y2="435.2"/>
+            <line class="c-axis" x1="240" y1="240" x2="49.0" y2="330.4"/>
+            <line class="c-axis" x1="240" y1="240" x2="45.0" y2="139.4"/>
+
+            <polygon class="c-thread" points="
+              240,100
+              345.7,166.9
+              337.0,296.2
+              296.7,330.4
+              183.3,330.4
+              125.0,296.2
+              153.7,150.0
+            "/>
+
+            <text class="c-label" x="240" y="22" text-anchor="middle">Habits</text>
+            <text class="c-label-score" x="240" y="34" text-anchor="middle">14/20</text>
+            <text class="c-label" x="450" y="120" text-anchor="middle">Own</text>
+            <text class="c-label-score" x="450" y="132" text-anchor="middle">11/18</text>
+            <text class="c-label" x="450" y="340" text-anchor="middle">Tax</text>
+            <text class="c-label-score" x="450" y="352" text-anchor="middle">10/18</text>
+            <text class="c-label" x="290" y="464" text-anchor="middle">Safety</text>
+            <text class="c-label-score" x="290" y="476" text-anchor="middle">8/16</text>
+            <text class="c-label" x="190" y="464" text-anchor="middle">Flow</text>
+            <text class="c-label-score" x="190" y="476" text-anchor="middle">12/16</text>
+            <text class="c-label" x="30" y="340" text-anchor="middle">Debt</text>
+            <text class="c-label-score" x="30" y="352" text-anchor="middle">9/14</text>
+            <text class="c-label" x="30" y="120" text-anchor="middle">Legacy</text>
+            <text class="c-label-score" x="30" y="132" text-anchor="middle">14/28</text>
+
+            <g>
+              <circle class="c-halo" cx="240" cy="100" r="14"/>
+              <circle class="c-handle" cx="240" cy="100" r="12"/>
+              <circle cx="240" cy="100" r="6.5" fill="#3260c0" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="240" cy="100" r="2.5" fill="#f3ecd9" opacity="0.9"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="345.7" cy="166.9" r="12"/>
+              <circle class="c-handle" cx="345.7" cy="166.9" r="11"/>
+              <circle cx="345.7" cy="166.9" r="5.8" fill="#00875a" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="345.7" cy="166.9" r="2.2" fill="#f3ecd9" opacity="0.9"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="337.0" cy="296.2" r="11"/>
+              <circle class="c-handle" cx="337.0" cy="296.2" r="10"/>
+              <circle cx="337.0" cy="296.2" r="5.4" fill="#a36810" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="337.0" cy="296.2" r="2.0" fill="#f3ecd9" opacity="0.9"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="296.7" cy="330.4" r="11" style="fill: rgba(138, 44, 32, 0.30);"/>
+              <circle class="c-handle" cx="296.7" cy="330.4" r="11" stroke="var(--alert)" stroke-dasharray="2 2" opacity="0.7"/>
+              <circle cx="296.7" cy="330.4" r="5.0" fill="#b73a30" stroke="var(--alert)" stroke-width="1"/>
+              <circle cx="296.7" cy="330.4" r="2.0" fill="#f3ecd9" opacity="0.95"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="183.3" cy="330.4" r="13"/>
+              <circle class="c-handle" cx="183.3" cy="330.4" r="12"/>
+              <circle cx="183.3" cy="330.4" r="6.2" fill="#2a7a3d" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="183.3" cy="330.4" r="2.3" fill="#f3ecd9" opacity="0.9"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="125.0" cy="296.2" r="12"/>
+              <circle class="c-handle" cx="125.0" cy="296.2" r="11"/>
+              <circle cx="125.0" cy="296.2" r="5.7" fill="#6a36a0" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="125.0" cy="296.2" r="2.1" fill="#f3ecd9" opacity="0.9"/>
+            </g>
+            <g>
+              <circle class="c-halo" cx="153.7" cy="150.0" r="11"/>
+              <circle class="c-handle" cx="153.7" cy="150.0" r="10"/>
+              <circle cx="153.7" cy="150.0" r="5.0" fill="#a35a08" stroke="var(--star-ring)" stroke-width="0.8"/>
+              <circle cx="153.7" cy="150.0" r="2.0" fill="#f3ecd9" opacity="0.9"/>
+            </g>
+
+            <circle class="c-center" cx="240" cy="240" r="14"/>
+            <line x1="232" y1="240" x2="248" y2="240" stroke="var(--acc)" stroke-width="1" opacity="0.7"/>
+            <line x1="240" y1="232" x2="240" y2="248" stroke="var(--acc)" stroke-width="1" opacity="0.7"/>
+            <circle class="c-center-mark" cx="240" cy="240" r="1.5"/>
+          </svg>
+        </div>
+
+        <div class="tickers">
+          <div class="ticker ticker--answer">
+            <p class="ticker__label">Wealth Score</p>
+            <p class="ticker__value">60<sup>/100</sup></p>
+            <p class="ticker__sub">Mid-band. Composed.</p>
+          </div>
+          <div class="ticker">
+            <p class="ticker__label">Risk</p>
+            <p class="ticker__value">4.2<sup>/7</sup></p>
+            <p class="ticker__sub">Moderate. Within plan band.</p>
+          </div>
+          <div class="ticker">
+            <p class="ticker__label">Plan progress</p>
+            <p class="ticker__value">24<sup>%</sup></p>
+            <p class="ticker__sub">First home · target July 2029.</p>
+          </div>
+        </div>
+
+        <footer class="report__foot">
+          <div class="report__sig">
+            <em>From the Sonuswealth desk,</em>
+            <strong>Compiled for Dima — 13 May</strong>
+          </div>
+          <button class="report__cta">Drill the chart</button>
+        </footer>
+
+      </article>
+
+    </div>
+  </div>
+
+
+  <!-- Notes -->
+  <section class="note-strip">
+    <h2>What this is, and what changed from the radar you knew.</h2>
+    <ul>
+      <li><strong>Radar → Constellation</strong>The 7 dims are now stars sized by score. No polygon fill. The polygon edge is a fine brass thread at 55% opacity — the shape still reads, but it's recessive.</li>
+      <li><strong>Center is empty</strong>No score in the center anymore. The score moves to its own ticker below, so the chart is for shape, the ticker is for figure. Two facts, two places.</li>
+      <li><strong>Safety net star</strong>The lowest-score dim wears a fine lacquer-red dashed ring — it's the one your brief paragraph names. Chart and prose agree.</li>
+      <li><strong>Hero number above the chart</strong>Net worth £487,200 in 88px serif. The big figure is the headline; the chart is the supporting evidence beneath.</li>
+      <li><strong>Brief paragraph mid-card</strong>Real plain-English prose with key figures in brass italic serif. This is the Warren "Your Goal" move adapted — paragraph, not bullets.</li>
+      <li><strong>Three tickers</strong>Wealth Score (brass — answer register), Risk, Plan progress. Each with a short sub-line. Replaces the three-anchor row I had before.</li>
+      <li><strong>Date stamp + "No. 14 monthly"</strong>It IS a standing report. Not a live dashboard refreshing every second. A monthly dispatch you read like a letter.</li>
+      <li><strong>Signoff line</strong>"From the Sonuswealth desk · Compiled for Dima — 13 May" — frames this as a document prepared FOR the user, not generated BY a SaaS.</li>
+    </ul>
+  </section>
+
+</div>
+
+</body>
+</html>

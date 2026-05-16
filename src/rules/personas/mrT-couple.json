@@ -1,0 +1,380 @@
+{
+  "fixture_id": "mrT-couple",
+  "fixture_version": "1.1",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "UK married couple at Consolidation life stage. 3-year age differential exercises more-advanced-partner stage rule (Decision 3). Asymmetric income tests cross-partner optimiser. Joint + individual asset mix tests spousal-exemption IHT paths and TNRB/TRNRB.",
+  "fixture_anchor_archetype": "10",
+  "archetypes_exercised": ["08", "09", "10", "11", "12", "13", "14"],
+  "v1_1_changes": "charges_percent populated on all pensions (missing in v1.0)",
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-couple-primary",
+    "name": "Mr T Couple",
+    "dob": "1981-06-12",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "employed",
+    "employer": "Synthetic Consulting Ltd",
+    "gross_salary": 92000,
+    "income_band": "higher-rate",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 22,
+    "life_stage": "consolidation",
+    "couple_archetype_life_stage": "consolidation",
+    "couple_archetype_rule_applied": "more-advanced-partner (Decision 3)"
+  },
+
+  "partner": {
+    "id": "mrT-couple-partner",
+    "name": "Mrs T Couple",
+    "dob": "1978-03-04",
+    "gender": "F",
+    "residency_status": "UK-resident",
+    "employment_status": "employed",
+    "employer": "Synthetic NHS Trust",
+    "gross_salary": 38500,
+    "income_band": "basic-rate",
+    "state_pension_start_age": 66,
+    "state_pension_accrued_years": 28,
+    "life_stage": "consolidation",
+    "age_differential_to_primary_years": 3.3,
+    "more_advanced_in_life_stage": true
+  },
+
+  "relationships": [
+    {
+      "id": "marriage-1",
+      "type": "married",
+      "partner_entity_ref": "mrT-couple-partner",
+      "start_date": "2010-09-18",
+      "end_date": null,
+      "pso_applicable": false,
+      "children_from_relationship": 2
+    }
+  ],
+
+  "children": [
+    {"id": "child-1", "name": "Child A", "dob": "2012-11-02", "age": 13, "dependent": true},
+    {"id": "child-2", "name": "Child B", "dob": "2015-04-30", "age": 11, "dependent": true}
+  ],
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-primary",
+        "owner": "mrT-couple-primary",
+        "type": "SIPP",
+        "provider": "Vanguard",
+        "balance": 185000,
+        "contribution_monthly_personal": 800,
+        "contribution_monthly_employer": 550,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.004,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [{"name": "Mrs T Couple", "pct": 100}],
+          "date_set": "2021-03-12",
+          "stale": false
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "dc-pot-primary-legacy",
+        "owner": "mrT-couple-primary",
+        "type": "occupational-DC",
+        "provider": "Scottish Widows",
+        "balance": 62000,
+        "cost_base": null,
+        "null_reason": "FP-4 coverage: historical DC pot, cost base not captured; CGT not applicable but flagged for transfer planning",
+        "growth_rate_assumption": 0.045,
+        "charges_percent": 0.009,
+        "last_valuation_date": "2026-04-10"
+      },
+      {
+        "id": "sipp-partner",
+        "owner": "mrT-couple-partner",
+        "type": "SIPP",
+        "provider": "AJ Bell",
+        "balance": 98000,
+        "contribution_monthly_personal": 300,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.005,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [
+            {"name": "Child A", "pct": 50},
+            {"name": "Child B", "pct": 50}
+          ],
+          "date_set": "2022-09-05",
+          "stale": false,
+          "cross_nomination_pattern": true,
+          "cross_nomination_note": "Partner nominates children (not spouse) — tests mixed nomination engine paths"
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "nhs-db-partner",
+        "owner": "mrT-couple-partner",
+        "type": "occupational-DB",
+        "scheme": "NHS 2015",
+        "status": "active",
+        "accrual_years": 18,
+        "projected_annual_pension": 13200,
+        "cetv": 285000,
+        "normal_retirement_age": 66
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-ss-primary",
+        "owner": "mrT-couple-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 68000,
+        "contribution_current_tax_year": 18000,
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "isa-ss-partner",
+        "owner": "mrT-couple-partner",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 52000,
+        "contribution_current_tax_year": 12000,
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "gia-joint",
+        "owner": "joint",
+        "ownership_split": {"mrT-couple-primary": 0.5, "mrT-couple-partner": 0.5},
+        "type": "GIA",
+        "provider": "HL",
+        "balance": 24000,
+        "cost_base": 18000,
+        "last_valuation_date": "2026-04-18"
+      },
+      {
+        "id": "jisa-child-1",
+        "owner": "child-1",
+        "type": "JISA-stocks-and-shares",
+        "provider": "Vanguard",
+        "balance": 14500,
+        "contribution_current_tax_year": 3000,
+        "last_valuation_date": "2026-04-20"
+      },
+      {
+        "id": "jisa-child-2",
+        "owner": "child-2",
+        "type": "JISA-stocks-and-shares",
+        "provider": "Vanguard",
+        "balance": 11200,
+        "contribution_current_tax_year": 3000,
+        "last_valuation_date": "2026-04-20"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "main-residence",
+        "type": "main-residence",
+        "value": 620000,
+        "purchase_price": 475000,
+        "purchase_date": "2014-06-20",
+        "mortgage_id": "mortgage-primary",
+        "ownership": "joint",
+        "ownership_split": {"mrT-couple-primary": 0.5, "mrT-couple-partner": 0.5},
+        "last_valuation_date": "2026-02-01"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "joint-current",
+        "owner": "joint",
+        "type": "current-account",
+        "provider": "First Direct",
+        "balance": 8400,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "joint-savings",
+        "owner": "joint",
+        "type": "savings",
+        "provider": "Chase",
+        "balance": 22000,
+        "interest_rate": 0.041,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "primary-savings",
+        "owner": "mrT-couple-primary",
+        "type": "savings",
+        "balance": 6800,
+        "last_valuation_date": "2026-04-22"
+      }
+    ]
+  },
+
+  "liabilities": [
+    {
+      "id": "mortgage-primary",
+      "type": "residential-mortgage",
+      "lender": "HSBC",
+      "outstanding_balance": 348000,
+      "original_balance": 380000,
+      "interest_rate": 0.042,
+      "rate_type": "fixed-until-2027",
+      "term_remaining_years": 22,
+      "monthly_payment": 2040,
+      "secured_on": "main-residence",
+      "jointly_held": true
+    }
+  ],
+
+  "protection": [
+    {
+      "id": "life-joint-first-death",
+      "type": "life-insurance-joint-first-death",
+      "provider": "Aviva",
+      "cover_amount": 400000,
+      "premium_monthly": 42,
+      "term_years": 25,
+      "start_date": "2014-07-01",
+      "trust_status": "in-trust-verified",
+      "trust_beneficiaries": ["child-1", "child-2"]
+    },
+    {
+      "id": "ci-primary",
+      "type": "critical-illness",
+      "owner": "mrT-couple-primary",
+      "cover_amount": 250000,
+      "premium_monthly": 58,
+      "trust_status": "claimed_but_unverified",
+      "null_reason": "FP-5 coverage: CI policy ownership ambiguous; engine flags for verification"
+    }
+  ],
+
+  "gifts_and_trusts": [
+    {
+      "id": "pet-1",
+      "type": "PET",
+      "donor": "mrT-couple-primary",
+      "amount": 12000,
+      "date": "2022-08-15",
+      "recipient": "Adult-niece (non-direct-descendant)",
+      "years_elapsed": 3.7,
+      "within_annual_exemption": false,
+      "taper_band_applicable_at_death": true
+    },
+    {
+      "id": "pet-2",
+      "type": "PET",
+      "donor": "joint",
+      "amount": 4000,
+      "date": "2024-09-01",
+      "recipient": "Charity (exempt)",
+      "years_elapsed": 1.6,
+      "exempt": true,
+      "exemption_reason": "Gift to UK charity"
+    }
+  ],
+
+  "events": [
+    {"date": "2010-09-18", "type": "relationship-start", "relationship": "married"},
+    {"date": "2012-11-02", "type": "child-birth", "child_id": "child-1"},
+    {"date": "2014-06-20", "type": "property-purchase", "asset_id": "main-residence", "amount": 475000, "jointly": true},
+    {"date": "2014-07-01", "type": "protection-start", "policy_id": "life-joint-first-death"},
+    {"date": "2015-04-30", "type": "child-birth", "child_id": "child-2"},
+    {"date": "2021-03-12", "type": "pension-nomination-set", "pension_id": "sipp-primary"},
+    {"date": "2022-08-15", "type": "gift-given", "gift_id": "pet-1", "amount": 12000},
+    {"date": "2022-09-05", "type": "pension-nomination-set", "pension_id": "sipp-partner", "pattern": "cross-nomination"},
+    {"date": "2024-09-01", "type": "gift-given", "gift_id": "pet-2", "amount": 4000, "exempt": true},
+    {"date": "2026-02-01", "type": "property-valuation", "asset_id": "main-residence", "amount": 620000, "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "assets.pensions[1].cost_base", "expected_behaviour": "flag not blocking; no current CGT event; marker for future transfer planning"}
+    ],
+    "fp5": [
+      {"location": "protection[1].trust_status", "expected_behaviour": "CI policy trust status unverified; engine includes in taxable estate conservatively"}
+    ]
+  },
+
+  "archetype_specific": {
+    "couple_life_stage_applied": "consolidation (more-advanced-partner rule: partner older at 48)",
+    "asymmetric_income": {
+      "primary_band": "higher-rate",
+      "partner_band": "basic-rate",
+      "optimiser_opportunities": [
+        "isa-contribution-cross-partner-reallocation",
+        "pension-loading-higher-rate-partner",
+        "savings-interest-via-lower-rate-partner-PSA"
+      ]
+    },
+    "joint_assets_ratio": {
+      "joint": 0.42,
+      "individual_primary": 0.38,
+      "individual_partner": 0.20
+    },
+    "nomination_cross_state": {
+      "primary_nominates": "spouse",
+      "partner_nominates": "children",
+      "note": "Tests mixed nomination engine paths — spouse-bypass-on-first-death vs direct-to-children"
+    },
+    "hicbc_band": false,
+    "hicbc_reason": "Partner's salary £38.5k keeps household adjusted income below HICBC threshold"
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [68, 78],
+      "confidence": "high",
+      "couple_score_method": "joint-entity aggregated scoring",
+      "dimensions_to_populate_in_session_3": "7 FINIO-1.0 dimensions per Part 3 spec"
+    },
+    "risk_score": {
+      "value_range": [62, 74],
+      "confidence": "high"
+    },
+    "net_worth": {
+      "value_range": [800000, 870000],
+      "confidence": "high",
+      "joint_net_worth_calc": "primary + partner individual assets + joint assets - joint liabilities",
+      "staleness_flags": []
+    },
+    "iht_projection": {
+      "value_range": [0, 0],
+      "confidence": "high",
+      "explanation": "Joint estate below combined NRB + TRNRB + RNRB (4 × direct-descendant children threshold)",
+      "exemption_flags": ["spousal-exemption-first-death", "RNRB-both-available"]
+    },
+    "cost_of_inaction": {
+      "value_range": [0, 1200],
+      "confidence": "high",
+      "explanation": "Minimal at this stage; IHT exposure not yet material"
+    },
+    "financial_profile_cell": "III-B",
+    "archetype_classification": "10 uk-couple-consolidation",
+    "apq_items_expected": [
+      "hicbc-monitoring-if-income-rises",
+      "cross-partner-isa-optimisation",
+      "partner-pension-loading-opportunity",
+      "ci-trust-status-verification",
+      "pet-1-taper-monitor-next-review",
+      "child-1-jisa-to-isa-transition-in-5-years",
+      "mortgage-rate-review-2027-fixing"
+    ]
+  }
+}

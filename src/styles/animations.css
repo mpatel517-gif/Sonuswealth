@@ -1,0 +1,361 @@
+/* ═══════════════════════════════════════════════════════════════
+   SONUSWEALTH ANIMATION FOUNDATION
+   Tokens, keyframes, and utility classes consumed by the
+   shared primitives (Num, CoIOdometer, X28TopBar, Diff…) and
+   per-tab polish layers.
+
+   Naming: every utility prefixed `sw-` (sonuswealth) so it does
+   not collide with component-local class names.
+
+   Reduced-motion: `@media (prefers-reduced-motion: reduce)` at the
+   bottom of this file disables every animation and transition.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Durations ──────────────────────────────────────────────── */
+  --dur-instant: 100ms;
+  --dur-fast:    200ms;
+  --dur-normal:  350ms;
+  --dur-slow:    600ms;
+  --dur-tick:    2000ms;
+
+  /* ── Easings ─────────────────────────────────────────────────── */
+  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes sw-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes sw-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sw-slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+@keyframes sw-halo {
+  0%   { box-shadow: 0 0 0 0   rgba(45, 242, 195, 0.55),
+                     0 0 0 0   rgba(45, 242, 195, 0.30); }
+  60%  { box-shadow: 0 0 0 8px rgba(45, 242, 195, 0.10),
+                     0 0 0 14px rgba(45, 242, 195, 0.04); }
+  100% { box-shadow: 0 0 0 16px rgba(45, 242, 195, 0),
+                     0 0 0 24px rgba(45, 242, 195, 0); }
+}
+
+@keyframes sw-shimmer-sweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0;  }
+}
+
+@keyframes sw-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 242, 195, 0.35),
+                         0 0 8px  rgba(45, 242, 195, 0.20); }
+  50%      { box-shadow: 0 0 0 4px rgba(45, 242, 195, 0.10),
+                         0 0 14px  rgba(45, 242, 195, 0.45); }
+}
+
+@keyframes sw-band-flash-frames {
+  0%   { box-shadow: 0 0 0 0   currentColor; }
+  20%  { box-shadow: 0 0 0 1px currentColor; }
+  100% { box-shadow: 0 0 0 1px transparent;  }
+}
+
+@keyframes sw-tap-ripple-frames {
+  from { transform: translate(-50%, -50%) scale(0);   opacity: 0.45; }
+  to   { transform: translate(-50%, -50%) scale(2.4); opacity: 0;    }
+}
+
+/* Composition / progress bar grow-from-left on mount.
+   Used by the wrapper composition bar (mymoney) and any progress-style
+   container that should "draw in" rather than appear. */
+@keyframes sw-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes sw-slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes sw-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Confetti dot — radial expansion outward from anchor, fade out.
+   Consumer sets --cx / --cy CSS vars per dot for direction. */
+@keyframes sw-confetti-burst {
+  0%   { transform: translate(-50%, -50%) translate(0, 0)                  scale(0.4); opacity: 0; }
+  20%  {                                                                                opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--cx, 0), var(--cy, 0)) scale(1.0); opacity: 0; }
+}
+
+/* Subtle sparkle for achieved milestones (looped pulse). */
+@keyframes sw-sparkle {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.18); opacity: 1.00; }
+}
+.sw-sparkle {
+  animation: sw-sparkle 2200ms var(--ease-out-cubic) infinite;
+  display: inline-block;
+}
+
+/* Confetti container (overlay) and dot (positioned absolute, animated). */
+.sw-confetti-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+.sw-confetti-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: sw-confetti-burst 900ms var(--ease-out-cubic) forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENTRY UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-fade-in-up {
+  animation: sw-fade-up var(--dur-normal) var(--ease-out-cubic) both;
+}
+
+.sw-fade-in {
+  animation: sw-fade var(--dur-fast) var(--ease-out-cubic) both;
+}
+
+.sw-tab-slide {
+  animation: sw-slide-in-right var(--dur-normal) var(--ease-out-cubic) both;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HOVER / PRESS
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-lift {
+  transition:
+    transform   var(--dur-fast) var(--ease-out-cubic),
+    box-shadow  var(--dur-fast) var(--ease-out-cubic);
+  will-change: transform;
+}
+.sw-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
+.sw-press {
+  transition: transform var(--dur-instant) var(--ease-out-cubic);
+}
+.sw-press:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOADING / SKELETON
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.00) 30%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.00) 70%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: sw-shimmer-sweep var(--dur-slow) linear infinite;
+}
+
+.sw-skeleton {
+  display: block;
+  background-color: var(--c-surface2, #172035);
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.00) 30%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.00) 70%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: sw-shimmer-sweep var(--dur-slow) linear infinite;
+  border-radius: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATEFUL HIGHLIGHTS
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-pulse-glow {
+  animation: sw-glow-pulse var(--dur-tick) var(--ease-out-cubic) infinite;
+}
+
+.sw-cascade-halo {
+  position: relative;
+  animation: sw-halo 800ms var(--ease-out-expo);
+  border-radius: inherit;
+}
+
+/* Band-flash: 1px outline of the band colour fades in then out.
+   Caller sets `color` to the band colour on the same element. */
+.sw-band-flash {
+  animation: sw-band-flash-frames 1200ms var(--ease-out-cubic);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TAP RIPPLE  (Material-style, CSS-only via ::before)
+   Applies to elements with `position: relative; overflow: hidden;`
+   Click sets a CSS custom property `--ripple-x` / `--ripple-y` to
+   the click coords (the consumer wires this up in JS — see
+   useAnimation.jsx::useTapRipple if needed). For pure-CSS fallback
+   the ripple emits from centre on :active.
+   ═══════════════════════════════════════════════════════════════ */
+
+.sw-tap-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.sw-tap-ripple::before {
+  content: "";
+  position: absolute;
+  top:  var(--ripple-y, 50%);
+  left: var(--ripple-x, 50%);
+  width:  120%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+.sw-tap-ripple:active::before {
+  animation: sw-tap-ripple-frames var(--dur-slow) var(--ease-out-cubic);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PHASE 2 BATCH B ADDITIONS
+   Chart stroke-draw · accent glow · cinema cascade · responsive hero
+   number · pill state · pressable card lift.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Stroke draw — SVG <path>/<polygon>/<line> with stroke-dasharray set to the
+   path length. Component must set --sw-draw-len (defaults to 1000). */
+@keyframes sw-draw {
+  to { stroke-dashoffset: 0; }
+}
+.sw-stroke-draw {
+  stroke-dashoffset: var(--sw-draw-len, 1000);
+  animation: sw-draw 1.6s var(--ease-out-expo) forwards;
+}
+
+/* Accent glow — drop-shadow filter on accent strokes / polygons / dots.
+   Reads --c-radar-glow which is theme-aware (mint in dark, indigo in light). */
+.sw-accent-glow {
+  filter: drop-shadow(0 0 12px var(--c-radar-glow, rgba(45,242,195,0.45)));
+}
+
+/* Cinema cascade — used by .sw-tab-slide children when viewMode flips.
+   Combine with inline animation-delay for staggered entry across zones. */
+@keyframes sw-cinema-cascade {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);     }
+}
+.sw-cinema {
+  animation: sw-cinema-cascade 0.75s var(--ease-out-expo) both;
+}
+
+/* Hero number sizing — responsive scale for headline values on triple-anchor,
+   Cashflow surplus hero, Risk score gauge centre. */
+.sw-hero-num {
+  font-size: clamp(34px, 8vw, 50px);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pill active state — glass border + tone-tinted gradient + soft lift.
+   Component must set `style="--pill-tone: <color>"` for the gradient. */
+.sw-pill-active {
+  position: relative;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pill-tone, var(--c-acc)) 18%, transparent),
+    color-mix(in srgb, var(--pill-tone, var(--c-acc)) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--pill-tone, var(--c-acc)) 45%, transparent);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+  color: var(--pill-tone, var(--c-acc));
+  font-weight: 700;
+  transition: transform 0.18s var(--ease-out-cubic), box-shadow 0.18s var(--ease-out-cubic);
+}
+.sw-pill-active:hover { transform: scale(1.02); }
+
+/* Pressable card — adds tactile hover lift + active press scale.
+   Use on .sw-tile / .sw-card variants that should respond to touch.
+   Lift increased 2026-05-12 from -1px to -3px for noticeable feedback;
+   added a mint glow on the border so the eye registers the interaction. */
+.sw-pressable {
+  transition: transform 0.22s var(--ease-out-expo, cubic-bezier(0.16,1,0.3,1)),
+              box-shadow 0.22s var(--ease-out-cubic),
+              border-color 0.22s ease-out;
+}
+.sw-pressable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.34),
+              0 0 18px color-mix(in srgb, var(--c-acc) 22%, transparent);
+  border-color: color-mix(in srgb, var(--c-acc) 38%, var(--c-border)) !important;
+}
+.sw-pressable:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION  (a11y — disable everything)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .sw-fade-in-up,
+  .sw-fade-in,
+  .sw-tab-slide,
+  .sw-pulse-glow,
+  .sw-cascade-halo,
+  .sw-band-flash,
+  .sw-shimmer,
+  .sw-skeleton,
+  .sw-stroke-draw,
+  .sw-cinema {
+    animation: none !important;
+  }
+  .sw-lift:hover     { transform: none !important; }
+  .sw-press:active   { transform: none !important; }
+  .sw-tap-ripple::before { display: none !important; }
+}

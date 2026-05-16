@@ -1,0 +1,409 @@
+{
+  "fixture_id": "mrT-decum-complex",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-04-23",
+  "fixture_purpose": "Specialty fixture. Single UK adult, Decumulation life stage (age 70). High-asset + high-complexity: multi-phase SIPP drawdown, MPAA triggered, partial LSA use, LSDBA headroom, 14-yr gift clock active with failed PET + CLT into discretionary trust, post-FA2026 DC pension IHT activation modelled pre/post 6-April-2027. Exercises engine branches that simple age-shifted Single/Couple fixtures cannot fire: Monte Carlo longevity (500-run), Gauss-Seidel convergence under circular SIPP↔IHT↔spend dependency, trust 10-yr periodic charge, Cost of Inaction daily ticker at meaningful size. NOT an onboarding archetype — testing-only.",
+  "fixture_anchor_archetype": "05",
+  "archetypes_exercised": ["04", "05", "06", "11", "12", "13", "35", "40", "45"],
+  "testing_only": true,
+  "testing_only_reason": "Cross-cuts multiple archetypes to fire engine branches that single-archetype fixtures cannot. Not an onboarding classification target.",
+
+  "jurisdiction": {
+    "primary": "UK",
+    "secondary": null,
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK",
+    "deemed_domicile": false
+  },
+
+  "individual": {
+    "id": "mrT-decum-primary",
+    "name": "Mr T Decum",
+    "dob": "1956-04-23",
+    "gender": "M",
+    "residency_status": "UK-resident",
+    "tax_residency_days_current_year": 365,
+    "employment_status": "retired",
+    "gross_salary": 0,
+    "state_pension_start_age": 66,
+    "state_pension_start_date": "2022-04-23",
+    "state_pension_annual_gross": 11502,
+    "state_pension_accrued_years": 42,
+    "life_stage": "decumulation",
+    "age_at_fixture_date": 70
+  },
+
+  "relationships": [
+    {
+      "id": "widowhood-1",
+      "type": "widowed",
+      "former_partner_entity_ref": "mrT-decum-late-spouse",
+      "end_date": "2020-06-12",
+      "end_reason": "death",
+      "tnrb_available_pct": 100,
+      "trnrb_available_pct": 100,
+      "spousal_exemption_utilised_on_first_death": true
+    }
+  ],
+
+  "children": [],
+
+  "assets": {
+    "pensions": [
+      {
+        "id": "sipp-primary",
+        "owner": "mrT-decum-primary",
+        "type": "SIPP",
+        "provider": "AJ Bell",
+        "balance": 2400000,
+        "balance_band": "high",
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.003,
+        "crystallisation_history": [
+          {"date": "2022-05-10", "type": "UFPLS-with-TFC", "amount_gross": 480000, "tfc_taken": 120000, "taxable_portion": 360000, "lsa_consumed": 120000, "mpaa_triggered": true}
+        ],
+        "drawdown_schedule": [
+          {"year_from_date": "2022-05-10", "year_to_date": "2023-04-05", "annual_gross_drawdown": 80000, "reason": "Y1 high-spend re-settle-into-retirement"},
+          {"year_from_date": "2023-04-06", "year_to_date": "2024-04-05", "annual_gross_drawdown": 65000, "reason": "Y2 normalised"},
+          {"year_from_date": "2024-04-06", "year_to_date": "2025-04-05", "annual_gross_drawdown": 55000, "reason": "Y3 stepped down"},
+          {"year_from_date": "2025-04-06", "year_to_date": null, "annual_gross_drawdown": 40000, "reason": "Y4+ steady state", "is_current": true}
+        ],
+        "mpaa_triggered": true,
+        "mpaa_trigger_date": "2022-05-10",
+        "mpaa_current_aa": 10000,
+        "lsa_allowance_standard": 268275,
+        "lsa_consumed_to_date": 120000,
+        "lsa_remaining": 148275,
+        "lsdba_allowance_standard": 1073100,
+        "lsdba_consumed_to_date": 0,
+        "lsdba_remaining": 1073100,
+        "nomination": {
+          "type": "expression-of-wish",
+          "beneficiaries": [
+            {"name": "Child (adult non-dependent)", "pct": 60},
+            {"name": "Grandchild 1", "pct": 20},
+            {"name": "Grandchild 2", "pct": 20}
+          ],
+          "date_set": "2020-09-15",
+          "stale": false
+        },
+        "post_fa2026_treatment": {
+          "pre_6_april_2027": "outside estate for IHT (current regime)",
+          "post_6_april_2027": "within estate for IHT (Finance Act 2026 s.X activation)",
+          "engine_must_model_both": true,
+          "cost_of_inaction_driver": true
+        },
+        "last_valuation_date": "2026-04-15"
+      },
+      {
+        "id": "db-in-payment",
+        "owner": "mrT-decum-primary",
+        "type": "occupational-DB",
+        "scheme": "Former Employer DB",
+        "status": "in-payment",
+        "annual_pension_gross": 28000,
+        "spouse_pension_pct": 0.5,
+        "inflation_linkage": "CPI-capped-3pct",
+        "start_date": "2022-04-23"
+      }
+    ],
+
+    "investments": [
+      {
+        "id": "isa-ss",
+        "owner": "mrT-decum-primary",
+        "type": "stocks-and-shares-ISA",
+        "provider": "Vanguard",
+        "balance": 385000,
+        "contribution_current_tax_year": 20000,
+        "growth_rate_assumption": 0.05,
+        "charges_percent": 0.002,
+        "last_valuation_date": "2026-04-20",
+        "verified_by_user": true
+      },
+      {
+        "id": "gia-1",
+        "owner": "mrT-decum-primary",
+        "type": "GIA",
+        "provider": "HL",
+        "balance": 210000,
+        "cost_base": 148000,
+        "unrealised_gain": 62000,
+        "growth_rate_assumption": 0.045,
+        "last_valuation_date": "2026-04-18"
+      },
+      {
+        "id": "bpr-aim-portfolio",
+        "owner": "mrT-decum-primary",
+        "type": "EIS-like-BPR-AIM",
+        "provider": "Octopus AIM IHT service",
+        "balance": 185000,
+        "bpr_qualifying": true,
+        "bpr_holding_period_years": 3.5,
+        "bpr_eligible_for_relief_at_death": true,
+        "bpr_relief_pct": 100,
+        "note": "Held >2 yrs so 100% BPR relief applies; excludes from IHT estate if held at death",
+        "last_valuation_date": "2026-04-18"
+      }
+    ],
+
+    "property": [
+      {
+        "id": "main-residence",
+        "type": "main-residence",
+        "value": 820000,
+        "purchase_price": 240000,
+        "purchase_date": "1992-08-15",
+        "mortgage_id": null,
+        "mortgage_note": "Paid off 2018",
+        "ownership": "sole",
+        "last_valuation_date": "2026-02-01"
+      }
+    ],
+
+    "bank": [
+      {
+        "id": "current-1",
+        "owner": "mrT-decum-primary",
+        "type": "current-account",
+        "provider": "First Direct",
+        "balance": 12000,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "savings-1",
+        "owner": "mrT-decum-primary",
+        "type": "savings",
+        "provider": "NS&I",
+        "balance": 85000,
+        "interest_rate": 0.045,
+        "last_valuation_date": "2026-04-22"
+      },
+      {
+        "id": "premium-bonds",
+        "owner": "mrT-decum-primary",
+        "type": "premium-bonds",
+        "balance": 50000,
+        "prize_based_return": true,
+        "effective_return_estimate": 0.04,
+        "last_valuation_date": "2026-04-22"
+      }
+    ]
+  },
+
+  "liabilities": [],
+
+  "protection": [
+    {
+      "id": "life-whole-of-life",
+      "type": "life-insurance-whole-of-life",
+      "owner": "mrT-decum-primary",
+      "cover_amount": 150000,
+      "premium_monthly": 185,
+      "trust_status": "in-trust-verified",
+      "trust_type": "discretionary",
+      "trust_beneficiaries": ["Child (adult)"],
+      "start_date": "2008-03-01",
+      "purpose": "IHT liquidity at second death; held in trust outside estate"
+    }
+  ],
+
+  "gifts_and_trusts": [
+    {
+      "id": "failed-pet-1",
+      "type": "failed-PET-within-14-yr-clock",
+      "donor": "mrT-decum-primary",
+      "amount": 85000,
+      "date": "2014-03-20",
+      "years_elapsed": 12.1,
+      "recipient": "Adult child",
+      "within_annual_exemption": false,
+      "annual_exemption_offset": 3000,
+      "chargeable_amount": 82000,
+      "taper_band_applicable_at_death": true,
+      "note_14_year_clock": "Reason 14-yr clock relevant: this PET preceded the CLT below; if donor dies within 14 years of the CLT, this failed PET is brought into the cumulation calculation for NRB exhaustion"
+    },
+    {
+      "id": "clt-into-trust-1",
+      "type": "CLT",
+      "donor": "mrT-decum-primary",
+      "amount": 180000,
+      "date": "2018-07-12",
+      "years_elapsed": 7.8,
+      "recipient": "Discretionary Trust (Mr T Family Trust 2018)",
+      "trust_id": "trust-discretionary-2018",
+      "nrb_used_at_setup": 180000,
+      "entry_charge_paid": 0,
+      "entry_charge_reason": "Within NRB at time of transfer",
+      "ten_year_anniversary_approaching": true,
+      "ten_year_anniversary_date": "2028-07-12",
+      "periodic_charge_estimated_pct": 0.06,
+      "periodic_charge_estimated_amount_current": 10800
+    }
+  ],
+
+  "trusts": [
+    {
+      "id": "trust-discretionary-2018",
+      "type": "discretionary-trust",
+      "settlor": "mrT-decum-primary",
+      "trust_fund_value": 235000,
+      "trust_fund_growth_since_settlement": 55000,
+      "beneficiaries": ["Child (adult)", "Grandchildren"],
+      "trustees": ["mrT-decum-primary", "Professional trustee"],
+      "ten_year_charge_next": "2028-07-12",
+      "ten_year_charge_projected_at_then_value": 15000,
+      "exit_charges_to_date": 0,
+      "engine_obligations": {
+        "periodic_charge_calc": "every 10 years from creation",
+        "exit_charge_calc": "on distributions out of trust",
+        "trust_fund_separate_from_donor_estate": true
+      }
+    }
+  ],
+
+  "events": [
+    {"date": "1992-08-15", "type": "property-purchase", "asset_id": "main-residence", "amount": 240000},
+    {"date": "2008-03-01", "type": "protection-start", "policy_id": "life-whole-of-life", "in_trust_from_outset": true},
+    {"date": "2014-03-20", "type": "gift-given", "gift_id": "failed-pet-1", "amount": 85000, "classification_at_entry": "PET"},
+    {"date": "2018-07-12", "type": "clt-settlement", "gift_id": "clt-into-trust-1", "trust_id": "trust-discretionary-2018", "amount": 180000},
+    {"date": "2020-06-12", "type": "spouse-death", "former_spouse_ref": "mrT-decum-late-spouse", "tnrb_inherited_pct": 100, "trnrb_inherited_pct": 100},
+    {"date": "2020-09-15", "type": "pension-nomination-set", "pension_id": "sipp-primary"},
+    {"date": "2022-04-23", "type": "state-pension-start"},
+    {"date": "2022-04-23", "type": "db-pension-start", "pension_id": "db-in-payment", "annual_gross": 28000},
+    {"date": "2022-05-10", "type": "ufpls-with-tfc", "pension_id": "sipp-primary", "amount_gross": 480000, "tfc": 120000, "taxable": 360000, "lsa_consumed": 120000, "mpaa_triggered": true},
+    {"date": "2022-05-10", "type": "drawdown-phase-start", "phase_amount": 80000, "reason": "Y1"},
+    {"date": "2023-04-06", "type": "drawdown-phase-change", "phase_amount": 65000, "reason": "Y2"},
+    {"date": "2024-04-06", "type": "drawdown-phase-change", "phase_amount": 55000, "reason": "Y3"},
+    {"date": "2025-04-06", "type": "drawdown-phase-change", "phase_amount": 40000, "reason": "Y4 steady state"},
+    {"date": "2026-02-01", "type": "property-valuation", "asset_id": "main-residence", "amount": 820000, "verified_by_user": true},
+    {"date": "2026-04-15", "type": "pension-valuation", "pension_id": "sipp-primary", "balance": 2400000, "verified_by_user": true},
+    {"date": "2026-04-23", "type": "pre-activation-snapshot", "target_activation": "2027-04-06", "regime_change": "FA2026-DC-pension-IHT-inclusion", "scenario_bundle": "pre-post-FA2026-comparison"}
+  ],
+
+  "null_coverage": {
+    "fp4": [
+      {"location": "assets.pensions[0].drawdown_schedule[3].year_to_date", "expected_behaviour": "open-ended current-phase drawdown; engine projects forward with Monte Carlo longevity, 500-run; ranges published not point estimates"},
+      {"location": "gifts_and_trusts[0].taper_band_applicable_at_death", "expected_behaviour": "14-yr clock cumulation must treat failed PET amount against NRB at death; engine ranges IHT between scenarios"},
+      {"location": "trusts[0].ten_year_charge_projected_at_then_value", "expected_behaviour": "2028 periodic charge depends on trust-fund value at then-date; engine projects range, not a point"}
+    ],
+    "fp5": [
+      {"location": "assets.pensions[0].post_fa2026_treatment", "expected_behaviour": "rule activation on 6-April-2027 is SCHEDULED but not ACTIVE; engine must support toggle between pre/post regimes until activation; baseline at 2026-04-23 uses pre-regime with post-regime shown as scenario"}
+    ]
+  },
+
+  "archetype_specific": {
+    "sipp_size_band": "high (>£2m)",
+    "drawdown_mode": "multi-phase with MPAA active",
+    "mpaa_state": {
+      "triggered": true,
+      "trigger_date": "2022-05-10",
+      "current_aa": 10000,
+      "further_contributions_permitted": true,
+      "further_contributions_limited_to_aa": true
+    },
+    "lsa_state": {
+      "allowance_standard": 268275,
+      "consumed_to_date": 120000,
+      "remaining": 148275,
+      "remaining_pct": 0.553
+    },
+    "lsdba_state": {
+      "allowance_standard": 1073100,
+      "consumed_to_date": 0,
+      "remaining": 1073100,
+      "note": "No LSDBA consumption to date; full headroom available on death for beneficiaries' tax-free lump sums"
+    },
+    "14_yr_clock_state": {
+      "active": true,
+      "failed_pet_preceding_clt": true,
+      "pet_amount": 85000,
+      "pet_date": "2014-03-20",
+      "clt_date": "2018-07-12",
+      "clt_amount": 180000,
+      "cumulation_note": "If donor dies within 14 years of CLT, PET is cumulated with CLT for NRB exhaustion"
+    },
+    "trust_state": {
+      "trust_count": 1,
+      "next_periodic_charge_date": "2028-07-12",
+      "engine_obligation": "project trust value + calculate periodic charge at then-date"
+    },
+    "bpr_holdings": {
+      "aim_portfolio_bpr_100pct": 185000,
+      "holding_period_years": 3.5,
+      "relief_eligible_at_death": true
+    },
+    "fa2026_activation_modelling": {
+      "regime_change_date": "2027-04-06",
+      "days_to_activation_at_fixture_date": 348,
+      "pre_activation_iht_estimate": 265000,
+      "post_activation_iht_estimate": 1225000,
+      "delta_iht_from_activation": 960000,
+      "cost_of_inaction_daily": 2759,
+      "note": "Cost of Inaction ticker drives the April 2027 commercial hook. The £960k step-up on activation for a large SIPP is the product's demo pivot."
+    },
+    "monte_carlo_obligations": {
+      "longevity_required": true,
+      "target_run_count": 500,
+      "gender_specific_mortality": "UK male",
+      "joint_life_applicable": false,
+      "ruin_probability_calc_required": true
+    },
+    "gauss_seidel_obligations": {
+      "circular_dependency_present": true,
+      "circular_path": "SIPP_draw → taxable_income → IHT_projection → Cost_of_Inaction → optimal_draw",
+      "convergence_required": true,
+      "divergence_handling_required": true
+    }
+  },
+
+  "expected_output_envelope": {
+    "finio_score": {
+      "value_range": [72, 82],
+      "confidence": "high",
+      "note": "Wealth-band penalty on Capital dimension balanced by Estate and Tax dimensions pulled up by active planning"
+    },
+    "risk_score": {
+      "value_range": [68, 78],
+      "confidence": "high"
+    },
+    "net_worth": {
+      "value_range": [4050000, 4200000],
+      "confidence": "high",
+      "staleness_flags": [],
+      "excluded_assets": [],
+      "note": "Includes SIPP, BPR AIM portfolio, property, ISA, GIA, cash, Premium Bonds. Trust fund (trust-discretionary-2018) excluded from donor net worth — separate legal entity."
+    },
+    "iht_projection": {
+      "value_range_pre_fa2026": [200000, 320000],
+      "value_range_post_fa2026": [1150000, 1320000],
+      "confidence": "medium",
+      "confidence_reason": "14-yr clock cumulation uncertainty; BPR relief at-death dependency on holding-period maintenance; trust periodic charge projection to 2028",
+      "scenario_ranges": {
+        "pre_fa2026_with_bpr_relief": [180000, 240000],
+        "pre_fa2026_without_bpr_relief": [260000, 340000],
+        "post_fa2026_with_bpr_relief": [1050000, 1220000],
+        "post_fa2026_without_bpr_relief": [1180000, 1340000]
+      },
+      "exemption_flags": ["tnrb-100pct-from-widowhood", "trnrb-100pct-from-widowhood", "bpr-aim-100pct", "policy-in-trust"]
+    },
+    "cost_of_inaction": {
+      "value_range": [850000, 1050000],
+      "confidence": "medium",
+      "daily_ticker_value": 2759,
+      "explanation": "Primary driver: FA2026 DC pension IHT activation on 6-April-2027 moves SIPP £2.4m into IHT estate. Mitigation window: draw down / gift / BPR-shift / trust routing before activation."
+    },
+    "financial_profile_cell": "V-A",
+    "archetype_classification": "05 uk-single-decumulation (high-asset subtype)",
+    "apq_items_expected": [
+      "fa2026-activation-countdown-daily",
+      "drawdown-phase-4-review",
+      "14-yr-clock-cumulation-monitor",
+      "clt-trust-10yr-charge-approaching-2028",
+      "bpr-aim-holding-period-verification",
+      "lsa-remaining-allowance-at-148275",
+      "state-pension-vs-db-vs-sipp-sequencing-optimisation",
+      "estate-plan-review-annual"
+    ]
+  }
+}

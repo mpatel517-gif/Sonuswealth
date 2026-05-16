@@ -1,0 +1,1364 @@
+{
+  "id": "f",
+  "name": "Anna Finch",
+  "type": "life_arc",
+  "snapshots": [
+    {
+      "id": "f-22",
+      "name": "Anna Finch",
+      "displayName": "Anna Finch · 22",
+      "type": "individual",
+      "isIFA": false,
+      "lifeStage": 1,
+      "lifeStageName": "Foundation",
+      "lifeStageAge": "18–30",
+      "hasBusiness": false,
+      "isCouple": false,
+      "hasTrust": false,
+      "hasDBPension": false,
+      "isHigherRateTaxpayer": false,
+      "age": 22,
+      "targetIncome": 28000,
+      "dataLastUpdated": "2026-04-19",
+      "rulesVersion": "UK-2026.1",
+      "jurisdictionContext": {
+        "primary": "UK-2026.1",
+        "secondary": null
+      },
+      "drawdown": 0,
+      "assets": {
+        "sipp": {
+          "total": 3200,
+          "growth": 0.07,
+          "crystalised": 0,
+          "tfcTaken": 0,
+          "pensions": [
+            {
+              "name": "Auto-enrolment (Finch & Co)",
+              "value": 3200,
+              "type": "Workplace DC",
+              "provider": "Nest",
+              "charge": 0.003,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": null
+            }
+          ]
+        },
+        "isa": {
+          "value": 1800,
+          "growth": 0.05
+        },
+        "residence": {
+          "value": 0,
+          "ownership": "none",
+          "ownershipShare": 0
+        },
+        "portfolio": {
+          "value": 0,
+          "growth": 0.07,
+          "bpr": false
+        },
+        "cash": {
+          "total": 2400,
+          "own": 2400,
+          "rate": 0.04
+        },
+        "trustGifts": null,
+        "protection": {
+          "lifeInsurance": {
+            "exists": false,
+            "amount": 0,
+            "inTrust": false,
+            "premium": 0
+          },
+          "criticalIllness": {
+            "exists": false,
+            "amount": 0,
+            "premium": 0
+          },
+          "incomeProtection": {
+            "exists": false,
+            "monthlyBenefit": 0,
+            "premium": 0
+          },
+          "relevantLifePlan": {
+            "exists": false,
+            "amount": 0
+          },
+          "keyPerson": {
+            "exists": false,
+            "amount": 0
+          },
+          "shareholderProtection": {
+            "exists": false
+          }
+        }
+      },
+      "liabilities": {
+        "mortgage": {
+          "outstanding": 0,
+          "monthlyPayment": 0,
+          "rateType": "none",
+          "rate": 0,
+          "remainingYears": 0
+        },
+        "otherLoans": [
+          {
+            "type": "student_loan_plan2",
+            "outstanding": 44000,
+            "monthlyPayment": 0,
+            "rateType": "variable",
+            "rate": 0.073,
+            "note": "Repayments begin above £27,295 threshold — not yet earning enough to repay"
+          }
+        ]
+      },
+      "dependants": [],
+      "willStatus": "none",
+      "lpaStatus": "neither",
+      "guardianNamed": false,
+      "income": {
+        "statePension": {
+          "annual": 11973,
+          "startAge": 67
+        },
+        "employment": 28000,
+        "dividends": 0,
+        "rentalIncome": 0,
+        "overseasIncome": 0
+      },
+      "riskQuestionnaire": {
+        "q11_liquidity_months": "under-1",
+        "q12_income_protection": "no",
+        "q13_income_sources": "one",
+        "d6_nominations_complete": "none",
+        "d6_will_current": "no",
+        "confidenceLevel": "low"
+      },
+      "alerts": [
+        {
+          "level": "critical",
+          "colour": "#FF3B30",
+          "badge": "CRITICAL",
+          "days": "No date",
+          "headline": "No emergency fund — 1 payslip from crisis",
+          "context": "£2,400 cash covers less than 1 month of essential expenses at £28,000/yr income.",
+          "action": "Build emergency fund to 3 months first",
+          "screen": "money",
+          "lifeStage": 1
+        },
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "This year",
+          "headline": "Auto-enrolment only — no named beneficiary",
+          "context": "Your Nest pension has no nomination. If you die, the trustees decide who receives it.",
+          "action": "Name a beneficiary on your pension",
+          "screen": "money",
+          "lifeStage": 1
+        },
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "Next ISA year",
+          "headline": "£1,800 ISA — maximise before tax year end",
+          "context": "You have £18,200 remaining ISA allowance this year. Shelter savings from future tax.",
+          "action": "Move savings into ISA",
+          "screen": "money",
+          "lifeStage": 1
+        }
+      ],
+      "aiSuggestions": [
+        "How much should I save each month to build a 3-month emergency fund by the end of this year?",
+        "Should I pay into my pension or build an ISA first?",
+        "Does my student loan affect my ability to get a mortgage later?",
+        "What happens to my pension if I die — and how do I name a beneficiary?"
+      ],
+      "dimensionNarrative": {
+        "behaviour": {
+          "risk": "Just starting and already engaged. At 22, showing up is the habit.",
+          "action": "Set up a small automated monthly savings transfer. Any amount. It's the habit that counts.",
+          "future": "Behaviours locked in at 22 compound for 45+ years — nothing else in your life has that leverage."
+        },
+        "capital": {
+          "risk": "£7k NW vs a £560k retirement number — exactly where you should be at 22.",
+          "action": "Your auto-enrolment pension is working. Consider opening an ISA with £25/month.",
+          "future": "Starting early beats saving more later. A £50/month habit at 22 beats £200/month at 32."
+        },
+        "tax": {
+          "risk": "Basic-rate taxpayer. Auto-enrolment pension is the easy win. ISA allowance almost entirely unused.",
+          "action": "Open an ISA. Any contribution counts — even £10/month uses a wrapper you'll benefit from forever.",
+          "future": "Early ISA contributions sit in a wrapper that never pays CGT or dividend tax — for life."
+        },
+        "protection": {
+          "risk": "No dependants, no mortgage — protection isn't needed yet.",
+          "action": "Revisit when you take on a mortgage or have dependants.",
+          "future": "Protection becomes essential when someone else depends on your income. Not now."
+        },
+        "cashflow": {
+          "risk": "£2k cash gives you about 1 month runway. The priority below 6 months is cash, not investments.",
+          "action": "Build a 3-month emergency buffer before increasing pension or ISA contributions.",
+          "future": "A cash buffer is what lets you keep invested through dips without being forced to sell."
+        },
+        "debt": {
+          "risk": "Debt-free. Keep it that way through your 20s.",
+          "action": "Avoid consumer debt — credit cards paid in full, no buy-now-pay-later.",
+          "future": "Consumer debt is the thief of your 30s. Avoiding it in your 20s is the biggest compounding decision you have."
+        },
+        "estate": {
+          "risk": "No will needed yet at 22 with minimal assets and no dependants.",
+          "action": "Revisit if you buy property or have a long-term partner.",
+          "future": "Estate planning starts when there's something to leave and someone to leave it to."
+        }
+      }
+    },
+    {
+      "id": "f-32",
+      "name": "Anna Finch",
+      "displayName": "Anna Finch · 32",
+      "type": "individual",
+      "isIFA": false,
+      "lifeStage": 2,
+      "lifeStageName": "Accumulation",
+      "lifeStageAge": "30–45",
+      "hasBusiness": false,
+      "isCouple": true,
+      "hasTrust": false,
+      "hasDBPension": false,
+      "isHigherRateTaxpayer": false,
+      "age": 32,
+      "targetIncome": 52000,
+      "dataLastUpdated": "2026-04-19",
+      "rulesVersion": "UK-2026.1",
+      "jurisdictionContext": {
+        "primary": "UK-2026.1",
+        "secondary": null
+      },
+      "drawdown": 0,
+      "assets": {
+        "sipp": {
+          "total": 38000,
+          "growth": 0.07,
+          "crystalised": 0,
+          "tfcTaken": 0,
+          "pensions": [
+            {
+              "name": "Current employer DC",
+              "value": 28000,
+              "type": "Workplace DC",
+              "provider": "Aviva",
+              "charge": 0.0035,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2023-05-10"
+            },
+            {
+              "name": "Previous employer DC",
+              "value": 10000,
+              "type": "Workplace DC",
+              "provider": "Nest",
+              "charge": 0.003,
+              "chargeIsEstimate": true,
+              "transferEligible": true,
+              "nominationDate": null
+            }
+          ]
+        },
+        "isa": {
+          "value": 22000,
+          "growth": 0.06
+        },
+        "residence": {
+          "value": 380000,
+          "ownership": "joint",
+          "ownershipShare": 0.5,
+          "address": "14 Maple Lane, Bristol BS4"
+        },
+        "portfolio": {
+          "value": 0,
+          "growth": 0.07,
+          "bpr": false
+        },
+        "cash": {
+          "total": 18000,
+          "own": 9000,
+          "spouseCash": 9000,
+          "rate": 0.042
+        },
+        "trustGifts": null,
+        "protection": {
+          "lifeInsurance": {
+            "exists": true,
+            "amount": 280000,
+            "inTrust": false,
+            "premium": 520
+          },
+          "criticalIllness": {
+            "exists": false,
+            "amount": 0,
+            "premium": 0
+          },
+          "incomeProtection": {
+            "exists": false,
+            "monthlyBenefit": 0,
+            "premium": 0
+          },
+          "relevantLifePlan": {
+            "exists": false,
+            "amount": 0
+          },
+          "keyPerson": {
+            "exists": false,
+            "amount": 0
+          },
+          "shareholderProtection": {
+            "exists": false
+          }
+        }
+      },
+      "liabilities": {
+        "mortgage": {
+          "outstanding": 295000,
+          "monthlyPayment": 1380,
+          "rateType": "fixed",
+          "rate": 0.043,
+          "remainingYears": 27
+        },
+        "otherLoans": [
+          {
+            "type": "student_loan_plan2",
+            "outstanding": 31000,
+            "monthlyPayment": 90,
+            "rateType": "variable",
+            "rate": 0.073
+          }
+        ]
+      },
+      "dependants": [
+        {
+          "type": "partner",
+          "age": 33,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 1,
+          "financiallyDependent": true
+        }
+      ],
+      "willStatus": "outdated",
+      "lpaStatus": "neither",
+      "guardianNamed": false,
+      "income": {
+        "statePension": {
+          "annual": 11973,
+          "startAge": 67
+        },
+        "employment": 52000,
+        "dividends": 0,
+        "rentalIncome": 0,
+        "overseasIncome": 0
+      },
+      "riskQuestionnaire": {
+        "q11_liquidity_months": "1-3",
+        "q12_income_protection": "no",
+        "q13_income_sources": "two",
+        "d6_nominations_complete": "some",
+        "d6_will_current": "outdated",
+        "confidenceLevel": "medium"
+      },
+      "alerts": [
+        {
+          "level": "critical",
+          "colour": "#FF3B30",
+          "badge": "CRITICAL",
+          "days": "No date",
+          "headline": "No guardian named — new baby",
+          "context": "Your will is outdated and names no guardian for your 1-year-old. If both parents die, the courts decide.",
+          "action": "Update will and name a guardian",
+          "screen": "money",
+          "lifeStage": 2
+        },
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "This year",
+          "headline": "Life insurance not in trust — adds to estate",
+          "context": "£280k life policy sits in your estate and triggers IHT. A trust removes it at no cost.",
+          "action": "Place life policy in trust",
+          "screen": "money",
+          "lifeStage": 2
+        },
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "This year",
+          "headline": "No income protection — mortgage at risk",
+          "context": "No IP in place. If unable to work for 6+ months, the £1,380/month mortgage payment is at risk.",
+          "action": "Review income protection need",
+          "screen": "money",
+          "lifeStage": 2
+        },
+        {
+          "level": "medium",
+          "colour": "#007AFF",
+          "badge": "OPPORTUNITY",
+          "days": "This year",
+          "headline": "Consolidate old pension — Nest pot",
+          "context": "£10k Nest pot from previous employer has higher charges and no beneficiary named.",
+          "action": "Transfer to current employer scheme",
+          "screen": "money",
+          "lifeStage": 2
+        }
+      ],
+      "aiSuggestions": [
+        "How much life insurance do I need with a mortgage, a partner, and a 1-year-old?",
+        "Should I focus on the mortgage, pension, or ISA first?",
+        "What happens to my child if I die without updating my will?",
+        "How does income protection work and what would it cost for my income level?"
+      ],
+      "dimensionNarrative": {
+        "behaviour": {
+          "risk": "Habits holding up. Mortgage serviced, pension contributions ongoing, ISA used.",
+          "action": "Review direct debits and pension contribution rate after any pay rise.",
+          "future": "Consistent contributions through stage 2 are what fill the gap to your retirement number."
+        },
+        "capital": {
+          "risk": "£38k SIPP + £22k ISA + £190k property. Mortgage £295k — NW is temporarily negative, normal at this stage.",
+          "action": "Focus on pension contribution rate, not NW on paper. Equity builds while you sleep.",
+          "future": "Stage 2 NW looks weak because leverage dominates — the flipside is the biggest growth phase of your life."
+        },
+        "tax": {
+          "risk": "Basic-rate taxpayer. Mortgage payments first, then pension + ISA.",
+          "action": "Split new savings 60/40 between pension (20% relief) and ISA (flexibility).",
+          "future": "Staying in the basic-rate band means the pension/ISA split is closer to a toss-up than later when you hit higher-rate."
+        },
+        "protection": {
+          "risk": "Life cover in place — good with a mortgage. Critical illness is the missing layer.",
+          "action": "Add critical illness cover. It's cheaper at 32 than it will ever be.",
+          "future": "CI cover bought at 32 locks in the rate for decades. Buying at 45 costs significantly more."
+        },
+        "cashflow": {
+          "risk": "£18k cash against £295k mortgage — adequate but thin. Build to 6 months of mortgage + bills.",
+          "action": "Hold cash at 6 months of fixed expenses before increasing pension contributions.",
+          "future": "A cash buffer means a job loss or illness doesn't force you to stop pension contributions."
+        },
+        "debt": {
+          "risk": "Mortgage is the only debt. Priced in, predictable. No consumer debt is the baseline.",
+          "action": "Don't accelerate mortgage overpayment — pension contributions at 20% relief beat paying down a ~5% mortgage.",
+          "future": "Your mortgage will shrink as inflation erodes it. Your pension will compound. Don't mix them."
+        },
+        "estate": {
+          "risk": "Likely no will yet. Any assets + partner/children = make one.",
+          "action": "£100-£300 for an online will, or £500-£1000 for a solicitor-drafted one. Either beats nothing.",
+          "future": "A will drafted at 32 will serve you fine until your situation meaningfully changes."
+        }
+      }
+    },
+    {
+      "id": "f-45",
+      "name": "Anna Finch",
+      "displayName": "Anna Finch · 45",
+      "type": "individual",
+      "isIFA": false,
+      "lifeStage": 3,
+      "lifeStageName": "Consolidation",
+      "lifeStageAge": "45–55",
+      "hasBusiness": false,
+      "isCouple": true,
+      "hasTrust": false,
+      "hasDBPension": false,
+      "isHigherRateTaxpayer": true,
+      "age": 45,
+      "targetIncome": 75000,
+      "dataLastUpdated": "2026-04-19",
+      "rulesVersion": "UK-2026.1",
+      "jurisdictionContext": {
+        "primary": "UK-2026.1",
+        "secondary": null
+      },
+      "drawdown": 0,
+      "assets": {
+        "sipp": {
+          "total": 210000,
+          "growth": 0.06,
+          "crystalised": 0,
+          "tfcTaken": 0,
+          "pensions": [
+            {
+              "name": "Current employer DC",
+              "value": 165000,
+              "type": "Workplace DC",
+              "provider": "Scottish Widows",
+              "charge": 0.003,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2024-01-12"
+            },
+            {
+              "name": "Previous employer DC (consolidated)",
+              "value": 45000,
+              "type": "SIPP",
+              "provider": "Vanguard",
+              "charge": 0.0015,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2023-06-20"
+            }
+          ]
+        },
+        "isa": {
+          "value": 88000,
+          "growth": 0.06
+        },
+        "residence": {
+          "value": 520000,
+          "ownership": "joint",
+          "ownershipShare": 0.5,
+          "address": "14 Maple Lane, Bristol BS4"
+        },
+        "portfolio": {
+          "value": 0,
+          "growth": 0.06,
+          "bpr": false
+        },
+        "cash": {
+          "total": 32000,
+          "own": 16000,
+          "spouseCash": 16000,
+          "rate": 0.043
+        },
+        "trustGifts": null,
+        "protection": {
+          "lifeInsurance": {
+            "exists": true,
+            "amount": 350000,
+            "inTrust": true,
+            "premium": 780
+          },
+          "criticalIllness": {
+            "exists": true,
+            "amount": 100000,
+            "premium": 1140
+          },
+          "incomeProtection": {
+            "exists": true,
+            "monthlyBenefit": 3200,
+            "premium": 960
+          },
+          "relevantLifePlan": {
+            "exists": false,
+            "amount": 0
+          },
+          "keyPerson": {
+            "exists": false,
+            "amount": 0
+          },
+          "shareholderProtection": {
+            "exists": false
+          }
+        }
+      },
+      "liabilities": {
+        "mortgage": {
+          "outstanding": 185000,
+          "monthlyPayment": 1050,
+          "rateType": "fixed",
+          "rate": 0.039,
+          "remainingYears": 15
+        },
+        "otherLoans": []
+      },
+      "dependants": [
+        {
+          "type": "partner",
+          "age": 46,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 14,
+          "financiallyDependent": true
+        },
+        {
+          "type": "child",
+          "age": 11,
+          "financiallyDependent": true
+        }
+      ],
+      "willStatus": "current",
+      "lpaStatus": "financial_only",
+      "guardianNamed": true,
+      "income": {
+        "statePension": {
+          "annual": 11973,
+          "startAge": 67
+        },
+        "employment": 75000,
+        "dividends": 0,
+        "rentalIncome": 0,
+        "overseasIncome": 0
+      },
+      "riskQuestionnaire": {
+        "q11_liquidity_months": "3-6",
+        "q12_income_protection": "yes",
+        "q13_income_sources": "two",
+        "d6_nominations_complete": "all",
+        "d6_will_current": "yes",
+        "confidenceLevel": "medium"
+      },
+      "alerts": [
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "This year",
+          "headline": "No health & welfare LPA — update before children leave school",
+          "context": "Financial LPA in place but no health LPA. At 45 with children this is a gap.",
+          "action": "Complete health and welfare LPA",
+          "screen": "money",
+          "lifeStage": 3
+        },
+        {
+          "level": "medium",
+          "colour": "#007AFF",
+          "badge": "OPPORTUNITY",
+          "days": "This tax year",
+          "headline": "Higher-rate taxpayer — pension contributions maximised?",
+          "context": "40% tax relief on pension contributions. Review salary sacrifice arrangement.",
+          "action": "Review pension contribution rate",
+          "screen": "money",
+          "lifeStage": 3
+        },
+        {
+          "level": "medium",
+          "colour": "#007AFF",
+          "badge": "OPPORTUNITY",
+          "days": "This tax year",
+          "headline": "£20,000 ISA allowance — £88k built, keep growing",
+          "context": "Excellent ISA discipline. Consider increasing contributions this year.",
+          "action": "Review ISA contribution plan",
+          "screen": "money",
+          "lifeStage": 3
+        }
+      ],
+      "aiSuggestions": [
+        "Am I on track for my retirement income target at 65?",
+        "How does salary sacrifice compare to a direct pension contribution for my situation?",
+        "What would happen to my mortgage if I couldn't work for 6 months?",
+        "Should I be making any IHT planning moves at this stage?"
+      ],
+      "dimensionNarrative": {
+        "behaviour": {
+          "risk": "Peak engagement stage. Nominations current, both protection layers active, ISA disciplined.",
+          "action": "Book an annual review with a qualified adviser if you haven't. Stage 3 is when advice starts to pay.",
+          "future": "The habits you've built are now compounding visibly — this is where the curve bends."
+        },
+        "capital": {
+          "risk": "£210k SIPP + £88k ISA + £260k property. Against a £1.5m retirement target — stage 3 should feel like closing the gap.",
+          "action": "Model whether to accelerate pension contributions now you're higher-rate.",
+          "future": "The 40% relief window opens at stage 3 — this is when pension contributions give the biggest lift."
+        },
+        "tax": {
+          "risk": "Higher-rate taxpayer. Pension contributions at 40% relief are your biggest tax lever.",
+          "action": "Maximise pension contributions up to your £60k annual allowance. Use salary sacrifice if your employer offers it.",
+          "future": "Every £1,000 pension contribution as a higher-rate payer costs you £600 — a 40% head start on compound growth."
+        },
+        "protection": {
+          "risk": "Life and critical illness in place — strong at peak-earning stage with dependants at home.",
+          "action": "Review sum assured against your mortgage balance and earnings — cover should scale as income rises.",
+          "future": "Protection at 45 protects not just your family but the compound growth of everything you've built."
+        },
+        "cashflow": {
+          "risk": "£32k cash against mortgage and family expenses — comfortable, not generous.",
+          "action": "Maintain 6 months of fixed expenses in cash. Higher earners with higher fixed costs need the same ratio.",
+          "future": "A cash buffer becomes more valuable as your earnings rise — replacing a higher income takes longer."
+        },
+        "debt": {
+          "risk": "£185k mortgage remaining at stage 3 — on track to be paid by 55-60.",
+          "action": "Don't pay down mortgage early at the expense of pension 40% relief.",
+          "future": "Finishing the mortgage naturally around stage 4 leaves stage 5 pension contributions untouched."
+        },
+        "estate": {
+          "risk": "With dependent children, a current will and LPA are essential.",
+          "action": "Review will if dependants have changed. Set up an LPA if you haven't.",
+          "future": "An LPA at 45 is a small admin cost that protects the next 40 years of financial decisions if anything goes wrong."
+        }
+      }
+    },
+    {
+      "id": "f-58",
+      "name": "Anna Finch",
+      "displayName": "Anna Finch · 58",
+      "type": "individual",
+      "isIFA": false,
+      "lifeStage": 4,
+      "lifeStageName": "Transition",
+      "lifeStageAge": "55–65",
+      "hasBusiness": false,
+      "isCouple": true,
+      "hasTrust": false,
+      "hasDBPension": false,
+      "isHigherRateTaxpayer": true,
+      "age": 58,
+      "targetIncome": 85000,
+      "dataLastUpdated": "2026-04-19",
+      "rulesVersion": "UK-2026.1",
+      "jurisdictionContext": {
+        "primary": "UK-2026.1",
+        "secondary": null
+      },
+      "drawdown": 0,
+      "assets": {
+        "sipp": {
+          "total": 680000,
+          "growth": 0.05,
+          "crystalised": 0,
+          "tfcTaken": 0,
+          "pensions": [
+            {
+              "name": "Main employer pension",
+              "value": 540000,
+              "type": "Workplace DC",
+              "provider": "Legal & General",
+              "charge": 0.002,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2025-03-08"
+            },
+            {
+              "name": "Personal SIPP (consolidated)",
+              "value": 140000,
+              "type": "SIPP",
+              "provider": "Hargreaves Lansdown",
+              "charge": 0.0045,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2025-03-08"
+            }
+          ]
+        },
+        "isa": {
+          "value": 240000,
+          "growth": 0.05
+        },
+        "residence": {
+          "value": 680000,
+          "ownership": "joint",
+          "ownershipShare": 0.5,
+          "address": "14 Maple Lane, Bristol BS4"
+        },
+        "portfolio": {
+          "value": 85000,
+          "growth": 0.05,
+          "bpr": false
+        },
+        "cash": {
+          "total": 68000,
+          "own": 34000,
+          "spouseCash": 34000,
+          "rate": 0.044
+        },
+        "trustGifts": null,
+        "protection": {
+          "lifeInsurance": {
+            "exists": true,
+            "amount": 200000,
+            "inTrust": true,
+            "premium": 1440
+          },
+          "criticalIllness": {
+            "exists": true,
+            "amount": 150000,
+            "premium": 2160
+          },
+          "incomeProtection": {
+            "exists": true,
+            "monthlyBenefit": 4200,
+            "premium": 1680
+          },
+          "relevantLifePlan": {
+            "exists": false,
+            "amount": 0
+          },
+          "keyPerson": {
+            "exists": false,
+            "amount": 0
+          },
+          "shareholderProtection": {
+            "exists": false
+          }
+        }
+      },
+      "liabilities": {
+        "mortgage": {
+          "outstanding": 42000,
+          "monthlyPayment": 480,
+          "rateType": "fixed",
+          "rate": 0.034,
+          "remainingYears": 8
+        },
+        "otherLoans": []
+      },
+      "dependants": [
+        {
+          "type": "partner",
+          "age": 59,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 27,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 24,
+          "financiallyDependent": false
+        }
+      ],
+      "willStatus": "current",
+      "lpaStatus": "both",
+      "guardianNamed": false,
+      "income": {
+        "statePension": {
+          "annual": 11973,
+          "startAge": 67
+        },
+        "employment": 85000,
+        "dividends": 0,
+        "rentalIncome": 0,
+        "overseasIncome": 0
+      },
+      "riskQuestionnaire": {
+        "q11_liquidity_months": "3-6",
+        "q12_income_protection": "yes",
+        "q13_income_sources": "two",
+        "d6_nominations_complete": "all",
+        "d6_will_current": "yes",
+        "confidenceLevel": "medium"
+      },
+      "alerts": [
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "353 days",
+          "headline": "Pension enters estate April 2027",
+          "context": "£680k pension will be subject to IHT from 6 April 2027. Start planning drawdown sequence now.",
+          "action": "Model drawdown strategy",
+          "screen": "tax",
+          "lifeStage": 4
+        },
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "This year",
+          "headline": "IHT position emerging — £1.6m total estate (joint)",
+          "context": "Property + pensions + ISA puts the joint estate over the combined nil-rate bands. Review.",
+          "action": "IHT review with adviser",
+          "screen": "tax",
+          "lifeStage": 4
+        },
+        {
+          "level": "info",
+          "colour": "#34C759",
+          "badge": "POSITIVE",
+          "days": "On track",
+          "headline": "Mortgage clears in 8 years — before retirement",
+          "context": "Mortgage on track to clear at age 66 — year before state pension.",
+          "action": "Model cashflow post-mortgage",
+          "screen": "money",
+          "lifeStage": 4
+        }
+      ],
+      "aiSuggestions": [
+        "How should I sequence pension and ISA drawdown for the most tax-efficient retirement income?",
+        "What is my IHT position and what can I do before 2027?",
+        "When should I start taking my pension given my target retirement age?",
+        "How much will my income change when the mortgage clears?"
+      ],
+      "dimensionNarrative": {
+        "behaviour": {
+          "risk": "Transition-stage habits. You're preparing, not accumulating. Reviews have stepped up.",
+          "action": "Annual reviews become quarterly conversations as retirement approaches.",
+          "future": "Pre-retirement habits set the tone for 25+ years of decumulation ahead."
+        },
+        "capital": {
+          "risk": "£680k SIPP + £240k ISA + £85k portfolio against a £1.7m target — well on course.",
+          "action": "Model drawdown scenarios — start date, rate, sequencing. Seven years before state pension begins.",
+          "future": "Being on course at 58 means decisions ahead are about optimisation, not catch-up."
+        },
+        "tax": {
+          "risk": "Higher-rate taxpayer. Last window for peak pension contributions before drawdown begins.",
+          "action": "Max pension contributions now — relief at 40% before you drop to basic-rate in retirement.",
+          "future": "The final pre-retirement years often give the biggest absolute pension contributions — use them."
+        },
+        "protection": {
+          "risk": "Life + CI still in place. Review whether cover amounts still match a shrinking mortgage.",
+          "action": "Reduce cover amounts in line with shrinking liabilities — don't pay for cover you no longer need.",
+          "future": "Protection needs drop as mortgage shrinks and children become independent — premiums should drop too."
+        },
+        "cashflow": {
+          "risk": "£68k cash gives strong runway. Preparation fund, not emergency fund now.",
+          "action": "Start building a 24-month cash cushion for early-drawdown sequence-risk protection.",
+          "future": "Sequence-of-returns risk in the first 5 years of drawdown is the biggest threat — cash cushion defuses it."
+        },
+        "debt": {
+          "risk": "£42k mortgage remaining — will be gone before pension access.",
+          "action": "Let the mortgage finish naturally. Pension contributions at 40% relief beat mortgage overpayment.",
+          "future": "Entering drawdown mortgage-free removes a fixed outflow and gives full drawdown flexibility."
+        },
+        "estate": {
+          "risk": "Check pension nominations, refresh will, confirm LPA. Stage 4 is where estate planning begins.",
+          "action": "Book an estate-focused review — will, LPA, pension nominations reviewed in one sitting.",
+          "future": "Pre-drawdown estate setup avoids messy updates once drawdown is underway."
+        }
+      }
+    },
+    {
+      "id": "f-72",
+      "name": "Anna Finch",
+      "displayName": "Anna Finch · 72",
+      "type": "individual",
+      "isIFA": false,
+      "lifeStage": 5,
+      "lifeStageName": "Decumulation",
+      "lifeStageAge": "65–75",
+      "hasBusiness": false,
+      "isCouple": true,
+      "hasTrust": false,
+      "hasDBPension": false,
+      "isHigherRateTaxpayer": false,
+      "age": 72,
+      "targetIncome": 52000,
+      "dataLastUpdated": "2026-04-19",
+      "rulesVersion": "UK-2026.1",
+      "jurisdictionContext": {
+        "primary": "UK-2026.1",
+        "secondary": null
+      },
+      "drawdown": 22000,
+      "assets": {
+        "sipp": {
+          "total": 520000,
+          "growth": 0.04,
+          "crystalised": 520000,
+          "tfcTaken": 130000,
+          "inDrawdown": true,
+          "drawdownStartAge": 67,
+          "pensions": [
+            {
+              "name": "Main pension (FAD)",
+              "value": 390000,
+              "type": "FAD",
+              "provider": "Legal & General",
+              "charge": 0.002,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2025-08-15"
+            },
+            {
+              "name": "Consolidated SIPP",
+              "value": 130000,
+              "type": "FAD",
+              "provider": "Hargreaves Lansdown",
+              "charge": 0.0045,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2025-08-15"
+            }
+          ]
+        },
+        "isa": {
+          "value": 310000,
+          "growth": 0.04
+        },
+        "residence": {
+          "value": 820000,
+          "ownership": "joint",
+          "ownershipShare": 0.5,
+          "address": "14 Maple Lane, Bristol BS4"
+        },
+        "portfolio": {
+          "value": 120000,
+          "growth": 0.04,
+          "bpr": false
+        },
+        "cash": {
+          "total": 165000,
+          "own": 88000,
+          "spouseCash": 77000,
+          "rate": 0.042
+        },
+        "trustGifts": null,
+        "protection": {
+          "lifeInsurance": {
+            "exists": true,
+            "amount": 100000,
+            "inTrust": true,
+            "premium": 2400
+          },
+          "criticalIllness": {
+            "exists": true,
+            "amount": 50000,
+            "premium": 3200
+          },
+          "incomeProtection": {
+            "exists": false,
+            "monthlyBenefit": 0,
+            "premium": 0
+          },
+          "relevantLifePlan": {
+            "exists": false,
+            "amount": 0
+          },
+          "keyPerson": {
+            "exists": false,
+            "amount": 0
+          },
+          "shareholderProtection": {
+            "exists": false
+          }
+        }
+      },
+      "liabilities": {
+        "mortgage": {
+          "outstanding": 0,
+          "monthlyPayment": 0,
+          "rateType": "none",
+          "rate": 0,
+          "remainingYears": 0
+        },
+        "otherLoans": []
+      },
+      "dependants": [
+        {
+          "type": "partner",
+          "age": 73,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 41,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 38,
+          "financiallyDependent": false
+        }
+      ],
+      "willStatus": "current",
+      "lpaStatus": "both",
+      "guardianNamed": false,
+      "income": {
+        "statePension": {
+          "annual": 11973,
+          "startAge": 67,
+          "inPayment": true
+        },
+        "employment": 0,
+        "dividends": 4800,
+        "rentalIncome": 8400,
+        "overseasIncome": 0
+      },
+      "riskQuestionnaire": {
+        "q11_liquidity_months": "over-6",
+        "q12_income_protection": "no",
+        "d6_nominations_complete": "all",
+        "d6_will_current": "yes",
+        "confidenceLevel": "medium",
+        "q13_note": "data-inferred: state pension + drawdown + dividends + rental = 4 sources"
+      },
+      "alerts": [
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "Estate planning",
+          "headline": "Estate approaching IHT threshold",
+          "context": "Joint estate (property + SIPP + ISA) is approaching the combined NRB+RNRB. Review gifting strategy.",
+          "action": "Annual estate review",
+          "screen": "tax",
+          "lifeStage": 5
+        },
+        {
+          "level": "info",
+          "colour": "#34C759",
+          "badge": "POSITIVE",
+          "days": "On track",
+          "headline": "Drawdown within guardrail",
+          "context": "£22,000 annual drawdown is well within the safe withdrawal rate for your portfolio size.",
+          "action": "View cashflow projection",
+          "screen": "money",
+          "lifeStage": 5
+        }
+      ],
+      "aiSuggestions": [
+        "Am I drawing down too much or too little given my age and portfolio?",
+        "What is my IHT position and what gifting options are available to me?",
+        "How does my state pension affect my drawdown tax position?",
+        "What happens to my SIPP if I die before my partner?"
+      ],
+      "dimensionNarrative": {
+        "behaviour": {
+          "risk": "Decumulation habits — drawdown active, nominations reviewed, state pension taken.",
+          "action": "Annual review to confirm drawdown rate is sustainable across expected longevity.",
+          "future": "Steady behaviours in decumulation let capital outlast you — the purpose of all of this."
+        },
+        "capital": {
+          "risk": "£520k SIPP + £310k ISA + £120k portfolio. Capital secure at £1.5m total.",
+          "action": "Model capital at age 90 under current drawdown — confirm safety margin is holding.",
+          "future": "Capital secure at 72 usually means the remaining decades are about transfer efficiency, not survival."
+        },
+        "tax": {
+          "risk": "Drawdown at £22k/year. Combined with state pension this stays close to basic-rate efficiency.",
+          "action": "Coordinate SIPP drawdown with state pension to avoid drifting into higher-rate band.",
+          "future": "Keeping post-65 drawdown below the higher-rate threshold saves compounded tax over 20+ retirement years."
+        },
+        "protection": {
+          "risk": "Legacy-phase protection review — do cover amounts still make sense at 72?",
+          "action": "Review whether legacy life cover premiums still justify the sum assured.",
+          "future": "At 72, some cover types lose their value — premiums can often be reduced or dropped."
+        },
+        "cashflow": {
+          "risk": "£165k cash reserves strong. Reliable income from drawdown + state pension.",
+          "action": "Keep 2+ years cash cushion against sequence risk. The rest can work harder in ISA.",
+          "future": "Decumulation cashflow is about stability — reliable monthly income matters more than maximum growth."
+        },
+        "debt": {
+          "risk": "Debt-free through decumulation. Clean sheet.",
+          "action": "Stay debt-free. Avoid equity release unless genuinely needed.",
+          "future": "Debt-free decumulation means full capital goes to beneficiaries, not to interest payments."
+        },
+        "estate": {
+          "risk": "Drawdown reducing SIPP each year. Beneficiary reviews and trust structures matter most now.",
+          "action": "Review pension beneficiaries and confirm nominations reflect current wishes.",
+          "future": "Stage 5 estate work is mostly about making the transition to beneficiaries smooth and tax-efficient."
+        }
+      }
+    },
+    {
+      "id": "f-89",
+      "name": "Anna Finch",
+      "displayName": "Anna Finch · 89",
+      "type": "individual",
+      "isIFA": false,
+      "lifeStage": 7,
+      "lifeStageName": "Legacy",
+      "lifeStageAge": "85+",
+      "hasBusiness": false,
+      "isCouple": false,
+      "hasTrust": true,
+      "hasDBPension": false,
+      "isHigherRateTaxpayer": false,
+      "age": 89,
+      "targetIncome": 38000,
+      "dataLastUpdated": "2026-04-19",
+      "rulesVersion": "UK-2026.1",
+      "jurisdictionContext": {
+        "primary": "UK-2026.1",
+        "secondary": null
+      },
+      "drawdown": 14000,
+      "postAge75": true,
+      "assets": {
+        "sipp": {
+          "total": 120000,
+          "growth": 0.03,
+          "crystalised": 120000,
+          "tfcTaken": 130000,
+          "inDrawdown": true,
+          "drawdownStartAge": 67,
+          "pensions": [
+            {
+              "name": "Main pension (late-stage FAD)",
+              "value": 120000,
+              "type": "FAD",
+              "provider": "Legal & General",
+              "charge": 0.002,
+              "chargeIsEstimate": false,
+              "transferEligible": false,
+              "nominationDate": "2025-11-01",
+              "postAge75Treatment": "lumpsum_taxable"
+            }
+          ]
+        },
+        "isa": {
+          "value": 280000,
+          "growth": 0.03
+        },
+        "residence": {
+          "value": 920000,
+          "ownership": "sole",
+          "ownershipShare": 1.0,
+          "address": "14 Maple Lane, Bristol BS4"
+        },
+        "portfolio": {
+          "value": 180000,
+          "growth": 0.03,
+          "bpr": false
+        },
+        "cash": {
+          "total": 88000,
+          "own": 88000,
+          "rate": 0.038
+        },
+        "trustGifts": {
+          "each": 80000,
+          "total": 80000,
+          "date": "2020-06-15",
+          "numChildren": 2,
+          "trustType": "Discretionary"
+        },
+        "protection": {
+          "lifeInsurance": {
+            "exists": false,
+            "amount": 0,
+            "inTrust": false,
+            "premium": 0
+          },
+          "criticalIllness": {
+            "exists": false,
+            "amount": 0,
+            "premium": 0
+          },
+          "incomeProtection": {
+            "exists": false,
+            "monthlyBenefit": 0,
+            "premium": 0
+          },
+          "relevantLifePlan": {
+            "exists": false,
+            "amount": 0
+          },
+          "keyPerson": {
+            "exists": false,
+            "amount": 0
+          },
+          "shareholderProtection": {
+            "exists": false
+          }
+        }
+      },
+      "liabilities": {
+        "mortgage": {
+          "outstanding": 0,
+          "monthlyPayment": 0,
+          "rateType": "none",
+          "rate": 0,
+          "remainingYears": 0
+        },
+        "otherLoans": []
+      },
+      "dependants": [
+        {
+          "type": "child",
+          "age": 58,
+          "financiallyDependent": false
+        },
+        {
+          "type": "child",
+          "age": 55,
+          "financiallyDependent": false
+        }
+      ],
+      "willStatus": "current",
+      "lpaStatus": "both",
+      "guardianNamed": false,
+      "income": {
+        "statePension": {
+          "annual": 11973,
+          "startAge": 67,
+          "inPayment": true
+        },
+        "employment": 0,
+        "dividends": 0,
+        "rentalIncome": 0,
+        "overseasIncome": 0
+      },
+      "riskQuestionnaire": {
+        "q11_liquidity_months": "over-6",
+        "q12_income_protection": "no",
+        "q13_income_sources": "two",
+        "d6_nominations_complete": "all",
+        "d6_will_current": "yes",
+        "confidenceLevel": "medium"
+      },
+      "alerts": [
+        {
+          "level": "high",
+          "colour": "#FF9500",
+          "badge": "HIGH",
+          "days": "Estate planning",
+          "headline": "SIPP — post-75 death benefit review",
+          "context": "Remaining £120k SIPP is taxable income for beneficiaries. Review drawdown rate and nomination.",
+          "action": "Annual beneficiary drawdown review",
+          "screen": "tax",
+          "lifeStage": 7
+        },
+        {
+          "level": "info",
+          "colour": "#34C759",
+          "badge": "POSITIVE",
+          "days": "Completed",
+          "headline": "Estate well-planned — trust active",
+          "context": "£80k in discretionary trust from 2020 is IHT-free. Will and LPA fully current.",
+          "action": "Annual estate review",
+          "screen": "tax",
+          "lifeStage": 7
+        }
+      ],
+      "aiSuggestions": [
+        "How long will my current drawdown rate sustain my portfolio?",
+        "What will my children receive after IHT under the current arrangement?",
+        "Should I accelerate gifting from my estate at this stage?",
+        "How does the SIPP interact with IHT now that I am over 75?"
+      ],
+      "dimensionNarrative": {
+        "behaviour": {
+          "risk": "Legacy-stage habits shift from actions to annual reviews with whoever holds your LPA.",
+          "action": "Confirm your LPA is registered and your attorney has the current pension statements.",
+          "future": "At 89 the product becomes about someone else being able to act on your behalf smoothly."
+        },
+        "capital": {
+          "risk": "Capital has grown through retirement. £1.59m against a £38k target — heavily over-funded.",
+          "action": "Consider whether earlier gifting could reduce future IHT for your beneficiaries.",
+          "future": "Capital that outlasts spending becomes inheritance — the question is how much is lost to IHT vs reaches them."
+        },
+        "tax": {
+          "risk": "Drawdown low, ISA substantial. Tax focus now is beneficiary tax on inheritance.",
+          "action": "Model ISA + SIPP + property together as an inheritance package — different tax treatments apply.",
+          "future": "Inherited ISAs transfer to a spouse tax-free via APS. SIPP treatment depends on age-at-death rules."
+        },
+        "protection": {
+          "risk": "No cover at 89 — expected. Protection is now about documents, not policies.",
+          "action": "Confirm will, LPA, and digital-access instructions are current and accessible.",
+          "future": "At 89 the most valuable 'protection' is documents that let your family act quickly and correctly."
+        },
+        "cashflow": {
+          "risk": "£88k cash gives 2+ years runway. Fixed income covers spending comfortably.",
+          "action": "Keep 2 years cash plus current-year buffer. Rest can remain invested.",
+          "future": "At 89, predictable monthly income plus cash cushion removes any reason for capital pressure."
+        },
+        "debt": {
+          "risk": "Debt-free. Has been for decades.",
+          "action": "No debt action needed.",
+          "future": "Debt-free through your 80s means full capital reaches beneficiaries with no interest leakage."
+        },
+        "estate": {
+          "risk": "Will, LPA, beneficiaries — everything should be airtight at this stage.",
+          "action": "Annual review of will, LPA, and pension nominations. Confirm beneficiaries are all correctly listed.",
+          "future": "The work done at 89 is what your beneficiaries will be grateful for at 90 — clear, current, final."
+        }
+      }
+    }
+  ]
+}

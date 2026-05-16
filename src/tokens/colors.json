@@ -1,0 +1,57 @@
+{
+  "dark": {
+    "bg":        "#080E1A",
+    "bg2":       "#0D1525",
+    "surface":   "#111C2E",
+    "surface2":  "#172036",
+    "surface3":  "#1E2940",
+    "border":    "rgba(255,255,255,0.06)",
+    "border2":   "rgba(255,255,255,0.12)",
+    "text":      "#F0F4FF",
+    "text2":     "#8A9BC0",
+    "text3":     "#4A5878",
+    "acc":       "#00E5A8",
+    "acc2":      "#4D8EFF",
+    "acc3":      "#FF6B6B",
+    "gold":      "#FFB347",
+    "accBg":     "rgba(0,229,168,0.10)",
+    "acc2Bg":    "rgba(77,142,255,0.10)",
+    "acc3Bg":    "rgba(255,107,107,0.10)",
+    "goldBg":    "rgba(255,179,71,0.10)"
+  },
+  "light": {
+    "bg":        "#F0F4F8",
+    "bg2":       "#E8EDF5",
+    "surface":   "#FFFFFF",
+    "surface2":  "#F7FAFC",
+    "surface3":  "#EEF2F8",
+    "border":    "rgba(11,31,58,0.07)",
+    "border2":   "rgba(11,31,58,0.14)",
+    "text":      "#0B1F3A",
+    "text2":     "#4A5568",
+    "text3":     "#94A3B8",
+    "acc":       "#00B88A",
+    "acc2":      "#2563EB",
+    "acc3":      "#DC2626",
+    "gold":      "#D97706",
+    "accBg":     "rgba(0,184,138,0.10)",
+    "acc2Bg":    "rgba(37,99,235,0.10)",
+    "acc3Bg":    "rgba(220,38,38,0.10)",
+    "goldBg":    "rgba(217,119,6,0.10)"
+  },
+  "alert": {
+    "critical":  "#FF3B30",
+    "high":      "#FF9500",
+    "medium":    "#007AFF",
+    "info":      "#34C759"
+  },
+  "stages": {
+    "1": "#4D8EFF",
+    "2": "#00E5A8",
+    "3": "#FFB347",
+    "4": "#FF8C42",
+    "5": "#FF6B6B",
+    "6": "#9B59B6",
+    "7": "#7F8C8D"
+  }
+}

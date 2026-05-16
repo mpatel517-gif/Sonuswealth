@@ -1,0 +1,289 @@
+{
+  "_meta": {
+    "version": "UK-CMA-2026.1",
+    "type": "capital-market-assumptions",
+    "jurisdiction": "UK",
+    "effectiveFrom": "2026-04-06",
+    "effectiveTo": "2027-04-05",
+    "verifiedBy": "Claude (s17b-1c-cma · Opus)",
+    "verificationDate": "2026-05-08",
+    "supersedes": null,
+    "siblingBundle": "UK-master-2026.1.1.json (tax bundle)",
+    "notes": "First CMA bundle for Sonuswealth. Sibling to UK-master-2026.1.1.json (tax bundle); no field overlap. Per CF v1.5 §7.3 patch (s17b-1c-cma close), the 5 retail-reference fields (tvLicenceFee, hmrcInterestRate, nhsPrescriptionCharges, childcareFreeHours, taxFreeChildcareMax-equivalent) move from claimed-tax-bundle ownership to CMA bundle ownership. All monetary values in GBP. All rates as decimals. Time-sensitive fields (cashRate, hmrcInterestRate, giltYields, tvLicenceFee) carry snapshot dates in their _source; verify against publisher at next refresh.",
+    "sourceUniverseDecisions": {
+      "O-CF-RULES-01_assetUniverse": "B · Standard 8 (UK eq · Global eq DM ex-UK · EM eq · UK gilts short · UK gilts medium · UK corp credit · Property/REIT · Cash)",
+      "O-CF-RULES-05_swrMorningstar": "B · Localise to UK (UK-grounded SWR derivation; closes O-CF-RULES-02 in same step)",
+      "O-CF-RULES-10_expenseBands": "C · Persona-aligned 5 cuts (Foundation 18-30 · Accumulation 30-45 · Pre-retirement 45-60 · Transition 60-67 · Decumulation 67+) × 3 PLSA tiers × essential/discretionary",
+      "O-CF-RULES-12_coiDiscountRate": "B · Risk-free interim (UK 10-yr gilt yield from cma.giltYields; PCC upgrade hook reserved)",
+      "Finding1_retailReferenceFieldOwnership": "CMA bundle owns 5 fields previously claimed by CF §7.3 tax bundle. CF v1.5 → v1.6 patch noted at session close."
+    },
+    "_correctionLog": []
+  },
+  "inflationPath": [
+    {"year": 2026, "cpi": 0.023, "_source": "OBR Economic and Fiscal Outlook March 2026 — central CPI forecast 2.3% for 2026 (OBR Mar 2026 EFO §1.14)", "snapshot_date": "2026-03-26"},
+    {"year": 2027, "cpi": 0.020, "_source": "OBR Economic and Fiscal Outlook March 2026 — central CPI forecast 2.0% from 2027 onward; aligns with BoE 2% target", "snapshot_date": "2026-03-26"},
+    {"year": 2028, "cpi": 0.020, "_source": "OBR Economic and Fiscal Outlook March 2026 — long-run target convergence", "snapshot_date": "2026-03-26"},
+    {"year": 2029, "cpi": 0.020, "_source": "BoE 2% inflation target (long-run anchor; OBR EFO converges)", "snapshot_date": "2026-03-26"},
+    {"year": 2030, "cpi": 0.020, "_source": "BoE 2% inflation target (long-run anchor)", "snapshot_date": "2026-03-26"},
+    {"year": 2031, "cpi": 0.020, "_source": "BoE 2% inflation target (years 6+ revert per CMA convention)", "snapshot_date": "2026-03-26"}
+  ],
+  "_inflationPathNotes": "Years 1-2 from OBR EFO Mar 2026 published forecast. Years 3-5 OBR forecast extension converging to 2% target. Years 6+ revert to BoE inflation target per standard CMA convention (terminal value assumption). Refresh annually around 6 April with new OBR EFO.",
+  "equityReturns": {
+    "uk": {
+      "mean": 0.058,
+      "std_dev": 0.155,
+      "_source": "Vanguard VCMM 10-year UK equity nominal return projection (mean ~5.8%) · long-run UK equity volatility ~15.5% from Dimson-Marsh-Staunton Yearbook 2024 (UK 1900-2023 series). Conservative: mean is mid-range of major asset manager CMAs (Vanguard 5.5-6.0%, Schroders 5.5-7.0%, Morningstar 5.8-6.2%).",
+      "snapshot_date": "2025-Q4",
+      "is_default": false
+    },
+    "global": {
+      "mean": 0.062,
+      "std_dev": 0.145,
+      "_source": "MSCI World ex-UK 10-year nominal return projection ~6.2% (Vanguard VCMM 2025 + Schroders CMA 2025 mid-range) · vol ~14.5% from MSCI World long-run series.",
+      "snapshot_date": "2025-Q4",
+      "is_default": false
+    },
+    "emerging": {
+      "mean": 0.072,
+      "std_dev": 0.215,
+      "_source": "MSCI EM 10-year nominal return projection ~7.2% (Vanguard VCMM 2025 EM range 6.8-7.5%) · vol ~21.5% from MSCI EM long-run series. Higher mean reflects EM risk premium; higher vol reflects EM volatility characteristic.",
+      "snapshot_date": "2025-Q4",
+      "is_default": false
+    }
+  },
+  "bondReturns": {
+    "short": {
+      "mean": 0.038,
+      "std_dev": 0.030,
+      "duration_years": 3,
+      "_source": "UK gilts short-duration (3-yr) 10-year nominal expected return ~3.8% (Vanguard VCMM 2025) · vol ~3.0% from FTSE Actuaries UK Gilts Short Index long-run series.",
+      "snapshot_date": "2025-Q4",
+      "is_default": false
+    },
+    "medium": {
+      "mean": 0.042,
+      "std_dev": 0.062,
+      "duration_years": 7,
+      "_source": "UK gilts medium-duration (7-yr) 10-year nominal expected return ~4.2% (Vanguard VCMM 2025) · vol ~6.2% from FTSE Actuaries UK Gilts All-Stocks long-run series.",
+      "snapshot_date": "2025-Q4",
+      "is_default": false
+    },
+    "corporateCredit": {
+      "mean": 0.048,
+      "std_dev": 0.075,
+      "duration_years": 7,
+      "_source": "UK corporate credit (investment-grade, 7-yr avg duration) 10-year expected return ~4.8% (Schroders CMA 2025) · vol ~7.5% from iBoxx Sterling Corporate Index long-run series. Spread over gilts ~80-100bps.",
+      "snapshot_date": "2025-Q4",
+      "is_default": false
+    }
+  },
+  "giltYields": [
+    {"duration_years": 1, "yield": 0.0395, "_source": "BoE yield curve · 1-yr nominal · approximate snapshot from BoE published yield curve data; refresh from https://www.bankofengland.co.uk/statistics/yield-curves at bundle activation", "snapshot_date": "2026-05-08"},
+    {"duration_years": 3, "yield": 0.0410, "_source": "BoE yield curve · 3-yr nominal · approximate snapshot", "snapshot_date": "2026-05-08"},
+    {"duration_years": 5, "yield": 0.0425, "_source": "BoE yield curve · 5-yr nominal · approximate snapshot", "snapshot_date": "2026-05-08"},
+    {"duration_years": 10, "yield": 0.0455, "_source": "BoE yield curve · 10-yr nominal · approximate snapshot · used as risk-free rate for CF CoI variant NPV per O-CF-RULES-12 = B (Risk-free interim)", "snapshot_date": "2026-05-08"},
+    {"duration_years": 15, "yield": 0.0470, "_source": "BoE yield curve · 15-yr nominal · approximate snapshot", "snapshot_date": "2026-05-08"},
+    {"duration_years": 20, "yield": 0.0480, "_source": "BoE yield curve · 20-yr nominal · approximate snapshot", "snapshot_date": "2026-05-08"},
+    {"duration_years": 25, "yield": 0.0485, "_source": "BoE yield curve · 25-yr nominal · approximate snapshot", "snapshot_date": "2026-05-08"},
+    {"duration_years": 30, "yield": 0.0490, "_source": "BoE yield curve · 30-yr nominal · approximate snapshot", "snapshot_date": "2026-05-08"}
+  ],
+  "_giltYieldsNotes": "Yield curve snapshot 2026-05-08. Daily BoE publication; bundle is point-in-time snapshot. Refresh at each bundle effective period; CF Floor-Upside (§3.4) consumes for bond ladder pricing.",
+  "annuityRates": [
+    {"age": 55, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 4850, "_source": "William Burrows Annuities published quarterly tables · CMI SAPS S3 mortality base · level annuity, no guarantee", "snapshot_date": "2026-Q1"},
+    {"age": 55, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 3320, "_source": "William Burrows · 3% escalation"},
+    {"age": 55, "sex": "M", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 4810, "_source": "William Burrows · 5-yr guarantee"},
+    {"age": 55, "sex": "M", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 4730, "_source": "William Burrows · 10-yr guarantee"},
+    {"age": 55, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 4760, "_source": "William Burrows · female annuity"},
+    {"age": 55, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 3240, "_source": "William Burrows"},
+    {"age": 55, "sex": "F", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 4720, "_source": "William Burrows"},
+    {"age": 55, "sex": "F", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 4640, "_source": "William Burrows"},
+    {"age": 60, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 5720, "_source": "William Burrows · age 60 male"},
+    {"age": 60, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 4080, "_source": "William Burrows"},
+    {"age": 60, "sex": "M", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 5680, "_source": "William Burrows"},
+    {"age": 60, "sex": "M", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 5600, "_source": "William Burrows"},
+    {"age": 60, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 5610, "_source": "William Burrows"},
+    {"age": 60, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 3970, "_source": "William Burrows"},
+    {"age": 60, "sex": "F", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 5570, "_source": "William Burrows"},
+    {"age": 60, "sex": "F", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 5490, "_source": "William Burrows"},
+    {"age": 65, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 6790, "_source": "William Burrows · age 65 male — most-quoted reference rate"},
+    {"age": 65, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 5050, "_source": "William Burrows"},
+    {"age": 65, "sex": "M", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 6740, "_source": "William Burrows"},
+    {"age": 65, "sex": "M", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 6620, "_source": "William Burrows"},
+    {"age": 65, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 6620, "_source": "William Burrows"},
+    {"age": 65, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 4910, "_source": "William Burrows"},
+    {"age": 65, "sex": "F", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 6580, "_source": "William Burrows"},
+    {"age": 65, "sex": "F", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 6470, "_source": "William Burrows"},
+    {"age": 70, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 8120, "_source": "William Burrows · age 70 male"},
+    {"age": 70, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 6310, "_source": "William Burrows"},
+    {"age": 70, "sex": "M", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 8050, "_source": "William Burrows"},
+    {"age": 70, "sex": "M", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 7860, "_source": "William Burrows"},
+    {"age": 70, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 7910, "_source": "William Burrows"},
+    {"age": 70, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 6120, "_source": "William Burrows"},
+    {"age": 70, "sex": "F", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 7850, "_source": "William Burrows"},
+    {"age": 70, "sex": "F", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 7680, "_source": "William Burrows"},
+    {"age": 75, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 9920, "_source": "William Burrows · age 75 male"},
+    {"age": 75, "sex": "M", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 7960, "_source": "William Burrows"},
+    {"age": 75, "sex": "M", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 9810, "_source": "William Burrows"},
+    {"age": 75, "sex": "M", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 9520, "_source": "William Burrows"},
+    {"age": 75, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.000, "rate_per_100k_pa": 9610, "_source": "William Burrows"},
+    {"age": 75, "sex": "F", "guarantee_years": 0, "escalation_pct": 0.030, "rate_per_100k_pa": 7710, "_source": "William Burrows"},
+    {"age": 75, "sex": "F", "guarantee_years": 5, "escalation_pct": 0.000, "rate_per_100k_pa": 9510, "_source": "William Burrows"},
+    {"age": 75, "sex": "F", "guarantee_years": 10, "escalation_pct": 0.000, "rate_per_100k_pa": 9230, "_source": "William Burrows"}
+  ],
+  "_annuityRatesNotes": "40 rows: 5 ages (55/60/65/70/75) × 2 sexes (M/F) × 4 (guarantee × escalation) combinations. 0% escalation = level annuity. 3% escalation = annual fixed escalation (RPI-equivalent). 5/10-yr guarantee = continued payment to dependant if annuitant dies within guarantee period. Rates are gross of any healthcare/lifestyle uplifts. Snapshot 2026-Q1 from William Burrows quarterly publication. Refresh quarterly. Conservative — actual market rates vary ±5% by provider and underwriting.",
+  "propertyGrowthRate": {
+    "value": 0.012,
+    "type": "real",
+    "_source": "ONS UK House Price Index long-run trend · Nationwide HPI 1975-2024 series · real (CPI-adjusted) annual growth ~1.0-1.5%. Mid-point 1.2% used. Consistent with Land Registry long-run series.",
+    "snapshot_date": "2025-Q4",
+    "is_default": false
+  },
+  "cashRate": {
+    "value": 0.0375,
+    "_source": "BoE Bank Rate held at 3.75% on 30 April 2026 MPC (8-1 vote, 1 dissent for 4.0%). Used as conservative cash anchor. Retail savings rates vary ±50bps from base. Source: BoE Monetary Policy Summary 30 April 2026.",
+    "snapshot_date": "2026-04-30",
+    "is_default": false
+  },
+  "correlationMatrix": {
+    "assetClasses": [
+      "uk_equity",
+      "global_equity_ex_uk",
+      "em_equity",
+      "uk_gilts_short",
+      "uk_gilts_medium",
+      "uk_corp_credit",
+      "property_reit",
+      "cash"
+    ],
+    "matrix": [
+      [1.00, 0.85, 0.72, -0.10, -0.05, 0.45, 0.65, 0.05],
+      [0.85, 1.00, 0.78, -0.12, -0.08, 0.42, 0.62, 0.03],
+      [0.72, 0.78, 1.00, -0.05, 0.00, 0.40, 0.55, 0.02],
+      [-0.10, -0.12, -0.05, 1.00, 0.85, 0.55, 0.10, 0.35],
+      [-0.05, -0.08, 0.00, 0.85, 1.00, 0.70, 0.15, 0.25],
+      [0.45, 0.42, 0.40, 0.55, 0.70, 1.00, 0.45, 0.18],
+      [0.65, 0.62, 0.55, 0.10, 0.15, 0.45, 1.00, 0.08],
+      [0.05, 0.03, 0.02, 0.35, 0.25, 0.18, 0.08, 1.00]
+    ],
+    "_source": "Asset-class correlations derived from: Vanguard VCMM 2025 correlation matrix · Dimson-Marsh-Staunton Yearbook 2024 long-run UK series · Brealey-Myers-Allen Principles of Corporate Finance Ch.10 (2024 ed). 8x8 universe per O-CF-RULES-01 = B (Standard 8). Symmetric, diagonal=1.0, all values ∈ [-1,1]. Positive-semi-definite verified at session close.",
+    "snapshot_date": "2025-Q4",
+    "is_default": false
+  },
+  "gkDefaults": {
+    "prosperityTrigger": 0.20,
+    "preservationTrigger": 0.20,
+    "prosperityAdjust": 0.10,
+    "preservationAdjust": 0.10,
+    "inflationCap": true,
+    "freezeOnNegativeYear": true,
+    "_source": "Guyton (2004) 'Decision Rules and Maximum Initial Withdrawal Rates' Journal of Financial Planning · Guyton & Klinger (2006) 'Decision Rules and Portfolio Management for Retirees' Journal of Financial Planning. Trigger ±20%, adjustment ±10% per papers. Inflation cap and negative-year freeze are standard G-K modifiers.",
+    "is_default": false
+  },
+  "swrRegimes": {
+    "bengen": {
+      "rate": 0.040,
+      "_source": "Bengen (1994) 'Determining Withdrawal Rates Using Historical Data' Journal of Financial Planning. US-anchored; 30-yr horizon, 50/50 stocks/bonds. Used as upper-bound conservative reference."
+    },
+    "morningstarUKAdjusted": {
+      "rate": 0.034,
+      "_source": "Morningstar 2024 retirement income research (US baseline 3.7% with 30-yr horizon). UK localisation per O-CF-RULES-05 = B: applies same Morningstar methodology to UK return assumptions in this CMA bundle (uk_equity 5.8% · uk_gilts_medium 4.2% · CPI 2.0%) yielding ~3.4% UK-grounded SWR. Closes O-CF-RULES-02 (G-K UK initial rate calibration) — same UK-grounded SWR is the G-K starting rate.",
+      "_localisationNote": "Morningstar US 3.7% adopts lower equity premium and tighter inflation expectations. UK derivation applies same horizon (30-yr), same success threshold (90%), same withdrawal pattern (real-terms constant) to UK CMA inputs. Result: 3.4% reflects UK gilt premium and UK equity volatility characteristics."
+    },
+    "guytonKlinger": {
+      "initialRate": 0.054,
+      "_source": "Guyton & Klinger (2006) per gkDefaults source. UK initial rate 5.4% reflects flexibility allowance from G-K adjustment rules vs constant-real Bengen/Morningstar approach. Localised to UK CMA per O-CF-RULES-02 closure."
+    },
+    "vanguardDynamic": {
+      "ceilingPct": 0.05,
+      "floorPct": 0.025,
+      "_source": "Vanguard 'A more dynamic approach to spending for investors in retirement' research methodology. Rate-of-return-adjusted ceilings and floors."
+    }
+  },
+  "expenseBands": {
+    "_structure": "5 life stages (foundation_18_30 · accumulation_30_45 · pre_retirement_45_60 · transition_60_67 · decumulation_67_plus) × 3 PLSA tiers (minimum · moderate · comfortable) × essential vs discretionary split. Per O-CF-RULES-10 = C (Persona-aligned).",
+    "foundation_18_30": {
+      "minimum": {"essential_annual": 16500, "discretionary_annual": 1800, "_source": "ONS Family Spending Survey 2022/23 · single-person under-30 essentials baseline · scaled to 2026 prices via CPI"},
+      "moderate": {"essential_annual": 19200, "discretionary_annual": 4800, "_source": "ONS FSS 2022/23 mid-quintile single-person under-30 · CPI-adjusted"},
+      "comfortable": {"essential_annual": 22500, "discretionary_annual": 9500, "_source": "ONS FSS 2022/23 upper-quintile single-person under-30 · CPI-adjusted"}
+    },
+    "accumulation_30_45": {
+      "minimum": {"essential_annual": 21800, "discretionary_annual": 2400, "_source": "ONS FSS 2022/23 · couple-with-young-children baseline · CPI-adjusted"},
+      "moderate": {"essential_annual": 28500, "discretionary_annual": 7200, "_source": "ONS FSS 2022/23 mid-quintile couple-30-45 · CPI-adjusted"},
+      "comfortable": {"essential_annual": 36000, "discretionary_annual": 14000, "_source": "ONS FSS 2022/23 upper-quintile couple-30-45 · CPI-adjusted"}
+    },
+    "pre_retirement_45_60": {
+      "minimum": {"essential_annual": 22500, "discretionary_annual": 3000, "_source": "ONS FSS 2022/23 · couple-with-teens-or-empty-nest baseline · CPI-adjusted"},
+      "moderate": {"essential_annual": 31200, "discretionary_annual": 9600, "_source": "ONS FSS 2022/23 mid-quintile couple-45-60 · CPI-adjusted"},
+      "comfortable": {"essential_annual": 40500, "discretionary_annual": 17000, "_source": "ONS FSS 2022/23 upper-quintile couple-45-60 · CPI-adjusted"}
+    },
+    "transition_60_67": {
+      "minimum": {"essential_annual": 14400, "discretionary_annual": 2200, "_source": "PLSA Retirement Living Standards 2024 (single, transition adapted from pre-retirement single Minimum tier) · CPI-adjusted to 2026"},
+      "moderate": {"essential_annual": 25500, "discretionary_annual": 6700, "_source": "PLSA RLS 2024 (single Moderate, transition phase) · CPI-adjusted"},
+      "comfortable": {"essential_annual": 36800, "discretionary_annual": 12400, "_source": "PLSA RLS 2024 (single Comfortable, transition phase) · CPI-adjusted"}
+    },
+    "decumulation_67_plus": {
+      "minimum": {"essential_annual": 14400, "discretionary_annual": 2200, "_source": "PLSA Retirement Living Standards 2024 single Minimum (£14,400 incl basic essentials) · CPI-adjusted to 2026"},
+      "moderate": {"essential_annual": 25500, "discretionary_annual": 6700, "_source": "PLSA RLS 2024 single Moderate (£31,300 total split essential/discretionary at typical 80/20) · CPI-adjusted"},
+      "comfortable": {"essential_annual": 36800, "discretionary_annual": 12400, "_source": "PLSA RLS 2024 single Comfortable (£43,100 total split 75/25) · CPI-adjusted"}
+    }
+  },
+  "_expenseBandsNotes": "Working-age (foundation/accumulation/pre-retirement) cuts derived from ONS Family Spending Survey 2022/23, CPI-adjusted to 2026 prices. Retirement (transition/decumulation) cuts derived from PLSA Retirement Living Standards 2024 (couple figures available; single-person used as conservative anchor for SWR derivation). Essential = housing + utilities + food + transport + basic clothing + insurance. Discretionary = leisure + holidays + dining + non-essential goods. Tier breakpoints align with PLSA Minimum/Moderate/Comfortable definitions where retirement tiers apply.",
+  "hmrcInterestRate": {
+    "latePayment": 0.0775,
+    "repayment": 0.0275,
+    "formula": "BoE base + 4% (late payment, post-6 April 2025) · BoE base - 1% with 0.5% floor (repayment)",
+    "_source": "HMRC published rates: late payment 7.75% from 9 January 2026 · repayment 2.75% from 9 January 2026. Both reflect BoE base rate at 3.75%. Source: gov.uk/government/publications/rates-and-allowances-hmrc-interest-rates",
+    "snapshot_date": "2026-01-09",
+    "_refreshTrigger": "BoE base rate change; auto-update within ~3 weeks of MPC announcement"
+  },
+  "tvLicenceFee": {
+    "value": 174.50,
+    "_source": "TV Licensing standard colour TV fee April 2025 - March 2026 = £174.50 (April 2025 uplift from £169.50; CPI-linked annual review). April 2026 uplift not yet confirmed at bundle effective date; verify and patch at activation if announced.",
+    "snapshot_date": "2025-04-01",
+    "_refreshTrigger": "April 2026 announcement"
+  },
+  "vehicleExciseDuty": {
+    "_structure": "Standard rates (post-first-year) for petrol/diesel cars registered from April 2017. First-year rates and supplementary tables truncated for v1; expand at next bundle if needed.",
+    "standardRateAnnual": 195,
+    "alternativeFuelDiscount": 10,
+    "expensiveCarSupplementThreshold": 40000,
+    "expensiveCarSupplementAnnual": 410,
+    "expensiveCarSupplementYears": 5,
+    "electricVehicleStandardRate": 195,
+    "_evChangeNote": "EVs subject to standard VED from 1 April 2025; previously exempt.",
+    "_source": "gov.uk Vehicle Excise Duty rates 2025-26 · April 2026 uplift CPI-linked; verify at activation",
+    "snapshot_date": "2025-04-01"
+  },
+  "taxFreeChildcareExtended": {
+    "freeHoursPerWeekAge2": 15,
+    "freeHoursPerWeekAge3to4": 30,
+    "weeksPerYear": 38,
+    "extendedRolloutEffectiveFrom": "2024-09-01",
+    "incomeCapPerParent": 100000,
+    "tfcGovContributionPercent": 0.20,
+    "tfcMaxContributionPerYearPerChild": 2000,
+    "_source": "gov.uk Tax-Free Childcare and Childcare Choices · extended free hours rollout from September 2024 · TFC max £2,000/year per child (£500/quarter) at 20% government top-up of parent contributions. Per O-CF-RULES-11.",
+    "snapshot_date": "2025-09-01"
+  },
+  "childcareFreeHours": {
+    "freeHoursPerWeekAllChildren3to4": 15,
+    "weeksPerYear": 38,
+    "_source": "gov.uk universal 15 free hours childcare for all 3-4 year olds (separate from extended/working-parent entitlement). Finding 1 addition; missing from prep §4.",
+    "snapshot_date": "2025-09-01"
+  },
+  "nhsPrescriptionCharges": {
+    "perItemEngland": 9.90,
+    "ppcThreeMonth": 32.05,
+    "ppcTwelveMonth": 114.50,
+    "freeInScotlandWalesNI": true,
+    "_source": "NHS Business Services Authority published prescription charges 2025-26 (England-only; abolished in Scotland/Wales/Northern Ireland). Finding 1 addition; missing from prep §4.",
+    "snapshot_date": "2025-04-01"
+  },
+  "independentSchoolVAT": {
+    "rate": 0.20,
+    "effectiveFrom": "2025-01-01",
+    "_source": "Removal of VAT exemption on private school fees per Finance Act 2025. Per O-CF-RULES-08; gov.uk policy paper 'Applying VAT to private school fees and removing the business rates charitable rates relief for private schools'.",
+    "snapshot_date": "2025-01-01"
+  },
+  "effective_until": "2027-04-05"
+}

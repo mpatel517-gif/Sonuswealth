@@ -1360,6 +1360,21 @@ function openDimDrill(key) {
     `<div class="dim-impact-strip">📈 Reaching target (${d.target}) lifts Wealth Score <strong>${d.impact.score_from} → ${d.impact.score_to}</strong> (+${deltaScore} points)</div>` :
     `<div class="dim-impact-strip" style="background:var(--c-acc-soft);border-color:var(--c-acc-line)">✓ This dimension is at or above target — maintain it</div>`;
 
+  const DIM_TAB = {
+    own:      { label: 'See full portfolio breakdown',  dest: 'My Money tab' },
+    tax:      { label: 'Explore tax planning actions',  dest: 'Tax & Estate tab' },
+    debt:     { label: 'Review your liabilities',       dest: 'My Money tab' },
+    safety:   { label: 'Review protection gaps',        dest: 'Tax & Estate tab' },
+    income:   { label: 'Explore income sources',        dest: 'Cashflow tab' },
+    planning: { label: 'Review your cashflow plan',     dest: 'Cashflow tab' },
+    legacy:   { label: 'Explore estate planning',       dest: 'Tax & Estate tab' },
+  };
+  const navInfo = DIM_TAB[key];
+  const navHTML = navInfo ? `<div style="margin-top:14px;padding:13px 16px;background:var(--c-surface2);border:1px solid var(--c-hairline);border-radius:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px" onclick="document.getElementById('dim-overlay').classList.remove('open');document.body.style.overflow=''">
+    <span style="font-size:13px;font-weight:600;color:var(--c-text)">${navInfo.label}</span>
+    <span style="font-size:11px;font-weight:700;color:var(--c-acc);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap">${navInfo.dest} →</span>
+  </div>` : '';
+
   const noteStyle = key === 'debt' ? 'margin-top:10px;padding:10px 12px;background:rgba(255,189,89,0.08);border:1px solid rgba(255,189,89,0.2);border-radius:10px;font-size:12px;color:var(--c-text3);line-height:1.5' : 'display:none';
 
   document.getElementById('dim-body').innerHTML = `
@@ -1400,7 +1415,8 @@ function openDimDrill(key) {
       <div class="dim-section__hd">What improves it</div>
       <div class="dim-actions">${actionsHTML}</div>
     </div>
-    ${impactHTML}`;
+    ${impactHTML}
+    ${navHTML}`;
 
   document.getElementById('dim-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1434,6 +1450,19 @@ const SCENARIOS = {
       { id: 'home',    q: 'What would you do with your UK home?',  chips: ['Sell it','Rent it out','Keep it empty'] },
       { id: 'when',    q: 'How soon are you thinking?',            chips: ['Within 2 years','3–5 years','Just exploring'] }
     ],
+    answerNote: (ans) => {
+      const c = ans.country || '';
+      const map = { 'Portugal': 0, 'UAE': 1, 'Spain': 2 };
+      if (c in map) return { tabIdx: map[c], banner: '' };
+      const costNotes = { 'Kenya': '~40% of UK spend (cost index)', 'Australia': '~80% of UK spend — smaller saving than EU', 'Other': 'cost varies by destination' };
+      const note = costNotes[c] || 'cost varies by destination';
+      return {
+        tabIdx: 0,
+        banner: `<div style="margin-bottom:14px;padding:10px 14px;background:rgba(100,210,255,0.07);border:1px solid rgba(100,210,255,0.18);border-radius:10px;font-size:13px;color:var(--c-text2);line-height:1.5">
+          <strong style="color:var(--c-text)">${c}</strong> isn't in our four modelled options yet (${note}). The framework below applies — compare the four closest-modelled destinations and use Option D (UK-primary, winters abroad) as a zero-legal-change baseline.
+        </div>`
+      };
+    },
     decision: {
       statement: `You have <strong>£3.63M net worth</strong> and <strong>326 days</strong> to the enacted SIPP IHT deadline (Finance Act 2026, 6 Apr 2027). Relocating abroad can reduce annual spending by 30–40% — but your pension income stays UK-taxed regardless of where you live, and UK <em>deemed domicile</em> for IHT persists for up to <span class="fig-gold">17 years</span> after departure. The decision is about lifestyle and cost; it doesn't change your tax exposure on the pension or the estate.`,
       research: [
@@ -1585,7 +1614,7 @@ const SCENARIOS = {
           pros: ['ISA wrapper fully preserved — £835K continues growing tax-free', 'Cash reserves maintained for SIPP flexibility', 'Larger property — more capital growth potential', 'ISA can be used to overpay mortgage later as income allows'],
           cons: ['Score drops 3pts (debt dimension) — recovers as mortgage reduces', 'Mortgage repayments reduce cashflow (especially post-retirement if before paid off)', 'SDLT is £60K higher than Option A', 'Stress-test: lender will test at notional rate ~5.5%'],
           sequence: [
-            { title: 'Confirm mortgage eligibility at current income level (£120K)', sub: 'At 62, many lenders cap term at age 70–75. Confirm the maximum term available — a shorter term means higher monthly repayments.', route: 'Ask Sonu for broker recommendations' },
+            { title: 'Confirm mortgage eligibility at current income level (£120K)', sub: 'At 62, many lenders cap term at age 70–75. Confirm the maximum term available — a shorter term means higher monthly repayments.', route: 'Ask Sonu what to ask a mortgage adviser' },
             { title: 'Stress-test mortgage repayment against retirement income plan', sub: 'If retiring at 65, the mortgage runs into retirement. Ensure drawdown income (SIPP + ISA) can service it without compromising lifestyle.', route: 'Cashflow tab' },
             { title: 'Resolve SIPP before exchanging contracts', sub: 'ISA preserved but SIPP flexibility is still needed pre-April 2027. Don\'t lock into a mortgage before the SIPP decision is made.', route: 'Tax & Estate tab' },
             { title: 'Model ISA overpayment schedule once mortgage set', sub: 'ISA drawdown to overpay mortgage each year is more tax-efficient than direct income payments in higher tax bands.', route: 'Cashflow tab' },
@@ -2058,12 +2087,17 @@ function renderPhase() {
     // Decision engine: statement + research + option tabs + unconsidered + conflicts
     const d = currentScenario.decision;
 
+    // Answer-aware banner + default tab (e.g. Kenya shows note + stays on A)
+    const ansNote = currentScenario.answerNote ? currentScenario.answerNote(answers) : { tabIdx: 0, banner: '' };
+    const defaultTabIdx = ansNote.tabIdx || 0;
+    selectedOptionIdx = defaultTabIdx;
+
     const researchHTML = d.research.map(r =>
       `<span class="research-pill"><span class="research-pill__src">${r.source}</span>${r.fact}</span>`
     ).join('');
 
     const tabsHTML = d.options.map((o, i) =>
-      `<button class="opt-tab${i===0?' active':''}" data-idx="${i}">Option ${o.id}</button>`
+      `<button class="opt-tab${i===defaultTabIdx?' active':''}" data-idx="${i}">Option ${o.id}</button>`
     ).join('');
 
     const panelsHTML = d.options.map((o, i) => {
@@ -2077,7 +2111,7 @@ function renderPhase() {
         `<div class="seq-step"><div class="seq-step__n">${j+1}</div><div class="seq-step__txt"><div class="seq-step__title">${s.title}</div>${s.sub?`<div class="seq-step__sub">${s.sub}</div>`:''}</div></div>`
       ).join('');
       const riskHTML = o.risks.map(r => `<div class="risk-item">${r}</div>`).join('');
-      return `<div class="opt-panel${i===0?' active':''}" data-paneli="${i}">
+      return `<div class="opt-panel${i===defaultTabIdx?' active':''}" data-paneli="${i}">
         <div class="opt-header">
           <div><div class="opt-name">${o.name}</div><div class="opt-rationale">${o.rationale}</div></div>
           <span class="irrev-badge ${irreClass}">${o.irreversibility} lock-in</span>
@@ -2106,6 +2140,7 @@ function renderPhase() {
 
     ovBody.innerHTML = `
       <div class="decision-statement">${d.statement}</div>
+      ${ansNote.banner}
       <div class="research-pills">${researchHTML}</div>
       <div class="opt-tabs">${tabsHTML}</div>
       ${panelsHTML}

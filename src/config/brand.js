@@ -12,13 +12,13 @@ export const BRAND = {
   logoAccent:     'wealth',
 
   // ── Positioning ───────────────────────────────────────────────────────────
-  // Tagline is canon per Home v1.4 §Q1.1 — appears verbatim in Z0 first-render
-  // orientation card. The top-header strap uses the same line as brand strap.
-  tagline:        'Intelligence without the noise.',
-  taglineShort:   'See, score, and grow your financial world — without the noise.',
+  // Tagline locked 2026-05-16 by founder: "Your wealth, in one place."
+  // Appears verbatim in Z0 first-render orientation card and top-header strap.
+  tagline:        'Your wealth, in one place.',
+  taglineShort:   'See, score, and grow your financial world — in one place.',
 
   // ── Meaning ───────────────────────────────────────────────────────────────
-  nameExpanded:   'Intelligence without the noise — see, score, and grow your financial world.',
+  nameExpanded:   'Your wealth, in one place — see, score, and grow your financial world.',
 
   // ── Regulatory disclaimer ─ shown verbatim on every tax-touching screen ──
   disclaimer:     'Not regulated financial advice. Verify decisions with a qualified UK financial adviser.',

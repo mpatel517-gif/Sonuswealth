@@ -123,7 +123,7 @@ export default function RadarAnchor({
   const targetDims = targetInfo.dims
 
   /* ── plan dims (separate from target — plan is for the Plan viewMode) ── */
-  const planWealth = useMemo(() => safe(() => planFor(entity, 'wealth'), null), [entity])
+  const planWealth = useMemo(() => safe(() => planFor(entity, 'retirement'), null), [entity])
   const planDims   = planWealth?.target?.dims || planWealth?.targetValue?.dims || null
 
   /* ── current dims ──────────────────────────────────────────────────────── */

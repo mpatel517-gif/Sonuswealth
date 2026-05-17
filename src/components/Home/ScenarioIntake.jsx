@@ -111,7 +111,7 @@ export default function ScenarioIntake({ scenario, onSubmit, onBack }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--c-sep)', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-acc)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0, flexShrink: 0 }}>
+        <button onClick={onBack} aria-label="Back" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-acc)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0, flexShrink: 0 }}>
           <span style={{ fontSize: 16 }}>←</span>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>

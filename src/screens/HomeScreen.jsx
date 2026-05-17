@@ -383,9 +383,9 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
         <div style={{ paddingLeft: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Cost of Inaction</div>
           <Drillable metric="coi" onOpen={onDrillMetric} inline affordance="none">
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{fmt(coiTotal)}</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{coiTotal > 0 ? fmt(coiTotal) : '—'}</span>
           </Drillable>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', marginTop: 4 }}>{days} days to act</div>
+          {coiTotal > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', marginTop: 4 }}>{days} days to act</div>}
           <div style={{ height: 4, background: 'var(--c-surface2)', borderRadius: 2, marginTop: 5, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--c-gold), var(--c-acc3))', borderRadius: 2 }} />
           </div>
@@ -906,7 +906,7 @@ function DimExplainerStub({ metric, onClose }) {
         <div style={{
           fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
           letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4,
-        }}>X23 dimension explainer</div>
+        }}>{dim?.label || 'Dimension'} — what this means</div>
         <div style={{
           fontSize: 16, fontWeight: 700, color: 'var(--c-text)',
           marginBottom: 8,
@@ -1579,12 +1579,14 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)' }}>
               What to do next
             </span>
-            <button onClick={() => onDrillMetric?.('apq')} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 11, color: 'var(--c-acc)', fontWeight: 700, padding: 0,
-            }}>
-              See all {actions.length} →
-            </button>
+            {actions.length > 0 && (
+              <button onClick={() => onDrillMetric?.('apq')} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 11, color: 'var(--c-acc)', fontWeight: 700, padding: 0,
+              }}>
+                See all {actions.length} →
+              </button>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1668,91 +1670,6 @@ const DE_SCENARIOS = [
   { key: 'children',  icon: '🏠', label: 'What if I helped my children get started?', sub: 'Gifting, trust, mortgage — IHT impact',             tag: 'Ask Sonu', engine: false, query: 'What if I helped my children financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
 ]
 
-function DecisionEngineEntryCard({ onNav }) {
-  const [freeform, setFreeform] = useState('')
-
-  return (
-    <div style={{ margin: '0 16px 10px' }}>
-      {/* Header row */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderTop: '1px solid var(--c-sep)', paddingTop: 14, marginBottom: 10,
-      }}>
-        <span style={{
-          fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-          color: '#ba8cff', display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          ✦ What if?
-        </span>
-        <span style={{ fontSize: 10, color: 'var(--c-text3)', fontWeight: 500 }}>Explore · not advice</span>
-      </div>
-
-      {/* Scenario rows — match HTML .whatif-row layout */}
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {DE_SCENARIOS.map(({ key, icon, label, sub, tag, engine, query, eventId }, i) => (
-          <button
-            key={key}
-            onClick={() => onNav?.('de', { query, eventId })}
-            className="sw-press"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 4px', background: 'none', border: 'none',
-              borderBottom: i < DE_SCENARIOS.length - 1 ? '1px solid var(--c-sep)' : 'none',
-              cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit',
-            }}
-          >
-            <span style={{ fontSize: 15, flexShrink: 0, width: 22, textAlign: 'center' }}>{icon}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3 }}>{label}</div>
-              <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1 }}>{sub}</div>
-            </div>
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
-              padding: '2px 6px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
-              ...(engine
-                ? { background: 'rgba(93,219,194,0.12)', color: 'var(--c-acc)', border: '1px solid var(--c-acc)' }
-                : { background: 'rgba(186,140,255,0.12)', color: '#ba8cff', border: '1px solid rgba(186,140,255,0.3)' }
-              ),
-            }}>{tag}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Free-form input */}
-      <div style={{
-        marginTop: 10, display: 'flex', alignItems: 'center', gap: 8,
-        padding: '9px 10px',
-        background: 'rgba(186,140,255,0.07)',
-        border: '1px dashed rgba(186,140,255,0.30)',
-        borderRadius: 14,
-      }}>
-        <input
-          value={freeform}
-          onChange={e => setFreeform(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && freeform.trim()) {
-              onNav?.('de', { query: freeform.trim() })
-              setFreeform('')
-            }
-          }}
-          placeholder="Ask your own what-if…"
-          style={{
-            flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
-            color: 'var(--c-text2)', background: 'transparent', border: 'none', outline: 'none',
-          }}
-        />
-        <button
-          onClick={() => { if (freeform.trim()) { onNav?.('de', { query: freeform.trim() }); setFreeform('') } }}
-          style={{
-            fontSize: 11, fontWeight: 700, color: '#ba8cff',
-            background: 'rgba(186,140,255,0.15)', border: 'none',
-            borderRadius: 999, padding: '4px 8px', cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >Ask Sonu →</button>
-      </div>
-    </div>
-  )
-}
 
 // Preserve for ESM consumers / unused-export lint suppression
 export { ScoreOrientation }

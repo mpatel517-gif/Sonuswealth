@@ -35,6 +35,7 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import { useMemo, useState } from 'react'
+import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import {
   calcFQ, calcRisk, calcAPQ, netWorth, fmt,
   planFor, diffSet, costOfInaction,
@@ -1477,10 +1478,8 @@ export default function HomeScreen({
           diffs={diffs}
           onDrillMetric={drillFn}
         />
-        {/* RIGHT: Actions placeholder (Task 4) */}
-        <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 20, padding: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Actions — Task 4</div>
-        </div>
+        {/* RIGHT: Actions card (Task 4) */}
+        <ActionsCard entity={entity} viewMode={viewMode} onNav={onNav} onDrillMetric={drillFn} />
       </div>
 
       {/* CoI + SIPP-IHT countdown now embedded in AnchorRow (4-column layout) */}
@@ -1490,19 +1489,8 @@ export default function HomeScreen({
         <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Plan strip — Task 8</div>
       </div>
 
-      {/* ── Card 4: Priority Action ───────────────────────────────────── */}
-      <PriorityActionCard entity={entity} onNav={onNav} />
-
       {/* ── Card 5: Plan progress ─────────────────────────────────────── */}
       <PlanProgressCard entity={entity} onNav={onNav} />
-
-      {/* ── Card 6: Active Insights ───────────────────────────────────── */}
-      <ActiveInsightsCard entity={entity} onNav={onNav} />
-
-      {/* ── Decision Engine entry ─────────────────────────────────────── */}
-      {/* Replaces 5 hardcoded What-if scenarios with single dynamic entry.
-          onNav('de', { query, eventId }) → parent opens DecisionEngineV2. */}
-      <DecisionEngineEntryCard onNav={onNav} />
 
       {/* ── FCA footer ────────────────────────────────────────────────── */}
       <div style={{
@@ -1519,6 +1507,194 @@ export default function HomeScreen({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   WhatIfSection — 5 scenario rows + freeform input
+   Used inside ActionsCard at the bottom of the right column.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function WhatIfSection({ viewMode, onSelectScenario, onFreeform }) {
+  const [freeform, setFreeform] = useState('')
+  const isActive = viewMode === 'scenario'
+
+  return (
+    <div style={{
+      borderTop: '1px solid var(--c-sep)',
+      padding: '12px 16px 14px',
+      background: isActive ? 'rgba(186,140,255,0.04)' : 'transparent',
+      transition: 'background 300ms ease',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+          color: '#ba8cff', display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          ✦ What if?
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>Explore · not advice</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {DE_SCENARIOS.map((s, i) => (
+          <button
+            key={s.key}
+            onClick={() => onSelectScenario(s)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 0', background: 'none', border: 'none',
+              borderBottom: i < DE_SCENARIOS.length - 1 ? '1px solid var(--c-sep)' : 'none',
+              cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit',
+            }}
+          >
+            <span style={{ fontSize: 14, flexShrink: 0, width: 20, textAlign: 'center' }}>{s.icon}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3 }}>{s.label}</div>
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>{s.sub}</div>
+            </div>
+            <span style={{
+              fontSize: 8.5, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
+              padding: '2px 5px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+              ...(s.engine
+                ? { background: 'rgba(93,219,194,0.12)', color: 'var(--c-acc)', border: '1px solid rgba(93,219,194,0.3)' }
+                : { background: 'rgba(186,140,255,0.12)', color: '#ba8cff', border: '1px solid rgba(186,140,255,0.3)' }
+              ),
+            }}>{s.tag}</span>
+          </button>
+        ))}
+      </div>
+
+      <div style={{
+        marginTop: 10, display: 'flex', alignItems: 'center', gap: 8,
+        padding: '8px 10px',
+        background: 'rgba(186,140,255,0.07)',
+        border: '1px dashed rgba(186,140,255,0.30)',
+        borderRadius: 12,
+      }}>
+        <input
+          value={freeform}
+          onChange={e => setFreeform(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && freeform.trim()) { onFreeform(freeform.trim()); setFreeform('') } }}
+          placeholder="Ask your own what-if…"
+          style={{ flex: 1, fontFamily: 'inherit', fontSize: 12, color: 'var(--c-text2)', background: 'transparent', border: 'none', outline: 'none' }}
+        />
+        <button
+          onClick={() => { if (freeform.trim()) { onFreeform(freeform.trim()); setFreeform('') } }}
+          style={{ fontSize: 10, fontWeight: 700, color: '#ba8cff', background: 'rgba(186,140,255,0.15)', border: 'none', borderRadius: 999, padding: '4px 8px', cursor: 'pointer', fontFamily: 'inherit' }}
+        >
+          Ask Sonu →
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ActionsCard — expandable actions list + WhatIfSection
+   Replaces PriorityActionCard + ActiveInsightsCard + DecisionEngineEntryCard
+   in the right column of the 2-column grid.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
+  const apq = useMemo(() => safe(() => calcAPQ(entity), []), [entity])
+  const actions = Array.isArray(apq) ? apq : []
+  const [expandedId, setExpandedId] = useState(null)
+  const [intakeScenario, setIntakeScenario] = useState(null)
+
+  return (
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 20,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    }}>
+      {intakeScenario ? (
+        <ScenarioIntake
+          scenario={intakeScenario}
+          onBack={() => setIntakeScenario(null)}
+          onSubmit={({ query, eventId }) => {
+            setIntakeScenario(null)
+            onNav?.('de', { query, eventId })
+          }}
+        />
+      ) : (
+        <>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 16px 10px',
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)' }}>
+              What to do next
+            </span>
+            <button onClick={() => onDrillMetric?.('apq')} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 11, color: 'var(--c-acc)', fontWeight: 700, padding: 0,
+            }}>
+              See all {actions.length} →
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {actions.slice(0, 6).map((action, i) => {
+              const badge  = severityBadge(action)
+              const route  = safeRoute(action)
+              const isOpen = expandedId === (action.id || i)
+              const impact = action?.impact?.finioScore || 0
+              return (
+                <div key={action.id || i}>
+                  <div
+                    onClick={() => setExpandedId(isOpen ? null : (action.id || i))}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 16px',
+                      borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
+                      cursor: 'pointer',
+                      background: isOpen ? 'linear-gradient(180deg, rgba(255,189,89,0.06), transparent)' : 'transparent',
+                    }}
+                  >
+                    <span style={{
+                      flexShrink: 0, padding: '3px 7px', borderRadius: 6,
+                      background: badge.bg, fontSize: 9.5, fontWeight: 800,
+                      textTransform: 'uppercase', letterSpacing: 0.5, color: badge.color,
+                      minWidth: 38, textAlign: 'center',
+                    }}>
+                      {badge.label}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3, minWidth: 0 }}>
+                      {action.title || action.headline || '—'}
+                    </span>
+                    {impact > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc)', flexShrink: 0 }}>+{impact}</span>
+                    )}
+                    <span style={{ color: 'var(--c-text3)', fontSize: 16, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}>›</span>
+                  </div>
+                  {isOpen && (
+                    <div style={{ padding: '4px 16px 14px' }}>
+                      <p style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55, margin: '0 0 10px' }}>
+                        {action.context || action.detail || action.why || ''}
+                      </p>
+                      {route && (
+                        <button onClick={e => { e.stopPropagation(); onNav?.(route) }} style={{
+                          padding: '8px 16px', borderRadius: 999, background: 'var(--c-acc)',
+                          border: 'none', color: '#0B1F3A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        }}>
+                          Show me how →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <WhatIfSection
+            viewMode={viewMode}
+            onSelectScenario={setIntakeScenario}
+            onFreeform={q => onNav?.('de', { query: q })}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Decision Engine Entry Card
    Replaces 5 hardcoded What-if cinema scenarios with a single dynamic entry.
    Tapping a chip calls onNav('de', { query, eventId }) — parent routes to
@@ -1527,11 +1703,11 @@ export default function HomeScreen({
    ═══════════════════════════════════════════════════════════════════════ */
 
 const DE_SCENARIOS = [
-  { icon: '✈️', label: 'How much do I need to relocate?',           sub: 'Kenya · Portugal · UAE — cost, tax, residency',   tag: 'Ask Sonu', engine: false, query: 'How much do I need to relocate abroad? Cover cost of living, tax, IHT deemed domicile, and pension implications.', eventId: null },
-  { icon: '🏡', label: 'What if I moved to a bigger house?',        sub: 'Stamp duty, mortgage impact, equity on home',      tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
-  { icon: '⏱️', label: 'What if I retired 5 years earlier?',       sub: 'Pension drawdown at 60 — cashflow, Score, IHT',    tag: 'Instant',  engine: true,  query: 'What if I retired 5 years earlier?', eventId: 'retire' },
-  { icon: '🌴', label: 'What if I went part-time or took a break?', sub: 'Runway, monthly shortfall, and when to return',    tag: 'Instant',  engine: true,  query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
-  { icon: '🏠', label: 'What if I helped my children get started?', sub: 'Gifting, joint mortgage, trust — IHT and estate',  tag: 'Ask Sonu', engine: false, query: 'What if I helped my children get started financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
+  { key: 'relocate',  icon: '✈️', label: 'How much do I need to relocate?',           sub: 'Kenya · Portugal · UAE — cost, tax, residency',   tag: 'Ask Sonu', engine: false, query: 'What would it cost and mean financially to relocate abroad?', eventId: null },
+  { key: 'house',     icon: '🏡', label: 'What if I moved to a bigger house?',        sub: 'Stamp duty, mortgage impact, equity',               tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
+  { key: 'retire',    icon: '⏱️', label: 'What if I retired 5 years earlier?',       sub: 'Pension drawdown — cashflow, Score, IHT',           tag: 'Instant',  engine: true,  query: 'What if I retired 5 years earlier?', eventId: 'retire' },
+  { key: 'part_time', icon: '🌴', label: 'What if I went part-time or took a break?', sub: 'Runway, monthly shortfall, when to return',         tag: 'Instant',  engine: true,  query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
+  { key: 'children',  icon: '🏠', label: 'What if I helped my children get started?', sub: 'Gifting, trust, mortgage — IHT impact',             tag: 'Ask Sonu', engine: false, query: 'What if I helped my children financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
 ]
 
 function DecisionEngineEntryCard({ onNav }) {
@@ -1555,9 +1731,9 @@ function DecisionEngineEntryCard({ onNav }) {
 
       {/* Scenario rows — match HTML .whatif-row layout */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {DE_SCENARIOS.map(({ icon, label, sub, tag, engine, query, eventId }, i) => (
+        {DE_SCENARIOS.map(({ key, icon, label, sub, tag, engine, query, eventId }, i) => (
           <button
-            key={i}
+            key={key}
             onClick={() => onNav?.('de', { query, eventId })}
             className="sw-press"
             style={{

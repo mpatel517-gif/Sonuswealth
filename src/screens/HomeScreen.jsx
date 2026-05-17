@@ -239,98 +239,150 @@ function MastheadCard({ entity, viewMode, onModeChange }) {
    FIX S2 + R10: Drillables wired; risk colour derived from engine band.
    ═══════════════════════════════════════════════════════════════════════ */
 
-function AnchorRow({ nw, fqData, riskData, diffs, onDrillMetric, onOpenBreakdown }) {
-  const score = fqData?.total ?? fqData?.score ?? 0
+function nwComposition(entity) {
+  const a = entity?.assets || {}
+  const num = v => {
+    if (typeof v === 'number') return v
+    if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
+    return +v?.total || +v?.value || 0
+  }
+  const pensions = num(a.sipp) + num(a.pension) + num(a.pensions)
+  const isa      = num(a.isa) + num(a.lisa)
+  const home     = num(a.residence) + num(a.home)
+  const cash     = num(a.cash) + num(a.bank) + num(a.savings)
+  const total    = pensions + isa + home + cash || 1
+  return [
+    { label: 'Pensions', pct: pensions / total, color: 'var(--c-acc2)' },
+    { label: 'ISA',      pct: isa      / total, color: 'var(--c-acc)'  },
+    { label: 'Home',     pct: home     / total, color: 'var(--c-violet)' },
+    { label: 'Cash',     pct: cash     / total, color: 'var(--c-text3)' },
+  ].filter(s => s.pct > 0.005)
+}
 
-  // Risk: calcRisk returns { total: 0–100, band: { name, colour } }
-  const riskScore = riskData?.total ?? 0
-  const riskBandName = riskData?.band?.name || riskData?.band || '—'
-  // FIX R10 — single source of truth: engine band.colour. Local override
-  // (mint for Protected) deleted; previously caused contract drift with
-  // riskBand() which returns #4D8EFF (blue) for Protected.
-  const riskColor = riskData?.band?.colour || 'var(--c-text2)'
+function gapDims(fqData) {
+  const dims = fqData?.dims || {}
+  const GAP_THRESH = { habits: 50, own: 50, tax: 50, safety: 8, flow: 50, debt: 50, legacy: 50 }
+  return Object.entries(GAP_THRESH).filter(([key, thresh]) => (dims[key] ?? 0) < thresh).length
+}
 
-  // NW weekly delta from diffs
-  const nwDiff = (diffs || []).find(d => d?.key === 'netWorth' || d?.dim === 'netWorth')
-  const nwDelta = nwDiff?.delta ?? null
+function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdown }) {
+  const score      = fqData?.total ?? 0
+  const riskScore  = riskData?.total ?? 0
+  const riskColor  = riskData?.band?.colour || 'var(--c-gold)'
+  const riskBand   = riskData?.band?.name || '—'
+  const segments   = nwComposition(entity)
+  const gapCount   = gapDims(fqData)
+
+  const coiTotal = safe(() => { const c = costOfInaction(entity); return typeof c === 'number' ? c : (c?.total || 0) }, 0)
+  const dueDate  = new Date('2027-04-06')
+  const now      = new Date()
+  const days     = Math.max(0, Math.ceil((dueDate - now) / 86_400_000))
+  const enacted  = new Date('2026-03-18')
+  const totalSpan = (dueDate - enacted) / 86_400_000
+  const elapsed   = (now - enacted) / 86_400_000
+  const pct       = Math.min(100, Math.max(0, (elapsed / totalSpan) * 100))
+
+  // SVG donut for Score
+  const r = 16, C = 2 * Math.PI * r
+  const filled       = (score / 100) * C
+  const targetFilled = (68   / 100) * C
 
   return (
-    <div style={card({ padding: '14px 18px' })}>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: 0,
-      }}>
-        {/* Net worth — drills BalanceSheet via driver tree */}
-        <div style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 14 }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4,
-          }}>Net worth</div>
+    <div style={card({ padding: '14px 18px', margin: '0 16px 12px' })}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 0 }}>
+
+        {/* NW + composition bar */}
+        <div style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Net Worth</div>
           <Drillable metric="netWorth" onOpen={onDrillMetric} inline affordance="none">
-            <span style={{
-              fontSize: 18, fontWeight: 700, color: 'var(--c-text)',
-              letterSpacing: -0.3,
-            }}>
-              {fmt(nw)}
-            </span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -1 }}>{fmt(nw)}</span>
           </Drillable>
-          {nwDelta !== null && (
-            <div style={{
-              fontSize: 11, color: nwDelta >= 0 ? 'var(--c-gold)' : 'var(--c-acc3)',
-              marginTop: 2,
-            }}>
-              {nwDelta >= 0 ? '↑' : '↓'} {fmt(Math.abs(nwDelta))} · 7d
+          <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: 'var(--c-surface2)', marginTop: 8 }}>
+            {segments.map(s => <div key={s.label} style={{ width: `${s.pct * 100}%`, background: s.color }} />)}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+            {segments.map(s => (
+              <span key={s.label} style={{ fontSize: 9.5, color: 'var(--c-text3)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
+                {s.label} {Math.round(s.pct * 100)}%
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Score + donut + gaps badge */}
+        <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Wealth Score</div>
+          <button onClick={() => onOpenBreakdown?.()} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="40" height="40" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+              <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-surface2)" strokeWidth="5" />
+              <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,189,89,0.25)" strokeWidth="5"
+                strokeDasharray={`${targetFilled.toFixed(1)} ${(C - targetFilled).toFixed(1)}`} />
+              <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-acc)" strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={`${filled.toFixed(1)} ${(C - filled).toFixed(1)}`} />
+            </svg>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
+                {score}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
+              </div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.7 }}>
+                {fqData?.band?.name || '—'}
+              </div>
             </div>
+          </button>
+          {gapCount > 0 && (
+            <button onClick={() => onDrillMetric?.('gaps')} style={{
+              marginTop: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <span style={{
+                width: 16, height: 16, borderRadius: '50%', background: 'var(--c-acc3)',
+                fontSize: 9, fontWeight: 800, color: '#fff',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>!</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>
+                {gapCount} gaps in radar →
+              </span>
+            </button>
           )}
         </div>
 
-        {/* Wealth Score — opens FQBreakdown overlay (richer than driver tree) */}
+        {/* Risk + gradient gauge */}
         <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4,
-          }}>Score</div>
-          <button
-            type="button"
-            onClick={() => onOpenBreakdown?.()}
-            className="sw-press"
-            aria-label="Open Wealth Score breakdown"
-            style={{
-              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-              color: 'inherit', font: 'inherit', display: 'inline',
-            }}
-          >
-            <span style={{
-              fontSize: 18, fontWeight: 700, color: 'var(--c-acc)',
-              letterSpacing: -0.3,
-            }}>
-              {score}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.6 }}>/100</span>
-            </span>
-          </button>
-        </div>
-
-        {/* Risk — drills riskScore via driver tree */}
-        <div style={{ paddingLeft: 14 }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4,
-          }}>Risk</div>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Risk</div>
           <Drillable metric="riskScore" onOpen={onDrillMetric} inline affordance="none">
-            <span style={{
-              fontSize: 18, fontWeight: 700, color: riskColor,
-              letterSpacing: -0.3,
-            }}>
-              {riskScore}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.6 }}>/100</span>
+            <span style={{ fontSize: 20, fontWeight: 800, color: riskColor, letterSpacing: -0.5 }}>
+              {riskScore}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
             </span>
           </Drillable>
-          <div style={{
-            fontSize: 10, color: riskColor, marginTop: 2,
-            fontWeight: 600, letterSpacing: 0.2,
-          }}>
-            {riskBandName}
+          <div style={{ position: 'relative', height: 8, borderRadius: 4, marginTop: 8, overflow: 'visible',
+            background: 'linear-gradient(90deg, #34c759 0%, #34c759 33%, #ffb347 33%, #ffb347 66%, #ff6b6b 66%, #ff6b6b 100%)' }}>
+            <div style={{
+              position: 'absolute', top: -5, left: `calc(${riskScore}% - 9px)`,
+              width: 18, height: 18, borderRadius: '50%',
+              background: riskColor, border: '2px solid var(--c-bg)',
+              boxShadow: `0 0 8px ${riskColor}88`,
+            }} />
+          </div>
+          <div style={{ fontSize: 9.5, fontWeight: 700, color: riskColor, marginTop: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{riskBand}</div>
+        </div>
+
+        {/* CoI + countdown bar */}
+        <div style={{ paddingLeft: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Cost of Inaction</div>
+          <Drillable metric="coi" onOpen={onDrillMetric} inline affordance="none">
+            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{fmt(coiTotal)}</span>
+          </Drillable>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', marginTop: 4 }}>{days} days to act</div>
+          <div style={{ height: 4, background: 'var(--c-surface2)', borderRadius: 2, marginTop: 5, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--c-gold), var(--c-acc3))', borderRadius: 2 }} />
+          </div>
+          <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.4 }}>
+            SIPP IHT · 6 Apr 2027 · enacted
           </div>
         </div>
+
       </div>
     </div>
   )
@@ -1405,7 +1457,7 @@ export default function HomeScreen({
         nw={nw}
         fqData={fq}
         riskData={risk}
-        diffs={diffs}
+        entity={entity}
         onDrillMetric={drillFn}
         onOpenBreakdown={onOpenBreakdown}
       />
@@ -1431,25 +1483,7 @@ export default function HomeScreen({
         </div>
       </div>
 
-      {/* ── Z3 (RESTORED): Cost of Inaction strip ──────────────────────── */}
-      <div style={{ position: 'relative', marginTop: 14 }}>
-        <CostOfInactionStrip entity={entity} onTap={() => onNav?.('tax')} />
-        <button
-          onClick={() => drillFn('coi')}
-          className="sw-chip sw-chip-sm sw-press"
-          style={{
-            position: 'absolute', top: 10, right: 14,
-            cursor: 'pointer', fontSize: 11, fontWeight: 700,
-            background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-            color: 'var(--c-acc)',
-          }}
-        >
-          View detail ›
-        </button>
-      </div>
-
-      {/* ── Z10 (RESTORED): SIPP-IHT countdown ──────────────────────────── */}
-      <SippIhtCountdown entity={entity} onNav={onNav} />
+      {/* CoI + SIPP-IHT countdown now embedded in AnchorRow (4-column layout) */}
 
       {/* ── Plan strip placeholder (Task 8) ──────────────────────────────── */}
       <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>

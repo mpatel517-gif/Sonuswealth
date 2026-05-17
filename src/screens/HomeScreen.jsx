@@ -262,7 +262,17 @@ function nwComposition(entity) {
 
 function gapDims(fqData) {
   const dims = fqData?.dims || {}
-  const GAP_THRESH = { habits: 50, own: 50, tax: 50, safety: 8, flow: 50, debt: 50, legacy: 50 }
+  // Real dim keys + max values from src/config/dimensions.js (50% of max = gap threshold)
+  // behaviour=20, capital=18, tax=18, protection=16, cashflow=16, debt=14, estate=28
+  const GAP_THRESH = {
+    behaviour:  10,
+    capital:     9,
+    tax:         9,
+    protection:  8,
+    cashflow:    8,
+    debt:        7,
+    estate:     14,
+  }
   return Object.entries(GAP_THRESH).filter(([key, thresh]) => (dims[key] ?? 0) < thresh).length
 }
 
@@ -1379,16 +1389,20 @@ export default function HomeScreen({
   const [localDrill, setLocalDrill] = useState(null)
 
   const drillFn = (metric) => {
-    if (metric === 'netWorth') {
-      setLocalDrill('networth')
-    } else if (metric === 'coi') {
-      setLocalDrill('coi')
-    } else if (metric === 'apq') {
-      setLocalDrill('apq')
-    } else {
-      if (onDrillMetric) onDrillMetric(metric)
-      else setStubMetric(metric)
+    if (metric === 'netWorth' || metric === 'networth') { setLocalDrill('networth'); return }
+    if (metric === 'coi')                               { setLocalDrill('coi');      return }
+    if (metric === 'apq' || metric === 'gaps')          { setLocalDrill('apq');      return }
+    // Dim keys — strip prefix if present ('wealth.behaviour' → 'behaviour')
+    const dimKey = typeof metric === 'string' ? metric.replace(/^wealth\./, '') : metric
+    const DIM_KEYS = ['behaviour', 'capital', 'tax', 'protection', 'cashflow', 'debt', 'estate']
+    if (DIM_KEYS.includes(dimKey)) {
+      // Show DimExplainerStub locally; if host provided onDrillMetric, also call it
+      setStubMetric(dimKey)
+      return
     }
+    // Everything else (riskScore, wealthScore, etc.) — push to host or stub
+    if (onDrillMetric) onDrillMetric(metric)
+    else setStubMetric(metric)
   }
 
   return (

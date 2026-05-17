@@ -998,7 +998,7 @@ function CoIDrillPanel({ entity, onClose, onNav }) {
    L3 — APQ Drill Panel
    ═══════════════════════════════════════════════════════════════════════ */
 
-function APQDrillPanel({ entity, onClose }) {
+function APQDrillPanel({ entity, onNav, onClose }) {
   const apq = safe(() => calcAPQ(entity), [])
   const items = Array.isArray(apq) ? apq : []
 
@@ -1048,47 +1048,54 @@ function APQDrillPanel({ entity, onClose }) {
             </div>
           )}
           {items.map((action, i) => {
+            const route  = ACTION_ROUTE_OVERRIDE[action.id] || action.screen || null
             const impact = action?.impact?.finioScore || action?.impact?.score || 0
+            const canNav = route || action.id === 'pension-drawdown'
             return (
               <div
                 key={action.id || i}
-                className="sw-press"
+                onClick={() => {
+                  if (!canNav) return
+                  if (action.id === 'pension-drawdown') { onClose(); onNav?.('tax'); return }
+                  onClose(); onNav?.(route)
+                }}
                 style={{
                   padding: '12px 0',
                   borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
-                  cursor: 'default',
+                  cursor: canNav ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <span style={{
-                    flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
-                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                    fontSize: 11, fontWeight: 800, color: 'var(--c-text3)',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {i + 1}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>
-                      {action.title || action.headline || '—'}
-                    </div>
-                    {(action.context || action.detail || action.why) && (
-                      <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 4 }}>
-                        {action.context || action.detail || action.why}
-                      </div>
-                    )}
-                    {impact > 0 && (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '2px 8px', borderRadius: 100,
-                        background: 'rgba(93,219,194,0.12)', border: '1px solid rgba(93,219,194,0.25)',
-                        fontSize: 10, fontWeight: 700, color: 'var(--c-acc)',
-                      }}>
-                        +{impact} Wealth Score
-                      </span>
-                    )}
+                <span style={{
+                  flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                  fontSize: 11, fontWeight: 800, color: 'var(--c-text3)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {i + 1}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>
+                    {action.title || action.headline || '—'}
                   </div>
+                  {(action.context || action.detail || action.why) && (
+                    <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 4 }}>
+                      {action.context || action.detail || action.why}
+                    </div>
+                  )}
+                  {impact > 0 && (
+                    <span style={{
+                      display: 'inline-block', padding: '2px 8px', borderRadius: 100,
+                      background: 'rgba(93,219,194,0.12)', border: '1px solid rgba(93,219,194,0.25)',
+                      fontSize: 10, fontWeight: 700, color: 'var(--c-acc)',
+                    }}>
+                      +{impact} Wealth Score
+                    </span>
+                  )}
                 </div>
+                {canNav && (
+                  <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, alignSelf: 'center' }}>›</span>
+                )}
               </div>
             )
           })}
@@ -1360,7 +1367,7 @@ export default function HomeScreen({
       {/* Drill panels — float above everything (replaces early returns) */}
       {localDrill === 'networth' && <NetWorthDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
-      {localDrill === 'apq'     && <APQDrillPanel        entity={entity} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'apq'     && <APQDrillPanel entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'pension-drawdown' && (
         <PensionDrawdownPanel entity={entity} onClose={() => setLocalDrill(null)} onNav={onNav} />
       )}

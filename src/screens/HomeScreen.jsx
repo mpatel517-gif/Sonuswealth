@@ -660,17 +660,55 @@ function PlanProgressStrip({ entity, onNav }) {
       }}
     >
       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)', flexShrink: 0 }}>Plan progress</div>
-      <div style={{ flex: 1, fontSize: 13, color: 'var(--c-text2)' }}>No active plan — set one in the <strong style={{ color: 'var(--c-text)' }}>Plan tab</strong> to see your trajectory and milestones.</div>
+      <div style={{ flex: 1, fontSize: 13, color: 'var(--c-text2)' }}>
+        No active plan — set one in the <strong style={{ color: 'var(--c-text)' }}>Timeline</strong> tab.
+      </div>
       <span style={{ color: 'var(--c-acc)', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>Set plan →</span>
     </div>
   )
 
-  const target   = typeof plan.target === 'number' ? plan.target : (plan.target?.netWorth || plan.target?.value || plan.targetValue || 0)
-  const current  = plan.progress?.current ?? plan.current ?? 0
-  const pct      = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
-  const onTrack  = plan.progress?.onTrack ?? plan.onTrack ?? true
-  const horizon  = plan.horizonDate || plan.target?.date || null
-  const planName = plan.name || plan.goal || 'Retirement plan'
+  const targetDate    = plan.target?.date || plan.horizonDate || null
+  const targetValue   = typeof plan.target === 'number'
+    ? plan.target
+    : (plan.target?.netWorth || plan.target?.value || plan.targetValue || 0)
+  const monthlyTarget = plan.target?.monthlyDrawdown || 0
+  const drawdownStarted = (entity?.drawdown || 0) > 0
+  const planName = plan.name || plan.label || plan.goal || 'Retirement plan'
+
+  let pct = 0
+  let statusLabel = 'Not started'
+  let statusColor = 'var(--c-text3)'
+
+  if (targetDate) {
+    const deadline  = new Date(targetDate)
+    const created   = plan.createdAt ? new Date(plan.createdAt) : new Date(Date.now() - 86_400_000 * 365)
+    const totalSpan = deadline - created
+    const elapsed   = Date.now() - created
+    const timeProgress = totalSpan > 0
+      ? Math.min(100, Math.max(0, Math.round((elapsed / totalSpan) * 100)))
+      : 0
+    if (drawdownStarted) {
+      pct = timeProgress
+      statusLabel = 'In progress'
+      statusColor = 'var(--c-acc)'
+    } else {
+      pct = 0
+      statusLabel = 'Action required'
+      statusColor = 'var(--c-acc3)'
+    }
+  } else if (targetValue > 0) {
+    const current = plan.progress?.current ?? plan.current ?? 0
+    pct = Math.min(100, Math.round((current / targetValue) * 100))
+    const onTrack = plan.progress?.onTrack ?? plan.onTrack ?? false
+    statusLabel = onTrack ? 'On course' : 'Behind plan'
+    statusColor = onTrack ? 'var(--c-acc)' : 'var(--c-acc3)'
+  }
+
+  const daysLeft = targetDate
+    ? Math.max(0, Math.ceil((new Date(targetDate) - new Date()) / 86_400_000))
+    : null
+
+  const barColor = drawdownStarted || (!targetDate && pct > 0) ? 'var(--c-acc)' : 'var(--c-acc3)'
 
   return (
     <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>
@@ -678,22 +716,30 @@ function PlanProgressStrip({ entity, onNav }) {
         <div>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)', marginBottom: 2 }}>Plan progress</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
-            {planName}{target > 0 && ` · ${fmt(target)} target`}
+            {planName}
+            {monthlyTarget > 0 && ` · ${fmt(monthlyTarget)}/month target`}
+            {!monthlyTarget && targetValue > 0 && ` · ${fmt(targetValue)} target`}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {horizon && <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>{new Date(horizon).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</span>}
-          <span style={{ fontSize: 12, fontWeight: 700, color: onTrack ? 'var(--c-acc)' : 'var(--c-acc3)' }}>
-            {onTrack ? 'On course' : 'Behind plan'}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {daysLeft !== null && (
+            <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{daysLeft} days</span>
+          )}
+          <span style={{ fontSize: 12, fontWeight: 700, color: statusColor }}>{statusLabel}</span>
         </div>
       </div>
       <div style={{ height: 5, background: 'var(--c-surface2)', borderRadius: 100, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--c-acc)', borderRadius: 100, transition: 'width 0.6s ease' }} />
+        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 100, transition: 'width 0.6s ease' }} />
       </div>
       <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 6 }}>
-        <strong style={{ color: 'var(--c-text)' }}>{pct}%</strong>
-        {target > 0 && <span> · {fmt(current)} of {fmt(target)}</span>}
+        {targetDate && !drawdownStarted
+          ? `Drawdown not yet started — ${daysLeft} days until deadline`
+          : targetDate && drawdownStarted
+            ? `Drawdown active · ${daysLeft} days to deadline`
+            : targetValue > 0
+              ? <><strong style={{ color: 'var(--c-text)' }}>{pct}%</strong> · {fmt(plan.progress?.current ?? 0)} of {fmt(targetValue)}</>
+              : null
+        }
       </div>
     </div>
   )

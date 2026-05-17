@@ -165,6 +165,14 @@ const MODE_LABEL = {
   scenario: 'What-if',
 }
 
+/* ─── MODES array (for pill buttons in MastheadCard) ───────────────────── */
+const MODES = [
+  { id: 'actual',   label: 'Today' },
+  { id: 'forecast', label: 'Future' },
+  { id: 'plan',     label: 'Plan' },
+  { id: 'scenario', label: 'What If' },
+]
+
 /* ═══════════════════════════════════════════════════════════════════════════
    §Z0 — Score Orientation Layer  (cut in v2.0 simplification)
    ═══════════════════════════════════════════════════════════════════════ */
@@ -178,37 +186,48 @@ function ScoreOrientation({ onDismiss }) {
    Card 1 — Masthead
    ═══════════════════════════════════════════════════════════════════════ */
 
-function MastheadCard({ entity, viewMode }) {
+function MastheadCard({ entity, viewMode, onModeChange }) {
   const firstName = pickFirstName(entity)
-  const modeLabel = MODE_LABEL[viewMode] || 'Today'
-
+  const initials = firstName.slice(0, 2).toUpperCase()
   return (
-    <div style={card()}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+    <div style={{
+      margin: '0 16px 14px',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+          background: 'linear-gradient(135deg, var(--c-gold), #b87f30)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, fontWeight: 800, color: '#0B1F3A',
+          boxShadow: '0 4px 14px rgba(255,189,89,0.25)',
+        }}>
+          {initials}
+        </div>
         <div>
-          <div style={{
-            fontSize: 13, color: 'var(--c-text3)', marginBottom: 2,
-          }}>
-            {greeting()},
-          </div>
-          <div style={{
-            fontSize: 20, fontWeight: 700, color: 'var(--c-text)',
-            letterSpacing: -0.4, lineHeight: 1.2,
-          }}>
+          <div style={{ fontSize: 13, color: 'var(--c-text3)' }}>{greeting()},</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -0.4, marginTop: 2, lineHeight: 1.2 }}>
             {firstName} · {fmtHomeDate()}
           </div>
         </div>
-        <span style={{
-          flexShrink: 0,
-          padding: '4px 12px',
-          borderRadius: 100,
-          fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7,
-          background: 'var(--c-surface2)',
-          border: '1px solid var(--c-sep)',
-          color: 'var(--c-acc)',
-        }}>
-          {modeLabel}
-        </span>
+      </div>
+      {/* Mode pill */}
+      <div style={{
+        display: 'flex', gap: 3, padding: 4,
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 999,
+        flexShrink: 0,
+      }}>
+        {MODES.map(({ id, label }) => (
+          <button key={id} onClick={() => onModeChange?.(id)} style={{
+            padding: '6px 12px', borderRadius: 999, border: 'none', fontFamily: 'inherit',
+            fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
+            background: viewMode === id ? 'var(--c-acc)' : 'transparent',
+            color: viewMode === id ? '#0B1F3A' : 'var(--c-text3)',
+            cursor: 'pointer', transition: 'background 150ms ease',
+          }}>
+            {label}
+          </button>
+        ))}
       </div>
     </div>
   )
@@ -1328,14 +1347,17 @@ function NetWorthDrillPanel({ entity, onClose }) {
 
 export default function HomeScreen({
   entity,
-  viewMode = 'actual',
-  personaId,            // eslint-disable-line no-unused-vars
+  viewMode: _viewModeProp,  // eslint-disable-line no-unused-vars — ignored; local state owns this
+  personaId,                // eslint-disable-line no-unused-vars
   onNav,
-  onCommit,             // eslint-disable-line no-unused-vars
-  onAskAI,              // eslint-disable-line no-unused-vars
-  onOpenBreakdown,      // FQBreakdown overlay (used by Score Drillable)
-  onDrillMetric,        // PP-3 — push detail frame onto Dashboard's stack
+  onCommit,                 // eslint-disable-line no-unused-vars
+  onAskAI,                  // eslint-disable-line no-unused-vars
+  onOpenBreakdown,          // FQBreakdown overlay (used by Score Drillable)
+  onDrillMetric,            // PP-3 — push detail frame onto Dashboard's stack
 }) {
+  // ── viewMode lives here as LOCAL state (Task 2) ────────────────────────
+  const [viewMode, setViewMode] = useState('actual')
+
   // ── Core engine values ─────────────────────────────────────────────────
   const nw   = useMemo(() => safe(() => netWorth(entity), 0), [entity])
   const fq   = useMemo(() => safe(() => calcFQ(entity),
@@ -1367,22 +1389,18 @@ export default function HomeScreen({
     }
   }
 
-  if (localDrill === 'networth') {
-    return <NetWorthDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />
-  }
-  if (localDrill === 'coi') {
-    return <CoIDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />
-  }
-  if (localDrill === 'apq') {
-    return <APQDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />
-  }
-
   return (
     <>
-      {/* ── Card 1: Masthead ──────────────────────────────────────────── */}
-      <MastheadCard entity={entity} viewMode={viewMode} />
+      {/* Drill panels — float above everything (replaces early returns) */}
+      {localDrill === 'networth' && <NetWorthDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'apq'     && <APQDrillPanel        entity={entity} onClose={() => setLocalDrill(null)} />}
+      {stubMetric && <DimExplainerStub metric={stubMetric} onClose={() => setStubMetric(null)} />}
 
-      {/* ── Card 2: Anchor row ────────────────────────────────────────── */}
+      {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
+      <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
+
+      {/* ── Anchor row (inline AnchorRow component defined above) ─────── */}
       <AnchorRow
         nw={nw}
         fqData={fq}
@@ -1392,8 +1410,29 @@ export default function HomeScreen({
         onOpenBreakdown={onOpenBreakdown}
       />
 
+      {/* ── 2-column content grid (Task 2 scaffold) ───────────────────── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+        gap: 14, margin: '0 16px',
+      }}>
+        {/* LEFT: Radar card */}
+        <RadarCard
+          entity={entity}
+          fqData={fq}
+          nw={nw}
+          viewMode={viewMode}
+          diffs={diffs}
+          onDrillMetric={drillFn}
+        />
+        {/* RIGHT: Actions placeholder (Task 4) */}
+        <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 20, padding: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Actions — Task 4</div>
+        </div>
+      </div>
+
       {/* ── Z3 (RESTORED): Cost of Inaction strip ──────────────────────── */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', marginTop: 14 }}>
         <CostOfInactionStrip entity={entity} onTap={() => onNav?.('tax')} />
         <button
           onClick={() => drillFn('coi')}
@@ -1412,15 +1451,10 @@ export default function HomeScreen({
       {/* ── Z10 (RESTORED): SIPP-IHT countdown ──────────────────────────── */}
       <SippIhtCountdown entity={entity} onNav={onNav} />
 
-      {/* ── Card 3: Radar card ────────────────────────────────────────── */}
-      <RadarCard
-        entity={entity}
-        fqData={fq}
-        nw={nw}
-        viewMode={viewMode}
-        diffs={diffs}
-        onDrillMetric={drillFn}
-      />
+      {/* ── Plan strip placeholder (Task 8) ──────────────────────────────── */}
+      <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Plan strip — Task 8</div>
+      </div>
 
       {/* ── Card 4: Priority Action ───────────────────────────────────── */}
       <PriorityActionCard entity={entity} onNav={onNav} />
@@ -1441,16 +1475,11 @@ export default function HomeScreen({
         textAlign: 'center', fontSize: 11, color: 'var(--c-text3)',
         padding: '14px 24px 8px', lineHeight: 1.6,
       }}>
-        Information &amp; guidance only · Not regulated financial advice · FCA boundary applies on every Ask response
+        Information &amp; guidance only · Not regulated financial advice · FCA boundary applies
       </div>
 
       {/* Nav spacer */}
       <div style={{ height: 78 }} />
-
-      {/* Dim explainer stub — only used in standalone/lab hosts */}
-      {stubMetric && (
-        <DimExplainerStub metric={stubMetric} onClose={() => setStubMetric(null)} />
-      )}
     </>
   )
 }

@@ -93,6 +93,22 @@ function activeDimsFor(viewMode, currentDims, target, plan, horizonYears = 5) {
   return currentDims || {}
 }
 
+/* ─── drag tooltip helper ─────────────────────────────────────────────── */
+function estimateScoreDelta(fqData, dimKey, newDimVal) {
+  const dims    = fqData?.dims || {}
+  const dim     = DIMENSIONS.find(d => d.key === dimKey)
+  if (!dim) return 0
+  const maxVal  = dim.max || 100
+  // Approximate per-dim weight: each dim contributes proportionally to its max
+  // relative to the total of all maxes (sum = 110 for the 7-dim set).
+  const totalMax = DIMENSIONS.reduce((s, d) => s + d.max, 0)
+  const w       = maxVal / totalMax
+  const oldPct  = (dims[dimKey] ?? 0) / maxVal
+  const newPct  = newDimVal           / maxVal
+  // fqData.total is on a 0-100 scale
+  return Math.round((newPct - oldPct) * w * 100)
+}
+
 /* ─── main component ───────────────────────────────────────────────────── */
 
 export default function RadarAnchor({
@@ -145,9 +161,11 @@ export default function RadarAnchor({
   }, [])
 
   /* ── drag-node what-if ────────────────────────────────────────────────── */
-  const [dragKey, setDragKey]   = useState(null)
-  const [dragFrac, setDragFrac] = useState(0)
-  const [story, setStory]       = useState(null)  // §13.1 causal story payload
+  const [dragKey, setDragKey]     = useState(null)
+  const [dragFrac, setDragFrac]   = useState(0)
+  const [story, setStory]         = useState(null)  // §13.1 causal story payload
+  const [dragTooltip, setDragTooltip] = useState(null)
+  // dragTooltip: { dimKey, label, oldVal, newVal, scoreDelta, x, y } | null
   const dragStartedAt = useRef(0)
 
   const handleNodeDown = (e, dimKey) => {
@@ -183,8 +201,29 @@ export default function RadarAnchor({
     const dx = p.x - CX
     const dy = p.y - CY
     const dist = Math.hypot(dx, dy)
-    setDragFrac(Math.max(0, Math.min(1, dist / MAX_R)))
-  }, [dragKey, getSvgPoint])
+    const newFrac = Math.max(0, Math.min(1, dist / MAX_R))
+    setDragFrac(newFrac)
+
+    // Tooltip: show live dim value + estimated score delta
+    const dim = DIMENSIONS.find(d => d.key === dragKey)
+    if (dim) {
+      const newDimVal = newFrac * dim.max
+      const delta = estimateScoreDelta(fqData, dragKey, newDimVal)
+      const svg = svgRef.current
+      const rect = svg ? svg.getBoundingClientRect() : { left: 0, top: 0 }
+      const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0
+      const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0
+      setDragTooltip({
+        dimKey,
+        label:      dim.label,
+        oldVal:     Math.round(fqData?.dims?.[dragKey] ?? 0),
+        newVal:     Math.round(newDimVal),
+        scoreDelta: delta,
+        x:          clientX - rect.left + 12,
+        y:          clientY - rect.top  - 40,
+      })
+    }
+  }, [dragKey, getSvgPoint, fqData, svgRef])
 
   const handleUp = useCallback(() => {
     cancelLongPress()
@@ -206,6 +245,7 @@ export default function RadarAnchor({
       }))
     }
     setDragKey(null)
+    setDragTooltip(null)
   }, [dragKey, dragFrac, entity, currentDims, cancelLongPress])
 
   useEffect(() => {
@@ -491,6 +531,29 @@ export default function RadarAnchor({
           onDrillMetric={onDrillMetric}
           targetSource={targetInfo.source}
         />
+
+        {/* Drag tooltip — live dim value + score delta */}
+        {dragTooltip && (
+          <div style={{
+            position: 'absolute',
+            left: dragTooltip.x, top: dragTooltip.y,
+            background: 'var(--c-surface)',
+            border: '1px solid var(--c-sep)',
+            borderRadius: 10, padding: '8px 12px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+            fontSize: 12, color: 'var(--c-text2)',
+            pointerEvents: 'none', zIndex: 20,
+            minWidth: 140,
+          }}>
+            <div style={{ fontWeight: 800, color: 'var(--c-text)', marginBottom: 3 }}>{dragTooltip.label}</div>
+            <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {dragTooltip.oldVal} → <strong style={{ color: dragTooltip.newVal > dragTooltip.oldVal ? 'var(--c-acc)' : 'var(--c-acc3)' }}>{dragTooltip.newVal}</strong>
+            </div>
+            <div style={{ marginTop: 4, fontWeight: 700, color: dragTooltip.scoreDelta >= 0 ? 'var(--c-acc)' : 'var(--c-acc3)', fontSize: 11 }}>
+              Score: {dragTooltip.scoreDelta >= 0 ? '+' : ''}{dragTooltip.scoreDelta} pts
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mode header strip — readable label + a one-line interaction hint.

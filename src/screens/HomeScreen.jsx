@@ -1463,59 +1463,95 @@ export default function HomeScreen({
    Spec: plan §Phase 4 — "replace 5 hardcoded What-if scenarios".
    ═══════════════════════════════════════════════════════════════════════ */
 
-const DE_QUICK_ENTRIES = [
-  { label: 'Should I retire early?',         eventId: 'retire',           icon: '🌅' },
-  { label: 'Reduce IHT before April 2027',   eventId: 'iht_planning',     icon: '⏱' },
-  { label: 'Buy a second property?',         eventId: 'buy_second_home',  icon: '🏠' },
-  { label: 'Go part-time financially',       eventId: 'part_time',        icon: '⚖' },
-  { label: 'Deploy a large lump sum',        eventId: 'large_investment',  icon: '💷' },
+const DE_SCENARIOS = [
+  { icon: '✈️', label: 'How much do I need to relocate?',           sub: 'Kenya · Portugal · UAE — cost, tax, residency',   tag: 'Ask Sonu', engine: false, query: 'How much do I need to relocate abroad? Cover cost of living, tax, IHT deemed domicile, and pension implications.', eventId: null },
+  { icon: '🏡', label: 'What if I moved to a bigger house?',        sub: 'Stamp duty, mortgage impact, equity on home',      tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
+  { icon: '⏱️', label: 'What if I retired 5 years earlier?',       sub: 'Pension drawdown at 60 — cashflow, Score, IHT',    tag: 'Instant',  engine: true,  query: 'What if I retired 5 years earlier?', eventId: 'retire' },
+  { icon: '🌴', label: 'What if I went part-time or took a break?', sub: 'Runway, monthly shortfall, and when to return',    tag: 'Instant',  engine: true,  query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
+  { icon: '🏠', label: 'What if I helped my children get started?', sub: 'Gifting, joint mortgage, trust — IHT and estate',  tag: 'Ask Sonu', engine: false, query: 'What if I helped my children get started financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
 ]
 
 function DecisionEngineEntryCard({ onNav }) {
+  const [freeform, setFreeform] = useState('')
+
   return (
-    <div style={{
-      margin: '0 0 10px',
-      padding: '14px 16px',
-      background: 'linear-gradient(180deg, rgba(93,219,194,0.06), var(--c-surface))',
-      borderRadius: 16,
-      border: '1px solid rgba(93,219,194,0.18)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+    <div style={{ margin: '0 16px 10px' }}>
+      {/* Header row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderTop: '1px solid var(--c-sep)', paddingTop: 14, marginBottom: 10,
+      }}>
         <span style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-          color: 'var(--c-acc)', padding: '2px 8px', borderRadius: 999,
-          background: 'rgba(93,219,194,.12)', border: '1px solid rgba(93,219,194,.25)',
-        }}>Decision Engine</span>
-        <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>Ask any life question</span>
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+          color: '#ba8cff', display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          ✦ What if?
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--c-text3)', fontWeight: 500 }}>Explore · not advice</span>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {DE_QUICK_ENTRIES.map(({ label, eventId, icon }) => (
+      {/* Scenario rows — match HTML .whatif-row layout */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {DE_SCENARIOS.map(({ icon, label, sub, tag, engine, query, eventId }, i) => (
           <button
-            key={eventId}
-            onClick={() => onNav?.('de', { query: label, eventId })}
+            key={i}
+            onClick={() => onNav?.('de', { query, eventId })}
+            className="sw-press"
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '7px 12px', borderRadius: 999,
-              border: '1px solid var(--c-sep)',
-              background: 'var(--c-surface2)', color: 'var(--c-text2)',
-              fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'border-color .15s, color .15s',
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 4px', background: 'none', border: 'none',
+              borderBottom: i < DE_SCENARIOS.length - 1 ? '1px solid var(--c-sep)' : 'none',
+              cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit',
             }}
           >
-            {icon && <span style={{ fontSize: 14 }}>{icon}</span>}
-            {label}
+            <span style={{ fontSize: 15, flexShrink: 0, width: 22, textAlign: 'center' }}>{icon}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3 }}>{label}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1 }}>{sub}</div>
+            </div>
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
+              padding: '2px 6px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0,
+              ...(engine
+                ? { background: 'rgba(93,219,194,0.12)', color: 'var(--c-acc)', border: '1px solid var(--c-acc)' }
+                : { background: 'rgba(186,140,255,0.12)', color: '#ba8cff', border: '1px solid rgba(186,140,255,0.3)' }
+              ),
+            }}>{tag}</span>
           </button>
         ))}
-        <button
-          onClick={() => onNav?.('de', {})}
-          style={{
-            padding: '7px 12px', borderRadius: 999,
-            border: '1px solid rgba(93,219,194,.4)',
-            background: 'rgba(93,219,194,.08)', color: 'var(--c-acc)',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+      </div>
+
+      {/* Free-form input */}
+      <div style={{
+        marginTop: 10, display: 'flex', alignItems: 'center', gap: 8,
+        padding: '9px 10px',
+        background: 'rgba(186,140,255,0.07)',
+        border: '1px dashed rgba(186,140,255,0.30)',
+        borderRadius: 14,
+      }}>
+        <input
+          value={freeform}
+          onChange={e => setFreeform(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && freeform.trim()) {
+              onNav?.('de', { query: freeform.trim() })
+              setFreeform('')
+            }
           }}
-        >+ Your question</button>
+          placeholder="Ask your own what-if…"
+          style={{
+            flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
+            color: 'var(--c-text2)', background: 'transparent', border: 'none', outline: 'none',
+          }}
+        />
+        <button
+          onClick={() => { if (freeform.trim()) { onNav?.('de', { query: freeform.trim() }); setFreeform('') } }}
+          style={{
+            fontSize: 11, fontWeight: 700, color: '#ba8cff',
+            background: 'rgba(186,140,255,0.15)', border: 'none',
+            borderRadius: 999, padding: '4px 8px', cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >Ask Sonu →</button>
       </div>
     </div>
   )

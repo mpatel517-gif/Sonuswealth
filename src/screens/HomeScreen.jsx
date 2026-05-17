@@ -36,6 +36,7 @@
 
 import { useMemo, useState } from 'react'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
+import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
 import {
   calcFQ, calcRisk, calcAPQ, netWorth, fmt,
   planFor, diffSet, costOfInaction, totalCoI,
@@ -113,7 +114,7 @@ const ACTION_ROUTE_OVERRIDE = {
   'life-in-trust':         'tax',
   'nominations':           'tax',
   'fallback-iht':          'tax',
-  'pension-drawdown':      'flow',
+  'pension-drawdown':      'tax',
   'pension-contributions': 'money',
   'income-protection':     'risk',
   'will-update':           'tax',
@@ -883,7 +884,7 @@ function DimExplainerStub({ metric, fqData, onClose, onNav }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 const COI_DOMAIN_META = {
-  drawdown:           { label: 'Pension drawdown strategy',       screen: 'flow'  },
+  drawdown:           { label: 'SIPP estate exposure',             screen: 'tax'   },
   wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)',   screen: 'tax'   },
   contributions:      { label: 'Pension contributions',           screen: 'money' },
   taxAllowances:      { label: 'Unused tax allowances',           screen: 'tax'   },
@@ -1340,6 +1341,7 @@ export default function HomeScreen({
     if (metric === 'netWorth' || metric === 'networth') { setLocalDrill('networth'); return }
     if (metric === 'coi')                               { setLocalDrill('coi');      return }
     if (metric === 'apq' || metric === 'gaps')          { setLocalDrill('apq');      return }
+    if (metric === 'pension-drawdown')                  { setLocalDrill('pension-drawdown'); return }
     // Dim keys — strip prefix if present ('wealth.behaviour' → 'behaviour')
     const dimKey = typeof metric === 'string' ? metric.replace(/^wealth\./, '') : metric
     const DIM_KEYS = ['behaviour', 'capital', 'tax', 'protection', 'cashflow', 'debt', 'estate']
@@ -1359,6 +1361,9 @@ export default function HomeScreen({
       {localDrill === 'networth' && <NetWorthDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'apq'     && <APQDrillPanel        entity={entity} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'pension-drawdown' && (
+        <PensionDrawdownPanel entity={entity} onClose={() => setLocalDrill(null)} onNav={onNav} />
+      )}
       {stubMetric && <DimExplainerStub metric={stubMetric} fqData={fq} onNav={onNav} onClose={() => setStubMetric(null)} />}
 
       {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
@@ -1594,10 +1599,20 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
                         {action.context || action.detail || action.why || ''}
                       </p>
                       {route && (
-                        <button onClick={e => { e.stopPropagation(); onNav?.(route) }} style={{
-                          padding: '8px 16px', borderRadius: 999, background: 'var(--c-acc)',
-                          border: 'none', color: '#0B1F3A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                        }}>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            if (action.id === 'pension-drawdown') {
+                              onDrillMetric?.('pension-drawdown')
+                            } else {
+                              onNav?.(route)
+                            }
+                          }}
+                          style={{
+                            padding: '8px 16px', borderRadius: 999, background: 'var(--c-acc)',
+                            border: 'none', color: '#0B1F3A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
                           Show me how →
                         </button>
                       )}

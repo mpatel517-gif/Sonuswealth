@@ -43,7 +43,6 @@ import {
 } from '../engine/fq-calculator.js'
 import Drillable from '../components/shared/Drillable.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
-import CostOfInactionStrip from '../components/Home/CostOfInactionStrip.jsx'
 import { DIMENSIONS } from '../config/dimensions.js'
 
 /* ─── helpers ───────────────────────────────────────────────────────────── */
@@ -175,15 +174,6 @@ const MODES = [
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   §Z0 — Score Orientation Layer  (cut in v2.0 simplification)
-   ═══════════════════════════════════════════════════════════════════════ */
-
-// eslint-disable-next-line no-unused-vars
-function ScoreOrientation({ onDismiss }) {
-  return null  // Cut in v2.0
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
    Card 1 — Masthead
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -300,7 +290,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
 
   return (
     <div style={card({ padding: '14px 18px', margin: '0 16px 12px' })}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 0, overflow: 'hidden' }}>
 
         {/* NW + composition bar */}
         <div style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 16 }}>
@@ -415,12 +405,15 @@ function SippIhtCountdown({ entity, onNav }) {
   if (now >= dueDate) return null  // After the deadline, no countdown needed
   const days = Math.max(0, Math.ceil((dueDate.getTime() - now.getTime()) / 86400000))
 
-  // Suppress if no exposed SIPP/pension value
+  // Suppress if no exposed SIPP/pension value (handles flat number, object, or array-of-pots)
   const sippVal = safe(() => {
-    const s = entity?.assets?.sipp
-    if (!s) return 0
-    if (typeof s === 'number') return s
-    return s.total || s.value || 0
+    const a = entity?.assets || {}
+    const num = v => {
+      if (typeof v === 'number') return v
+      if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
+      return +v?.total || +v?.value || 0
+    }
+    return num(a.sipp) + num(a.pensions)
   }, 0)
   if (sippVal <= 0) return null
 
@@ -581,8 +574,12 @@ function RadarCard({ entity, fqData, nw, viewMode, diffs, onDrillMetric }) {
   const lowestDim  = useMemo(() => pickLowestDim(entity, dims), [entity, dims])
   const taxShelter = useMemo(() => {
     const a = entity?.assets || {}
-    const num = v => (typeof v === 'number' ? v : (v?.value ?? v?.total ?? 0))
-    const sheltered = num(a.isa) + num(a.lisa) + num(a.sipp) + num(a.pension)
+    const num = v => {
+      if (typeof v === 'number') return v
+      if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
+      return +v?.total || +v?.value || 0
+    }
+    const sheltered = num(a.isa) + num(a.lisa) + num(a.sipp) + num(a.pension) + num(a.pensions)
     return nw > 0 ? Math.round((sheltered / nw) * 100) : 0
   }, [entity, nw])
   const assetList = useMemo(() => joinList(listAssetClasses(entity, 3)), [entity])
@@ -623,83 +620,6 @@ function RadarCard({ entity, fqData, nw, viewMode, diffs, onDrillMetric }) {
           Drag any point to test what-if
         </div>
       )}
-    </div>
-  )
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Card 4 — Priority Action
-   Top-1 action from calcAPQ · gold pre-pill · CTA
-   ═══════════════════════════════════════════════════════════════════════ */
-
-function PriorityActionCard({ entity, onNav }) {
-  const apq = useMemo(() => safe(() => calcAPQ(entity), []), [entity])
-  const top = Array.isArray(apq) ? apq[0] : null
-  if (!top) return null
-
-  const route  = safeRoute(top)
-  const reason = rankReasonFor(top, 1)
-
-  return (
-    <div
-      style={card({
-        background: 'linear-gradient(180deg, rgba(255,189,89,0.08), var(--c-surface))',
-        borderColor: 'rgba(255,189,89,0.25)',
-        cursor: route ? 'pointer' : 'default',
-      })}
-      onClick={() => route && onNav?.(route)}
-      role={route ? 'button' : undefined}
-      tabIndex={route ? 0 : undefined}
-      onKeyDown={e => { if (route && (e.key === 'Enter' || e.key === ' ')) onNav?.(route) }}
-    >
-      {/* Gold pre-pill */}
-      <div style={{ marginBottom: 8 }}>
-        <span style={{
-          display: 'inline-block',
-          padding: '3px 10px',
-          borderRadius: 100,
-          background: 'rgba(255,189,89,0.18)',
-          border: '1px solid rgba(255,189,89,0.35)',
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: 0.7, color: 'var(--c-gold)',
-        }}>
-          {reason || 'This month · 1 thing'}
-        </span>
-      </div>
-
-      {/* Headline */}
-      <div style={{
-        fontSize: 16, fontWeight: 700, color: 'var(--c-text)',
-        letterSpacing: -0.2, lineHeight: 1.3, marginBottom: 8,
-      }}>
-        {top.title || top.headline || '—'}
-      </div>
-
-      {/* Why paragraph */}
-      <p style={{
-        fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55,
-        margin: '0 0 14px',
-      }}>
-        {top.context || top.detail || top.why || 'Review this action for your situation.'}
-      </p>
-
-      {/* CTA */}
-      <button
-        className="sw-press"
-        onClick={e => { e.stopPropagation(); route && onNav?.(route) }}
-        style={{
-          padding: '10px 20px',
-          borderRadius: 100,
-          background: 'var(--c-acc)',
-          border: 'none',
-          color: 'var(--c-bg)',
-          fontSize: 13, fontWeight: 700,
-          cursor: 'pointer',
-          letterSpacing: 0.2,
-        }}
-      >
-        {top.cta || 'Show me how →'}
-      </button>
     </div>
   )
 }
@@ -759,111 +679,6 @@ function PlanProgressStrip({ entity, onNav }) {
       <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 6 }}>
         <strong style={{ color: 'var(--c-text)' }}>{pct}%</strong>
         {target > 0 && <span> · {fmt(current)} of {fmt(target)}</span>}
-      </div>
-    </div>
-  )
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Card 6 — Active Insights
-   Actions ranked 2–4 from calcAPQ · badge severity · See all link
-   ═══════════════════════════════════════════════════════════════════════ */
-
-function severityBadge(action) {
-  const p = action?.priority ?? 3
-  if (p === 1) return { label: 'High', bg: 'rgba(255,111,125,0.15)', color: 'var(--c-acc3)' }
-  if (p === 2) return { label: 'Med',  bg: 'rgba(255,189,89,0.15)',  color: 'var(--c-gold)' }
-  return               { label: 'Watch', bg: 'rgba(93,219,194,0.12)', color: 'var(--c-acc)' }
-}
-
-function ActiveInsightsCard({ entity, onNav }) {
-  const apq = useMemo(() => safe(() => calcAPQ(entity), []), [entity])
-  // Insights are actions 2–4 (index 1–3), skipping top-1 which lives in Card 4
-  const insights = Array.isArray(apq) ? apq.slice(1, 4) : []
-  if (!insights.length) return null
-
-  return (
-    <div style={card({ padding: '14px 18px' })}>
-      {/* Section header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 10,
-      }}>
-        <span style={{
-          fontSize: 12, fontWeight: 700, color: 'var(--c-text2)',
-          textTransform: 'uppercase', letterSpacing: 0.6,
-        }}>
-          Active insights
-        </span>
-        <button
-          className="sw-press"
-          onClick={() => onNav?.('timeline')}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 12, color: 'var(--c-acc)', fontWeight: 700, padding: 0,
-          }}
-        >
-          See all {Array.isArray(apq) ? apq.length : 5} →
-        </button>
-      </div>
-
-      {/* Insight rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-        {insights.map((action, i) => {
-          const badge = severityBadge(action)
-          const route = safeRoute(action)
-          return (
-            <div
-              key={action.id || i}
-              onClick={() => route && onNav?.(route)}
-              role={route ? 'button' : undefined}
-              tabIndex={route ? 0 : undefined}
-              onKeyDown={e => { if (route && (e.key === 'Enter' || e.key === ' ')) onNav?.(route) }}
-              className={route ? 'sw-press' : undefined}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '10px 0',
-                borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
-                cursor: route ? 'pointer' : 'default',
-              }}
-            >
-              {/* Badge */}
-              <span style={{
-                flexShrink: 0,
-                padding: '3px 8px',
-                borderRadius: 6,
-                background: badge.bg,
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: 0.5, color: badge.color,
-                minWidth: 42, textAlign: 'center',
-              }}>
-                {badge.label}
-              </span>
-
-              {/* Body */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13, fontWeight: 600, color: 'var(--c-text)',
-                  lineHeight: 1.3, marginBottom: 2,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {action.title || action.headline || '—'}
-                </div>
-                <div style={{
-                  fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {action.detail || action.context || ''}
-                </div>
-              </div>
-
-              {/* Chev */}
-              {route && (
-                <span style={{ fontSize: 16, color: 'var(--c-text3)', flexShrink: 0 }}>›</span>
-              )}
-            </div>
-          )
-        })}
       </div>
     </div>
   )
@@ -1173,7 +988,13 @@ function NetWorthDrillPanel({ entity, onClose }) {
   const a      = entity?.assets || {}
 
   // Derive asset buckets from entity shape (canonical — no hardcoding)
-  const pensions   = safe(() => (a.pensions || []).reduce((s, p) => s + (+p.currentValue || +p.value || 0), 0), 0)
+  // Pensions: sum all three possible shapes (sipp flat/object, pension flat/object, pensions array)
+  const _numAsset = v => {
+    if (typeof v === 'number') return v
+    if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
+    return +v?.total || +v?.value || 0
+  }
+  const pensions   = safe(() => _numAsset(a.sipp) + _numAsset(a.pension) + _numAsset(a.pensions), 0)
   const property   = safe(() => (a.property  || []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
   const business   = safe(() => (a.business_assets || []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
   const cash       = safe(() => (+a.cash || +a.savings || +a.cashSavings || 0), 0)
@@ -1671,5 +1492,4 @@ const DE_SCENARIOS = [
 ]
 
 
-// Preserve for ESM consumers / unused-export lint suppression
-export { ScoreOrientation }
+

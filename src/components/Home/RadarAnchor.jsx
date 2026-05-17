@@ -418,7 +418,7 @@ export default function RadarAnchor({
                   style={{ filter: 'drop-shadow(0 0 4px var(--c-acc3-bg))' }}
                 />
                 <circle
-                  cx={midX} cy={midY} r={9}
+                  cx={midX} cy={midY} r={24}
                   fill="transparent"
                   onClick={() => onDrillMetric?.(`wealth.${key}`)}
                   aria-label={`Gap on ${dim.label}. Tap to see what's missing.`}

@@ -105,7 +105,8 @@ function buildEnrichedQuery(baseQuery, scenarioKey, answers, entity) {
   const enriched = parts.length
     ? `${baseQuery} Here is additional context about my situation: ${parts.join('; ')}.`
     : baseQuery
-  return ctx + enriched
+  const instruction = `\n\nPlease structure your response as 4 specific, actionable options for my situation. For each option: (1) name the action clearly, (2) state the financial impact in £ or % terms using my actual numbers above, (3) note the timing and urgency, (4) flag any tax or regulatory deadline. Base all figures on my financial context. Do not use placeholder amounts.`
+  return ctx + enriched + instruction
 }
 
 export default function ScenarioIntake({ scenario, entity, onSubmit, onBack }) {

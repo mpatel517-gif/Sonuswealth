@@ -702,102 +702,53 @@ function PriorityActionCard({ entity, onNav }) {
    string directly so the call doesn't silently break if the alias is removed.
    ═══════════════════════════════════════════════════════════════════════ */
 
-function PlanProgressCard({ entity, onNav }) {
+function PlanProgressStrip({ entity, onNav }) {
   const plan = useMemo(() => safe(() => planFor(entity, 'retirement'), null), [entity])
 
-  if (!plan) {
-    return (
-      <div
-        style={card({ cursor: 'pointer' })}
-        onClick={() => onNav?.('timeline')}
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onNav?.('timeline') }}
-      >
-        <div style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 6,
-        }}>Plan progress</div>
-        <div style={{
-          fontSize: 14, color: 'var(--c-text2)', display: 'flex',
-          alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span>No active plan — set one in Plan tab →</span>
-          <span style={{ color: 'var(--c-text3)', fontSize: 16 }}>›</span>
-        </div>
-      </div>
-    )
-  }
+  if (!plan) return (
+    <div
+      onClick={() => onNav?.('timeline')}
+      style={{
+        margin: '14px 16px 0', padding: '14px 18px',
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16,
+        display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer',
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)', flexShrink: 0 }}>Plan progress</div>
+      <div style={{ flex: 1, fontSize: 13, color: 'var(--c-text2)' }}>No active plan — set one in the <strong style={{ color: 'var(--c-text)' }}>Plan tab</strong> to see your trajectory and milestones.</div>
+      <span style={{ color: 'var(--c-acc)', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>Set plan →</span>
+    </div>
+  )
 
-  // Extract values — handle both legacy (bare numbers) and new (object) shapes
-  const target   = typeof plan.target === 'number' ? plan.target
-    : plan.target?.netWorth || plan.target?.value || plan.targetValue || 0
+  const target   = typeof plan.target === 'number' ? plan.target : (plan.target?.netWorth || plan.target?.value || plan.targetValue || 0)
   const current  = plan.progress?.current ?? plan.current ?? 0
   const pct      = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
   const onTrack  = plan.progress?.onTrack ?? plan.onTrack ?? true
-  const horizon  = plan.horizonDate || plan.target?.date || plan.progress?.horizonDate || null
+  const horizon  = plan.horizonDate || plan.target?.date || null
   const planName = plan.name || plan.goal || 'Retirement plan'
 
-  const trackColor = onTrack ? 'var(--c-acc)' : 'var(--c-acc3)'
-  const trackLabel = onTrack ? 'On course' : 'Behind plan'
-
   return (
-    <div style={card()}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        marginBottom: 12,
-      }}>
+    <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div>
-          <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 3,
-          }}>Plan progress</div>
-          <div style={{
-            fontSize: 14, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.2,
-          }}>
-            {planName}
-            {target > 0 && ` · ${fmt(target)} target`}
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)', marginBottom: 2 }}>Plan progress</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+            {planName}{target > 0 && ` · ${fmt(target)} target`}
           </div>
         </div>
-        {horizon && (
-          <span style={{
-            fontSize: 12, color: 'var(--c-text3)', flexShrink: 0, marginTop: 2,
-          }}>
-            {fmtDate(horizon)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {horizon && <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>{new Date(horizon).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}</span>}
+          <span style={{ fontSize: 12, fontWeight: 700, color: onTrack ? 'var(--c-acc)' : 'var(--c-acc3)' }}>
+            {onTrack ? 'On course' : 'Behind plan'}
           </span>
-        )}
+        </div>
       </div>
-
-      {/* Progress bar */}
-      <div style={{
-        height: 6, background: 'var(--c-surface2)',
-        borderRadius: 100, marginBottom: 10, overflow: 'hidden',
-      }}>
-        <div style={{
-          height: '100%', width: `${pct}%`,
-          background: 'var(--c-acc)', borderRadius: 100,
-          transition: 'width 0.6s ease',
-        }} />
+      <div style={{ height: 5, background: 'var(--c-surface2)', borderRadius: 100, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: 'var(--c-acc)', borderRadius: 100, transition: 'width 0.6s ease' }} />
       </div>
-
-      {/* Meta row */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>
-          <strong style={{ color: 'var(--c-text)' }}>{pct}%</strong>
-          {target > 0 && (
-            <span style={{ color: 'var(--c-text3)', marginLeft: 4 }}>
-              · {fmt(current)} of {fmt(target)}
-            </span>
-          )}
-        </span>
-        <span style={{
-          fontSize: 12, fontWeight: 700, color: trackColor,
-        }}>
-          {trackLabel}
-        </span>
+      <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 6 }}>
+        <strong style={{ color: 'var(--c-text)' }}>{pct}%</strong>
+        {target > 0 && <span> · {fmt(current)} of {fmt(target)}</span>}
       </div>
     </div>
   )
@@ -1482,13 +1433,8 @@ export default function HomeScreen({
 
       {/* CoI + SIPP-IHT countdown now embedded in AnchorRow (4-column layout) */}
 
-      {/* ── Plan strip placeholder (Task 8) ──────────────────────────────── */}
-      <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>
-        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Plan strip — Task 8</div>
-      </div>
-
-      {/* ── Card 5: Plan progress ─────────────────────────────────────── */}
-      <PlanProgressCard entity={entity} onNav={onNav} />
+      {/* ── Card 5: Plan progress strip ───────────────────────────────── */}
+      <PlanProgressStrip entity={entity} onNav={onNav} />
 
       {/* ── FCA footer ────────────────────────────────────────────────── */}
       <div style={{

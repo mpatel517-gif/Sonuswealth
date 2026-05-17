@@ -1850,15 +1850,17 @@ function FundedRatioGauge({ fr }) {
     )
   }
   const ratio = fr.ratio || 0
-  const zone = ratio >= 1.0 ? 'Funded'
-             : ratio >= 0.7 ? 'On track'
-             : 'Underfunded'
-  const c = ratio >= 1.0 ? 'var(--c-mint-text)'
-           : ratio >= 0.7 ? 'var(--c-amber-text)'
+  // Thresholds match FundedRatioGauge.jsx statusFor() — ratio < 0.85 is Under-funded
+  const zone = ratio >= 1.1  ? 'Over-funded'
+             : ratio >= 1.0  ? 'On track'
+             : ratio >= 0.85 ? 'Approaching target'
+             : 'Under-funded'
+  const c = ratio >= 1.0  ? 'var(--c-mint-text)'
+           : ratio >= 0.85 ? 'var(--c-amber-text)'
            : 'var(--c-coral-text)'
-  const chip = ratio >= 1.0 ? 'sw-chip-mint'
-              : ratio >= 0.7 ? 'sw-chip-amber'
-              : 'sw-chip-coral'
+  const chip = ratio >= 1.0  ? 'sw-chip-mint'
+             : ratio >= 0.85 ? 'sw-chip-amber'
+             : 'sw-chip-coral'
 
   // Half-circle gauge — DrawSVG animates the stroke-dashoffset.
   const r = 60, W = 200, H = 110, cx = W / 2, cy = 90
@@ -2651,11 +2653,29 @@ function FiProgressDepthCard({ fi }) {
 
 // ── §C.8 Confidence-interval summary (§6.9) ─────────────────────────────
 function ConfidenceIntervalSummary({ health, fr, pos, coi }) {
+  // For the funded ratio row, show the status label (Under-funded / Approaching target /
+  // On track / Over-funded) derived from fr.ratio — NOT fr.confidence.
+  // fr.confidence = 'HIGH' means high calculation certainty, NOT that the ratio is high.
+  // Showing 'HIGH' next to 'Funded ratio' is misleading when ratio is e.g. 0.32.
+  const frStatusLabel = (() => {
+    const r = +(fr?.ratio ?? fr?.value ?? 0)
+    if (!fr || fr.insufficient_data || !r) return fr?.confidence || null
+    if (r >= 1.1)  return 'Over-funded'
+    if (r >= 1.0)  return 'On track'
+    if (r >= 0.85) return 'Approaching target'
+    return 'Under-funded'
+  })()
+  const frStatusChip = (() => {
+    const r = +(fr?.ratio ?? fr?.value ?? 0)
+    if (!fr || fr.insufficient_data || !r) return confChip(fr?.confidence)
+    return r >= 1.0 ? 'sw-chip-mint' : r >= 0.85 ? 'sw-chip-amber' : 'sw-chip-coral'
+  })()
+
   const rows = [
-    { key: 'health', label: 'Cashflow Health',     conf: health?.confidence },
-    { key: 'fr',     label: 'Funded ratio',        conf: fr?.confidence },
-    { key: 'pos',    label: 'Probability of Success', conf: pos?.confidence },
-    { key: 'coi',    label: 'Cost of Inaction',    conf: coi?.confidence },
+    { key: 'health', label: 'Cashflow Health',        conf: health?.confidence, chipClass: null },
+    { key: 'fr',     label: 'Funded ratio',           conf: frStatusLabel,      chipClass: frStatusChip },
+    { key: 'pos',    label: 'Probability of Success', conf: pos?.confidence,    chipClass: null },
+    { key: 'coi',    label: 'Cost of Inaction',       conf: coi?.confidence,    chipClass: null },
   ]
   return (
     <div className="sw-card sw-lift" style={S.card}>
@@ -2669,7 +2689,7 @@ function ConfidenceIntervalSummary({ health, fr, pos, coi }) {
         {rows.map(r => (
           <div key={r.key} style={S.allocRow}>
             <div style={{ flex: 1, fontSize: 12 }}>{r.label}</div>
-            <span className={`sw-chip sw-chip-sm ${confChip(r.conf)}`}>
+            <span className={`sw-chip sw-chip-sm ${r.chipClass ?? confChip(r.conf)}`}>
               {r.conf || '—'}
             </span>
           </div>

@@ -38,8 +38,9 @@ import { useMemo, useState } from 'react'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import {
   calcFQ, calcRisk, calcAPQ, netWorth, fmt,
-  planFor, diffSet, costOfInaction,
+  planFor, diffSet, costOfInaction, totalCoI,
   investable, liquidityBuffer,
+  fiRatio, debtRatio, protectionScore, cashflowHealth, estateReadiness, taxEfficiency,
 } from '../engine/fq-calculator.js'
 import Drillable from '../components/shared/Drillable.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
@@ -108,10 +109,18 @@ function pickFirstName(entity) {
    id: 'nominations' (see fq-calculator.js L1211); the legacy mapping used
    'update-pension-nominations' which never matched. Fixed. */
 const ACTION_ROUTE_OVERRIDE = {
-  'cgt-bedisa':                'tax',
-  'life-in-trust':             'tax',
-  'nominations':               'tax',
-  'fallback-iht':              'tax',
+  'cgt-bedisa':            'tax',
+  'life-in-trust':         'tax',
+  'nominations':           'tax',
+  'fallback-iht':          'tax',
+  'pension-drawdown':      'flow',
+  'pension-contributions': 'money',
+  'income-protection':     'risk',
+  'will-update':           'tax',
+  'sipp-nominations':      'tax',
+  'wrapper-sequencing':    'tax',
+  'debt-clearance':        'money',
+  'isa-allowance':         'money',
 }
 function safeRoute(action) {
   if (!action) return null
@@ -237,16 +246,21 @@ function nwComposition(entity) {
     if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
     return +v?.total || +v?.value || 0
   }
-  const pensions = num(a.sipp) + num(a.pension) + num(a.pensions)
-  const isa      = num(a.isa) + num(a.lisa)
-  const home     = num(a.residence) + num(a.home)
-  const cash     = num(a.cash) + num(a.bank) + num(a.savings)
-  const total    = pensions + isa + home + cash || 1
+  const pensions  = num(a.sipp) + num(a.pension) + num(a.pensions)
+  const isa       = num(a.isa) + num(a.lisa)
+  const home      = safe(() => (a.property || []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
+              + num(a.residence) + num(a.home)
+  const cash      = num(a.cash) + num(a.bank) + num(a.savings)
+  const business  = safe(() => (a.business_assets || []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
+  const other     = num(a.investments) + num(a.alternatives)
+  const total     = pensions + isa + home + cash + business + other || 1
   return [
     { label: 'Pensions', pct: pensions / total, color: 'var(--c-acc2)' },
     { label: 'ISA',      pct: isa      / total, color: 'var(--c-acc)'  },
-    { label: 'Home',     pct: home     / total, color: 'var(--c-violet)' },
+    { label: 'Home',     pct: home     / total, color: 'var(--c-gold)' },
     { label: 'Cash',     pct: cash     / total, color: 'var(--c-text3)' },
+    { label: 'Business', pct: business / total, color: '#ba8cff' },
+    { label: 'Other',    pct: other    / total, color: 'var(--c-acc3)' },
   ].filter(s => s.pct > 0.005)
 }
 
@@ -692,10 +706,116 @@ function PlanProgressStrip({ entity, onNav }) {
    the X23 explainer view is coming next.
    ═══════════════════════════════════════════════════════════════════════ */
 
-function DimExplainerStub({ metric, onClose }) {
+/* ═══════════════════════════════════════════════════════════════════════════
+   Zone 4 — State Tiles  (spec §Z4 + §Q3.1)
+   6 tiles: FI · Debt · Protection · Cashflow · Estate · Tax Efficiency
+   All engine-backed. Each drillable to its canonical tab.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function StateTilesCard({ entity, onNav }) {
+  const fi   = useMemo(() => safe(() => fiRatio(entity),         { ratio: 0, state: 'Building',   fiAge: null }), [entity])
+  const debt = useMemo(() => safe(() => debtRatio(entity),       { state: 'Manageable' }),                        [entity])
+  const prot = useMemo(() => safe(() => protectionScore(entity), { score: 0, state: 'Gaps' }),                    [entity])
+  const cf   = useMemo(() => safe(() => cashflowHealth(entity),  { state: 'Monitor', surplus: 0 }),               [entity])
+  const est  = useMemo(() => safe(() => estateReadiness(entity), { score: 0, outOf: 7, state: 'Incomplete' }),    [entity])
+  const tax  = useMemo(() => safe(() => taxEfficiency(entity),   { score: 0, state: 'Review' }),                  [entity])
+
+  const stateColor = s => {
+    const g = ['Achieved', 'Debt-Free', 'Covered', 'On Track', 'Optimised', 'Complete', 'Financially Independent']
+    const r = ['Attention', 'Shortfall', 'Critical Gap', 'Action Required', 'Building']
+    if (g.some(x => (s || '').includes(x))) return 'var(--c-acc)'
+    if (r.some(x => (s || '').includes(x))) return 'var(--c-acc3)'
+    return 'var(--c-gold)'
+  }
+
+  const fiPct = Math.round((fi.ratio || 0) * 100)
+  const tiles = [
+    {
+      label: 'FI Ratio', value: `${fiPct}%`, state: fi.state || 'Building',
+      route: 'money',
+      sub: fi.state === 'Achieved' ? 'Financially independent' : fi.fiAge ? `FI by age ${fi.fiAge}` : 'Building towards FI',
+    },
+    {
+      label: 'Debt', value: debt.state || '—', state: debt.state || 'Manageable',
+      route: 'money',
+      sub: (debt.state || '').includes('Free') ? 'No high-cost debt' : 'High-rate debt reducing returns',
+    },
+    {
+      label: 'Protection', value: `${Math.round(prot.score || 0)}/100`, state: prot.state || 'Gaps',
+      route: 'risk',
+      sub: prot.state === 'Covered' ? 'Protection complete' : 'Gaps found — review cover',
+    },
+    {
+      label: 'Cashflow',
+      value: (cf.surplus != null && cf.surplus !== 0) ? ((cf.surplus > 0 ? '+' : '') + fmt(Math.abs(cf.surplus || 0))) : '—',
+      state: cf.state || 'Monitor',
+      route: 'flow',
+      sub: (cf.surplus || 0) >= 0 ? 'Monthly surplus' : 'Monthly shortfall',
+    },
+    {
+      label: 'Estate', value: `${est.score || 0}/${est.outOf || 7}`, state: est.state || 'Incomplete',
+      route: 'tax',
+      sub: (est.score || 0) >= (est.outOf || 7) ? 'Estate plan complete' : `${(est.outOf || 7) - (est.score || 0)} items outstanding`,
+    },
+    {
+      label: 'Tax Efficiency', value: `${Math.round(tax.score || 0)}/100`, state: tax.state || 'Review',
+      route: 'tax',
+      sub: tax.state === 'Optimised' ? 'Tax-efficient' : 'Allowances not fully used',
+    },
+  ]
+
+  return (
+    <div style={{ margin: '0 16px 12px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ display: 'flex', gap: 8, paddingBottom: 2, minWidth: 'max-content' }}>
+        {tiles.map(tile => {
+          const colour = stateColor(tile.state)
+          return (
+            <div
+              key={tile.label}
+              onClick={() => onNav?.(tile.route)}
+              role="button" tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onNav?.(tile.route) }}
+              style={{
+                background: 'var(--c-surface)',
+                border: `1px solid var(--c-sep)`,
+                borderTop: `2.5px solid ${colour}`,
+                borderRadius: 14,
+                padding: '10px 14px',
+                cursor: 'pointer',
+                minWidth: 120, flex: '0 0 auto',
+                transition: 'background 120ms',
+              }}
+            >
+              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4 }}>{tile.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: colour, letterSpacing: -0.3, marginBottom: 2 }}>{tile.value}</div>
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.3 }}>{tile.sub}</div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const DIM_EXPLAINERS = {
+  behaviour:  { what: 'How consistently your financial actions match your goals — contributions, reviews, rebalancing.', lift: 'Set up automatic contributions and review your plan quarterly.', route: 'money' },
+  capital:    { what: 'How hard your capital is working — return vs risk vs wrapper efficiency.', lift: 'Maximise ISA and pension allowances before investing in a GIA.', route: 'money' },
+  tax:        { what: 'How much of your return you keep after tax — allowances, shelters, sequencing.', lift: 'Use annual CGT and dividend allowances. Review ISA/SIPP/GIA sequencing.', route: 'tax' },
+  protection: { what: 'Whether a shock — illness, death, or liability — would derail your financial plan.', lift: 'Review life cover, income protection, and lasting power of attorney.', route: 'risk' },
+  cashflow:   { what: 'Whether your monthly surplus gives you flexibility and a resilience buffer.', lift: 'Build 3–6 months of expenses in liquid, accessible savings.', route: 'flow' },
+  debt:       { what: 'Whether your debt is costing more than your investments earn after tax.', lift: 'Clear high-rate debt before increasing investment contributions.', route: 'money' },
+  estate:     { what: 'Whether your wealth transfers efficiently — IHT exposure, nominations, and Will.', lift: 'Review beneficiary nominations, update your Will, and consider trust structures.', route: 'tax' },
+}
+
+const TAB_LABELS = { money: 'MyMoney', tax: 'Tax & Estate', risk: 'Risk', flow: 'Cashflow', timeline: 'Timeline' }
+
+function DimExplainerStub({ metric, fqData, onClose, onNav }) {
   const dimKey = (metric || '').replace(/^wealth\./, '')
-  const dim = DIMENSIONS.find(d => d.key === dimKey)
-  const label = dim?.label || dimKey || metric
+  const dim    = DIMENSIONS.find(d => d.key === dimKey)
+  const label  = dim?.label || dimKey || metric
+  const exp    = DIM_EXPLAINERS[dimKey] || {}
+  const score  = fqData?.dims?.[dimKey]
+  const route  = exp.route || null
   return (
     <div
       role="dialog"
@@ -703,7 +823,7 @@ function DimExplainerStub({ metric, onClose }) {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'rgba(0,0,0,0.55)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24,
       }}
@@ -713,43 +833,46 @@ function DimExplainerStub({ metric, onClose }) {
         style={{
           background: 'var(--c-surface)',
           border: '1px solid var(--c-sep)',
-          borderRadius: 18,
-          padding: '18px 20px',
-          maxWidth: 380, width: '100%',
+          borderRadius: 20, padding: '20px 22px',
+          maxWidth: 400, width: '100%',
         }}
       >
-        <div style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4,
-        }}>{dim?.label || 'Dimension'} — what this means</div>
-        <div style={{
-          fontSize: 16, fontWeight: 700, color: 'var(--c-text)',
-          marginBottom: 8,
-        }}>{label}</div>
-        <p style={{
-          fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55, margin: '0 0 14px',
-        }}>
-          {dim?.definition || 'Detail view for this dimension is being prepared.'}
-        </p>
-        <p style={{
-          fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.5, margin: '0 0 14px',
-          fontStyle: 'italic',
-        }}>
-          Full X23 explainer (drivers, history, what would lift it) coming next.
-        </p>
-        <button
-          onClick={onClose}
-          className="sw-press"
-          style={{
-            padding: '8px 16px',
-            borderRadius: 100,
-            background: 'var(--c-acc)',
-            border: 'none', color: 'var(--c-bg)',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          Close
-        </button>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4 }}>
+          Sonuswealth Wealth Score — {label}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{label}</div>
+          {score != null && (
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
+              {Math.round(score)}<span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text3)' }}>pts</span>
+            </div>
+          )}
+        </div>
+
+        {exp.what && (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>What this measures</div>
+            <p style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55, margin: '0 0 14px' }}>{exp.what}</p>
+          </>
+        )}
+
+        {exp.lift && (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-gold)', marginBottom: 4 }}>What would lift this score</div>
+            <p style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55, margin: '0 0 16px' }}>{exp.lift}</p>
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          {route && onNav && (
+            <button onClick={() => { onClose(); onNav(route) }} className="sw-press" style={{ flex: 1, padding: '9px 14px', borderRadius: 100, background: 'var(--c-acc)', border: 'none', color: '#0B1F3A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Go to {TAB_LABELS[route] || route} →
+            </button>
+          )}
+          <button onClick={onClose} className="sw-press" style={{ padding: '9px 14px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-sep)', color: 'var(--c-text2)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -759,22 +882,28 @@ function DimExplainerStub({ metric, onClose }) {
    L3 — CoI Drill Panel
    ═══════════════════════════════════════════════════════════════════════ */
 
-function CoIDrillPanel({ entity, onClose }) {
-  const apq = safe(() => calcAPQ(entity), [])
-  const coiTotal = safe(() => {
-    const c = costOfInaction(entity)
-    return typeof c === 'number' ? c : (c?.total || 0)
-  }, 0)
-  const perYear = coiTotal
+const COI_DOMAIN_META = {
+  drawdown:           { label: 'Pension drawdown strategy',       screen: 'flow'  },
+  wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)',   screen: 'tax'   },
+  contributions:      { label: 'Pension contributions',           screen: 'money' },
+  taxAllowances:      { label: 'Unused tax allowances',           screen: 'tax'   },
+  estatePlanning:     { label: 'Estate planning gap',             screen: 'tax'   },
+  protection:         { label: 'Protection coverage gap',         screen: 'risk'  },
+  debt:               { label: 'High-cost debt',                  screen: 'money' },
+  gifting:            { label: 'Gifting opportunity',             screen: 'tax'   },
+  propertyDecisions:  { label: 'Property decisions',              screen: 'money' },
+  investmentStrategy: { label: 'Investment strategy',             screen: 'money' },
+}
 
-  const rows = Array.isArray(apq) ? apq.slice(0, 5).map(action => {
-    const domainCoi = safe(() => {
-      const d = action.domain || action.id || ''
-      const c = costOfInaction(entity, d)
-      return typeof c === 'number' ? c : (c?.total || 0)
-    }, 0)
-    return { action, monthly: Math.round(domainCoi / 12) }
-  }) : []
+function CoIDrillPanel({ entity, onClose, onNav }) {
+  const coiObj   = useMemo(() => safe(() => totalCoI(entity), { total: 0, byDomain: {} }), [entity])
+  const total    = coiObj.total || 0
+  const byDomain = coiObj.byDomain || {}
+
+  const rows = Object.entries(COI_DOMAIN_META)
+    .map(([key, meta]) => ({ key, ...meta, value: Math.round(byDomain[key] || 0) }))
+    .filter(r => r.value > 0)
+    .sort((a, b) => b.value - a.value)
 
   return (
     <div
@@ -815,38 +944,36 @@ function CoIDrillPanel({ entity, onClose }) {
           background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
           borderRadius: 18, padding: '14px 18px', marginBottom: 12,
         }}>
-          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Total cost of inaction</div>
-          <div style={{
-            fontSize: 28, fontWeight: 800, letterSpacing: -0.8,
-            color: 'var(--c-danger)',
-          }}>
-            {fmt(perYear)}/yr
+          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Total annual cost of inaction</div>
+          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.8, color: 'var(--c-danger)' }}>
+            {fmt(total)}/yr
           </div>
           <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 4 }}>
-            Every month without acting this accumulates
+            Across all financial planning areas — the cost of staying on your current path
           </div>
         </div>
 
         {rows.length > 0 && (
-          <div style={{
-            background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-            borderRadius: 18, padding: '14px 18px', marginBottom: 12,
-          }}>
-            <div className="sw-eyebrow" style={{ marginBottom: 12 }}>By action</div>
-            {rows.map(({ action, monthly }, i) => (
-              <div key={action.id || i} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '8px 0',
-                borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
-              }}>
-                <span style={{ fontSize: 13, color: 'var(--c-text2)', flex: 1, marginRight: 8 }}>
-                  {action.title || action.headline || action.id}
-                </span>
+          <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 18, padding: '14px 18px', marginBottom: 12 }}>
+            <div className="sw-eyebrow" style={{ marginBottom: 12 }}>By planning area</div>
+            {rows.map((row, i) => (
+              <div
+                key={row.key}
+                onClick={() => { onNav?.(row.screen); onClose() }}
+                role="button" tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { onNav?.(row.screen); onClose() } }}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none', cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: 13, color: 'var(--c-text2)', flex: 1, marginRight: 8 }}>{row.label}</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                  {monthly > 0 ? `${fmt(monthly)}/mo` : '—'}
+                  {fmt(row.value)}/yr
                 </span>
               </div>
             ))}
+            <div style={{ borderTop: '1px solid var(--c-sep)', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text3)' }}>Total</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-danger)' }}>{fmt(total)}/yr</span>
+            </div>
           </div>
         )}
 
@@ -1230,9 +1357,9 @@ export default function HomeScreen({
     <>
       {/* Drill panels — float above everything (replaces early returns) */}
       {localDrill === 'networth' && <NetWorthDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />}
-      {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'apq'     && <APQDrillPanel        entity={entity} onClose={() => setLocalDrill(null)} />}
-      {stubMetric && <DimExplainerStub metric={stubMetric} onClose={() => setStubMetric(null)} />}
+      {stubMetric && <DimExplainerStub metric={stubMetric} fqData={fq} onNav={onNav} onClose={() => setStubMetric(null)} />}
 
       {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
       <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
@@ -1246,6 +1373,9 @@ export default function HomeScreen({
         onDrillMetric={drillFn}
         onOpenBreakdown={onOpenBreakdown}
       />
+
+      {/* ── Zone 4: State Tiles (spec §Z4) ────────────────────────────── */}
+      <StateTilesCard entity={entity} onNav={onNav} />
 
       {/* ── 2-column content grid (Task 2 scaffold) ───────────────────── */}
       <div style={{
@@ -1292,7 +1422,9 @@ export default function HomeScreen({
 
 function WhatIfSection({ viewMode, onSelectScenario, onFreeform }) {
   const [freeform, setFreeform] = useState('')
+  const [showAll, setShowAll]   = useState(false)
   const isActive = viewMode === 'scenario'
+  const visible  = showAll ? DE_SCENARIOS : DE_SCENARIOS.slice(0, 5)
 
   return (
     <div style={{
@@ -1302,24 +1434,21 @@ function WhatIfSection({ viewMode, onSelectScenario, onFreeform }) {
       transition: 'background 300ms ease',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{
-          fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-          color: '#ba8cff', display: 'flex', alignItems: 'center', gap: 6,
-        }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#ba8cff', display: 'flex', alignItems: 'center', gap: 6 }}>
           ✦ What if?
         </span>
         <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>Explore · not advice</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {DE_SCENARIOS.map((s, i) => (
+        {visible.map((s, i) => (
           <button
             key={s.key}
             onClick={() => onSelectScenario(s)}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 0', background: 'none', border: 'none',
-              borderBottom: i < DE_SCENARIOS.length - 1 ? '1px solid var(--c-sep)' : 'none',
+              borderBottom: i < visible.length - 1 ? '1px solid var(--c-sep)' : 'none',
               cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit',
             }}
           >
@@ -1339,6 +1468,12 @@ function WhatIfSection({ viewMode, onSelectScenario, onFreeform }) {
           </button>
         ))}
       </div>
+      <button
+        onClick={() => setShowAll(s => !s)}
+        style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#ba8cff', fontSize: 11, fontWeight: 700, padding: '4px 0', fontFamily: 'inherit', width: '100%', textAlign: 'left' }}
+      >
+        {showAll ? '← See fewer scenarios' : `See all ${DE_SCENARIOS.length} scenarios →`}
+      </button>
 
       <div style={{
         marginTop: 10, display: 'flex', alignItems: 'center', gap: 8,
@@ -1371,6 +1506,14 @@ function WhatIfSection({ viewMode, onSelectScenario, onFreeform }) {
    in the right column of the 2-column grid.
    ═══════════════════════════════════════════════════════════════════════ */
 
+function severityBadge(action) {
+  const p = action?.priority
+  if (p === 1) return { label: 'CRIT', bg: 'rgba(255,89,89,0.18)',    color: '#ff5959' }
+  if (p === 2) return { label: 'HIGH', bg: 'rgba(255,189,89,0.18)',   color: 'var(--c-gold)' }
+  if (p === 3) return { label: 'MED',  bg: 'rgba(93,219,194,0.15)',   color: 'var(--c-acc)' }
+  return             { label: 'LOW',  bg: 'rgba(255,255,255,0.06)',   color: 'var(--c-text3)' }
+}
+
 function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
   const apq = useMemo(() => safe(() => calcAPQ(entity), []), [entity])
   const actions = Array.isArray(apq) ? apq : []
@@ -1385,6 +1528,7 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
       {intakeScenario ? (
         <ScenarioIntake
           scenario={intakeScenario}
+          entity={entity}
           onBack={() => setIntakeScenario(null)}
           onSubmit={({ query, eventId }) => {
             setIntakeScenario(null)
@@ -1484,11 +1628,18 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 const DE_SCENARIOS = [
-  { key: 'relocate',  icon: '✈️', label: 'How much do I need to relocate?',           sub: 'Kenya · Portugal · UAE — cost, tax, residency',   tag: 'Ask Sonu', engine: false, query: 'What would it cost and mean financially to relocate abroad?', eventId: null },
-  { key: 'house',     icon: '🏡', label: 'What if I moved to a bigger house?',        sub: 'Stamp duty, mortgage impact, equity',               tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
-  { key: 'retire',    icon: '⏱️', label: 'What if I retired 5 years earlier?',       sub: 'Pension drawdown — cashflow, Score, IHT',           tag: 'Instant',  engine: true,  query: 'What if I retired 5 years earlier?', eventId: 'retire' },
-  { key: 'part_time', icon: '🌴', label: 'What if I went part-time or took a break?', sub: 'Runway, monthly shortfall, when to return',         tag: 'Instant',  engine: true,  query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
-  { key: 'children',  icon: '🏠', label: 'What if I helped my children get started?', sub: 'Gifting, trust, mortgage — IHT impact',             tag: 'Ask Sonu', engine: false, query: 'What if I helped my children financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
+  { key: 'relocate',     icon: '✈️', label: 'How much do I need to relocate?',             sub: 'Kenya · Portugal · UAE — cost, tax, residency',  tag: 'Ask Sonu', engine: false, query: 'What would it cost and mean financially to relocate abroad?', eventId: null },
+  { key: 'house',        icon: '🏡', label: 'What if I moved to a bigger house?',           sub: 'Stamp duty, mortgage impact, equity',              tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
+  { key: 'retire',       icon: '⏱️', label: 'What if I retired 5 years earlier?',          sub: 'Pension drawdown — cashflow, Score, IHT',          tag: 'Instant',  engine: true,  query: 'What if I retired 5 years earlier?', eventId: 'retire' },
+  { key: 'part_time',    icon: '🌴', label: 'What if I went part-time or took a break?',   sub: 'Runway, monthly shortfall, when to return',        tag: 'Instant',  engine: true,  query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
+  { key: 'children',     icon: '🏠', label: 'What if I helped my children get started?',   sub: 'Gifting, trust, mortgage — IHT impact',            tag: 'Ask Sonu', engine: false, query: 'What if I helped my children financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
+  { key: 'downsize',     icon: '🔑', label: 'What if I downsized my home?',                sub: 'Equity release, SDLT saving, cashflow impact',     tag: 'Instant',  engine: true,  query: 'What if I downsized my home? Show the equity I would release, any SDLT saving, and how it changes my cashflow and estate.', eventId: 'sell_property' },
+  { key: 'lump_pension', icon: '💰', label: 'What if I made a large pension top-up?',      sub: 'Tax relief, carry-forward, IHT benefit',           tag: 'Instant',  engine: true,  query: 'What if I made a large one-off pension contribution? Cover tax relief available, annual allowance, carry-forward rules, and the IHT benefit of a larger SIPP.', eventId: 'pension_contribution' },
+  { key: 'inheritance',  icon: '📜', label: 'What if I received an inheritance?',           sub: 'IHT position, investment options, trust',          tag: 'Ask Sonu', engine: false, query: 'What if I received a significant inheritance? How should I invest it, what are the IHT implications, and should I consider a trust?', eventId: null },
+  { key: 'care',         icon: '🏥', label: 'What if I needed long-term care?',             sub: 'Care costs, estate depletion, LPA urgency',        tag: 'Ask Sonu', engine: false, query: 'What if I or my partner needed long-term care? Cover likely costs, the impact on my estate, and why a lasting power of attorney matters now.', eventId: null },
+  { key: 'market_drop',  icon: '📉', label: 'What if markets fell 20%?',                   sub: 'Drawdown impact, Score, recovery timeline',        tag: 'Instant',  engine: true,  query: 'What if my investment portfolio dropped 20%? Show the impact on my drawdown sustainability, Wealth Score, and estimated recovery timeline.', eventId: 'market_shock' },
+  { key: 'business',     icon: '🏢', label: 'What if I sold my business?',                  sub: 'CGT, BADR, reinvestment, retirement timing',       tag: 'Ask Sonu', engine: false, query: 'What if I sold my business? Cover CGT, Business Asset Disposal Relief, reinvestment options, and how the timing interacts with my retirement plan.', eventId: 'business_sale' },
+  { key: 'gift',         icon: '🎁', label: 'What if I gifted to family this tax year?',    sub: '7-year rule, PETs, IHT saving',                    tag: 'Instant',  engine: true,  query: 'What if I made significant gifts to family now? Cover the 7-year rule, potentially exempt transfers, and how much IHT this would save from my estate.', eventId: 'gift_to_family' },
 ]
 
 

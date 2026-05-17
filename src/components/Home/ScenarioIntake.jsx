@@ -1,4 +1,31 @@
 import { useState } from 'react'
+import { netWorth, calcFQ, calcRisk } from '../../engine/fq-calculator.js'
+
+function safe(fn, fallback) { try { return fn() ?? fallback } catch { return fallback } }
+
+function buildEntityContext(entity) {
+  if (!entity) return ''
+  const nw     = safe(() => netWorth(entity), 0)
+  const age    = entity?.age || entity?.individual?.age || ''
+  const fq     = safe(() => calcFQ(entity), { total: 0 })
+  const risk   = safe(() => calcRisk(entity), { total: 0 })
+  const sipp   = safe(() => {
+    const a = entity?.assets || {}
+    const n = v => typeof v === 'number' ? v
+      : Array.isArray(v) ? v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
+      : +v?.total || +v?.value || 0
+    return n(a.sipp) + n(a.pension) + n(a.pensions)
+  }, 0)
+  const income = safe(() => entity?.income?.salary || entity?.income?.total || 0, 0)
+  const parts  = []
+  if (age)        parts.push(`Age: ${age}`)
+  if (nw)         parts.push(`Net worth: £${Math.round(nw / 1000)}k`)
+  if (sipp)       parts.push(`Pension/SIPP: £${Math.round(sipp / 1000)}k`)
+  if (income)     parts.push(`Annual income: £${Math.round(income / 1000)}k`)
+  if (fq.total)   parts.push(`Wealth Score: ${fq.total}/100`)
+  if (risk.total) parts.push(`Risk Score: ${risk.total}/100`)
+  return parts.length ? `[My financial context: ${parts.join(' · ')}] ` : ''
+}
 
 // ── Question bank ─────────────────────────────────────────────────────────────
 
@@ -63,7 +90,8 @@ const KEY_MAP = {
   children:  'children',
 }
 
-function buildEnrichedQuery(baseQuery, scenarioKey, answers) {
+function buildEnrichedQuery(baseQuery, scenarioKey, answers, entity) {
+  const ctx       = buildEntityContext(entity)
   const questions = QUESTIONS[scenarioKey] || []
   const parts = questions
     .filter(q => !q.showIf || q.showIf(answers))
@@ -74,11 +102,13 @@ function buildEnrichedQuery(baseQuery, scenarioKey, answers) {
       return `${q.q.replace(/\?$/, '')}: ${valStr}`
     })
     .filter(Boolean)
-  if (!parts.length) return baseQuery
-  return `${baseQuery} Here is additional context about my situation: ${parts.join('; ')}.`
+  const enriched = parts.length
+    ? `${baseQuery} Here is additional context about my situation: ${parts.join('; ')}.`
+    : baseQuery
+  return ctx + enriched
 }
 
-export default function ScenarioIntake({ scenario, onSubmit, onBack }) {
+export default function ScenarioIntake({ scenario, entity, onSubmit, onBack }) {
   const [answers, setAnswers] = useState({})
 
   const qKey = KEY_MAP[scenario.key] || scenario.key
@@ -103,7 +133,7 @@ export default function ScenarioIntake({ scenario, onSubmit, onBack }) {
 
   function handleSubmit() {
     const qKey2 = KEY_MAP[scenario.key] || scenario.key
-    const enriched = buildEnrichedQuery(scenario.query, qKey2, answers)
+    const enriched = buildEnrichedQuery(scenario.query, qKey2, answers, entity)
     onSubmit({ query: enriched, eventId: scenario.eventId })
   }
 

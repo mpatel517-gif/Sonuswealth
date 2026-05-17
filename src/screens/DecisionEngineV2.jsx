@@ -286,7 +286,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
             color: 'var(--c-acc3)', fontSize: 14,
           }}>
             {orc.error === 'VITE_ANTHROPIC_API_KEY not set'
-              ? 'API key not configured — set VITE_ANTHROPIC_API_KEY in .env'
+              ? 'API key not configured — set VITE_ANTHROPIC_KEY in .env.local'
               : `Error: ${orc.error}`}
           </div>
         )}

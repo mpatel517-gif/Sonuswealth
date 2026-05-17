@@ -19,7 +19,7 @@ const MODEL   = 'claude-opus-4-7';
 
 async function callClaude(prompt, signal = null) {
   const apiKey = typeof import.meta !== 'undefined'
-    ? import.meta.env?.VITE_ANTHROPIC_API_KEY
+    ? (import.meta.env?.VITE_ANTHROPIC_API_KEY || import.meta.env?.VITE_ANTHROPIC_KEY)
     : null;
 
   if (!apiKey) throw new Error('VITE_ANTHROPIC_API_KEY not set');

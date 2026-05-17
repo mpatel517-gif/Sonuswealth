@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   CAELIXA — HOME SCREEN  v2.1  (spec: 2-Product-home-v1_4.md)
+   SONUSWEALTH — HOME SCREEN  v2.1  (spec: 2-Product-home-v1_4.md)
    ─────────────────────────────────────────────────────────────────────────
    Authority chain : Foundation v1.11 · Skill v1.4 · Tracker v5.75
-   Brand           : Caelixa (D-NAME-1). Score names per BRAND.
+   Brand           : Sonuswealth (D-NAME-2). Score names per BRAND.
    Engine          : src/engine/fq-calculator.js  (canonical)
    Components      : src/components/shared/*       (X28, X29, Reveal, etc.)
    ─────────────────────────────────────────────────────────────────────────
@@ -885,7 +885,7 @@ function DimExplainerStub({ metric, fqData, onClose, onNav }) {
         }}
       >
         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4 }}>
-          Caelixa Wealth Score — {label}
+          Sonuswealth Wealth Score — {label}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{label}</div>

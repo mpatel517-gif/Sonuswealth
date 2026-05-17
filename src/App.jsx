@@ -19,7 +19,7 @@ import mrTCore from './rules/personas/mrT-core.json'
 // Flat entity map — Anna Finch snapshots registered individually
 const ENTITIES = {
   a: personaA, b: personaB, c: personaC, d: personaD, e: personaE, g: personaG,
-  mrt: mrTCore,
+  mrt: personaA,   // Bruce Wilson is persona-a
   ...Object.fromEntries((personaF.snapshots || []).map(s => [s.id, s])),
 }
 

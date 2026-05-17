@@ -555,51 +555,46 @@ function pickLowestDim(entity, dims) {
   return low
 }
 
+const MODE_BRIEF = {
+  actual:   (nw, assetList, taxShelter, lowestDim) =>
+    `You hold ${fmt(nw)} across ${assetList}. ${taxShelter}% is in tax shelters. ${lowestDim?.label || 'One dimension'} is the area that would most benefit from a closer look.`,
+  forecast: () =>
+    `On your current trajectory, your wealth shape shifts over 5 years. The gold dashed ring shows where you are aiming — gaps between today (mint) and target (gold) are the priority actions.`,
+  plan:     (nw, assetList, taxShelter, lowestDim) =>
+    `Your plan target (gold dashed ring) vs today (mint). Close the gap by addressing the dimensions below target — ${lowestDim?.label || 'Legacy'} is furthest from your plan.`,
+  scenario: () =>
+    `Drag any radar point to explore what-if. Moving a dimension outward = better. Inward = worse. Watch the score in the centre update live.`,
+}
+
 function RadarCard({ entity, fqData, nw, viewMode, diffs, onDrillMetric }) {
-  const dims = fqData?.dims || {}
-
-  // FIX N1: nuanced lowest-dim
-  const lowestDim = useMemo(() => pickLowestDim(entity, dims), [entity, dims])
-
-  // Tax shelter percentage: ISA + SIPP/pension as % of NW
+  const dims       = fqData?.dims || {}
+  const lowestDim  = useMemo(() => pickLowestDim(entity, dims), [entity, dims])
   const taxShelter = useMemo(() => {
-    const assets = entity?.assets || {}
+    const a = entity?.assets || {}
     const num = v => (typeof v === 'number' ? v : (v?.value ?? v?.total ?? 0))
-    const sheltered = num(assets.isa) + num(assets.lisa) + num(assets.sipp) + num(assets.pension)
+    const sheltered = num(a.isa) + num(a.lisa) + num(a.sipp) + num(a.pension)
     return nw > 0 ? Math.round((sheltered / nw) * 100) : 0
   }, [entity, nw])
-
-  // FIX C1: enumerate real asset classes for this entity
   const assetList = useMemo(() => joinList(listAssetClasses(entity, 3)), [entity])
 
-  const brief = useMemo(() => {
-    const nwStr = fmt(nw)
-    const dimName = lowestDim?.label || 'one dimension'
-    // FIX N1/N2: no "5-7 points" claim — that requires an engine simulation.
-    // Generic, honest language until per-dim goalSeek is wired.
-    return `You hold ${nwStr} across ${assetList}. ${taxShelter}% of that is in tax shelters. ${dimName} is the area that would most benefit from a closer look.`
-  }, [nw, lowestDim, taxShelter, assetList])
+  const briefFn = MODE_BRIEF[viewMode] || MODE_BRIEF.actual
+  const brief = briefFn(nw, assetList, taxShelter, lowestDim)
 
   return (
-    <div style={card({ padding: '16px 18px 14px' })}>
-      {/* Card header */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        marginBottom: 12,
-      }}>
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 20,
+      padding: '16px 18px 14px', display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
         <div>
-          <div style={{
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 2,
-          }}>Your wealth shape</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)' }}>
-            7 dimensions · drag to test what-if
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 2 }}>Your wealth shape</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+            7 dimensions · {viewMode === 'scenario' ? 'drag to test what-if' : 'today vs target'}
           </div>
         </div>
-        <span style={{ fontSize: 18, color: 'var(--c-text3)' }}>›</span>
+        <button onClick={() => onDrillMetric?.('gaps')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text3)', fontSize: 18, padding: 0 }}>›</button>
       </div>
 
-      {/* Radar polygon — onDrillMetric is the per-dim drill handler */}
       <RadarAnchor
         entity={entity}
         fqData={fqData}
@@ -608,13 +603,16 @@ function RadarCard({ entity, fqData, nw, viewMode, diffs, onDrillMetric }) {
         onDrillMetric={onDrillMetric}
       />
 
-      {/* Plain-English brief */}
-      <p style={{
-        fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55,
-        marginTop: 14, marginBottom: 0,
-      }}>
+      <p style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55, marginTop: 12, marginBottom: 0 }}>
         {brief}
       </p>
+
+      {viewMode === 'scenario' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 11, color: 'var(--c-text3)' }}>
+          <span style={{ border: '1px dashed var(--c-text3)', borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }}>⋮</span>
+          Drag any point to test what-if
+        </div>
+      )}
     </div>
   )
 }

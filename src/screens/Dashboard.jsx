@@ -437,8 +437,8 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       )}
 
       {/* ── Screen area ──────────────────────────────────────────────────── */}
-      <div style={{ flex:1, overflow:'hidden', display:'flex',
-        flexDirection:'column' }}>
+      <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex',
+        flexDirection:'column', WebkitOverflowScrolling:'touch' }}>
         {tab === 'home'  && (
           <HomeScreen
             entity={wireEntity}

@@ -338,15 +338,15 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
           <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: 'var(--c-surface2)', marginTop: 8 }}>
             {segments.map(s => <div key={s.label} style={{ width: `${s.pct * 100}%`, background: s.color }} />)}
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', overflow: 'hidden' }}>
             {segments.map(s => (
               <button
                 key={s.label}
                 onClick={() => onDrillMetric?.(`netWorth:${s.key}`)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
               >
                 <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
-                <span style={{ fontSize: 9.5, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label} {Math.round(s.pct * 100)}%</span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments','Inv.')} {Math.round(s.pct * 100)}%</span>
               </button>
             ))}
           </div>
@@ -444,7 +444,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
           {coiTotal > 0 && (
             <div style={{ marginTop: 2 }}>
               {sippDelta > 0
-                ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{fmt(sippDelta)} SIPP exposure · {days} days</span>
+                ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', whiteSpace: 'nowrap' }}>{fmt(sippDelta)} SIPP · {days} days</span>
                 : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{days} days to act</span>
               }
             </div>

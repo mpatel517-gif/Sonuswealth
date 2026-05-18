@@ -644,13 +644,9 @@ body {
   }
 }
 
-/* Radar before tiles on mobile, tiles before radar on desktop */
+/* Radar always before tiles — overview before detail on every viewport */
 .sw-content-grid { order: 1; }
 .sw-tiles-section { order: 2; }
-@media (min-width: 640px) {
-  .sw-content-grid { order: 2; }
-  .sw-tiles-section { order: 1; }
-}
 
 /* Dimension tiles: 2-col grid on mobile so labels have room */
 .sw-state-tiles {

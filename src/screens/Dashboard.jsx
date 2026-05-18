@@ -34,6 +34,7 @@ import Sidebar         from '../components/Shell/Sidebar.jsx'
 import { driver }      from '../engine/driver-engine.js'
 import { readDrill, recordDrill, drillAsWhisper } from '../state/drillMemory.js'
 import { calcFQ, fqBand, calcAPQ } from '../engine/fq-calculator.js'
+import { getWealthTarget, gapDims as gapDimsVsTarget } from '../config/wealth-targets.js'
 import { useEvents } from '../state/events.jsx'
 
 // Ask is no longer a tab — it's a persistent floating pill (D-ASK-1).
@@ -209,8 +210,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
 
   const { commit } = useEvents()
 
-  const fq   = calcFQ(entity)  // align with HomeScreen anchor — single source of truth
-  const band = fqBand(fq.total)
+  const fq       = calcFQ(entity)  // align with HomeScreen anchor — single source of truth
+  const band     = fqBand(fq.total)
+  const _targetDims = getWealthTarget(entity)?.dims || {}
+  const _gapCount   = gapDimsVsTarget(fq.dims || {}, _targetDims, 0.15).length
+  const bandLabel   = _gapCount > 0 && band.name === 'Optimised' ? 'On Track' : band.name
 
   // Engine-generated alerts — replaces static entity.alerts for HomeV2
   const liveAlerts = calcAPQ(entity).map(a => ({
@@ -395,7 +399,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             display:'flex', flexDirection:'column', alignItems:'flex-end',
           }}>
             <div style={{ fontSize:20, fontWeight:800, color:band.colour, lineHeight:1 }}>{fq.total}</div>
-            <div style={{ fontSize:10, color:'var(--c-text3)', marginTop:1, textTransform:'uppercase', letterSpacing:0.8 }}>{band.name}</div>
+            <div style={{ fontSize:10, color:'var(--c-text3)', marginTop:1, textTransform:'uppercase', letterSpacing:0.8 }}>{bandLabel}</div>
           </button>
 
           {/* Theme switcher — Stitch 58×38 pill (replaces invisible 36px circle) */}

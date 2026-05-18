@@ -194,44 +194,47 @@ function MastheadCard({ entity, viewMode, onModeChange }) {
   const firstName = pickFirstName(entity)
   const initials = firstName.slice(0, 2).toUpperCase()
   return (
-    <div style={{
-      margin: '0 16px 14px',
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+    <div style={{ margin: '0 16px 14px' }}>
+      {/* Row 1 — avatar + greeting (single line, ellipsis if needed) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
-          width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+          width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
           background: 'linear-gradient(135deg, var(--c-gold), #b87f30)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 800, color: '#0B1F3A',
+          fontSize: 15, fontWeight: 800, color: '#0B1F3A',
           boxShadow: '0 4px 14px rgba(255,189,89,0.25)',
         }}>
           {initials}
         </div>
-        <div>
-          <div style={{ fontSize: 13, color: 'var(--c-text3)' }}>{greeting()},</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -0.4, marginTop: 2, lineHeight: 1.2 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1 }}>{greeting()},</div>
+          <div style={{
+            fontSize: 18, fontWeight: 800, color: 'var(--c-text)',
+            letterSpacing: -0.4, marginTop: 2, lineHeight: 1.2,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
             {firstName} · {fmtHomeDate()}
           </div>
         </div>
+        {/* Build stamp */}
+        <div style={{ fontSize: 9, color: 'var(--c-text3)', opacity: 0.5, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+          {BUILD}
+        </div>
       </div>
-      {/* Build stamp — visible to dev + founder to confirm which version is live */}
-      <div style={{ fontSize: 9, color: 'var(--c-text3)', fontVariantNumeric: 'tabular-nums', opacity: 0.6, position: 'absolute', top: 8, right: 16 }}>
-        {BUILD}
-      </div>
-      {/* Mode pill */}
+      {/* Row 2 — mode tabs, scrollable so all 4 always visible */}
       <div style={{
-        display: 'flex', gap: 3, padding: 4,
+        display: 'flex', gap: 3, padding: 4, marginTop: 12,
         background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 999,
-        flexShrink: 0,
+        overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
       }}>
         {MODES.map(({ id, label }) => (
           <button key={id} onClick={() => onModeChange?.(id)} style={{
-            padding: '6px 12px', borderRadius: 999, border: 'none', fontFamily: 'inherit',
-            fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase',
+            padding: '7px 14px', borderRadius: 999, border: 'none', fontFamily: 'inherit',
+            fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
             background: viewMode === id ? 'var(--c-acc)' : 'transparent',
             color: viewMode === id ? '#0B1F3A' : 'var(--c-text3)',
             cursor: 'pointer', transition: 'background 150ms ease',
+            whiteSpace: 'nowrap', flexShrink: 0,
           }}>
             {label}
           </button>
@@ -1143,8 +1146,8 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
 
   return (
     <>
-    <div style={{ margin: '0 16px 4px', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <div style={{ display: 'flex', gap: 8, paddingBottom: 2 }}>
+    <div style={{ margin: '0 16px 4px' }}>
+      <div className="sw-state-tiles" style={{ paddingBottom: 2 }}>
         {tiles.map(tile => {
           const valColor   = valueColor(tile.state)
           const isExpanded = expandedTile === tile.label

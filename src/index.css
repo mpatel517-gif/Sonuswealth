@@ -599,6 +599,10 @@ body {
   }
 }
 
+/* ── SCROLLBAR HIDE — cross-browser ──────────────────────────────────────*/
+.sw-anchor-row::-webkit-scrollbar,
+.sw-mode-tabs::-webkit-scrollbar { display: none; }
+
 /* ── HOME SCREEN RESPONSIVE LAYOUTS ──────────────────────────────────────
    Anchor row: 2×2 on mobile, 4-col on ≥540px
    Content grid: 1-col on mobile, 2-col on ≥640px              */
@@ -637,5 +641,27 @@ body {
   /* Remove right borders that don't make sense in 2×2 */
   .sw-anchor-row > div:nth-child(2) {
     border-right: none !important;
+  }
+}
+
+/* Dimension tiles: 2-col grid on mobile so labels have room */
+.sw-state-tiles {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+  overflow-x: visible !important;
+}
+/* On mobile, tiles in grid should not have fixed height */
+@media (max-width: 539px) {
+  .sw-state-tiles > * {
+    height: auto !important;
+    min-height: 100px;
+  }
+}
+@media (min-width: 540px) {
+  .sw-state-tiles {
+    display: flex !important;
+    grid-template-columns: unset !important;
+    overflow-x: auto !important;
   }
 }

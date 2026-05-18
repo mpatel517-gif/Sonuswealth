@@ -1171,8 +1171,11 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
                 display: 'flex', flexDirection: 'column',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 3 }}>
-                <div title={tile.label} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{tile.label}</div>
+              {/* Label — full width, no sparkline competing */}
+              <div title={tile.label} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }}>{tile.label}</div>
+              {/* Value + sparkline on same row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 3, marginBottom: 2 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: valColor, letterSpacing: -0.5 }}>{tile.value}</div>
                 {tile.spark?.length > 1 && (
                   <div
                     onClick={e => { e.stopPropagation(); setTrendTile({ ...tile }) }}
@@ -1183,7 +1186,6 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: valColor, letterSpacing: -0.5, marginBottom: 2 }}>{tile.value}</div>
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: tile.colour, opacity: 0.85, marginBottom: 4 }}>{tile.state}</div>
               <div style={{ fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tile.sub}</div>
               {isExpanded && (

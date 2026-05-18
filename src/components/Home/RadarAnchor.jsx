@@ -714,7 +714,11 @@ function CenterCap({ entity, fqData, diffs, onDrillMetric, targetSource }) {
           color: fqData?.band?.colour || 'var(--c-text3)',
           opacity: 0.85,
         }}>
-          {fqData?.band?.name || ''}
+          {(() => {
+            const tgt = getWealthTarget(entity)?.dims || {}
+            const gaps = gapDims(fqData?.dims || {}, tgt, 0.15).length
+            return gaps > 0 && fqData?.band?.name === 'Optimised' ? 'On Track' : (fqData?.band?.name || '')
+          })()}
         </div>
       </div>
 

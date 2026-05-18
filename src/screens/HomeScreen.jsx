@@ -1864,10 +1864,7 @@ export default function HomeScreen({
       {/* ── §Z10 SIPP-IHT countdown (regulatory: Finance Act 2026) ──── */}
       <SippIhtCountdown entity={entity} onNav={onNav} />
 
-      {/* ── Zone 4: State Tiles (spec §Z4) ────────────────────────────── */}
-      <StateTilesCard entity={entity} onNav={onNav} onDrillDim={drillFn} />
-
-      {/* ── 2-column content grid (Task 2 scaffold) ───────────────────── */}
+      {/* ── 2-column content grid — radar first on mobile, tiles follow ── */}
       <div className="sw-content-grid">
         {/* LEFT: Radar card */}
         <RadarCard
@@ -1880,6 +1877,11 @@ export default function HomeScreen({
         />
         {/* RIGHT: Actions card (Task 4) */}
         <ActionsCard entity={entity} viewMode={viewMode} onNav={onNav} onDrillMetric={drillFn} />
+      </div>
+
+      {/* ── Zone 4: State Tiles — after radar on mobile, before on desktop via CSS ── */}
+      <div className="sw-tiles-section">
+        <StateTilesCard entity={entity} onNav={onNav} onDrillDim={drillFn} />
       </div>
 
       {/* ── FUTURE / PLAN placeholder banner ────────────────────────── */}

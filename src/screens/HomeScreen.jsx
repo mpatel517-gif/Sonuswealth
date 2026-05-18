@@ -1161,7 +1161,7 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
                 borderRadius: 14,
                 padding: '12px 10px',
                 cursor: 'pointer',
-                flex: '1 1 90px', minWidth: 90,
+                flex: '1 1 104px', minWidth: 104,
                 height: isExpanded ? 'auto' : 116,
                 overflow: isExpanded ? 'visible' : 'hidden',
                 transition: 'border-color 120ms',
@@ -1914,8 +1914,8 @@ export default function HomeScreen({
         Information &amp; guidance only · Not regulated financial advice · FCA boundary applies
       </div>
 
-      {/* Nav spacer */}
-      <div style={{ height: 78 }} />
+      {/* Nav spacer — 78px bottom nav + 52px AskPill + 8px gap + 12px breathing room */}
+      <div style={{ height: 150 }} />
     </>
   )
 }

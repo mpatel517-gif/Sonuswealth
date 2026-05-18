@@ -314,7 +314,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
   return (
     <>
     <div style={card({ padding: '14px 18px', margin: '0 16px 12px' })}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 0, overflow: 'hidden' }}>
+      <div className="sw-anchor-row">
 
         {/* NW + composition bar — whole column is drillable */}
         <div
@@ -1865,11 +1865,7 @@ export default function HomeScreen({
       <StateTilesCard entity={entity} onNav={onNav} onDrillDim={drillFn} />
 
       {/* ── 2-column content grid (Task 2 scaffold) ───────────────────── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-        gap: 14, margin: '0 16px',
-      }}>
+      <div className="sw-content-grid">
         {/* LEFT: Radar card */}
         <RadarCard
           entity={entity}

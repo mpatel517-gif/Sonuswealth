@@ -598,3 +598,44 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── HOME SCREEN RESPONSIVE LAYOUTS ──────────────────────────────────────
+   Anchor row: 2×2 on mobile, 4-col on ≥540px
+   Content grid: 1-col on mobile, 2-col on ≥640px              */
+.sw-anchor-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 0;
+  overflow: hidden;
+}
+@media (min-width: 540px) {
+  .sw-anchor-row {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr !important;
+  }
+}
+
+.sw-content-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px;
+  margin: 0 16px;
+}
+@media (min-width: 640px) {
+  .sw-content-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important;
+  }
+}
+
+/* Anchor row: add top border between rows on mobile 2×2 */
+@media (max-width: 539px) {
+  .sw-anchor-row > div:nth-child(3),
+  .sw-anchor-row > div:nth-child(4) {
+    border-top: 1px solid var(--c-sep);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+  /* Remove right borders that don't make sense in 2×2 */
+  .sw-anchor-row > div:nth-child(2) {
+    border-right: none !important;
+  }
+}

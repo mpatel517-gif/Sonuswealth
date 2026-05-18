@@ -644,9 +644,7 @@ body {
   }
 }
 
-/* Radar always before tiles — overview before detail on every viewport */
-.sw-content-grid { order: 1; }
-.sw-tiles-section { order: 2; }
+/* Radar before tiles via JSX render order — no CSS order needed */
 
 /* Dimension tiles: 2-col grid on mobile so labels have room */
 .sw-state-tiles {

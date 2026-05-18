@@ -14,13 +14,21 @@
   "isHigherRateTaxpayer": false,
   "age": 62,
   "targetIncome": 120000,
-  "dataLastUpdated": "2026-04-19",
+  "dataLastUpdated": "2026-05-18",
   "rulesVersion": "UK-2026.1",
   "jurisdictionContext": {
     "primary": "UK-2026.1",
     "secondary": null
   },
   "drawdown": 0,
+  "drawdownPlan": {
+    "status": "not_started",
+    "targetAnnual": 96000,
+    "targetMonthly": 8000,
+    "plannedStartDate": "2026-10-01",
+    "tfcStrategy": "phased",
+    "note": "Phased drawdown before April 2027 SIPP IHT deadline. TFC taken in tranches to stay within basic rate."
+  },
   "assets": {
     "sipp": {
       "total": 850000,
@@ -90,15 +98,20 @@
     },
     "protection": {
       "lifeInsurance": {
-        "exists": false,
-        "amount": 0,
-        "inTrust": false,
-        "premium": 0
+        "exists": true,
+        "amount": 1500000,
+        "inTrust": true,
+        "premium": 185,
+        "provider": "Legal & General",
+        "type": "level_term",
+        "expiryAge": 80
       },
       "criticalIllness": {
-        "exists": false,
-        "amount": 0,
-        "premium": 0
+        "exists": true,
+        "amount": 500000,
+        "premium": 230,
+        "provider": "Aviva",
+        "expiryAge": 70
       },
       "incomeProtection": {
         "exists": false,
@@ -116,7 +129,24 @@
       "shareholderProtection": {
         "exists": false
       }
-    }
+    },
+    "property": [
+      {
+        "name": "Bermondsey Street BTL",
+        "address": "14 Bermondsey Street, London SE1 3PF",
+        "value": 450000,
+        "value_gbp": 450000,
+        "beneficial_interest_this_individual": 1.0,
+        "ownership": "sole",
+        "isRental": true,
+        "rentalGrossAnnual": 24000,
+        "rentalNetAnnual": 19200,
+        "growth": 0.04,
+        "purchaseDate": "2018-06-01",
+        "purchasePrice": 310000,
+        "status": "active"
+      }
+    ]
   },
   "liabilities": {
     "mortgage": {
@@ -124,9 +154,23 @@
       "monthlyPayment": 0,
       "rateType": "none",
       "rate": 0,
-      "remainingYears": 0
+      "remainingYears": 0,
+      "note": "Main residence mortgage-free since 2021"
     },
-    "otherLoans": []
+    "otherLoans": [
+      {
+        "name": "BTL mortgage — Bermondsey Street",
+        "type": "mortgage_btl",
+        "outstanding": 180000,
+        "monthlyPayment": 1100,
+        "rate": 0.0385,
+        "rateType": "fixed",
+        "remainingYears": 13,
+        "fixedRateExpiry": "2027-06-01",
+        "secured": true,
+        "property": "14 Bermondsey Street, London SE1 3PF"
+      }
+    ]
   },
   "dependants": [
     {
@@ -149,53 +193,77 @@
       "startAge": 67
     },
     "employment": 0,
-    "dividends": 0,
-    "rentalIncome": 0,
-    "overseasIncome": 0
+    "dividends": 16000,
+    "rentalIncome": 19200,
+    "overseasIncome": 0,
+    "selfEmployed": 0,
+    "other": 0
   },
+  "monthlyExpenditure": 7000,
   "riskQuestionnaire": {
     "q11_liquidity_months": "over-6",
     "q12_income_protection": "no",
-    "q13_income_sources": "one",
-    "d6_nominations_complete": "some",
+    "q13_income_sources": "two",
+    "d6_nominations_complete": "all",
     "d6_will_current": "yes",
-    "confidenceLevel": "medium"
+    "d4_debt_service_pct": 37,
+    "confidenceLevel": "high"
   },
   "etfs": [
     {
       "ticker": "VWRL",
       "name": "Vanguard FTSE All-World",
-      "val": "£148,000",
-      "pct": "+12.4%",
-      "up": true
+      "val": 148000,
+      "displayVal": "£148,000",
+      "pct": 12.4,
+      "displayPct": "+12.4%",
+      "up": true,
+      "costBasis": 131200,
+      "unrealisedGain": 16800
     },
     {
       "ticker": "SGLN",
       "name": "iShares Physical Gold",
-      "val": "£86,200",
-      "pct": "+18.4%",
-      "up": true
+      "val": 86200,
+      "displayVal": "£86,200",
+      "pct": 18.4,
+      "displayPct": "+18.4%",
+      "up": true,
+      "costBasis": 72800,
+      "unrealisedGain": 13400
     },
     {
       "ticker": "INRG",
       "name": "iShares Clean Energy",
-      "val": "£74,600",
-      "pct": "+7.1%",
-      "up": true
+      "val": 74600,
+      "displayVal": "£74,600",
+      "pct": 7.1,
+      "displayPct": "+7.1%",
+      "up": true,
+      "costBasis": 69700,
+      "unrealisedGain": 4900
     },
     {
       "ticker": "URNP",
       "name": "Sprott Uranium Miners",
-      "val": "£41,300",
-      "pct": "+31.7%",
-      "up": true
+      "val": 41300,
+      "displayVal": "£41,300",
+      "pct": 31.7,
+      "displayPct": "+31.7%",
+      "up": true,
+      "costBasis": 31400,
+      "unrealisedGain": 9900
     },
     {
       "ticker": "VMID",
       "name": "Vanguard FTSE 250",
-      "val": "£29,900",
-      "pct": "-2.8%",
-      "up": false
+      "val": 29900,
+      "displayVal": "£29,900",
+      "pct": -2.8,
+      "displayPct": "-2.8%",
+      "up": false,
+      "costBasis": 30800,
+      "unrealisedGain": -900
     }
   ],
   "alerts": [
@@ -214,10 +282,10 @@
       "level": "high",
       "colour": "#FF9500",
       "badge": "HIGH",
-      "days": "No date",
-      "headline": "No life insurance on a £3.6m estate",
-      "context": "Trust funded but estate unprotected on early death.",
-      "action": "Review protection needs",
+      "days": "June 2027",
+      "headline": "BTL mortgage fixed rate expires June 2027",
+      "context": "£180k remaining on Bermondsey BTL at 3.85%. Remortgage or overpay decision required before expiry.",
+      "action": "Review BTL mortgage options",
       "screen": "money",
       "lifeStage": 5
     },
@@ -282,7 +350,8 @@
     "What is my cost of inaction if I don't start drawdown before April 2027?",
     "Show me three drawdown strategies and their IHT impact",
     "Should I consolidate my three pensions before drawing down?",
-    "What LPA and protection does a £3.6m estate need?"
+    "My BTL fixed rate expires June 2027 — should I overpay or remortgage?",
+    "How much can I draw from my SIPP each year and stay within basic rate tax?"
   ],
   "dimensionNarrative": {
     "behaviour": {
@@ -291,7 +360,7 @@
       "future": "Consistent behaviour compounds over decades — the foundation everything else sits on."
     },
     "capital": {
-      "risk": "At £3.6m vs a retirement number around £2.4m you are comfortably ahead.",
+      "risk": "At £3.9m vs a retirement number around £2.4m you are comfortably ahead.",
       "action": "Review your retirement income target once a year as your situation evolves.",
       "future": "Being ahead of your number gives you flexibility on drawdown timing and amount."
     },
@@ -301,19 +370,19 @@
       "future": "Every year of unused allowances is a permanent loss — they don't carry forward."
     },
     "protection": {
-      "risk": "No life cover on a £3.6m estate. Your family is exposed on early death.",
-      "action": "Set up life insurance written into a discretionary trust — stays outside the estate for IHT.",
-      "future": "Life insurance in trust means your family gets the full amount. Outside trust, 40% of it goes to HMRC."
+      "risk": "Life insurance £1.5m in trust and critical illness £500k in place. Income protection not needed — no employment income.",
+      "action": "Critical illness cover expires at age 70. Decide at 68 whether to renew or self-insure from assets.",
+      "future": "Cover in trust pays your family immediately on death without waiting for probate — and stays outside the estate."
     },
     "cashflow": {
-      "risk": "£180k cash gives you over 4 years of spending runway. Strong.",
-      "action": "Consider whether cash above 24 months of expenses should be moved into an ISA.",
-      "future": "Strong cashflow means you never have to sell investments at the wrong time."
+      "risk": "Dividends (£16k) and rental (£19.2k) generate £35.2k of income per year. Against a £120k lifestyle target you are drawing ~£85k from assets — expected at this life stage.",
+      "action": "Start SIPP drawdown at £8k/month. This converts taxable pension wealth into cash flow and reduces the IHT clock simultaneously.",
+      "future": "At 67 your state pension (£11.97k/yr) begins. With SIPP drawdown the income gap narrows substantially."
     },
     "debt": {
-      "risk": "Debt-free. No action needed on this dimension.",
-      "action": "Continue to avoid new debt in decumulation.",
-      "future": "Remaining debt-free through retirement preserves more of your estate."
+      "risk": "One BTL mortgage at 3.85% fixed. £180k outstanding, 13 years remaining. Debt service is £1,100/month — well within rental income.",
+      "action": "Fixed rate expires June 2027. Remortgage or overpay decision needed in early 2027.",
+      "future": "At current pace the BTL mortgage clears by age 75, adding £180k back to investable assets."
     },
     "estate": {
       "risk": "SIPP enters the estate 6 April 2027. Cost of inaction based on current data: £340,000.",
@@ -347,11 +416,11 @@
     {
       "id": "plan-protection",
       "type": "protection",
-      "label": "Add £1m life cover in trust",
-      "target": { "lifeCoverInTrust": 1000000 },
-      "target_display": null,
-      "lastReviewedAt": "2024-09-01",
-      "status": "stale",
+      "label": "Life cover in trust — £1.5m L&G + £500k CI (Aviva)",
+      "target": { "lifeCoverInTrust": 1500000, "criticalIllness": 500000 },
+      "target_display": "£1.5m life in trust · £500k critical illness",
+      "lastReviewedAt": "2026-02-01",
+      "status": "active",
       "createdAt": "2024-09-01"
     },
     {
@@ -395,46 +464,91 @@
 
   "trajectories": {
     "netWorthHistory": [
-      { "date": "2025-06-01", "value": 3450000 },
-      { "date": "2025-07-01", "value": 3478000 },
-      { "date": "2025-08-01", "value": 3495000 },
-      { "date": "2025-09-01", "value": 3512000 },
-      { "date": "2025-10-01", "value": 3534000 },
-      { "date": "2025-11-01", "value": 3551000 },
-      { "date": "2025-12-01", "value": 3567000 },
-      { "date": "2026-01-01", "value": 3582000 },
-      { "date": "2026-02-01", "value": 3598000 },
-      { "date": "2026-03-01", "value": 3612000 },
-      { "date": "2026-04-01", "value": 3624000 },
-      { "date": "2026-05-01", "value": 3630000 }
+      { "date": "2024-06-01", "value": 3520000 },
+      { "date": "2024-07-01", "value": 3548000 },
+      { "date": "2024-08-01", "value": 3571000 },
+      { "date": "2024-09-01", "value": 3590000 },
+      { "date": "2024-10-01", "value": 3614000 },
+      { "date": "2024-11-01", "value": 3638000 },
+      { "date": "2024-12-01", "value": 3655000 },
+      { "date": "2025-01-01", "value": 3672000 },
+      { "date": "2025-02-01", "value": 3689000 },
+      { "date": "2025-03-01", "value": 3701000 },
+      { "date": "2025-04-01", "value": 3718000 },
+      { "date": "2025-05-01", "value": 3732000 },
+      { "date": "2025-06-01", "value": 3750000 },
+      { "date": "2025-07-01", "value": 3768000 },
+      { "date": "2025-08-01", "value": 3782000 },
+      { "date": "2025-09-01", "value": 3799000 },
+      { "date": "2025-10-01", "value": 3818000 },
+      { "date": "2025-11-01", "value": 3834000 },
+      { "date": "2025-12-01", "value": 3849000 },
+      { "date": "2026-01-01", "value": 3863000 },
+      { "date": "2026-02-01", "value": 3876000 },
+      { "date": "2026-03-01", "value": 3887000 },
+      { "date": "2026-04-01", "value": 3897000 },
+      { "date": "2026-05-01", "value": 3904000 }
     ],
     "scoreHistory": [
-      { "date": "2025-06-01", "score": 44 },
-      { "date": "2025-07-01", "score": 44 },
-      { "date": "2025-08-01", "score": 45 },
-      { "date": "2025-09-01", "score": 45 },
-      { "date": "2025-10-01", "score": 46 },
-      { "date": "2025-11-01", "score": 46 },
-      { "date": "2025-12-01", "score": 46 },
-      { "date": "2026-01-01", "score": 47 },
-      { "date": "2026-02-01", "score": 47 },
-      { "date": "2026-03-01", "score": 47 },
-      { "date": "2026-04-01", "score": 47 },
-      { "date": "2026-05-01", "score": 47 }
+      { "date": "2024-06-01", "score": 46 },
+      { "date": "2024-07-01", "score": 46 },
+      { "date": "2024-08-01", "score": 47 },
+      { "date": "2024-09-01", "score": 47 },
+      { "date": "2024-10-01", "score": 47 },
+      { "date": "2024-11-01", "score": 47 },
+      { "date": "2024-12-01", "score": 47 },
+      { "date": "2025-01-01", "score": 48 },
+      { "date": "2025-02-01", "score": 48 },
+      { "date": "2025-03-01", "score": 48 },
+      { "date": "2025-04-01", "score": 48 },
+      { "date": "2025-05-01", "score": 49 },
+      { "date": "2025-06-01", "score": 49 },
+      { "date": "2025-07-01", "score": 49 },
+      { "date": "2025-08-01", "score": 49 },
+      { "date": "2025-09-01", "score": 50 },
+      { "date": "2025-10-01", "score": 50 },
+      { "date": "2025-11-01", "score": 50 },
+      { "date": "2025-12-01", "score": 50 },
+      { "date": "2026-01-01", "score": 51 },
+      { "date": "2026-02-01", "score": 64 },
+      { "date": "2026-03-01", "score": 66 },
+      { "date": "2026-04-01", "score": 68 },
+      { "date": "2026-05-01", "score": 69 }
     ],
     "riskHistory": [
-      { "date": "2025-06-01", "score": 52 },
-      { "date": "2025-07-01", "score": 53 },
-      { "date": "2025-08-01", "score": 53 },
-      { "date": "2025-09-01", "score": 54 },
-      { "date": "2025-10-01", "score": 54 },
-      { "date": "2025-11-01", "score": 55 },
-      { "date": "2025-12-01", "score": 55 },
-      { "date": "2026-01-01", "score": 55 },
-      { "date": "2026-02-01", "score": 56 },
-      { "date": "2026-03-01", "score": 56 },
-      { "date": "2026-04-01", "score": 56 },
-      { "date": "2026-05-01", "score": 56 }
-    ]
+      { "date": "2024-06-01", "score": 54 },
+      { "date": "2024-07-01", "score": 54 },
+      { "date": "2024-08-01", "score": 55 },
+      { "date": "2024-09-01", "score": 55 },
+      { "date": "2024-10-01", "score": 55 },
+      { "date": "2024-11-01", "score": 55 },
+      { "date": "2024-12-01", "score": 56 },
+      { "date": "2025-01-01", "score": 56 },
+      { "date": "2025-02-01", "score": 56 },
+      { "date": "2025-03-01", "score": 57 },
+      { "date": "2025-04-01", "score": 57 },
+      { "date": "2025-05-01", "score": 57 },
+      { "date": "2025-06-01", "score": 58 },
+      { "date": "2025-07-01", "score": 58 },
+      { "date": "2025-08-01", "score": 58 },
+      { "date": "2025-09-01", "score": 59 },
+      { "date": "2025-10-01", "score": 59 },
+      { "date": "2025-11-01", "score": 59 },
+      { "date": "2025-12-01", "score": 60 },
+      { "date": "2026-01-01", "score": 60 },
+      { "date": "2026-02-01", "score": 62 },
+      { "date": "2026-03-01", "score": 63 },
+      { "date": "2026-04-01", "score": 64 },
+      { "date": "2026-05-01", "score": 65 }
+    ],
+    "fiRatioHistory": [0.50, 0.51, 0.52, 0.52, 0.53, 0.53, 0.54, 0.54, 0.55, 0.55, 0.56, 0.56, 0.57, 0.57, 0.58, 0.58, 0.59, 0.59, 0.60, 0.60, 0.61, 0.61, 0.62, 0.62],
+    "coiHistory": [445000, 442000, 438000, 435000, 432000, 429000, 426000, 424000, 421000, 419000, 417000, 415000, 413000, 411000, 409000, 407000, 406000, 405000, 404000, 413000, 412000, 412000, 412000, 412000],
+    "protectionHistory": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 12, 12, 12],
+    "taxEfficiencyHistory": [40, 41, 42, 43, 43, 44, 44, 45, 46, 46, 47, 47, 48, 48, 49, 49, 50, 50, 51, 51, 52, 52, 53, 53],
+    "cashflowHistory": [-7200, -6900, -7400, -7100, -6800, -7300, -7000, -6700, -7200, -6900, -6600, -7100, -6800, -6500, -7000, -6700, -6400, -6900, -6600, -6300, -6800, -6500, -6200, -6700],
+    "debtHistory": [187000, 186000, 185000, 184000, 184000, 183000, 182000, 181000, 181000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000],
+    "estateHistory": [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    "behaviourHistory": [13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16],
+    "capitalHistory":   [10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14]
   }
 }

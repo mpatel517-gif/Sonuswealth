@@ -51,28 +51,40 @@ function fmtCompact(v) {
 }
 
 export default function PoSChart({
-  probability = 0.94,
+  probability = null,
   median = null,         // [{ year, value }]
   bands = null,          // { p10: [], p90: [] }
   nowYear = new Date().getFullYear(),
   guardrail = null,      // { year, value, label }
   horizonYears = 30,
 }) {
-  // Synthesise default series if not provided. Median rises gently then
-  // gradually flattens; p10/p90 widen with horizon.
-  const rawSeries = median ?? Array.from({ length: 12 }, (_, i) => ({
-    year: nowYear + (i * (horizonYears / 11)),
-    value: 1_000_000 + i * 80_000 + Math.sin(i * 0.6) * 30_000,
-  }))
-  const series = rawSeries.length ? rawSeries : [{ year: nowYear, value: 1_000_000 }]
-  const p10 = (bands?.p10 && bands.p10.length) ? bands.p10 : series.map((p, i) => {
-    const widen = (i / series.length) * 0.35
-    return { year: p.year, value: p.value * (1 - widen) }
-  })
-  const p90 = (bands?.p90 && bands.p90.length) ? bands.p90 : series.map((p, i) => {
-    const widen = (i / series.length) * 0.30
-    return { year: p.year, value: p.value * (1 + widen) }
-  })
+  // If no real data from the engine, render an empty state — never show fabricated numbers.
+  if (probability == null && median == null) {
+    return (
+      <div className="sw-card sw-card-elevated" style={{
+        padding: 18,
+        background: 'var(--card-bg2)',
+        border: '1px solid var(--c-border)',
+        borderRadius: 'var(--r-lg, 20px)',
+        boxShadow: 'var(--sh2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 160,
+        gap: 8,
+      }}>
+        <div className="sw-eyebrow">Probability of Success</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 220 }}>
+          Calculating… add income and drawdown targets to generate your Monte Carlo projection.
+        </div>
+      </div>
+    )
+  }
+
+  const series = (median && median.length) ? median : [{ year: nowYear, value: 0 }]
+  const p10 = (bands?.p10 && bands.p10.length) ? bands.p10 : series
+  const p90 = (bands?.p90 && bands.p90.length) ? bands.p90 : series
 
   const minY = Math.min(...p10.map(p => p.value), 0)
   const maxY = Math.max(...p90.map(p => p.value), 1)
@@ -90,9 +102,9 @@ export default function PoSChart({
   const medianPath = smoothPath(medianPts)
   const nowX = xAt(nowYear)
 
-  const pct = Math.round(probability * 100)
-  const pctTone = pct >= 90 ? 'mint' : pct >= 75 ? 'gold' : 'coral'
-  const pctColor = pctTone === 'mint' ? 'var(--c-acc)' : pctTone === 'gold' ? 'var(--c-gold)' : 'var(--c-coral, #FF6F7D)'
+  const pct = probability != null ? Math.round(probability * 100) : null
+  const pctTone = pct == null ? 'neutral' : pct >= 90 ? 'mint' : pct >= 75 ? 'gold' : 'coral'
+  const pctColor = pctTone === 'mint' ? 'var(--c-acc)' : pctTone === 'gold' ? 'var(--c-gold)' : pctTone === 'coral' ? 'var(--c-coral, #FF6F7D)' : 'var(--c-text3)'
 
   // Year labels — every 5 years
   const yearLabels = []
@@ -124,7 +136,7 @@ export default function PoSChart({
           <div style={{
             fontSize: 36, fontWeight: 880, color: pctColor,
             letterSpacing: -0.5, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-          }}>{pct}%</div>
+          }}>{pct != null ? `${pct}%` : '—'}</div>
           <div style={{
             fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
             letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4,

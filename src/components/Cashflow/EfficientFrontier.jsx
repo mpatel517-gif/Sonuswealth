@@ -25,28 +25,48 @@ function smoothPath(pts) {
 }
 
 export default function EfficientFrontier({
-  userPosition: userPosArg,
-  reference: refArg,
+  userPosition: userPosArg = null,
+  reference: refArg = null,
   frontierPoints = null,
-  distanceToFrontier = 0.012,
+  distanceToFrontier = null,
 }) {
-  // Null-safe defaults — caller may pass null when engine output is sparse.
-  const userPosition = userPosArg || { volatility: 0.13, expectedReturn: 0.052 }
-  const reference    = refArg     || { label: '60/40', volatility: 0.10, expectedReturn: 0.058 }
-  // Synthesise frontier if not provided. Risk-return roughly logarithmic.
-  const front = frontierPoints ?? Array.from({ length: 14 }, (_, i) => {
-    const vol = 0.02 + (i / 13) * 0.20
-    const er  = 0.025 + Math.log(1 + vol * 10) * 0.03
-    return { volatility: vol, expectedReturn: er }
-  })
+  // If no engine data, show empty state — never render fabricated frontier or gaps.
+  if (!userPosArg && !frontierPoints) {
+    return (
+      <div className="sw-card sw-card-elevated" style={{
+        padding: 16,
+        background: 'var(--card-bg2)',
+        border: '1px solid var(--c-border)',
+        borderRadius: 'var(--r-lg, 20px)',
+        boxShadow: 'var(--sh2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 160,
+        gap: 8,
+      }}>
+        <div className="sw-eyebrow">Efficient frontier</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 240 }}>
+          Calculating… engine needs your portfolio allocation to plot your risk-return position.
+        </div>
+      </div>
+    )
+  }
+
+  const userPosition = userPosArg
+  // reference comes from cf_portfolioEfficiency().reference (CMA-derived 60/40 blend).
+  // null flows through when the engine hasn't returned a reference yet.
+  const reference    = refArg ?? null
+  const front = frontierPoints || []
 
   const W = 320, H = 200
   const PAD = { top: 12, right: 16, bottom: 30, left: 36 }
   const pw = W - PAD.left - PAD.right
   const ph = H - PAD.top - PAD.bottom
 
-  const xs = [userPosition.volatility, reference.volatility, ...front.map(p => p.volatility)]
-  const ys = [userPosition.expectedReturn, reference.expectedReturn, ...front.map(p => p.expectedReturn)]
+  const xs = [...(userPosition ? [userPosition.volatility] : []), ...(reference ? [reference.volatility] : []), ...front.map(p => p.volatility)]
+  const ys = [...(userPosition ? [userPosition.expectedReturn] : []), ...(reference ? [reference.expectedReturn] : []), ...front.map(p => p.expectedReturn)]
   const xMin = 0
   const xMax = Math.max(...xs) * 1.08 || 1
   const yMin = 0
@@ -58,10 +78,10 @@ export default function EfficientFrontier({
   const frontPts = front.map(p => ({ x: xAt(p.volatility), y: yAt(p.expectedReturn) }))
   const frontPath = smoothPath(frontPts)
 
-  const userPt = { x: xAt(userPosition.volatility), y: yAt(userPosition.expectedReturn) }
-  const refPt  = { x: xAt(reference.volatility),   y: yAt(reference.expectedReturn) }
+  const userPt = userPosition ? { x: xAt(userPosition.volatility), y: yAt(userPosition.expectedReturn) } : null
+  const refPt  = reference ? { x: xAt(reference.volatility), y: yAt(reference.expectedReturn) } : null
 
-  const gapPct = Math.round(distanceToFrontier * 1000) / 10  // 1.2%
+  const gapPct = distanceToFrontier != null ? Math.round(distanceToFrontier * 1000) / 10 : null
 
   return (
     <div className="sw-card sw-card-elevated" style={{
@@ -90,7 +110,7 @@ export default function EfficientFrontier({
             letterSpacing: -0.2, lineHeight: 1, marginTop: 4,
             fontVariantNumeric: 'tabular-nums',
           }}>
-            +{gapPct.toFixed(1)}% / yr
+            {gapPct != null ? `+${gapPct.toFixed(1)}% / yr` : '—'}
           </div>
         </div>
       </div>
@@ -141,26 +161,34 @@ export default function EfficientFrontier({
             filter: 'drop-shadow(0 0 8px var(--c-radar-glow))',
           }} />
 
-        {/* Reference dot (60/40) */}
-        <circle cx={refPt.x} cy={refPt.y} r="5" fill="var(--c-text3)" stroke="var(--c-bg)" strokeWidth="1.5" />
-        <text x={refPt.x + 10} y={refPt.y - 6}
-          fontSize="9" fontWeight="700" fill="var(--c-text2)"
-          fontFamily="Inter,sans-serif">
-          {reference.label}
-        </text>
+        {/* Reference dot (60/40 blend from CMA) — omitted when engine hasn't returned reference */}
+        {refPt && reference && (
+          <>
+            <circle cx={refPt.x} cy={refPt.y} r="5" fill="var(--c-text3)" stroke="var(--c-bg)" strokeWidth="1.5" />
+            <text x={refPt.x + 10} y={refPt.y - 6}
+              fontSize="9" fontWeight="700" fill="var(--c-text2)"
+              fontFamily="Inter,sans-serif">
+              {reference.label}
+            </text>
+          </>
+        )}
 
         {/* User position dot — accent + glow */}
-        <circle cx={userPt.x} cy={userPt.y} r="6.5" fill="var(--c-acc)"
-          stroke="var(--c-bg)" strokeWidth="2"
-          style={{ filter: 'drop-shadow(0 0 10px var(--c-radar-glow))' }} />
-        <text x={userPt.x + 12} y={userPt.y - 8}
-          fontSize="10" fontWeight="800" fill="var(--c-acc)"
-          fontFamily="Inter,sans-serif">
-          You
-        </text>
+        {userPt && (
+          <>
+            <circle cx={userPt.x} cy={userPt.y} r="6.5" fill="var(--c-acc)"
+              stroke="var(--c-bg)" strokeWidth="2"
+              style={{ filter: 'drop-shadow(0 0 10px var(--c-radar-glow))' }} />
+            <text x={userPt.x + 12} y={userPt.y - 8}
+              fontSize="10" fontWeight="800" fill="var(--c-acc)"
+              fontFamily="Inter,sans-serif">
+              You
+            </text>
+          </>
+        )}
 
         {/* Vertical "to frontier" line from user position straight up */}
-        {front.length > 0 && (() => {
+        {userPt && front.length > 0 && (() => {
           // Find frontier ER at user's volatility
           const userVol = userPosition.volatility
           const closest = front.reduce((best, p) => Math.abs(p.volatility - userVol) < Math.abs(best.volatility - userVol) ? p : best, front[0])

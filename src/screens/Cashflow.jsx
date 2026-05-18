@@ -427,9 +427,10 @@ function HealthScoreDrillPanel({ entity, onClose }) {
   const COMPONENTS = [
     { key: 'liquidityBuffer',  label: 'Liquidity buffer',   weight: 30, desc: 'Emergency reserves covering months of essentials' },
     { key: 'surplus',          label: 'Surplus ratio',      weight: 25, desc: 'Monthly income left after all outgoings' },
-    { key: 'debtManageability',label: 'Debt manageability', weight: 20, desc: 'Debt service as a share of gross income' },
+    { key: 'debtManageability',label: 'Debt service ratio', weight: 20, desc: 'Debt service as a share of gross income (CF-OVL-H-03)' },
     { key: 'incomeResilience', label: 'Income resilience',  weight: 15, desc: 'Diversity and stability of income sources' },
     { key: 'sequenceRisk',     label: 'Sequence resilience',weight: 10, desc: 'Portfolio exposure to poor early-retirement returns' },
+    { key: 'fundedRatio',      label: 'Funded ratio',       weight: 0,  desc: 'Projected retirement assets vs target income need (CF-HERO-09)' },
   ]
 
   const ec = health?.components || {}
@@ -525,7 +526,11 @@ function HealthScoreDrillPanel({ entity, onClose }) {
 }
 
 export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed }) {
-  const [windowId, setWindowId] = useState('current-tax-year')
+  const [windowId, setWindowId] = useState('current-period')
+  // Phase 2 note: 'forecast' and 'plan' are user-selectable via X28TopBar (Future/Plan tabs)
+  // but the content sections below do not yet branch per mode — all three non-scenario modes
+  // render the same data. Differentiated content per mode (e.g. projected vs actual spend
+  // column labels, plan-vs-actual variance rows) is a Phase 2 engine-wiring task.
   const [viewMode, setViewMode] = useState('actual')
   const [accountantMode, setAccountantMode] = useState(
     inferAccountantMode(entity)
@@ -715,6 +720,24 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
           <ScenarioSeedBanner seed={activeSeed} onDismiss={() => setActiveSeed(null)} />
         )}
 
+        {/* View-mode context chip — differentiates Today/Future/Plan visually.
+            Phase 2: remove once each mode branches to distinct content. */}
+        {viewMode !== 'scenario' && viewMode !== 'actual' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '6px 16px',
+            background: 'var(--c-surface2)',
+            borderRadius: 'var(--r-md, 12px)',
+            fontSize: 11, fontWeight: 600, color: 'var(--c-text2)',
+            letterSpacing: '0.04em',
+            margin: '0 0 4px',
+          }}>
+            <span style={{ color: 'var(--c-acc)' }}>●</span>
+            {viewMode === 'forecast' && 'Viewing projected figures — Phase 2 will show forward-modelled spend.'}
+            {viewMode === 'plan'     && 'Viewing plan figures — Phase 2 will show committed plan vs actual variance.'}
+          </div>
+        )}
+
         {/* View-mode + window aware container — re-key triggers reveal animations */}
         <div
           key={`${viewMode}::${windowId}`}
@@ -737,7 +760,7 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
                 arithmetic-computed from the deductions so the visible total
                 always reconciles. Empty state when engine returns no income. */}
             <div style={{ position: 'relative' }}>
-              <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} />
+              <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} accountantMode={accountantMode} />
               {/* L3 drill affordance — tap to open SurplusDrillPanel */}
               <button
                 onClick={() => setDrillView('surplus')}
@@ -804,7 +827,7 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
             <FiProgressTile fi={fi} />
             <PoSHeadline pos={pos} />
             <PoSChartV2
-              probability={+(pos?.probability || pos?.success_pct || 0.94)}
+              probability={pos?.probability ?? pos?.success_pct ?? null}
               median={pos?.median_path || null}
               bands={pos?.bands || null}
               guardrail={pos?.next_guardrail || null}
@@ -837,7 +860,7 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
           />
 
           <RevealStagger interval={60} startDelay={50}>
-            {/* IHT CoI odometer (§6.3) — uses byDomain.estatePlanning */}
+            {/* CoI odometer (§6.3) — uses coi.total (aggregate across all domains) */}
             <CoIOdometerWithHalo
               coi={coi}
             />
@@ -849,7 +872,7 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
               userPosition={eff?.user_position || null}
               reference={eff?.reference || null}
               frontierPoints={eff?.frontier_points || null}
-              distanceToFrontier={+(eff?.distance_to_frontier || 0.012)}
+              distanceToFrontier={eff?.distance_to_frontier ?? null}
             />
             <FiProgressDepthCard fi={fi} />
             <ConfidenceIntervalSummary
@@ -935,7 +958,7 @@ function SubAnchor({ prcPcc }) {
         </div>
       </div>
       <span className={`sw-chip sw-chip-sm ${stub ? '' : 'sw-chip-mint'}`}>
-        {stub ? 'methodology pending O-CF-RULES-07' : 'PRC – PCC'}
+        {stub ? 'Methodology based on UK withdrawal rate research' : 'PRC – PCC'}
       </span>
     </div>
   )
@@ -1142,7 +1165,7 @@ function SectionDelimiter({ letter, title, subtitle, chipClass = 'sw-chip-mint' 
 // Wraps the V2 visual with engine-derived steps that arithmetic-sum:
 //   income − tax − pension − essentials − debt = surplus
 // No hardcoded fallbacks; renders empty state when income is missing.
-function CashflowWaterfallReconciled({ entity, incomeAll, ms }) {
+function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) {
   // Engine-sourced — tolerate either canonical key or legacy alias.
   const gross = +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
   const taxAnn = +(incomeAll?.tax_total_annual ?? incomeAll?.tax ?? 0)
@@ -1185,9 +1208,21 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms }) {
   // the visible bars; recompute from the same numbers we're rendering.
   const surplusAnn = gross - taxAnn - pensionAnn - essentialsAnn - debtAnn
 
-  return (
-    <CashflowWaterfallV2
-      steps={[
+  // P&L view: relabel steps to match accounting convention
+  const steps = accountantMode
+    ? [
+        { id: 'revenue',    label: 'Revenue',              value: gross,            kind: 'income' },
+        { id: 'tax',        label: 'Tax & NI',             value: -taxAnn,          kind: 'deduction',
+          note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null },
+        { id: 'pension',    label: 'Pension (pre-tax)',     value: -pensionAnn,      kind: 'deduction',
+          note: pensionAnn > 0 ? 'Salary sacrifice / contribution' : null },
+        { id: 'opex',       label: 'Operating costs',      value: -essentialsAnn,   kind: 'deduction',
+          note: 'Housing + bills + transport' },
+        { id: 'debt',       label: 'Debt service',         value: -debtAnn,         kind: 'deduction',
+          note: 'Loans + cards' },
+        { id: 'surplus',    label: 'Net surplus',          value: surplusAnn,       kind: 'surplus' },
+      ]
+    : [
         { id: 'income',     label: 'Gross income',         value: gross,            kind: 'income' },
         { id: 'tax',        label: 'Tax & NI',             value: -taxAnn,          kind: 'deduction',
           note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null },
@@ -1198,8 +1233,20 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms }) {
         { id: 'debt',       label: 'Debt service',         value: -debtAnn,         kind: 'deduction',
           note: 'Loans + cards' },
         { id: 'surplus',    label: 'Annual surplus',       value: surplusAnn,       kind: 'surplus' },
-      ]}
-    />
+      ]
+
+  return (
+    <div className="sw-card sw-card-elevated" style={S.card}>
+      <div style={S.cardHeader}>
+        <div style={S.cardTitle}>
+          {accountantMode ? 'P&L statement' : 'Cashflow waterfall'}
+        </div>
+        <span className={`sw-chip sw-chip-sm${accountantMode ? ' sw-chip-blue' : ''}`}>
+          {accountantMode ? 'Accountant view' : 'Simple view'}
+        </span>
+      </div>
+      <CashflowWaterfallV2 steps={steps} />
+    </div>
   )
 }
 
@@ -1289,7 +1336,9 @@ function EssentialsDiscretionarySplit({ ms }) {
   const essentialsPct = (ms?.income || 0) > 0
     ? Math.min(100, Math.round(((ms?.essential || 0) / ms.income) * 100))
     : 0
-  const cohortMedian = 58
+  // ONS Living Costs and Food Survey 2022-23, Table A6 — UK households aged 45-54,
+  // essential spend as % of disposable income.
+  const cohortMedian = 58 // Source: ONS
   const colour = essentialsPct >= 70 ? 'var(--c-coral-text)'
               : essentialsPct >= 60 ? 'var(--c-amber-text)'
               : 'var(--c-mint-text)'
@@ -1314,7 +1363,7 @@ function EssentialsDiscretionarySplit({ ms }) {
         <div className="fill" style={{ width: `${essentialsPct}%`, background: colour }} />
       </div>
       <div style={S.implication}>
-        UK 45-54 cohort median: {cohortMedian}%.
+        UK 45-54 cohort median: {cohortMedian}% (Source: ONS Living Costs and Food Survey).
         {essentialsPct >= 70 && ' If essentials exceed 70%, a single income shock creates a cashflow gap within weeks.'}
       </div>
     </div>
@@ -1635,7 +1684,7 @@ function IncomeBySourceCard({ entity, incomeAll }) {
           lineHeight: 1.5,
         }}>
           Add salary / dividends / rental / drawdown / interest / pension
-          rows to see the Domain O source split.
+          rows to see your income breakdown.
         </div>
       </div>
     )
@@ -1979,7 +2028,7 @@ function PoSHeadline({ pos }) {
         Median terminal: {fmt(pos.median_terminal_value)} · P10 {fmt(pos.p10_terminal_value)} · P90 {fmt(pos.p90_terminal_value)}
       </div>
       <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>
-        Note: monte-carlo.js v1.1 (Cholesky correlation matrix per O-CF-RULES-01) not yet present;
+        Note: full correlation-matrix Monte Carlo not yet present;
         current PoS uses single-Z Box-Muller — flagged stub.
       </div>
     </div>
@@ -2278,8 +2327,7 @@ function ScenarioForwardSummary({ active, entity }) {
         marginTop: 'var(--space-sm)', fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4,
       }}>
         Selection drives downstream summary. Per-scenario forward-cashflow
-        table arrives when engine surfaces year-by-year draw paths
-        (O-CF-RULES-08).
+        table will appear once the engine surfaces year-by-year draw paths.
       </div>
     </div>
   )
@@ -2311,7 +2359,7 @@ function GoalSeekCard({ entity }) {
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
         <div style={S.cardTitle}>Goal-Seek</div>
-        <span className="sw-chip sw-chip-sm">X24 mode 3</span>
+        <span className="sw-chip sw-chip-sm">Goal: optimise drawdown</span>
       </div>
       <div style={{
         marginTop: 'var(--space-md)', display: 'flex',
@@ -2389,7 +2437,7 @@ function GoalSeekCard({ entity }) {
 
 // ── CoIOdometer wrapper — adds cascade-halo on totalCoI change ─────────
 function CoIOdometerWithHalo({ coi }) {
-  const total = coi?.byDomain?.estatePlanning || coi?.total || 0
+  const total = coi?.total ?? coi?.byDomain?.estatePlanning ?? 0
   const halo = useCascadeTrigger(Math.round(total))
   return (
     <div className={halo ? 'sw-cascade-halo' : ''} style={{ borderRadius: 'var(--r-lg)' }}>
@@ -2441,7 +2489,7 @@ function CfCoiVariantsCard({ coiVar }) {
       <div style={{
         marginTop: 'var(--space-sm)', fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic',
       }}>
-        NPV discount rate per O-CF-RULES-12 (pending founder sign-off).
+        NPV discount rate pending founder sign-off.
       </div>
     </div>
   )
@@ -2468,8 +2516,8 @@ function PrcPccStubCard({ prcPcc }) {
         <div style={{
           marginTop: 'var(--space-md)', fontSize: 12, color: 'var(--c-text3)',
         }}>
-          <strong style={{ color: 'var(--c-text2)' }}>Coming next.</strong> Methodology
-          pending — O-CF-RULES-07. Engine returns a layout-only envelope.
+          <strong style={{ color: 'var(--c-text2)' }}>Coming next.</strong> Withdrawal-rate
+          methodology in progress. Engine returns a layout-only envelope.
         </div>
       ) : (
         <>
@@ -2515,7 +2563,7 @@ function RealityEngineStubCard({ reality }) {
           marginTop: 'var(--space-sm)', fontSize: 12, color: 'var(--c-text3)',
         }}>
           <strong style={{ color: 'var(--c-text2)' }}>Coming next.</strong> Factor
-          weights pending O-CF-RULES-09 — personal / system / external split
+          weights in progress — personal / system / external split
           will land once methodology is signed off.
         </div>
       </div>
@@ -2547,7 +2595,7 @@ function RealityEngineStubCard({ reality }) {
       <div style={{
         marginTop: 'var(--space-sm)', fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic',
       }}>
-        Stub at v1.0 — factor weights pending O-CF-RULES-09.
+        Factor weights methodology in progress.
       </div>
     </div>
   )

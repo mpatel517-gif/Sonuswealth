@@ -595,7 +595,7 @@ export default function RadarAnchor({
 
       {/* Causal-story slide-over (What-if drag result) */}
       {story && (
-        <CausalStoryPanel story={story} onDismiss={() => setStory(null)} />
+        <CausalStoryPanel story={story} onDismiss={() => setStory(null)} onDrillMetric={onDrillMetric} />
       )}
     </div>
   )
@@ -739,7 +739,12 @@ function CenterCap({ entity, fqData, diffs, onDrillMetric, targetSource }) {
    forward." Engine-generated, not LLM. Bridges goal-seek output into a
    plain-English ripple narrative. ─────────────────────────────────────── */
 
-function CausalStoryPanel({ story, onDismiss }) {
+const DIM_ROUTE = {
+  behaviour: 'money', capital: 'money', tax: 'tax',
+  protection: 'risk', cashflow: 'flow', debt: 'money', estate: 'tax',
+}
+
+function CausalStoryPanel({ story, onDismiss, onDrillMetric }) {
   const { dim, currentValue, targetValue, ranked, narratives } = story
   const dir = targetValue > currentValue ? 'increase' : 'lower'
   const dimPct = Math.round((currentValue / dim.max) * 100)
@@ -816,15 +821,20 @@ function CausalStoryPanel({ story, onDismiss }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
             {ranked.map((p, i) => (
-              <div key={p.id || i} style={{
-                padding: 'var(--space-sm) var(--space-md)',
-                background: 'var(--c-surface2)',
-                border: '1px solid var(--c-sep)',
-                borderRadius: 'var(--r-md)',
-              }}>
-                <div style={{
-                  fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 2,
+              <div
+                key={p.id || i}
+                role="button"
+                tabIndex={0}
+                onClick={() => onDrillMetric?.(`nav:${DIM_ROUTE[dim?.key] || 'money'}`)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onDrillMetric?.(`nav:${DIM_ROUTE[dim?.key] || 'money'}`) }}
+                style={{
+                  padding: 'var(--space-sm) var(--space-md)',
+                  background: 'var(--c-surface2)',
+                  border: '1px solid var(--c-sep)',
+                  borderRadius: 'var(--r-md)',
+                  cursor: 'pointer',
                 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 2 }}>
                   {p.label || p.title || `Option ${i + 1}`}
                 </div>
                 {p.detail && (
@@ -832,6 +842,9 @@ function CausalStoryPanel({ story, onDismiss }) {
                     {p.detail}
                   </div>
                 )}
+                <div style={{ fontSize: 10, color: 'var(--c-acc)', marginTop: 4 }}>
+                  Go to {p.screen || dim?.formalLabel || 'detail'} →
+                </div>
               </div>
             ))}
           </div>

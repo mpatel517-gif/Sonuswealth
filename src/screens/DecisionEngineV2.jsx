@@ -187,6 +187,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
   const orc = useOrchestrator(entity)
   const [currentQuery, setCurrentQuery] = useState('')
   const [followUpRound, setFollowUpRound] = useState(0)
+  const [commitDone, setCommitDone] = useState(false)
   const scrollRef = useRef(null)
 
   useEffect(() => {
@@ -222,13 +223,25 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
 
   const handleCommit = (pathId) => {
     const planId = orc.commit(pathId)
-    onClose?.({ committed: true, planId, pathId })
+    setCommitDone(true)
+    setTimeout(() => onClose?.({ committed: true, planId, pathId }), 1500)
   }
 
   const handleSaveScenario = (pathId) => {
     const draftId = orc.saveScenario(pathId)
     onClose?.({ saved: true, draftId, pathId })
   }
+
+  if (commitDone) return (
+    <div style={{
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      height:'100%', gap:16, background:'var(--c-bg)', color:'var(--c-text)',
+    }}>
+      <div style={{ fontSize:40 }}>✓</div>
+      <div style={{ fontSize:16, fontWeight:700 }}>Plan committed</div>
+      <div style={{ fontSize:12, color:'var(--c-text3)' }}>Taking you to your Timeline…</div>
+    </div>
+  )
 
   return (
     <div style={{
@@ -285,9 +298,27 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
             background: 'rgba(255,111,125,.08)', border: '1px solid var(--c-acc3)',
             color: 'var(--c-acc3)', fontSize: 14,
           }}>
-            {orc.error === 'VITE_ANTHROPIC_API_KEY not set'
-              ? 'API key not configured — set VITE_ANTHROPIC_KEY in .env.local'
-              : `Error: ${orc.error}`}
+            {orc.error === 'service_unavailable'
+              ? 'Service temporarily unavailable — please try again later.'
+              : `Something went wrong — please try again.`}
+          </div>
+        )}
+
+        {/* Empty result — tree null after run completed */}
+        {!orc.isLoading && !orc.isIdle && !orc.tree && !orc.error && currentQuery && (
+          <div style={{ margin: '20px', padding: '16px 18px', borderRadius: 14, background: 'var(--c-surface)', border: '1px solid var(--c-sep)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Couldn't generate a decision tree</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
+              This can happen if the AI service isn't reachable (check your API key in <code style={{ fontSize: 11, background: 'var(--c-surface2)', padding: '1px 5px', borderRadius: 4 }}>.env.local</code>) or the question needs rephrasing. Try being more specific — e.g. "Should I start pension drawdown before April 2027?" rather than a general topic.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => handleSubmit(currentQuery)} style={{ padding: '8px 16px', borderRadius: 100, background: 'var(--c-acc)', border: 'none', color: 'var(--c-bg)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Try again →
+              </button>
+              <button onClick={() => { setCurrentQuery(''); orc.reset?.() }} style={{ padding: '8px 16px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-sep)', color: 'var(--c-text2)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                New question
+              </button>
+            </div>
           </div>
         )}
 

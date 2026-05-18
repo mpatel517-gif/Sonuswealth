@@ -29,6 +29,8 @@ import { BRAND } from '../config/brand.js'
 import {
   calcFQ, fqBand, fmt,
   planFor, planStaleness,
+  SCORING_VERSION, RISK_VERSION,
+  TAX,
 } from '../engine/fq-calculator.js'
 import OverlayShell from '../components/shared/OverlayShell.jsx'
 
@@ -42,10 +44,10 @@ const LONGEVITY_BANDS = [
 
 // Plan types we surface in Settings — read via planFor() stub today.
 const PLAN_TYPES = [
-  { id: 'protection', label: 'Protection plan', glyph: '⛨' },
-  { id: 'drawdown',   label: 'Drawdown plan',   glyph: '⊿' },
-  { id: 'estate',     label: 'Estate plan',     glyph: '◇' },
-  { id: 'cashflow',   label: 'Cashflow plan',   glyph: '≋' },
+  { id: 'protection', label: 'Protection plan', glyph: '⛨', tab: 'money'    },
+  { id: 'drawdown',   label: 'Drawdown plan',   glyph: '⊿', tab: 'flow'     },
+  { id: 'estate',     label: 'Estate plan',     glyph: '◇', tab: 'tax'      },
+  { id: 'cashflow',   label: 'Cashflow plan',   glyph: '≋', tab: 'flow'     },
 ]
 
 // Inline pill selector for longevity band.
@@ -76,7 +78,7 @@ function LongevityPill({ value, onChange }) {
 }
 
 // Plan list item — shows staleness chip if engine flags it.
-function PlanRow({ entity, planType }) {
+function PlanRow({ entity, planType, onNav, onClose }) {
   const plan = planFor(entity, planType.id)
   const stale = planStaleness(entity, planType.id) || { stale: false, severity: 'none' }
   const exists = plan != null
@@ -88,12 +90,22 @@ function PlanRow({ entity, planType }) {
     ? (stale.stale ? 'Stale' : 'Current')
     : 'Not started'
 
+  function handleClick() {
+    if (planType.tab && onNav) {
+      onClose?.()
+      onNav(planType.tab)
+    }
+  }
+
   return (
-    <div style={{
-      display:'flex', alignItems:'center', gap:12,
-      padding:'12px 16px',
-      borderBottom:'1px solid var(--c-sep)',
-    }}>
+    <div
+      onClick={handleClick}
+      style={{
+        display:'flex', alignItems:'center', gap:12,
+        padding:'12px 16px',
+        borderBottom:'1px solid var(--c-sep)',
+        cursor: planType.tab && onNav ? 'pointer' : 'default',
+      }}>
       <div style={{
         width:28, height:28, borderRadius:7,
         background: exists ? 'var(--c-acc-bg)' : 'var(--c-surface2)',
@@ -120,6 +132,9 @@ function PlanRow({ entity, planType }) {
       }}>
         {chipLabel}
       </div>
+      {planType.tab && onNav && (
+        <span style={{ color:'var(--c-text3)', fontSize:'var(--fs-title)', flexShrink:0 }}>›</span>
+      )}
     </div>
   )
 }
@@ -286,7 +301,7 @@ function writeLS(key, value) {
   try { window.localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore */ }
 }
 
-export default function Settings({ entity, theme='dark', onThemeChange, onClose, onHome }) {
+export default function Settings({ entity, theme='dark', onThemeChange, onClose, onHome, onNav }) {
   const [detail, setDetail] = useState(null)   // null | 'profile' | 'financial' | ...
   const [hideBalances, setHideBalances] = useState(() => readLS(LS_HIDE_BALANCES, false))
   const [longevity,    setLongevity]    = useState(() =>
@@ -444,7 +459,7 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
             <LongevityPill value={longevity} onChange={setLongevity} />
           </div>
           {PLAN_TYPES.map(pt => (
-            <PlanRow key={pt.id} entity={entity} planType={pt} />
+            <PlanRow key={pt.id} entity={entity} planType={pt} onNav={onNav} onClose={onClose} />
           ))}
         </Section>
 
@@ -576,7 +591,7 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
           <InfoRow label="Data as of"    value={dataDate}/>
           <InfoRow label="Jurisdiction"
             value={entity?.jurisdictionContext?.primary || 'United Kingdom'}/>
-          <InfoRow label="Tax year"      value="2026/27 UK"/>
+          <InfoRow label="Tax year"      value={`${TAX.taxYear ?? '2026/27'} UK`}/>
           <InfoRow label="Applied since" value={BRAND.appliedSince}/>
           <InfoRow label="Next rules change" value={BRAND.nextRulesDate} last={true}/>
           <div style={{ padding:'16px', fontSize:'var(--fs-small)',
@@ -597,8 +612,8 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
           <InfoRow label="Applied since"    value={BRAND.appliedSince}/>
           <InfoRow label="Next rules date"  value={BRAND.nextRulesDate}/>
           <InfoRow label="Data last updated" value={dataDate}/>
-          <InfoRow label="Scoring engine"   value="FINIO-1.0"/>
-          <InfoRow label="Risk engine"      value="RISK-1.0" last={true}/>
+          <InfoRow label="Scoring engine"   value={SCORING_VERSION}/>
+          <InfoRow label="Risk engine"      value={RISK_VERSION} last={true}/>
           <div style={{ padding:'16px', fontSize:'var(--fs-small)',
             color:'var(--c-text3)', lineHeight:1.6 }}>
             {BRAND.disclaimer}

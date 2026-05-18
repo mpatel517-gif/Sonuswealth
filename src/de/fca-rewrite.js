@@ -48,22 +48,57 @@ export function fcaBoundaryCheck(text) {
 }
 
 /**
- * Rewrite a full decision tree's recommendation field.
- * Mutates recommendation.rationale in place. Returns { tree, rewrote }.
+ * Rewrite a full decision tree's text fields.
+ * Covers: recommendation.rationale, tree.statement, and per-option
+ * name / summary / rationale fields.
+ * Returns { tree, rewrote }.
  */
 export function fcaRewriteTree(tree) {
-  if (!tree?.recommendation?.rationale) return { tree, rewrote: false };
-  const { text, rewrote, changes } = fcaRewrite(tree.recommendation.rationale);
+  if (!tree) return { tree, rewrote: false };
+
+  let anyRewrote = false;
+  const allChanges = [];
+
+  // Helper: rewrite one string, track changes
+  function rw(text) {
+    if (!text || typeof text !== 'string') return text;
+    const { text: out, rewrote, changes } = fcaRewrite(text);
+    if (rewrote) { anyRewrote = true; allChanges.push(...changes); }
+    return out;
+  }
+
+  // 1. tree.statement
+  const statement = rw(tree.statement);
+
+  // 2. per-option fields: name, summary, rationale
+  const options = (tree.options ?? []).map(opt => ({
+    ...opt,
+    name:      rw(opt.name),
+    summary:   rw(opt.summary),
+    rationale: rw(opt.rationale),
+  }));
+
+  // 3. recommendation.rationale
+  let recommendation = tree.recommendation;
+  if (recommendation?.rationale) {
+    const { text: recText, rewrote: recRewrote, changes: recChanges } = fcaRewrite(recommendation.rationale);
+    if (recRewrote) { anyRewrote = true; allChanges.push(...recChanges); }
+    recommendation = {
+      ...recommendation,
+      rationale:    recText,
+      fcaCompliant: fcaBoundaryCheck(recText),
+      _fcaChanges:  recChanges.length ? recChanges : undefined,
+    };
+  }
+
   return {
     tree: {
       ...tree,
-      recommendation: {
-        ...tree.recommendation,
-        rationale: text,
-        fcaCompliant: fcaBoundaryCheck(text),
-        _fcaChanges: changes.length ? changes : undefined,
-      },
+      statement,
+      options,
+      recommendation,
+      _fcaRewriteApplied: anyRewrote,
     },
-    rewrote,
+    rewrote: anyRewrote,
   };
 }

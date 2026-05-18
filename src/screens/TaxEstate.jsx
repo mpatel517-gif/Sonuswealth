@@ -46,6 +46,7 @@ import {
 } from '../components/shared/index.js'
 import { useCascadeTrigger, useCounterAnimation, useInView } from '../hooks/useAnimation.jsx'
 import InheritanceStory from '../components/TaxEstate/InheritanceStory.jsx'
+import { ihtProjection } from '../engine/tax-estate-engine.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & helpers
@@ -919,22 +920,12 @@ function IHTDualNumber({ entity }) {
   // After 2027: force isPostPension by modelling. te_ihtExposure already
   // computes against today's date; if today < 6-Apr-2027 we approximate the
   // 2027 view by using ihtDynamic with includeSipp=true (pension in estate).
+  // After 2027: use the same te_ihtExposure code path as IHTDrillPanel so both
+  // tiles always agree. scenario.postPension=true forces SIPP into the estate
+  // regardless of today's date (engine patch in tax-estate-engine.js §8.9).
   const after2027 = isPostPension
     ? exposureToday
-    : safe(() => {
-        const ihtAfter = ihtDynamic(entity, true)
-        // Cast back to ihtExposure-shape essentials
-        return {
-          gross_estate: ihtAfter.gross,
-          net_estate:   ihtAfter.taxable + (ihtAfter.gross - ihtAfter.taxable),
-          taxable_estate: ihtAfter.taxable,
-          iht_due: ihtAfter.iht,
-          effective_iht_rate: ihtAfter.gross > 0 ? ihtAfter.iht / ihtAfter.gross : 0,
-          beneficiary_value: Math.max(0, ihtAfter.gross - ihtAfter.iht),
-          confidence: 'MED',
-          reliefs: { apr_bpr: { allowance_used: 0 }, charity: {} },
-        }
-      }, null)
+    : safe(() => te_ihtExposure(entity, 'UK-2026.1', { postPension: true }), null)
 
   if (!exposureToday || !after2027) return null
 
@@ -1021,43 +1012,122 @@ function IHTDualNumber({ entity }) {
 }
 
 // §6.5 — IHT waterfall + multi-slider
+// Sliders map to engine delta keys:
+//   sippDraw  → drawdown_per_year  (annual SIPP drawdown; engine multiplies ×20)
+//   gift      → gift_amount        (one-off gift / PET)
+//   bpr       → apr_bpr_allowance_claimed (BPR/APR relief claimed)
 function IHTWaterfall({ entity }) {
   const [deltas, setDeltas] = useState({ sippDraw: 0, gift: 0, bpr: 0 })
-  const wf = safe(() => ihtWaterfall(entity, deltas), null)
-  // Animate the savings number
-  const animatedSavings = useCounterAnimation(wf?.savings || 0, {
+
+  // Map component slider keys → engine delta keys
+  const engineDeltas = {
+    drawdown_per_year:         deltas.sippDraw,
+    gift_amount:               deltas.gift,
+    apr_bpr_allowance_claimed: deltas.bpr,
+  }
+
+  const wf = safe(() => ihtWaterfall(entity, engineDeltas), null)
+
+  // delta_vs_baseline is negative when sliders reduce IHT (savings = positive)
+  const savings = wf ? Math.max(0, -(wf.delta_vs_baseline || 0)) : 0
+  const animatedSavings = useCounterAnimation(savings, {
     duration: 600, format: (n) => fmt(Math.round(n)),
   })
+
   if (!wf) return null
   const couples = !!entity?.isCouple
-  const stages = wf.stages || []
-  const max = Math.max(1, ...stages.map(s => s.value || 0))
+  const ihtDue  = wf.iht_due ?? 0
+
+  // Engine returns waterfall_components: [{ stage, value }]
+  // Map stage keys to human labels and filter to display-worthy rows
+  const STAGE_LABELS = {
+    gross_estate:            'Gross estate',
+    minus_drawdown_consumed: 'Less: SIPP drawdown',
+    minus_gift_PET:          'Less: gifts (PETs)',
+    minus_property_downsize: 'Less: downsizing',
+    minus_life_in_trust:     'Less: assets in trust',
+    subtotal:                'Net estate',
+    minus_NRB:               'Less: nil-rate band',
+    minus_RNRB:              'Less: residence NRB',
+    minus_BPR_APR:           'Less: BPR / APR relief',
+    minus_charity:           'Less: charitable gifts',
+    taxable:                 'Taxable estate',
+    iht_due:                 'IHT due',
+  }
+  // Show gross, deductions with non-zero values, taxable, and iht_due
+  const components = wf.waterfall_components || []
+  const stages = components
+    .filter(c => {
+      if (!STAGE_LABELS[c.stage]) return false
+      // Always show anchor rows; hide zero-value deduction rows
+      if (c.stage === 'gross_estate' || c.stage === 'subtotal' || c.stage === 'taxable' || c.stage === 'iht_due') return true
+      return (c.value || 0) !== 0
+    })
+    .map(c => ({ label: STAGE_LABELS[c.stage] || c.stage, value: c.value || 0, stage: c.stage }))
+
+  const absMax = Math.max(1, ...stages.map(s => Math.abs(s.value)))
+
   return (
     <div className="card sw-card-elevated">
       <SectionHead
         title="IHT waterfall — what reduces the bill?"
-        sub={`Save up to ${animatedSavings} with combined moves`}
+        sub={savings > 0 ? `Projected saving: ${animatedSavings}` : 'Adjust sliders to model IHT-reducing moves'}
         accessory={couples ? <Chip tone="info">Couples £5m business + agricultural relief pool</Chip> : null}
       />
-      <RevealStagger interval={80} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+
+      {/* IHT result summary — updates with sliders */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 14px', marginBottom: 'var(--space-sm)',
+        background: ihtDue > 0 ? 'var(--c-tint-coral)' : 'var(--c-tint-mint)',
+        borderRadius: 'var(--r-md)',
+        border: `1px solid ${ihtDue > 0 ? 'rgba(255,59,48,.25)' : 'rgba(52,199,89,.25)'}`,
+      }}>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 2 }}>IHT after moves</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: ihtDue > 0 ? 'var(--c-danger)' : 'var(--c-success)',
+            fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5 }}>
+            {fmt(ihtDue)}
+          </div>
+        </div>
+        {(wf.delta_vs_baseline || 0) !== 0 && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 2 }}>vs. no action</div>
+            <div style={{ fontSize: 14, fontWeight: 700,
+              color: savings > 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>
+              {savings > 0 ? `−${fmt(savings)}` : `+${fmt(Math.abs(wf.delta_vs_baseline))}`}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <RevealStagger interval={60} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 'var(--space-md)' }}>
         {stages.map((s, i) => {
-          const w = Math.round(((s.value || 0) / max) * 100)
-          const colour = i === 0 ? 'var(--c-danger)' : 'var(--c-success)'
+          const isDeduction  = s.value < 0
+          const isResult     = s.stage === 'iht_due'
+          const isGross      = s.stage === 'gross_estate'
+          const pct          = Math.round((Math.abs(s.value) / absMax) * 100)
+          const colour       = isResult ? 'var(--c-danger)' : isDeduction ? 'var(--c-success)' : isGross ? 'var(--c-text3)' : 'var(--c-warning)'
           return (
-            <div key={i}>
+            <div key={s.stage}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
                 <span style={{ color: 'var(--c-text2)' }}>{s.label}</span>
-                <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmt(s.value || 0)}</span>
+                <span style={{ color: 'var(--c-text)', fontWeight: isResult ? 800 : 600, fontVariantNumeric: 'tabular-nums' }}>
+                  {isDeduction ? `−${fmt(Math.abs(s.value))}` : fmt(s.value)}
+                </span>
               </div>
-              <GaugeBar pct={w} colour={colour} height={6} delay={i * 80} />
+              <GaugeBar pct={pct} colour={colour} height={isResult ? 8 : 5} delay={i * 60} />
             </div>
           )
         })}
       </RevealStagger>
-      <SliderRow label="SIPP drawdown" value={deltas.sippDraw} max={120000} step={5000}
-        onChange={v => setDeltas(d => ({ ...d, sippDraw: v }))} />
-      <SliderRow label="Gifts to trust" value={deltas.gift} max={500000} step={5000}
-        onChange={v => setDeltas(d => ({ ...d, gift: v }))} />
+
+      <SliderRow label="SIPP drawdown (annual)" value={deltas.sippDraw} max={120000} step={5000}
+        onChange={v => setDeltas(d => ({ ...d, sippDraw: v }))}
+        note="Modelled over 20 years — reduces estate by drawing down pension before death" />
+      <SliderRow label="Gifts / PETs" value={deltas.gift} max={500000} step={5000}
+        onChange={v => setDeltas(d => ({ ...d, gift: v }))}
+        note="One-off gift. IHT taper applies if death within 7 years" />
       <SliderRow label="Business relief positioning (BPR)" value={deltas.bpr} max={500000} step={5000}
         onChange={v => setDeltas(d => ({ ...d, bpr: v }))}
         note="Business + agricultural relief transitional rules apply — pre vs post 30-Oct-2024" />
@@ -1077,6 +1147,90 @@ function SliderRow({ label, value, max, step, onChange, note }) {
         style={{ width: '100%', accentColor: 'var(--c-acc)' }} />
       {note && <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>{note}</div>}
     </div>
+  )
+}
+
+// §8.20 — Year-by-year IHT projection table
+function IHTYearByYear({ entity }) {
+  const rows = useMemo(() => {
+    try { return ihtProjection(entity, 5) } catch { return [] }
+  }, [entity])
+
+  if (!rows.length) return null
+
+  const baseIHT = rows[0]?.ihtDue ?? 0
+
+  return (
+    <RevealCard
+      cardId="te-iht-projection"
+      title="Year-by-year IHT projection"
+      entity={entity}
+      defaultOpen={false}
+      headerAccessory={<Chip tone="neutral" size="sm">est · not advice</Chip>}
+    >
+      <div style={{ padding: '0 0 12px' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: 12,
+          }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--c-border)' }}>
+                {['Year', 'Est. estate', 'IHT due', 'vs today'].map(h => (
+                  <th key={h} style={{
+                    padding: '6px 8px',
+                    textAlign: h === 'Year' ? 'left' : 'right',
+                    color: 'var(--c-text3)',
+                    fontWeight: 600,
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    whiteSpace: 'nowrap',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => {
+                const isPensionYear = row.pensionIncluded && (i === 0 || !rows[i - 1].pensionIncluded)
+                const delta = row.ihtDue - baseIHT
+                return (
+                  <tr key={row.year} style={{
+                    borderBottom: '1px solid var(--c-border-subtle, color-mix(in srgb, var(--c-border) 40%, transparent))',
+                    background: isPensionYear ? 'color-mix(in srgb, var(--c-warn, #f59e0b) 8%, transparent)' : 'transparent',
+                  }}>
+                    <td style={{ padding: '7px 8px', color: 'var(--c-text)', fontWeight: i === 0 ? 700 : 400 }}>
+                      {row.year}
+                      {isPensionYear && (
+                        <span style={{
+                          marginLeft: 6,
+                          fontSize: 10,
+                          color: 'var(--c-warn, #f59e0b)',
+                          fontWeight: 600,
+                        }}>Pension enters estate</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
+                      £{fmt(row.estateValue)}
+                    </td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', color: row.ihtDue > 0 ? 'var(--c-bad, #ef4444)' : 'var(--c-good, #22c55e)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                      {row.ihtDue > 0 ? `£${fmt(row.ihtDue)}` : '—'}
+                    </td>
+                    <td style={{ padding: '7px 8px', textAlign: 'right', color: delta > 0 ? 'var(--c-bad, #ef4444)' : delta < 0 ? 'var(--c-good, #22c55e)' : 'var(--c-text3)', fontVariantNumeric: 'tabular-nums' }}>
+                      {i === 0 ? '—' : delta === 0 ? '=' : `${delta > 0 ? '+' : ''}£${fmt(Math.abs(delta))}`}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+          Growth assumed at {entity?.expectedReturn != null ? `${((entity.expectedReturn) * 100).toFixed(1)}%` : '4.0%'} p.a. · NRB/RNRB thresholds frozen · Annual gift exemption £3,000/yr deducted · Pension IHT inclusion from Apr 2027.
+        </div>
+      </div>
+    </RevealCard>
   )
 }
 
@@ -1274,7 +1428,7 @@ function NominationsManager({ entity }) {
 }
 
 // §6.9 — Will & LPA (X27 primary canonical home)
-function WillLPACard({ entity }) {
+function WillLPACard({ entity, onDrillMetric }) {
   const wl = safe(() => willLpaStatus(entity), null)
   const intst = safe(() => intestacyDistribution(entity), null)
   const nwc = safe(() => noWillCoI(entity), null)
@@ -1292,15 +1446,26 @@ function WillLPACard({ entity }) {
         }
       />
       {cohabRed && (
-        <div className="sw-pulse-glow" style={{
-          marginBottom: 'var(--space-md)', padding: 'var(--space-md)',
-          background: 'var(--c-tint-coral)',
-          border: '1px solid rgba(255,59,48,.40)',
-          borderRadius: 'var(--r-md)',
-          fontSize: 13, color: 'var(--c-coral-text)', fontWeight: 700,
-        }}>
+        <div
+          className="sw-pulse-glow sw-press"
+          role="button"
+          tabIndex={0}
+          onClick={() => onDrillMetric?.('will')}
+          onKeyDown={(e) => e.key === 'Enter' && onDrillMetric?.('will')}
+          style={{
+            marginBottom: 'var(--space-md)', padding: 'var(--space-md)',
+            background: 'var(--c-tint-coral)',
+            border: '1px solid rgba(255,59,48,.40)',
+            borderRadius: 'var(--r-md)',
+            fontSize: 13, color: 'var(--c-coral-text)', fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
           ⚠ RED — Cohabiting partner with no current will. Intestacy gives them
           NOTHING under English/Welsh law. This is the single highest-risk gap.
+          <span style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 500, opacity: 0.85 }}>
+            Tap to review will &amp; estate planning →
+          </span>
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
@@ -1479,7 +1644,7 @@ function BPRAPRMechanics({ entity }) {
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         <Chip tone="info">Pre-30-Oct-2024 trusts: 100% relief</Chip>
-        <Chip tone="warn">Post-30-Oct-2024 trusts: 50% above £1m</Chip>
+        <Chip tone="warn">Post-30-Oct-2024 trusts: 50% above {fmt(allow?.individual || 2500000)}</Chip>
         <Chip tone="info">7-yr refresh applies</Chip>
         <Chip tone="neutral">Instalment option available</Chip>
         <Chip tone="neutral">CPI indexation (post-2030)</Chip>
@@ -1503,8 +1668,9 @@ function BPRAPRMechanics({ entity }) {
 
 // §6.3 — CoI odometer (Estate planning domain) w/ cascade halo on change
 function EstateCoIOdometer({ entity }) {
-  const coi = safe(() => totalCoI(entity), { byDomain: {}, confidence: 'MED' })
-  const estCoI = coi?.byDomain?.estatePlanning || 0
+  const coi = safe(() => totalCoI(entity), { total: 0, byDomain: {}, confidence: 'MED' })
+  // Fix 4: show total CoI (all domains), not just the estatePlanning domain slice.
+  const estCoI = coi?.total || 0
   const days = daysLeft() || 365
   const dailyRate = estCoI > 0 ? estCoI / Math.max(1, days) : 0
   const byAction = Object.entries(coi.byDomain || {})
@@ -2435,7 +2601,7 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
         <div key="estate" className="sw-tab-slide">
           {/* §13.9 magic — Inheritance Story leads the Estate sub-tab.
               Replaces IHT waterfall as primary. Waterfall available on scroll. */}
-          <InheritanceStory entity={entity} />
+          <InheritanceStory entity={entity} onDrillMetric={onDrillMetric} />
           <EstatePlanBadge entity={entity} />
           <EstateCoIOdometer entity={entity} />
           <div ref={ihtDualRef} style={{ position: 'relative' }}>
@@ -2466,9 +2632,13 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
           )}
 
           {/* Will & LPA — primary canonical home (X27) */}
-          <WillLPACard entity={entity} />
+          <WillLPACard entity={entity} onDrillMetric={onDrillMetric} />
 
           <IHTWaterfall entity={entity} />
+
+          {/* Year-by-year IHT projection — §8.20 */}
+          <IHTYearByYear entity={entity} />
+
           <GiftClock entity={entity} />
 
           {/* Life-stage gated sections (D-CARD-REVEAL-1) */}

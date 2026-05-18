@@ -5,7 +5,7 @@
 // All pure. No side effects. No hardcoded values.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { netWorth, calcFQ, calcRisk, TAX } from './fq-calculator.js';
+import { netWorth, calcFQ, calcRisk, TAX, monthlySurplus } from './fq-calculator.js';
 
 const VERSION = 'RISK-ENGINE-1.0';
 
@@ -366,6 +366,103 @@ function _projectBTRPoints(months, level) {
  * @param {'low'|'medium'|'high'} engagementLevel
  * @returns {{ currentBTR, projectedBTR, currentRS, projectedRS, engagementLevel, months, monthlyPath, rulesVersion }}
  */
+/**
+ * Month-by-month drawdown survival trajectory for a single shock.
+ * @param {object} entity
+ * @param {string} shockId - job_loss | illness | market_fall | rate_rise | death
+ * @param {number} months  - projection window (default 24)
+ * @returns {{ baseline, shocked, survivalMonths, recoveryMonth }}
+ */
+export function shockTrajectory(entity, shockId, months = 24) {
+  // Investable assets (liquid + portfolio; excludes primary residence)
+  function investable(e) {
+    return (
+      (e.assets?.sipp?.total     || 0) +
+      (e.assets?.isa?.value      || 0) +
+      (e.assets?.portfolio?.value|| 0) +
+      (e.assets?.cash?.total     || 0)
+    );
+  }
+
+  // Monthly spend: use surplus deficit if negative (spending > income), else targetIncome/12
+  function monthlyBurn(e) {
+    let sur = 0;
+    try { sur = monthlySurplus(e)?.surplus ?? 0; } catch { sur = 0; }
+    if (sur < 0) return Math.abs(sur);       // already a net outflow
+    return (e.targetIncome || 50000) / 12;   // fallback: annual target / 12
+  }
+
+  // Estimate annual portfolio volatility from asset mix.
+  // Equity-like assets (SIPP, ISA, portfolio) vol ~16%/yr; cash ~1%/yr.
+  // Blend assumes remaining share is bonds at ~6%/yr.
+  // Default 50/50 equity/bond → annualVol ≈ 0.11 (√(0.5²×0.16² + 0.5²×0.06²)).
+  function portfolioVol(e) {
+    const total = investable(e);
+    if (total <= 0) return 0.11;
+    const equityLike = (e.assets?.sipp?.total || 0) + (e.assets?.isa?.value || 0) + (e.assets?.portfolio?.value || 0);
+    const cashShare  = Math.min(1, (e.assets?.cash?.total || 0) / total);
+    const equityShare = Math.max(0, 1 - cashShare);
+    // Treat equity share as split evenly between equities (0.16) and bonds (0.06)
+    const eqW  = equityShare * 0.5;
+    const bndW = equityShare * 0.5;
+    const cshW = cashShare;
+    return Math.sqrt(eqW * eqW * 0.16 * 0.16 + bndW * bndW * 0.06 * 0.06 + cshW * cshW * 0.01 * 0.01);
+  }
+
+  const annualReturn  = entity.expectedReturn || 0.04;
+  const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
+  const annualVol     = portfolioVol(entity);
+
+  // Deterministic "bad sequence" stress adjustment per month:
+  //   months 1–12: below-average (−annualVol/12 each month)
+  //   months 13+:  above-average (+annualVol/12 each month — partial recovery)
+  // This models the empirical finding that early-retirement sequence risk is worst
+  // when falls precede recovery, not when they coincide with accumulation.
+  function stressAdj(m) {
+    return m <= 12 ? -(annualVol / 12) : (annualVol / 12);
+  }
+
+  const baseStart   = investable(entity);
+  const burn        = monthlyBurn(entity);
+
+  // Apply the shock to get shocked starting value
+  const shockResult = runShock(entity, shockId);
+  const shockedStart = Math.max(0, baseStart + shockResult.nwDelta);
+
+  const baseline = [{ month: 0, value: baseStart }];
+  const shocked  = [{ month: 0, value: shockedStart }];
+
+  let survivalMonths = months;
+  let recoveryMonth  = null;
+
+  for (let m = 1; m <= months; m++) {
+    const prevBase    = baseline[m - 1].value;
+    const prevShocked = shocked[m - 1].value;
+
+    // Baseline: smooth deterministic compounding (unchanged — no stress)
+    const nextBase = Math.max(0, prevBase * (1 + monthlyReturn) - burn);
+
+    // Shocked: sequence-of-returns stress path — bad sequence first, partial recovery later
+    const nextShocked = Math.max(0, prevShocked * (1 + monthlyReturn + stressAdj(m)) - burn);
+
+    baseline.push({ month: m, value: Math.round(nextBase) });
+    shocked.push({ month: m, value: Math.round(nextShocked) });
+
+    // First month stressed shocked portfolio hits 0 → survival ceiling
+    if (nextShocked <= 0 && survivalMonths === months) {
+      survivalMonths = m;
+    }
+
+    // Recovery: first month baseline returns to ≥ pre-shock level (baseStart)
+    // Only meaningful for portfolio shocks; income shocks have no portfolio rebound modelled here
+    if (recoveryMonth === null && nextBase >= baseStart) {
+      recoveryMonth = m;
+    }
+  }
+
+  return { baseline, shocked, survivalMonths, recoveryMonth };
+}
+
 export function projectBTR(entity, months = 12, engagementLevel = 'medium') {
   if (!BTR_TIERS[engagementLevel]) throw new Error(`Unknown engagementLevel: "${engagementLevel}"`);
 

@@ -43,6 +43,8 @@ import {
   planFor, planStaleness, varianceFor,
   // Priority cards + decumulation
   calcAge, taxEfficiencyScore, effectiveBeneficiaryRate,
+  // Tax constants
+  TAX,
 } from '../engine/fq-calculator.js'
 
 import { BRAND } from '../config/brand.js'
@@ -76,6 +78,7 @@ import PropertyDrillDown    from '../components/MyMoney/PropertyDrillDown.jsx'
 import BusinessDrillDown    from '../components/MyMoney/BusinessDrillDown.jsx'
 import ProtectionDrillDown  from '../components/MyMoney/ProtectionDrillDown.jsx'
 import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx'
+import WhatIfLibrary        from '../components/MyMoney/WhatIfLibrary.jsx'
 import { EV } from '../state/events.jsx'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -993,8 +996,8 @@ function CliffEdgeWarning({ entity }) {
             </div>
             <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>
               {past
-                ? `Above £100k your personal allowance is tapering. A £${fmt(pensionToSolve)} pension contribution pulls you below it.`
-                : `Above £100k: your personal allowance disappears at 50p per £ — 60% effective rate. A £${fmt(pensionToSolve)} pension contribution keeps you below the cliff.`}
+                ? `Above £100k your personal allowance is tapering. A pension contribution of around £${fmt(pensionToSolve)} could help — verify the amount and timing with an adviser before acting.`
+                : `Above £100k: your personal allowance disappears at 50p per £ — 60% effective rate. A pension contribution could help keep you below the threshold — verify with an adviser before acting.`}
             </div>
           </div>
         </div>
@@ -1133,7 +1136,7 @@ function CashFlowSankey({ m }) {
 function SurplusTile({ entity }) {
   const m = monthlySurplus(entity)
   const surplus = m.surplus || -(m.deficit || 0)
-  const pos = surplus > 0
+  const pos = surplus >= 0
   const amt = Math.abs(surplus)
   const accentColor = pos ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)'
 
@@ -1466,7 +1469,7 @@ function DrawdownFrameworkPanel({ entity, onOpenDrillDown }) {
     {
       id: 'coi', title: 'Cost of waiting',
       hero: fmt(Object.values(coiV).reduce((s, v) => s + v, 0)),
-      heroLabel: 'Total cost of un-decided actions',
+      heroLabel: 'Total cost of un-decided actions (pension & ISA optimisation)',
       sub: `Drawdown ${fmt(coiV.drawdown)} · Wrapper choice ${fmt(coiV.wrapper)}`,
       colour: '#FF6B6B',
     },
@@ -1550,66 +1553,6 @@ function DrawdownFrameworkPanel({ entity, onOpenDrillDown }) {
       ))}
 
       <CausalityStripe sources={['CMA-2026.1', 'Bengen 1994', 'Morningstar UK 2024']} />
-    </RevealCard>
-  )
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// §10 DRAWDOWN MATRIX — £5k step grid with 60% effective-rate depth chip
-// ═════════════════════════════════════════════════════════════════════════════
-
-function DrawdownMatrixPanel({ entity }) {
-  const m = useMemo(() => drawdownMatrix(entity, { from: 0, to: 100000, step: 5000 }, true, false), [entity])
-  return (
-    <RevealCard cardId="drawdown-matrix" title="Annual income table — what each level of withdrawal looks like"
-      defaultOpen={false}
-      headerAccessory={
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-acc)' }}>
-          Best fit {fmt(m.recommended)}
-        </span>
-      }
-    >
-      <div style={{
-        maxHeight: 280, overflowY: 'auto',
-        background: 'var(--c-surface2)', borderRadius: 10,
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <th style={{ padding: 8, textAlign: 'left', color: 'var(--c-text3)' }}>Drawdown</th>
-              <th style={{ padding: 8, textAlign: 'right', color: 'var(--c-text3)' }}>Tax</th>
-              <th style={{ padding: 8, textAlign: 'right', color: 'var(--c-text3)' }}>IHT saved</th>
-              <th style={{ padding: 8, textAlign: 'right', color: 'var(--c-text3)' }}>Net</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(m.rows || []).map((r, i) => {
-              const isBest = r.drawdown === m.recommended
-              const effRate = r.drawdown > 0 ? r.tax / r.drawdown : 0
-              const cliff = effRate >= 0.60
-              return (
-                <tr key={i} style={{
-                  borderTop: '1px solid var(--c-sep)',
-                  background: isBest ? 'rgba(0,229,168,0.08)' : 'transparent',
-                }}>
-                  <td style={{ padding: 8, color: 'var(--c-text)' }}>
-                    {fmt(r.drawdown)}
-                    {cliff && <span style={{
-                      marginLeft: 6, padding: '1px 5px', borderRadius: 4,
-                      background: 'rgba(255,107,107,0.20)', color: '#FF6B6B',
-                      fontSize: 9, fontWeight: 700,
-                    }}>60%+</span>}
-                  </td>
-                  <td style={{ padding: 8, textAlign: 'right', color: '#FF6B6B' }}>{fmt(r.tax)}</td>
-                  <td style={{ padding: 8, textAlign: 'right', color: '#00E5A8' }}>{fmt(r.ihtSaved)}</td>
-                  <td style={{ padding: 8, textAlign: 'right', color: 'var(--c-text)', fontWeight: isBest ? 700 : 500 }}>{fmt(r.net)}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      <CausalityStripe sources={['Your data', BRAND.rulesVersion]} />
     </RevealCard>
   )
 }
@@ -1980,9 +1923,9 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
         }}>
-          <MetricTile label="This year's cap" value={fmt(60000)} sub="2026/27 tax year" colour="#4D8EFF" />
-          <MetricTile label="Reduced cap (after drawdown)" value={entity.mpaaTriggered ? fmt(10000) : 'Not triggered'}
-            sub={entity.mpaaTriggered ? 'Active — locked at £10k' : 'Full cap still available'} />
+          <MetricTile label="This year's cap" value={fmt(TAX.pensionAA)} sub="2026/27 tax year" colour="#4D8EFF" />
+          <MetricTile label="Reduced cap (after drawdown)" value={entity.mpaaTriggered ? fmt(TAX.mpaa ?? 10000) : 'Not triggered'}
+            sub={entity.mpaaTriggered ? `Active — locked at ${fmt(TAX.mpaa ?? 10000)}` : 'Full cap still available'} />
           <MetricTile label="Unused room from prior 3 yrs" value={fmt((+entity.carryForward3yr || 0))}
             sub="Carry forward — use before April" colour="#00E5A8" />
         </div>
@@ -2000,9 +1943,9 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
         }}>
-          <MetricTile label="Tax-free cash taken so far" value={fmt(+entity.lsaUsed || 0)} sub={`of £${(268275/1000).toFixed(0)}k lifetime cap`} />
-          <MetricTile label="Lifetime lump-sum cap used" value={fmt(+entity.lsdbaUsed || 0)} sub={`of £${(1073100/1000).toFixed(0)}k incl. death benefits`} />
-          <MetricTile label="Tax-free cash still available" value={fmt(Math.min(sippTot * 0.25, 268275))} sub="up to 25% of your pot" colour="#00E5A8" />
+          <MetricTile label="Tax-free cash taken so far" value={fmt(+entity.lsaUsed || 0)} sub={`of £${(TAX.lsa/1000).toFixed(0)}k lifetime cap`} />
+          <MetricTile label="Lifetime lump-sum cap used" value={fmt(+entity.lsdbaUsed || 0)} sub={`of £${(TAX.lsdba/1000).toFixed(0)}k incl. death benefits`} />
+          <MetricTile label="Tax-free cash still available" value={fmt(Math.min(sippTot * 0.25, TAX.lsa))} sub="up to 25% of your pot" colour="#00E5A8" />
         </div>
 
         {/* §4.5.4 Drawdown schedule editor */}
@@ -2181,7 +2124,7 @@ function BulletChart({ pct = 0 }) {
   )
 }
 
-function PriorityCards({ entity }) {
+function PriorityCards({ entity, onNav, setDrillPension }) {
   const [openId, setOpenId] = useState(null)
 
   const a    = entity.assets || {}
@@ -2249,10 +2192,10 @@ function PriorityCards({ entity }) {
         : `Clears in ${debtYears.toFixed(0)} yr`,
       band: debtBand, pct: debtPct,
       action: debtYears == null
-        ? `Add monthly payment details to your liabilities so we can calculate payoff time and cost.`
+        ? `Add monthly payment details to your liabilities so we can calculate payoff time and cost. Verify with an adviser.`
         : debtYears > 20
-          ? `Overpaying by £100/month can shave years off the term — check your ERC-free allowance (typically 10%/yr).`
-          : `Focus surplus on pensions and ISAs before early repayment — tax relief usually wins.`,
+          ? `Overpaying by £100/month can shave years off the term — check your ERC-free allowance (typically 10%/yr). Verify with an adviser.`
+          : `Focus surplus on pensions and ISAs before early repayment — tax relief usually wins. Verify with an adviser.`,
     },
     {
       id: 'fi', icon: '🎯', label: 'Retirement funded',
@@ -2260,8 +2203,8 @@ function PriorityCards({ entity }) {
       sub: fiTarget > 0 ? `Target: ${fmt(fiTarget)} (25× income)` : 'Set a target annual income',
       band: fiBand, pct: fiPct,
       action: fiRat_ < 0.3
-        ? `Max pension contributions — £1 costs only 60p after 40% tax relief. Highest-return action available.`
-        : `Check carry-forward pension allowance from the past 3 years — can unlock more than the standard £60k.`,
+        ? `Options include: maximising pension contributions — typically the highest-return action, since £1 costs only 60p after 40% tax relief. Verify with an adviser.`
+        : `Consider checking carry-forward pension allowance from the past 3 years — this can unlock more than the standard annual cap. Verify with an adviser.`,
     },
     {
       id: 'estate', icon: '🏛', label: 'Estate efficiency',
@@ -2269,7 +2212,7 @@ function PriorityCards({ entity }) {
       sub: ebr.ihtDue > 0 ? `${fmt(ebr.ihtDue)} IHT due` : 'No IHT liability',
       band: benBand, pct: benPct,
       action: ebr.ihtDue > 0
-        ? `Nominate pension, put life cover in trust, and use the £3k annual gift allowance — all IHT-free.`
+        ? `Consider: nominating pension beneficiaries, putting life cover in trust, or using the £3k annual gift allowance — all potentially IHT-free. Verify with an adviser.`
         : `Review nominations annually and after any life change (marriage, divorce, new child).`,
     },
     {
@@ -2278,8 +2221,8 @@ function PriorityCards({ entity }) {
       sub: `ISA ${tax.breakdown?.isa || 0}% used · Pension ${tax.breakdown?.aa || 0}% used`,
       band: taxBand, pct: Math.min(tax.total || 0, 100),
       action: (tax.total || 0) < 40
-        ? `Significant unused capacity. Max ISA (£20k) then pension — allowances reset every April.`
-        : `Check carry-forward pension allowance from the past 3 years to unlock extra shelter.`,
+        ? `Significant unused capacity. Max ISA (£20k) then pension — allowances reset every April. Verify with an adviser.`
+        : `Check carry-forward pension allowance from the past 3 years to unlock extra shelter. Verify with an adviser.`,
     },
   ]
 
@@ -2352,6 +2295,32 @@ function PriorityCards({ entity }) {
                   borderTop: `1px solid color-mix(in srgb, ${colour} 15%, var(--c-sep))`,
                 }}>
                   {t.action}
+                  <div style={{ marginTop: 8 }}>
+                    {(t.id === 'fi') && (
+                      <button onClick={(e) => { e.stopPropagation(); setDrillPension?.(true) }} style={{
+                        fontSize: 11, fontWeight: 700, color: colour,
+                        background: `color-mix(in srgb, ${colour} 10%, var(--c-surface))`,
+                        border: `1px solid color-mix(in srgb, ${colour} 25%, var(--c-border))`,
+                        borderRadius: 100, padding: '4px 10px', cursor: 'pointer',
+                      }}>View pension →</button>
+                    )}
+                    {(t.id === 'estate') && (
+                      <button onClick={(e) => { e.stopPropagation(); onNav?.('tax') }} style={{
+                        fontSize: 11, fontWeight: 700, color: colour,
+                        background: `color-mix(in srgb, ${colour} 10%, var(--c-surface))`,
+                        border: `1px solid color-mix(in srgb, ${colour} 25%, var(--c-border))`,
+                        borderRadius: 100, padding: '4px 10px', cursor: 'pointer',
+                      }}>Go to Tax & Estate →</button>
+                    )}
+                    {(t.id === 'tax') && (
+                      <button onClick={(e) => { e.stopPropagation(); onNav?.('flow') }} style={{
+                        fontSize: 11, fontWeight: 700, color: colour,
+                        background: `color-mix(in srgb, ${colour} 10%, var(--c-surface))`,
+                        border: `1px solid color-mix(in srgb, ${colour} 25%, var(--c-border))`,
+                        borderRadius: 100, padding: '4px 10px', cursor: 'pointer',
+                      }}>Go to Cashflow →</button>
+                    )}
+                  </div>
                 </div>
               )}
             </button>
@@ -2377,7 +2346,7 @@ function PriorityCards({ entity }) {
 // §12C DECUMULATION PANEL (Phase 4E) — GIA → ISA → Pension sequencing
 // ═════════════════════════════════════════════════════════════════════════════
 
-function DecumulationPanel({ entity }) {
+function DecumulationPanel({ entity, setDrillPension }) {
   const inv = investable(entity)
   // N-03 fix: don't render an orphan "Which pot to draw from first" header
   // with no body. When the user has < £10k investable, swap the full panel
@@ -2390,9 +2359,15 @@ function DecumulationPanel({ entity }) {
         title="Which pot to draw from first"
         defaultOpen={false}
         headerAccessory={
-          <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+          <button
+            onClick={() => setDrillPension(true)}
+            style={{
+              fontSize: 11, color: 'var(--c-acc)', background: 'none',
+              border: 'none', cursor: 'pointer', padding: 0,
+            }}
+          >
             Set up your drawdown plan →
-          </span>
+          </button>
         }>
         <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, padding: '4px 0' }}>
           You need investable assets across GIA, ISA and pension before
@@ -2499,6 +2474,10 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
   const [addOpen, setAddOpen] = useState(false)
   const [windowId, setWindowId] = useState('current-period')
   const [viewMode, setViewMode] = useState('actual')
+  // scenarioEntity: set by WhatIfLibrary when the user expands a scenario card.
+  // PivotView uses activeEntity = scenarioEntity ?? entity so pivot views
+  // reflect scenario numbers while a card is expanded.
+  const [scenarioEntity, setScenarioEntity] = useState(null)
   const [filterWrapper, setFilterWrapper] = useState(null)
   // Phase 2 follow-up — bucket-style add flow + category opened for it.
   const [bucketOpen, setBucketOpen] = useState(false)
@@ -2605,7 +2584,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
           window={windowId}
           viewMode={viewMode}
           onWindowChange={setWindowId}
-          onViewModeChange={setViewMode}
+          onViewModeChange={(m) => { setViewMode(m); if (m !== 'scenario') setScenarioEntity(null) }}
           rulesVersion={BRAND.rulesVersion}
           dataDate={BRAND.dataDate}
         />
@@ -2681,11 +2660,19 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
            display:contents so the wrapper doesn't introduce a layout box. */}
       <div key={viewMode} className="sw-tab-slide" style={{ display: 'contents' }}>
 
+      {/* ── What-If scenario library (viewMode === 'scenario') ───────────────
+           Replaces the main content when the user selects the "What if" mode
+           pill in X28TopBar. All other modes fall through to the normal view. */}
+      {viewMode === 'scenario' && (
+        <WhatIfLibrary entity={entity} onScenarioSelect={setScenarioEntity} />
+      )}
+      {viewMode === 'scenario' ? null : <>
+
       {/* Phase 2A — Net position sentence: one plain-English verdict per session */}
       {(() => {
         const m = monthlySurplus(entity)
         const surplus = m.surplus || -(m.deficit || 0)
-        const pos = surplus > 0
+        const pos = surplus >= 0
         const cashLiquid = +(entity?.assets?.cash?.total || entity?.assets?.cash?.value || 0)
         const monthsRunway = !pos && cashLiquid > 0 ? cashLiquid / Math.abs(surplus) : null
         const fiRat_ = (() => {
@@ -2720,7 +2707,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
           supportingSignal = fiRat_ != null && fiRat_ < 0.5 ? `Your retirement is also ${Math.round(fiRat_ * 100)}% funded — both need attention.` : `Your wealth is still growing — but this needs fixing before it compounds.`
         } else if (fiRat_ != null && fiRat_ < 0.3) {
           urgentSignal = `You're saving ${fmt(surplus)}/month — good. But your retirement is only ${Math.round(fiRat_ * 100)}% funded.`
-          supportingSignal = 'Direct surplus to your pension first — 40% tax relief makes every £1 worth £1.67.'
+          supportingSignal = 'Options include directing surplus to a pension — 40% tax relief means every £1 could be worth £1.67. Verify with an adviser.'
         } else {
           urgentSignal = `You have ${fmt(surplus)}/month surplus and ${fqBandObj?.name?.toLowerCase() || 'solid'} overall financial health.`
           supportingSignal = 'Review the opportunities below to compound this further.'
@@ -2828,7 +2815,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
       <CliffEdgeWarning entity={entity} />
 
       {/* Phase 2C — Priority cards: only show what needs attention (replaces 5-tile StateTileRow) */}
-      <PriorityCards entity={entity} />
+      <PriorityCards entity={entity} onNav={onNav} setDrillPension={setDrillPension} />
 
       {/* ── Surplus tile (§3.6) — surplus users only; deficit users see it above the anchor ── */}
       {!isDeficit && <SurplusTile entity={entity} />}
@@ -2850,14 +2837,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         const ranked = domains.map(id => {
           const text = coiForDomain(entity, id)
           if (!text) return null
-          // Extract first £ figure from the string for sorting only.
-          const match = text.match(/£([\d,]+(?:\.\d+)?)(k|m)?/i)
-          let value = 0
-          if (match) {
-            value = parseFloat(match[1].replace(/,/g, ''))
-            if (match[2]?.toLowerCase() === 'k') value *= 1000
-            if (match[2]?.toLowerCase() === 'm') value *= 1_000_000
-          }
+          // Use engine numeric byDomain value for sort — matches Home's totalCoI().byDomain
+          const value = coi?.byDomain?.[id] ?? 0
           return { id, text, value }
         }).filter(Boolean).sort((a, b) => b.value - a.value)
 
@@ -2888,31 +2869,43 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
                   </div>
                 )}
               </div>
-              {ranked.slice(0, 4).map((r, i) => (
-                <div key={r.id} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '7px 0',
-                  borderTop: i > 0 ? '1px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 12%, var(--c-sep))' : 'none',
-                }}>
-                  <span style={{
-                    minWidth: 18, height: 18, borderRadius: '50%',
-                    background: i === 0 ? 'var(--c-coral, #FF6F7D)' : 'var(--c-surface2)',
-                    color: i === 0 ? '#fff' : 'var(--c-text3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 9, fontWeight: 800, flexShrink: 0, marginTop: 1,
-                  }}>{i + 1}</span>
-                  <div style={{ fontSize: 11, color: i === 0 ? 'var(--c-text)' : 'var(--c-text2)', lineHeight: 1.45, flex: 1 }}>
-                    {r.text}
-                  </div>
-                </div>
-              ))}
+              {ranked.slice(0, 4).map((r, i) => {
+                const handleCoIRowClick = () => {
+                  if (r.id === 'pensions') setDrillPension(true)
+                  else if (r.id === 'investments' || r.id === 'cash' || r.id === 'alternatives') setDrillCat('investments')
+                  else if (r.id === 'property') setDrillCat('property')
+                  else if (r.id === 'business') setDrillCat('business')
+                  else if (r.id === 'protection') setDrillCat('protection')
+                  else if (r.id === 'liabilities') setDrillCat('liabilities')
+                  else if (r.id === 'obligations') onNav?.('flow')
+                }
+                return (
+                  <button key={r.id} onClick={handleCoIRowClick} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    padding: '7px 0', width: '100%', textAlign: 'left',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    borderTop: i > 0 ? '1px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 12%, var(--c-sep))' : 'none',
+                  }}>
+                    <span style={{
+                      minWidth: 18, height: 18, borderRadius: '50%',
+                      background: i === 0 ? 'var(--c-coral, #FF6F7D)' : 'var(--c-surface2)',
+                      color: i === 0 ? '#fff' : 'var(--c-text3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 9, fontWeight: 800, flexShrink: 0, marginTop: 1,
+                    }}>{i + 1}</span>
+                    <div style={{ fontSize: 11, color: i === 0 ? 'var(--c-text)' : 'var(--c-text2)', lineHeight: 1.45, flex: 1 }}>
+                      {r.text}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </FadeInOnMount>
         )
       })()}
 
       {/* Phase 4E — Decumulation sequencing: GIA → ISA → Pension order */}
-      <DecumulationPanel entity={entity} />
+      <DecumulationPanel entity={entity} setDrillPension={setDrillPension} />
 
       {/* §C — Balance Sheet / Financial Picture header. */}
       <SectionDelimiter
@@ -2924,7 +2917,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
           Each pivot is a different aggregation of the same entity. */}
       <PivotToggle pivot={pivot} onPivot={setPivot} />
       {pivot !== 'balance-sheet' && (
-        <PivotView pivot={pivot} entity={entity} />
+        <PivotView pivot={pivot} entity={entity} scenarioEntity={scenarioEntity || null} />
       )}
       {pivot === 'balance-sheet' && (() => {
         // Derive per-category row collections from existing dRows builders.
@@ -3009,7 +3002,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
           .filter(inv => (inv.type || '').toLowerCase().includes('isa'))
           .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0)
         const carryFwdAA = entity?.income?.allowance_use?.pension_aa
-        const aaHeadroomLeft = (1 - (carryFwdAA || 0)) * 60_000
+        const aaHeadroomLeft = (1 - (carryFwdAA || 0)) * TAX.pensionAA
 
         // Realistic monthly essentials — use entity.expenses if present, else
         // fall back to 55% of gross annual income / 12. Don't use director
@@ -3188,6 +3181,18 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
               if (id === 'pensions') setDrillPension(true)
               else if (['investments', 'property', 'business', 'protection', 'liabilities'].includes(id)) {
                 setDrillCat(id)
+              } else if (id === 'cash') {
+                // Cash lives under investments drill; scroll-open that panel
+                setDrillCat('investments')
+              } else if (id === 'alternatives') {
+                // Alternatives (crypto/PE/commodities) live under investments drill
+                setDrillCat('investments')
+              } else if (id === 'income') {
+                // Income streams — pivot to income view
+                setPivot('income')
+              } else if (id === 'obligations') {
+                // Annual obligations (family support, alimony) — route to Cashflow
+                onNav?.('flow')
               }
             }}
             onAdd={openBucket}
@@ -3205,9 +3210,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         const aaUsedRaw = entity?.income?.allowance_use?.pension_aa
         // M-12: guard — field could be a fraction (0-1) or absolute £. Treat >1 as absolute £.
         const aaUsed = aaUsedRaw != null
-          ? (aaUsedRaw <= 1 ? aaUsedRaw * 60_000 : aaUsedRaw)
+          ? (aaUsedRaw <= 1 ? aaUsedRaw * TAX.pensionAA : aaUsedRaw)
           : null
-        const aaLeft = aaUsed != null ? Math.max(0, 60_000 - aaUsed) : null
+        const aaLeft = aaUsed != null ? Math.max(0, TAX.pensionAA - aaUsed) : null
 
         // 4B: Optimal salary/dividend split signal
         const currentSalary = +(entity?.income?.directorSalary || entity?.income?.employment || 0)
@@ -3234,7 +3239,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         const goTaxAni = () => onNav?.('tax', { sub: 'ani' })
         const goTaxExtraction = () => onNav?.('tax', { sub: 'director-extraction' })
         const goTaxS24 = () => onNav?.('tax', { sub: 's24' })
-        const goAsk = (q) => onNav?.('ask', { prefill: q })
+        const goAsk = (q) => window.dispatchEvent(new CustomEvent('sonus:ask', { detail: { question: q } }))
 
         const items = [
           aaLeft != null && aaLeft > 1000 ? {
@@ -3341,7 +3346,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         const pensionLeft = (() => {
           try {
             const carryFwd = entity?.income?.allowance_use?.pension_aa
-            return carryFwd != null ? Math.max(0, (1 - carryFwd) * 60_000) : null
+            return carryFwd != null ? Math.max(0, (1 - carryFwd) * TAX.pensionAA) : null
           } catch { return null }
         })()
         const insights = [
@@ -3414,6 +3419,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
       {/* ── Disclaimer + rules ──────────────────────────────────────────── */}
       <p className="disclaimer">{BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}</p>
 
+      </>}{/* ── /non-scenario content fragment ─────────────────────────────── */}
       </div>{/* ── /sw-tab-slide viewMode wrapper ─────────────────────────── */}
 
       {/* ── Universal add button — wired to capture sheet ───────────────── */}

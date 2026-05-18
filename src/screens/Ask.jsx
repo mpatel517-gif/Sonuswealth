@@ -120,7 +120,7 @@ function fcaBoundaryCheck(text) {
 // ─────────────────────────────────────────────────────────────────────────────
 function classifyIntent(q) {
   const s = q.toLowerCase()
-  if (/^(act|commit|do|execute|gift|drawdown now|nominate)\b/.test(s)) return 'act'
+  if (/^(act|commit|do|execute|gift|drawdown now|nominate)\b/.test(s) || /\b(take action|want to act|going to act|ready to act)\b/.test(s)) return 'act'
   if (/\b(model|simulate|compare|what if|scenario|project|forecast)\b/.test(s)) return 'model'
   return 'explain'
 }
@@ -935,8 +935,8 @@ export default function Ask({
       _send('Explain that further with the underlying numbers.')
     } else if (action === 'model this') {
       _send(`Model this scenario: ${msg.content.slice(0, 80)}`)
-    } else if (action === 'act →' || action === 'act') {
-      setDecisionEngine({ topic: msg.intent === 'model' ? 'Model → Act' : 'Action' })
+    } else if (action === 'act →' || action === 'act' || action === 'decisionengine') {
+      setDecisionEngine({ topic: msg.intent === 'model' ? 'Model → Act' : (msg.content?.slice(0, 60) || 'Action') })
     } else if (action === 'commit') {
       emitAskEvent(EV.DECISION_COMMITTED, { from: 'sheet_preview' })
       onCommit?.({ via: 'ask_sheet', preview: msg.actPreview })
@@ -1017,6 +1017,7 @@ export default function Ask({
       }
       setMessages(prev => [...prev, reply])
       setChips(['Ask something else', 'Explain this further', 'Model this'])
+      if (intent === 'act') setDecisionEngine({ topic: q.slice(0, 60) })
       emitAskEvent(EV.ASK_RESPONSE_DELIVERED, { intent, sources, fcaFlagged: filtered.flagged, taxTouching: filtered.taxTouching })
     } catch {
       const demo = getDemoResponse(q, entity)
@@ -1035,6 +1036,7 @@ export default function Ask({
           ...(intent === 'act' ? { actPreview: 'Preview will simulate impact on Wealth Score, IHT, and Risk before you commit.' } : {}),
         }])
         setChips(demo.followUps)
+        if (intent === 'act') setDecisionEngine({ topic: q.slice(0, 60) })
         setLoading(false)
         emitAskEvent(EV.ASK_RESPONSE_DELIVERED, { intent, sources, fcaFlagged: filtered.flagged, taxTouching: filtered.taxTouching, demo: true })
       }, 800)

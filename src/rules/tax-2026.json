@@ -10,7 +10,7 @@
     "notes": "All monetary values in GBP. All rates as decimals. Never hardcode these values in UI components — always import from this file via the TAX object in fq-calculator.js."
   },
 
-  "_disclaimer": "These rules are verified at the date shown above. Tax rules change at each Budget and tax year. Finio updates this file after each change following professional verification. Always verify planning decisions with a qualified tax adviser before acting.",
+  "_disclaimer": "These rules are verified at the date shown above. Tax rules change at each Budget and tax year. Sonuswealth updates this file after each change following professional verification. Always verify planning decisions with a qualified tax adviser before acting.",
 
   "income": {
     "personalAllowance": 12570,

@@ -33,22 +33,7 @@ export default function Sidebar({
       {/* Brand mark */}
       <div className="sw-sidebar-brand">
         <div className="sw-sidebar-logo">
-          <svg viewBox="0 0 64 64" width={32} height={32} style={{ overflow: 'visible' }} aria-label="Sonuswealth">
-            <defs>
-              <linearGradient id="sbC" x1="16" y1="12" x2="45" y2="52" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#7dffcf" /><stop offset="1" stopColor="#20c7ff" />
-              </linearGradient>
-              <linearGradient id="sbX" x1="39" y1="20" x2="55" y2="44" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#f8fcff" /><stop offset="1" stopColor="#8ca7ff" />
-              </linearGradient>
-            </defs>
-            <path fill="url(#sbC)" d="M46 13.5A22.5 22.5 0 1 0 46 50.5l-7.5-8.4A11.5 11.5 0 1 1 38.5 21.9Z"
-              style={{ filter: 'drop-shadow(0 0 6px rgba(45,242,195,.36))' }} />
-            <path fill="none" stroke="url(#sbX)" strokeWidth="5.4" strokeLinecap="round" strokeLinejoin="round"
-              d="M42 23 53 41M53 23 42 41" />
-            <circle fill="#07111f" stroke="rgba(255,255,255,.72)" strokeWidth="1.4" cx="47.5" cy="32" r="3.4" />
-            <circle fill="#7dffcf" cx="19" cy="20" r="2.7" />
-          </svg>
+          <img src="/assets/logo/logo-app-icon.png" width={32} height={32} alt="Sonuswealth" style={{ borderRadius: 8, display: 'block' }} />
         </div>
         <div>
           <div className="sw-sidebar-name">Sonuswealth</div>

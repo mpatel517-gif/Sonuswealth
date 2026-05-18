@@ -54,7 +54,7 @@ export const DIMENSIONS = [
   },
   {
     key:         'cashflow',
-    label:       'C-Flow',
+    label:       'Cash flow',
     formalLabel: 'Cashflow',
     max:         16,
     angle:       -90 + 4 * 360/7,

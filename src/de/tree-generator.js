@@ -22,7 +22,7 @@ async function callClaude(prompt, signal = null) {
     ? (import.meta.env?.VITE_ANTHROPIC_API_KEY || import.meta.env?.VITE_ANTHROPIC_KEY)
     : null;
 
-  if (!apiKey) throw new Error('VITE_ANTHROPIC_API_KEY not set');
+  if (!apiKey) throw new Error('service_unavailable');
 
   const t0 = Date.now();
   const res = await fetch(API_URL, {
@@ -52,6 +52,53 @@ async function callClaude(prompt, signal = null) {
   return { rawText, ms };
 }
 
+// ── Options count guard (FD-DE-1) ─────────────────────────────────────────────
+// Spec requires exactly 4 options: A, B, C (main paths) + D (unconsidered).
+// If Claude returns fewer, pad with a placeholder. If more, truncate to 4.
+// The unconsidered option (id='D') is preserved as-is.
+const OPTION_IDS = ['A', 'B', 'C', 'D'];
+
+function makePlaceholderOption(id) {
+  return {
+    id,
+    name: `Option ${id}`,
+    rationale: 'Alternative path — details pending further analysis.',
+    pros: ['May suit different priorities'],
+    cons: ['Requires further modelling'],
+    consequences: [],
+    irreversibility: 'low',
+    sequence: [],
+    risks: [],
+  };
+}
+
+function enforceOptionsCount(tree) {
+  if (!tree) return tree;
+  const options = tree.options ?? [];
+
+  if (options.length === 4) return tree; // already correct
+
+  if (options.length > 4) {
+    // Keep first 3 main options + option D (unconsidered)
+    const main = options.filter(o => o.id !== 'D').slice(0, 3);
+    const d    = options.find(o => o.id === 'D') ?? options[3];
+    console.warn(`[DE] options count ${options.length} > 4 — truncated to 4`);
+    return { ...tree, options: [...main, d] };
+  }
+
+  // Fewer than 4 — pad
+  const existing = new Set(options.map(o => o.id));
+  const padded = [...options];
+  for (const id of OPTION_IDS) {
+    if (padded.length >= 4) break;
+    if (!existing.has(id)) {
+      console.warn(`[DE] options count ${options.length} < 4 — adding placeholder ${id}`);
+      padded.push(makePlaceholderOption(id));
+    }
+  }
+  return { ...tree, options: padded };
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 /**
@@ -74,22 +121,38 @@ export async function generateTree(prompt, entity, opts = {}) {
     const { rawText, ms } = await callClaude(prompt, signal);
 
     // 2. Parse + validate consequences
-    const { tree, report } = processClaudeResponse(rawText, entity);
+    const { tree: parsedTree, report } = processClaudeResponse(rawText, entity);
 
-    if (!tree) {
+    if (!parsedTree) {
       return {
         tree: null, report, rawText, ms,
         error: 'JSON parse failed — Claude did not return valid tree JSON',
       };
     }
 
-    // 3. FCA rewrite on recommendation
+    // 3. Horizon guard — supply default (current tax year end) if missing
+    let tree = parsedTree;
+    if (!tree.horizon) {
+      const now = new Date();
+      // UK tax year ends 5 April. If before Apr 5 this calendar year, use this year; else next.
+      const taxYearEnd = now.getMonth() < 3 || (now.getMonth() === 3 && now.getDate() <= 5)
+        ? `${now.getFullYear()}-04-05`
+        : `${now.getFullYear() + 1}-04-05`;
+      tree = { ...tree, horizon: taxYearEnd, _horizonDefaulted: true };
+      console.warn('[DE] tree.horizon missing — defaulted to', taxYearEnd);
+    }
+
+    // 4. FCA rewrite on all text fields
     const { tree: fcaTree } = fcaRewriteTree(tree);
 
-    // 4. Log
+    // 5. Options count guard — must be exactly 4 (FD-DE-1).
+    // Option D is the "unconsidered" path; A/B/C are the main options.
+    const guardedTree = enforceOptionsCount(fcaTree);
+
+    // 6. Log
     logGeneration({ eventIds, userQuery, prompt, responseMs: ms, validationReport: report, offOntology });
 
-    return { tree: fcaTree, report, rawText, ms, error: null };
+    return { tree: guardedTree, report, rawText, ms, error: null };
 
   } catch (err) {
     if (err.name === 'AbortError') {

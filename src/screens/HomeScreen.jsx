@@ -39,13 +39,16 @@ import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
 import {
   calcFQ, calcRisk, calcAPQ, netWorth, fmt,
-  planFor, diffSet, costOfInaction, totalCoI,
+  planFor, diffSet, costOfInaction, totalCoI, ihtSippDelta,
   investable, liquidityBuffer,
-  fiRatio, debtRatio, protectionScore, cashflowHealth, estateReadiness, taxEfficiency,
+  debtRatio, protectionScore, estateReadiness, taxEfficiency,
+  monthlySurplus,
+  daysLeft as engineDaysLeft,
 } from '../engine/fq-calculator.js'
 import Drillable from '../components/shared/Drillable.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
 import { DIMENSIONS } from '../config/dimensions.js'
+import { getWealthTarget, gapDims as gapDimsVsTarget } from '../config/wealth-targets.js'
 
 /* ─── helpers ───────────────────────────────────────────────────────────── */
 
@@ -114,7 +117,7 @@ const ACTION_ROUTE_OVERRIDE = {
   'life-in-trust':         'tax',
   'nominations':           'tax',
   'fallback-iht':          'tax',
-  'pension-drawdown':      'tax',
+  'pension-drawdown':      'money',
   'pension-contributions': 'money',
   'income-protection':     'risk',
   'will-update':           'tax',
@@ -212,6 +215,10 @@ function MastheadCard({ entity, viewMode, onModeChange }) {
           </div>
         </div>
       </div>
+      {/* Build stamp — visible to dev + founder to confirm which version is live */}
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', fontVariantNumeric: 'tabular-nums', opacity: 0.6, position: 'absolute', top: 8, right: 16 }}>
+        {BUILD}
+      </div>
       {/* Mode pill */}
       <div style={{
         display: 'flex', gap: 3, padding: 4,
@@ -243,56 +250,57 @@ function MastheadCard({ entity, viewMode, onModeChange }) {
 function nwComposition(entity) {
   const a = entity?.assets || {}
   const num = v => {
+    if (!v && v !== 0) return 0
     if (typeof v === 'number') return v
     if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
     return +v?.total || +v?.value || 0
   }
   const pensions  = num(a.sipp) + num(a.pension) + num(a.pensions)
   const isa       = num(a.isa) + num(a.lisa)
-  const home      = safe(() => (a.property || []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
+  const home      = safe(() => (Array.isArray(a.property) ? a.property : []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
               + num(a.residence) + num(a.home)
   const cash      = num(a.cash) + num(a.bank) + num(a.savings)
-  const business  = safe(() => (a.business_assets || []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
-  const other     = num(a.investments) + num(a.alternatives)
-  const total     = pensions + isa + home + cash + business + other || 1
+  const business  = safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
+  // Portfolio: check holdings OR direct value
+  const portfolio = safe(() => {
+    const h = a.portfolio?.holdings || a.holdings || []
+    const fromHoldings = h.reduce((s, hh) => s + (+hh.currentValue || +hh.value || 0), 0)
+    return fromHoldings > 0 ? fromHoldings : num(a.portfolio)
+  }, 0) + num(a.investments) + num(a.alternatives)
+  const total = pensions + isa + home + cash + business + portfolio || 1
   return [
-    { label: 'Pensions', pct: pensions / total, color: 'var(--c-acc2)' },
-    { label: 'ISA',      pct: isa      / total, color: 'var(--c-acc)'  },
-    { label: 'Home',     pct: home     / total, color: 'var(--c-gold)' },
-    { label: 'Cash',     pct: cash     / total, color: 'var(--c-text3)' },
-    { label: 'Business', pct: business / total, color: '#ba8cff' },
-    { label: 'Other',    pct: other    / total, color: 'var(--c-acc3)' },
+    { label: 'Pensions',    key: 'pensions',  pct: pensions   / total, color: 'var(--c-acc2)' },
+    { label: 'ISA',         key: 'isa',       pct: isa        / total, color: 'var(--c-acc)'  },
+    { label: 'Home',        key: 'property',  pct: home       / total, color: 'var(--c-gold)' },
+    { label: 'Cash',        key: 'cash',      pct: cash       / total, color: 'var(--c-text3)' },
+    { label: 'Business',    key: 'business',  pct: business   / total, color: '#ba8cff' },
+    { label: 'Investments', key: 'portfolio', pct: portfolio  / total, color: 'var(--c-success)' },
   ].filter(s => s.pct > 0.005)
 }
 
-function gapDims(fqData) {
-  const dims = fqData?.dims || {}
-  // Real dim keys + max values from src/config/dimensions.js (50% of max = gap threshold)
-  // behaviour=20, capital=18, tax=18, protection=16, cashflow=16, debt=14, estate=28
-  const GAP_THRESH = {
-    behaviour:  10,
-    capital:     9,
-    tax:         9,
-    protection:  8,
-    cashflow:    8,
-    debt:        7,
-    estate:     14,
-  }
-  return Object.entries(GAP_THRESH).filter(([key, thresh]) => (dims[key] ?? 0) < thresh).length
-}
 
 function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdown }) {
+  const [anchorTrend, setAnchorTrend] = useState(null)
   const score      = fqData?.total ?? 0
   const riskScore  = riskData?.total ?? 0
   const riskColor  = riskData?.band?.colour || 'var(--c-gold)'
   const riskBand   = riskData?.band?.name || '—'
   const segments   = nwComposition(entity)
-  const gapCount   = gapDims(fqData)
+  const targetDims = useMemo(() => getWealthTarget(entity)?.dims || {}, [entity])
+  const gapCount   = gapDimsVsTarget(fqData?.dims || {}, targetDims, 0.15).length
 
-  const coiTotal = safe(() => { const c = costOfInaction(entity); return typeof c === 'number' ? c : (c?.total || 0) }, 0)
+  // History sparklines from persona trajectories
+  const traj = entity?.trajectories || {}
+  const nwSpark    = (traj.netWorthHistory || []).map(p => p.value ?? p)
+  const scoreSpark = (traj.scoreHistory    || []).map(p => p.score ?? p)
+  const riskSpark  = (traj.riskHistory     || []).map(p => p.score ?? p)
+  const coiSpark   = (traj.coiHistory || []).map(p => (typeof p === 'object' && p !== null) ? (p.value ?? p.total ?? 0) : p)
+
+  const coiTotal   = safe(() => totalCoI(entity).total ?? 0, 0)
+  const sippDelta  = safe(() => ihtSippDelta(entity) ?? 0, 0)
   const dueDate  = new Date('2027-04-06')
   const now      = new Date()
-  const days     = Math.max(0, Math.ceil((dueDate - now) / 86_400_000))
+  const days     = engineDaysLeft()
   const enacted  = new Date('2026-03-18')
   const totalSpan = (dueDate - enacted) / 86_400_000
   const elapsed   = (now - enacted) / 86_400_000
@@ -304,24 +312,39 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
   const targetFilled = (68   / 100) * C
 
   return (
+    <>
     <div style={card({ padding: '14px 18px', margin: '0 16px 12px' })}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 0, overflow: 'hidden' }}>
 
-        {/* NW + composition bar */}
-        <div style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Net Worth</div>
-          <Drillable metric="netWorth" onOpen={onDrillMetric} inline affordance="none">
+        {/* NW + composition bar — whole column is drillable */}
+        <div
+          onClick={() => onDrillMetric?.('netWorth')}
+          style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 16, cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)' }}>Net Worth ›</div>
+            {nwSpark.length > 1 && (
+              <div onClick={e => { e.stopPropagation(); setAnchorTrend({ label: 'Net Worth', value: fmt(nw), spark: nwSpark, what: 'The total value of everything you own minus what you owe. Your primary measure of financial progress.', colour: 'var(--c-text2)' }) }}>
+                <Sparkline values={nwSpark} color="var(--c-text2)" width={40} height={18} />
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -1 }}>{fmt(nw)}</span>
-          </Drillable>
+          </div>
           <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: 'var(--c-surface2)', marginTop: 8 }}>
             {segments.map(s => <div key={s.label} style={{ width: `${s.pct * 100}%`, background: s.color }} />)}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
             {segments.map(s => (
-              <span key={s.label} style={{ fontSize: 9.5, color: 'var(--c-text3)', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <button
+                key={s.label}
+                onClick={() => onDrillMetric?.(`netWorth:${s.key}`)}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+              >
                 <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
-                {s.label} {Math.round(s.pct * 100)}%
-              </span>
+                <span style={{ fontSize: 9.5, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label} {Math.round(s.pct * 100)}%</span>
+              </button>
             ))}
           </div>
         </div>
@@ -329,7 +352,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
         {/* Score + donut + gaps badge */}
         <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Wealth Score</div>
-          <button onClick={() => onOpenBreakdown?.()} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => onOpenBreakdown?.()} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
             <svg width="40" height="40" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
               <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-surface2)" strokeWidth="5" />
               <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,189,89,0.25)" strokeWidth="5"
@@ -338,14 +361,19 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
                 strokeLinecap="round"
                 strokeDasharray={`${filled.toFixed(1)} ${(C - filled).toFixed(1)}`} />
             </svg>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
                 {score}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
               </div>
               <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.7 }}>
-                {fqData?.band?.name || '—'}
+                {gapCount > 0 && fqData?.band?.name === 'Optimised' ? 'On Track' : (fqData?.band?.name || '—')}
               </div>
             </div>
+            {scoreSpark.length > 1 && (
+              <div onClick={e => { e.stopPropagation(); setAnchorTrend({ label: 'Wealth Score', value: `${score}/100`, spark: scoreSpark, what: 'Your overall financial health — combining money habits, capital, tax, protection, cashflow, debt and estate planning.', colour: 'var(--c-acc)' }) }}>
+                <Sparkline values={scoreSpark} color="var(--c-acc)" width={40} height={18} />
+              </div>
+            )}
           </button>
           {gapCount > 0 && (
             <button onClick={() => onDrillMetric?.('gaps')} style={{
@@ -358,7 +386,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}>!</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>
-                {gapCount} gaps in radar →
+                {gapCount} {gapCount === 1 ? 'gap' : 'gaps'} in radar →
               </span>
             </button>
           )}
@@ -366,13 +394,20 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
 
         {/* Risk + gradient gauge */}
         <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Risk</div>
-          <Drillable metric="riskScore" onOpen={onDrillMetric} inline affordance="none">
-            <span style={{ fontSize: 20, fontWeight: 800, color: riskColor, letterSpacing: -0.5 }}>
-              {riskScore}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
-            </span>
-          </Drillable>
-          <div style={{ position: 'relative', height: 8, borderRadius: 4, marginTop: 8, overflow: 'visible',
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Risk Score</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Drillable metric="riskScore" onOpen={onDrillMetric} inline affordance="none">
+              <span style={{ fontSize: 20, fontWeight: 800, color: riskColor, letterSpacing: -0.5 }}>
+                {riskScore}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
+              </span>
+            </Drillable>
+            {riskSpark.length > 1 && (
+              <div onClick={() => setAnchorTrend({ label: 'Risk Score', value: `${riskScore}/100`, spark: riskSpark, what: 'How much financial risk you carry — investment volatility, debt, concentration, and liquidity gaps.', colour: riskColor })}>
+                <Sparkline values={riskSpark} color={riskColor} width={40} height={18} />
+              </div>
+            )}
+          </div>
+          <div style={{ position: 'relative', height: 8, borderRadius: 4, marginTop: 8, overflow: 'hidden',
             background: 'linear-gradient(90deg, #34c759 0%, #34c759 33%, #ffb347 33%, #ffb347 66%, #ff6b6b 66%, #ff6b6b 100%)' }}>
             <div style={{
               position: 'absolute', top: -5, left: `calc(${riskScore}% - 9px)`,
@@ -381,26 +416,62 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
               boxShadow: `0 0 8px ${riskColor}88`,
             }} />
           </div>
-          <div style={{ fontSize: 9.5, fontWeight: 700, color: riskColor, marginTop: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{riskBand}</div>
+          <div style={{ marginTop: 6 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: riskColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>{riskBand}</div>
+          </div>
         </div>
 
         {/* CoI + countdown bar */}
         <div style={{ paddingLeft: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Cost of Inaction</div>
-          <Drillable metric="coi" onOpen={onDrillMetric} inline affordance="none">
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{coiTotal > 0 ? fmt(coiTotal) : '—'}</span>
-          </Drillable>
-          {coiTotal > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', marginTop: 4 }}>{days} days to act</div>}
-          <div style={{ height: 4, background: 'var(--c-surface2)', borderRadius: 2, marginTop: 5, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--c-gold), var(--c-acc3))', borderRadius: 2 }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Drillable metric="coi" onOpen={onDrillMetric} inline affordance="none">
+              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{coiTotal > 0 ? fmt(coiTotal) : '—'}</span>
+            </Drillable>
+            {coiSpark.length > 1 && (
+              <div
+                onClick={() => setAnchorTrend({ label: 'Cost of Inaction', value: fmt(coiTotal), spark: coiSpark.map(p => p.value ?? p), what: 'The annual financial cost of staying on your current path without taking recommended actions.', colour: 'var(--c-acc3)' })}
+                title="Tap to see trend"
+                style={{ cursor: 'zoom-in', borderRadius: 4 }}
+              >
+                <Sparkline values={coiSpark} color="var(--c-acc3)" width={40} height={18} />
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.4 }}>
-            SIPP IHT · 6 Apr 2027 · enacted
+          {coiTotal > 0 && (
+            <div style={{ marginTop: 2 }}>
+              {sippDelta > 0
+                ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{fmt(sippDelta)} SIPP exposure · {days} days</span>
+                : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{days} days to act</span>
+              }
+            </div>
+          )}
+          <div style={{ position: 'relative', height: 4, background: 'var(--c-surface2)', borderRadius: 2, marginTop: 5, overflow: 'visible' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--c-gold), var(--c-acc3))', borderRadius: 2 }} />
+            <div style={{
+              position: 'absolute', top: '50%', left: `${pct}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 8, height: 8, borderRadius: '50%',
+              background: 'var(--c-acc3)', border: '2px solid var(--c-bg)',
+              boxShadow: '0 0 6px var(--c-acc3)',
+            }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+            <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.4 }}>Mar 2026</div>
+            <div style={{ fontSize: 9, color: 'var(--c-acc3)', lineHeight: 1.4, fontWeight: 700 }}>6 Apr 2027</div>
           </div>
         </div>
 
       </div>
     </div>
+    {anchorTrend && (
+      <TrendModal
+        tile={anchorTrend}
+        colour={anchorTrend.colour}
+        onClose={() => setAnchorTrend(null)}
+      />
+    )}
+    </>
   )
 }
 
@@ -418,7 +489,7 @@ function SippIhtCountdown({ entity, onNav }) {
   const dueDate = new Date('2027-04-06')
   const now = new Date()
   if (now >= dueDate) return null  // After the deadline, no countdown needed
-  const days = Math.max(0, Math.ceil((dueDate.getTime() - now.getTime()) / 86400000))
+  const days = engineDaysLeft()  // uses TAX.deadline — same source as Timeline
 
   // Suppress if no exposed SIPP/pension value (handles flat number, object, or array-of-pots)
   const sippVal = safe(() => {
@@ -759,88 +830,389 @@ function PlanProgressStrip({ entity, onNav }) {
    All engine-backed. Each drillable to its canonical tab.
    ═══════════════════════════════════════════════════════════════════════ */
 
-function StateTilesCard({ entity, onNav }) {
-  const fi   = useMemo(() => safe(() => fiRatio(entity),         { ratio: 0, state: 'Building',   fiAge: null }), [entity])
-  const debt = useMemo(() => safe(() => debtRatio(entity),       { state: 'Manageable' }),                        [entity])
-  const prot = useMemo(() => safe(() => protectionScore(entity), { score: 0, state: 'Gaps' }),                    [entity])
-  const cf   = useMemo(() => safe(() => cashflowHealth(entity),  { state: 'Monitor', surplus: 0 }),               [entity])
-  const est  = useMemo(() => safe(() => estateReadiness(entity), { score: 0, outOf: 7, state: 'Incomplete' }),    [entity])
-  const tax  = useMemo(() => safe(() => taxEfficiency(entity),   { score: 0, state: 'Review' }),                  [entity])
+/* ═══════════════════════════════════════════════════════════════════════════
+   Trend Modal — full chart overlay, opened when a sparkline is tapped
+   ═══════════════════════════════════════════════════════════════════════ */
+function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
+  const values = tile?.spark || []
+  if (!values.length) return null
 
-  const stateColor = s => {
-    const g = ['Achieved', 'Debt-Free', 'Covered', 'On Track', 'Optimised', 'Complete', 'Financially Independent']
-    const r = ['Attention', 'Shortfall', 'Critical Gap', 'Action Required', 'Building']
-    if (g.some(x => (s || '').includes(x))) return 'var(--c-acc)'
-    if (r.some(x => (s || '').includes(x))) return 'var(--c-acc3)'
-    return 'var(--c-gold)'
+  const W = 320, H = 170
+  const PAD = { top: 16, right: 14, bottom: 32, left: 42 }
+  const cW = W - PAD.left - PAD.right
+  const cH = H - PAD.top - PAD.bottom
+
+  const min  = Math.min(...values)
+  const max  = Math.max(...values)
+  const rng  = max - min || 1
+  const toX  = i => PAD.left + (i / Math.max(values.length - 1, 1)) * cW
+  const toY  = v => PAD.top + cH - ((v - min) / rng) * cH
+
+  const pts  = values.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ')
+  const bot  = (PAD.top + cH).toFixed(1)
+  const areaPath = [
+    `M${toX(0).toFixed(1)},${toY(values[0]).toFixed(1)}`,
+    ...values.map((v, i) => `L${toX(i).toFixed(1)},${toY(v).toFixed(1)}`),
+    `L${toX(values.length - 1).toFixed(1)},${bot}`,
+    `L${toX(0).toFixed(1)},${bot} Z`,
+  ].join(' ')
+
+  const current = values[values.length - 1]
+  const first   = values[0]
+  const change  = current - first
+  const up      = change >= 0
+
+  // Y-axis: 4 evenly-spaced gridlines
+  const yTicks = [0, 1, 2, 3].map(k => {
+    const v = min + (k / 3) * rng
+    return { v, y: toY(v) }
+  })
+
+  // X-axis labels every 6 months + "Now" at the end
+  const n   = values.length
+  const now = new Date()
+  const xLabels = []
+  for (let i = 0; i < n; i++) {
+    if (i === 0 || i % 6 === 0 || i === n - 1) {
+      const d = new Date(now)
+      d.setMonth(d.getMonth() - (n - 1 - i))
+      xLabels.push({
+        i,
+        label: i === n - 1 ? 'Now' : d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
+      })
+    }
   }
 
-  const fiPct = Math.round((fi.ratio || 0) * 100)
-  const tiles = [
-    {
-      label: 'FI Ratio', value: `${fiPct}%`, state: fi.state || 'Building',
-      route: 'money',
-      sub: fi.state === 'Achieved' ? 'Financially independent' : fi.fiAge ? `FI by age ${fi.fiAge}` : 'Building towards FI',
-    },
-    {
-      label: 'Debt', value: debt.state || '—', state: debt.state || 'Manageable',
-      route: 'money',
-      sub: (debt.state || '').includes('Free') ? 'No high-cost debt' : 'High-rate debt reducing returns',
-    },
-    {
-      label: 'Protection', value: `${Math.round(prot.score || 0)}/100`, state: prot.state || 'Gaps',
-      route: 'risk',
-      sub: prot.state === 'Covered' ? 'Protection complete' : 'Gaps found — review cover',
-    },
-    {
-      label: 'Cashflow',
-      value: (cf.surplus != null && cf.surplus !== 0) ? ((cf.surplus > 0 ? '+' : '') + fmt(Math.abs(cf.surplus || 0))) : '—',
-      state: cf.state || 'Monitor',
-      route: 'flow',
-      sub: (cf.surplus || 0) >= 0 ? 'Monthly surplus' : 'Monthly shortfall',
-    },
-    {
-      label: 'Estate', value: `${est.score || 0}/${est.outOf || 7}`, state: est.state || 'Incomplete',
-      route: 'tax',
-      sub: (est.score || 0) >= (est.outOf || 7) ? 'Estate plan complete' : `${(est.outOf || 7) - (est.score || 0)} items outstanding`,
-    },
-    {
-      label: 'Tax Efficiency', value: `${Math.round(tax.score || 0)}/100`, state: tax.state || 'Review',
-      route: 'tax',
-      sub: tax.state === 'Optimised' ? 'Tax-efficient' : 'Allowances not fully used',
-    },
-  ]
+  const col   = colour || 'var(--c-acc)'
+  const gradId = `tg-${tile.dimKey || tile.key || 'dim'}`
 
   return (
-    <div style={{ margin: '0 16px 12px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <div style={{ display: 'flex', gap: 8, paddingBottom: 2, minWidth: 'max-content' }}>
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9500,
+        background: 'rgba(0,0,0,0.72)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}
+    >
+      <style>{`
+        @keyframes tm-slide-up {
+          from { transform: translateY(24px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--c-bg)',
+          borderRadius: '22px 22px 0 0',
+          padding: '20px 20px 44px',
+          width: '100%',
+          maxWidth: 480,
+          animation: 'tm-slide-up .28s cubic-bezier(0.16,1,0.3,1)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 2 }}>
+              {n}-month trend
+            </div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -0.3 }}>{tile.label}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: col, letterSpacing: -0.5 }}>{tile.value}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2, color: up ? 'var(--c-success, #34c759)' : 'var(--c-danger, #ff6b6b)' }}>
+              {up ? '↑' : '↓'} {Math.abs(change).toFixed(0)} over {n} months
+            </div>
+          </div>
+        </div>
+
+        {/* Full chart */}
+        <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16, padding: '12px 8px 4px', marginBottom: 14, overflow: 'hidden' }}>
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={col} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={col} stopOpacity="0"    />
+              </linearGradient>
+            </defs>
+            {/* Y gridlines + labels */}
+            {yTicks.map(({ v, y }, k) => (
+              <g key={k}>
+                <line x1={PAD.left} y1={y} x2={PAD.left + cW} y2={y}
+                  stroke="rgba(255,255,255,0.07)" strokeWidth="0.75" />
+                <text x={PAD.left - 5} y={y + 3.5} fontSize="8" textAnchor="end"
+                  fill="rgba(255,255,255,0.38)" fontFamily="system-ui,sans-serif">
+                  {Number.isFinite(v) ? Math.round(v) : ''}
+                </text>
+              </g>
+            ))}
+            {/* X-axis labels */}
+            {xLabels.map(({ i, label }) => (
+              <text key={i} x={toX(i)} y={H - 10} fontSize="8" textAnchor="middle"
+                fill="rgba(255,255,255,0.38)" fontFamily="system-ui,sans-serif">
+                {label}
+              </text>
+            ))}
+            {/* Area fill */}
+            <path d={areaPath} fill={`url(#${gradId})`} />
+            {/* Line */}
+            <polyline points={pts} fill="none" stroke={col} strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round" />
+            {/* End dot with halo */}
+            <circle cx={toX(values.length - 1)} cy={toY(current)} r="9" fill={col} fillOpacity="0.18" />
+            <circle cx={toX(values.length - 1)} cy={toY(current)} r="4.5" fill={col} />
+          </svg>
+        </div>
+
+        {/* Legend row */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <i style={{ width: 8, height: 8, borderRadius: '50%', background: col, display: 'block' }} />
+            <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>{tile.label}</span>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>
+            Low: {Math.round(min)} · High: {Math.round(max)} · Now: {Math.round(current)}
+          </div>
+        </div>
+
+        {/* What this measures */}
+        {tile.what && (
+          <p style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55, margin: '0 0 16px' }}>
+            {tile.what}
+          </p>
+        )}
+
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(tile.dimKey || tile.route) && (onDrillDim || onNav) && (
+            <button
+              onClick={() => { onClose(); tile.dimKey && onDrillDim ? onDrillDim(tile.dimKey) : onNav?.(tile.route) }}
+              style={{ flex: 1, padding: '11px 16px', borderRadius: 100, background: col, border: 'none', color: '#0B1F3A', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              See full details →
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            style={{ padding: '11px 16px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-sep)', color: 'var(--c-text2)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* Tiny inline SVG sparkline. `values` = number array, latest last. */
+function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 20, onClick }) {
+  if (!values || values.length < 2) return null
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width
+    const y = height - ((v - min) / range) * (height - 2) - 1
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  const last = values[values.length - 1]
+  const prev = values[values.length - 2]
+  const trend = last > prev ? 'up' : last < prev ? 'down' : 'flat'
+  const trendColor = trend === 'up' ? 'var(--c-success, #34c759)' : trend === 'down' ? 'var(--c-danger, #ff6b6b)' : color
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} onClick={onClick} style={{ display: 'block', overflow: 'visible', cursor: onClick ? 'zoom-in' : 'default' }}>
+      <polyline points={pts} fill="none" stroke={trendColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+      {/* End dot */}
+      <circle
+        cx={(values.length - 1) / (values.length - 1) * width}
+        cy={height - ((last - min) / range) * (height - 2) - 1}
+        r="2.5" fill={trendColor}
+      />
+    </svg>
+  )
+}
+
+function StateTilesCard({ entity, onNav, onDrillDim }) {
+  // Engine values for sub-labels only — scores come from calcFQ().dims
+  const fq   = useMemo(() => safe(() => calcFQ(entity),            { dims: {} }),                      [entity])
+  const ms   = useMemo(() => safe(() => monthlySurplus(entity),    { surplus: 0, deficit: 0, income: 0 }), [entity])
+  const debt = useMemo(() => safe(() => debtRatio(entity),         { ratio: 0, monthlyService: 0, band: 'none' }), [entity])
+  const prot = useMemo(() => safe(() => protectionScore(entity),   { total: 0, band: 'critical' }),     [entity])
+  const est  = useMemo(() => safe(() => estateReadiness(entity),   { total: 0, components: {}, band: 'gaps' }), [entity])
+  const tax  = useMemo(() => safe(() => taxEfficiency(entity),     { total: 0, components: {} }),       [entity])
+
+  const dims      = fq.dims || {}
+  const traj      = entity?.trajectories || {}
+  const cfMonthly = ms.surplus > 0 ? ms.surplus : ms.deficit > 0 ? -ms.deficit : 0
+
+  // Dim score as % of its max (per dimensions.js)
+  const dimPct = key => {
+    const dim = DIMENSIONS.find(d => d.key === key)
+    const raw = dims[key] || 0
+    return dim && dim.max > 0 ? Math.min(100, Math.round((raw / dim.max) * 100)) : 0
+  }
+
+  // State label from pct
+  const stateOf = pct => pct >= 80 ? 'Optimised' : pct >= 65 ? 'On Track' : pct >= 45 ? 'Building' : 'Review'
+
+  // Value-colour: green = good, amber = building, red = needs attention
+  const valueColor = s => s === 'Optimised' || s === 'On Track' ? 'var(--c-acc)'
+    : s === 'Building' ? 'var(--c-gold)'
+    : 'var(--c-acc3)'
+
+  // Trend arrow from last 3 sparkline points
+  const trendOf = spark => {
+    if (!spark?.length || spark.length < 3) return ''
+    const last = spark[spark.length - 1]
+    const prev = spark[spark.length - 3]
+    if (last > prev * 1.01) return ' ↑'
+    if (last < prev * 0.99) return ' ↓'
+    return ''
+  }
+
+  // Sparklines — best available proxy per dimension (upward = improving)
+  // debtHistory is £ amounts; negate so sparkline rises as debt reduces
+  const sparks = {
+    behaviour:  (traj.behaviourHistory  || (traj.scoreHistory || []).map(p => typeof p === 'object' ? p.score : p)).slice(-24),
+    capital:    (traj.capitalHistory    || (traj.netWorthHistory || []).map(p => Math.round((typeof p === 'object' ? p.value : p) / 100000))).slice(-24),
+    tax:        (traj.taxEfficiencyHistory || []).slice(-24),
+    protection: (traj.protectionHistory    || []).slice(-24),
+    cashflow:   (traj.cashflowHistory      || []).slice(-24),
+    debt:       (traj.debtHistory          || []).map(v => -v).slice(-24),
+    estate:     (traj.estateHistory        || []).slice(-24),
+  }
+
+  // Plain-English sub-label per dimension
+  const subFor = key => {
+    const pct = dimPct(key)
+    switch (key) {
+      case 'behaviour': return pct >= 80 ? 'You review and act on your finances regularly'
+        : pct >= 60 ? 'Good habits in place — keep your quarterly reviews up'
+        : 'Set up regular reviews and automated contributions to improve this'
+      case 'capital': return pct >= 80 ? 'Your savings and investments are on track for retirement'
+        : pct >= 60 ? 'Building well — closing in on your retirement target'
+        : 'Gap between what you have saved and what you will need at retirement'
+      case 'tax': return (tax.total || 0) >= 70 ? 'Tax allowances well used this year'
+        : (tax.total || 0) >= 50 ? 'Check your £20k ISA each April'
+        : '£20k ISA and pension gap — use before 5 Apr 2027'
+      case 'protection':
+        if (prot.band === 'good' || prot.band === 'excellent') return 'Life insurance and illness cover in place'
+        if (prot.band === 'partial') return 'Life cover done · no power of attorney'
+        return 'No life insurance — your family is financially exposed'
+      case 'cashflow':
+        if (cfMonthly > 0) return `${fmt(cfMonthly)}/mo surplus — adding to wealth`
+        if (cfMonthly < 0) return `${fmt(Math.abs(cfMonthly))}/mo planned drawdown — on track`
+        return 'Income covers spending — in balance'
+      case 'debt':
+        if (debt.band === 'none') return 'No debt — all your income is yours to keep'
+        if (pct >= 65) return `${fmt(debt.monthlyService)}/mo debt service — well managed`
+        if (pct >= 45) return `${fmt(debt.monthlyService)}/mo debt service — manageable`
+        return `${Math.round((debt.ratio || 0) * 100)}p in every £1 goes on debt — worth reviewing`
+      case 'estate':
+        if (est.band === 'excellent') return 'Estate well planned — wealth passes efficiently'
+        if (est.band === 'good') return 'Nearly done — a couple of small gaps to close'
+        return `Missing: ${[!est.components?.lpa && 'power of attorney', !est.components?.will && 'up-to-date Will'].filter(Boolean).join(' and ') || 'review estate checklist'}`
+      default: return ''
+    }
+  }
+
+  // Build one tile per dimension, sorted worst-first so most urgent is always visible
+  const tiles = DIMENSIONS.map(dim => {
+    const pct   = dimPct(dim.key)
+    const state = stateOf(pct)
+    const spark = sparks[dim.key] || []
+    // Only show trend arrow when not Optimised — avoids confusing "88% ↓ OPTIMISED"
+    const arrow = state !== 'Optimised' ? trendOf(spark) : ''
+    return {
+      label:  dim.label,
+      dimKey: dim.key,
+      colour: dim.colour,
+      value:  `${pct}%${arrow}`,
+      state,
+      spark,
+      what:   dim.definition,
+      sub:    subFor(dim.key),
+      _pct:   pct,
+    }
+  }).sort((a, b) => a._pct - b._pct)
+
+  const [expandedTile, setExpandedTile] = useState(null)
+  const [trendTile,    setTrendTile]    = useState(null)
+
+  return (
+    <>
+    <div style={{ margin: '0 16px 4px', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ display: 'flex', gap: 8, paddingBottom: 2 }}>
         {tiles.map(tile => {
-          const colour = stateColor(tile.state)
+          const valColor   = valueColor(tile.state)
+          const isExpanded = expandedTile === tile.label
           return (
             <div
               key={tile.label}
-              onClick={() => onNav?.(tile.route)}
+              onClick={() => setExpandedTile(isExpanded ? null : tile.label)}
               role="button" tabIndex={0}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onNav?.(tile.route) }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setExpandedTile(isExpanded ? null : tile.label) }}
               style={{
                 background: 'var(--c-surface)',
-                border: `1px solid var(--c-sep)`,
-                borderTop: `2.5px solid ${colour}`,
+                border: `1px solid ${isExpanded ? tile.colour : 'var(--c-sep)'}`,
+                borderTop: `3px solid ${tile.colour}`,
                 borderRadius: 14,
-                padding: '10px 14px',
+                padding: '12px 10px',
                 cursor: 'pointer',
-                minWidth: 120, flex: '0 0 auto',
-                transition: 'background 120ms',
+                flex: '1 1 90px', minWidth: 90,
+                height: isExpanded ? 'auto' : 116,
+                overflow: isExpanded ? 'visible' : 'hidden',
+                transition: 'border-color 120ms',
+                display: 'flex', flexDirection: 'column',
               }}
             >
-              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: 'var(--c-text3)', marginBottom: 4 }}>{tile.label}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: colour, letterSpacing: -0.3, marginBottom: 2 }}>{tile.value}</div>
-              <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.3 }}>{tile.sub}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, gap: 3 }}>
+                <div title={tile.label} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{tile.label}</div>
+                {tile.spark?.length > 1 && (
+                  <div
+                    onClick={e => { e.stopPropagation(); setTrendTile({ ...tile }) }}
+                    title="Tap to see full trend"
+                    style={{ cursor: 'zoom-in', borderRadius: 4, flexShrink: 0 }}
+                  >
+                    <Sparkline values={tile.spark} color={tile.colour} width={36} height={14} />
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: valColor, letterSpacing: -0.5, marginBottom: 2 }}>{tile.value}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: tile.colour, opacity: 0.85, marginBottom: 4 }}>{tile.state}</div>
+              <div style={{ fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tile.sub}</div>
+              {isExpanded && (
+                <div style={{
+                  marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--c-sep)',
+                  fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.5,
+                }}>
+                  {tile.what}
+                  {onDrillDim && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setExpandedTile(null); onDrillDim(tile.dimKey) }}
+                      style={{ display: 'block', marginTop: 6, fontSize: 10, fontWeight: 700, color: tile.colour, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                    >
+                      See full details →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}
       </div>
     </div>
+    {trendTile && (
+      <TrendModal
+        tile={trendTile}
+        colour={trendTile.colour}
+        onClose={() => setTrendTile(null)}
+        onDrillDim={onDrillDim}
+      />
+    )}
+    </>
   )
 }
 
@@ -930,22 +1302,25 @@ function DimExplainerStub({ metric, fqData, onClose, onNav }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 const COI_DOMAIN_META = {
-  drawdown:           { label: 'SIPP estate exposure',             screen: 'tax'   },
-  wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)',   screen: 'tax'   },
-  contributions:      { label: 'Pension contributions',           screen: 'money' },
-  taxAllowances:      { label: 'Unused tax allowances',           screen: 'tax'   },
-  estatePlanning:     { label: 'Estate planning gap',             screen: 'tax'   },
-  protection:         { label: 'Protection coverage gap',         screen: 'risk'  },
-  debt:               { label: 'High-cost debt',                  screen: 'money' },
-  gifting:            { label: 'Gifting opportunity',             screen: 'tax'   },
-  propertyDecisions:  { label: 'Property decisions',              screen: 'money' },
-  investmentStrategy: { label: 'Investment strategy',             screen: 'money' },
+  drawdown:           { label: 'SIPP estate exposure',           screen: 'tax',   action: 'Review expression of wishes and beneficiary nominations. Your SIPP enters the estate in April 2027 — acting now reduces the IHT exposure while gifting windows remain open.' },
+  wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)', screen: 'tax',   action: 'Draw down ISA before SIPP in retirement. Preserves pension growth and keeps the pot outside your estate for longer.' },
+  contributions:      { label: 'Pension contributions',         screen: 'money', action: 'Maximising pension contributions reduces your income tax liability now and grows your retirement pot tax-free.' },
+  taxAllowances:      { label: 'Unused tax allowances',         screen: 'tax',   action: 'Use your ISA, CGT annual exemption, and dividend allowance before 5 April. These reset — unused years are lost.' },
+  estatePlanning:     { label: 'Estate planning gap',           screen: 'tax',   action: 'Update your Will, lasting power of attorney, and beneficiary nominations. Review IHT exposure and gifting opportunities.' },
+  protection:         { label: 'Protection coverage gap',       screen: 'risk',  action: 'Assess life cover, income protection, and critical illness against your current income and dependant obligations.' },
+  debt:               { label: 'High-cost debt',                screen: 'money', action: 'Clear debt costing more than your expected investment return after tax. This is a guaranteed risk-free return.' },
+  gifting:            { label: 'Gifting opportunity',           screen: 'tax',   action: 'Gift up to £3,000/yr free of IHT (carry forward 1 year). Each year without gifting is a permanent loss.' },
+  propertyDecisions:  { label: 'Property decisions',            screen: 'money', action: 'Assess rental yield, CGT on disposal, and whether property is the best use of this capital given your plan.' },
+  investmentStrategy: { label: 'Investment strategy',           screen: 'money', action: 'Review asset allocation, wrapper efficiency, and rebalancing schedule against your risk profile and timeline.' },
 }
+
+const COI_SCREEN_LABELS = { tax: 'Tax & Estate', money: 'MyMoney', risk: 'Risk' }
 
 function CoIDrillPanel({ entity, onClose, onNav }) {
   const coiObj   = useMemo(() => safe(() => totalCoI(entity), { total: 0, byDomain: {} }), [entity])
   const total    = coiObj.total || 0
   const byDomain = coiObj.byDomain || {}
+  const [openRow, setOpenRow] = useState(null)
 
   const rows = Object.entries(COI_DOMAIN_META)
     .map(([key, meta]) => ({ key, ...meta, value: Math.round(byDomain[key] || 0) }))
@@ -956,7 +1331,7 @@ function CoIDrillPanel({ entity, onClose, onNav }) {
     <div
       className="screen"
       style={{
-        position: 'fixed', inset: 0, zIndex: 300, overflowY: 'auto',
+        position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto',
         background: 'var(--c-bg)',
         animation: 'nw-slide-up .28s cubic-bezier(0.16,1,0.3,1)',
         padding: '0 0 120px',
@@ -1003,20 +1378,43 @@ function CoIDrillPanel({ entity, onClose, onNav }) {
         {rows.length > 0 && (
           <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 18, padding: '14px 18px', marginBottom: 12 }}>
             <div className="sw-eyebrow" style={{ marginBottom: 12 }}>By planning area</div>
-            {rows.map((row, i) => (
-              <div
-                key={row.key}
-                onClick={() => { onNav?.(row.screen); onClose() }}
-                role="button" tabIndex={0}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { onNav?.(row.screen); onClose() } }}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none', cursor: 'pointer' }}
-              >
-                <span style={{ fontSize: 13, color: 'var(--c-text2)', flex: 1, marginRight: 8 }}>{row.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                  {fmt(row.value)}/yr
-                </span>
-              </div>
-            ))}
+            {rows.map((row, i) => {
+              const isOpen = openRow === row.key
+              return (
+                <div key={row.key} style={{ borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none' }}>
+                  <div
+                    onClick={() => setOpenRow(isOpen ? null : row.key)}
+                    role="button" tabIndex={0}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setOpenRow(isOpen ? null : row.key) }}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: 13, color: 'var(--c-text2)', flex: 1, marginRight: 8 }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, marginRight: 8 }}>
+                      {fmt(row.value)}/yr
+                    </span>
+                    <span style={{ color: 'var(--c-text3)', fontSize: 13, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>›</span>
+                  </div>
+                  {isOpen && (
+                    <div style={{ padding: '0 0 12px', marginTop: -4 }}>
+                      <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 10 }}>
+                        {row.action}
+                      </div>
+                      <button
+                        onClick={() => { onNav?.(row.screen); onClose() }}
+                        style={{
+                          fontSize: 12, fontWeight: 700, padding: '7px 14px',
+                          borderRadius: 100, border: 'none', cursor: 'pointer',
+                          background: 'var(--c-acc)', color: 'var(--c-bg)',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Go to {COI_SCREEN_LABELS[row.screen] || row.screen} →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
             <div style={{ borderTop: '1px solid var(--c-sep)', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text3)' }}>Total</span>
               <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-danger)' }}>{fmt(total)}/yr</span>
@@ -1052,7 +1450,7 @@ function APQDrillPanel({ entity, onNav, onClose }) {
     <div
       className="screen"
       style={{
-        position: 'fixed', inset: 0, zIndex: 300, overflowY: 'auto',
+        position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto',
         background: 'var(--c-bg)',
         animation: 'nw-slide-up .28s cubic-bezier(0.16,1,0.3,1)',
         padding: '0 0 120px',
@@ -1102,7 +1500,7 @@ function APQDrillPanel({ entity, onNav, onClose }) {
                 key={action.id || i}
                 onClick={() => {
                   if (!canNav) return
-                  if (action.id === 'pension-drawdown') { onClose(); onNav?.('tax'); return }
+                  if (action.id === 'pension-drawdown') { onClose(); onNav?.('money'); return }
                   onClose(); onNav?.(route)
                 }}
                 style={{
@@ -1162,50 +1560,76 @@ function APQDrillPanel({ entity, onNav, onClose }) {
    alternatives → MINUS liabilities.
    ═══════════════════════════════════════════════════════════════════════ */
 
-function NetWorthDrillPanel({ entity, onClose }) {
+function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
   const nw     = safe(() => netWorth(entity), 0)
   const inv    = safe(() => investable(entity), 0)
   const lb     = safe(() => liquidityBuffer(entity), null)
   const a      = entity?.assets || {}
+  const [expandedRow, setExpandedRow] = useState(focusAsset || null)
 
-  // Derive asset buckets from entity shape (canonical — no hardcoding)
-  // Pensions: sum all three possible shapes (sipp flat/object, pension flat/object, pensions array)
-  const _numAsset = v => {
+  // Universal numeric extractor — handles flat number, object.total, object.value, array-of-pots
+  const _num = v => {
+    if (!v && v !== 0) return 0
     if (typeof v === 'number') return v
     if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
     return +v?.total || +v?.value || 0
   }
-  const pensions   = safe(() => _numAsset(a.sipp) + _numAsset(a.pension) + _numAsset(a.pensions), 0)
-  const property   = safe(() => (a.property  || []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
-  const business   = safe(() => (a.business_assets || []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
-  const cash       = safe(() => (+a.cash || +a.savings || +a.cashSavings || 0), 0)
-  const portfolio  = safe(() => {
-    const h = a.portfolio?.holdings || a.holdings || []
-    return h.reduce((s, h) => s + (+h.currentValue || +h.value || 0), 0)
+
+  const pensions  = safe(() => _num(a.sipp) + _num(a.pension) + _num(a.pensions), 0)
+  const isa       = safe(() => _num(a.isa) + _num(a.lisa), 0)
+  // Property: check all known field names (property[], residence, home)
+  const property  = safe(() => {
+    const arr = (Array.isArray(a.property) ? a.property : []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0)
+    return arr + _num(a.residence) + _num(a.home)
   }, 0)
-  const altAssets  = safe(() => (a.alternatives || []).reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0), 0)
+  // Portfolio: check holdings array OR direct .value
+  const portfolio = safe(() => {
+    const h = a.portfolio?.holdings || a.holdings || []
+    const fromHoldings = h.reduce((s, hh) => s + (+hh.currentValue || +hh.value || 0), 0)
+    return fromHoldings > 0 ? fromHoldings : (_num(a.portfolio) + _num(a.investments) + _num(a.gias))
+  }, 0)
+  const business  = safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
+  // Cash: must use _num, not +a.cash (would NaN on an object)
+  const cash      = safe(() => _num(a.cash) + _num(a.savings) + _num(a.cashSavings) + _num(a.bank), 0)
+  const altAssets = safe(() => (Array.isArray(a.alternatives) ? a.alternatives : []).reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0), 0)
+
   const liabilities = safe(() => {
     const l = entity?.liabilities || a.liabilities || {}
     if (Array.isArray(l)) return l.reduce((s, x) => s + (+x.outstanding || +x.balance || 0), 0)
     return (+l.mortgage || 0) + (+l.loans || 0) + (+l.creditCards || 0) + (+l.otherDebt || 0)
   }, 0)
 
-  const totalAssets = pensions + property + business + cash + portfolio + altAssets
+  const totalAssets = pensions + isa + property + portfolio + business + cash + altAssets
+
+  // Individual pension pots (for drill-down)
+  const pensionPots = safe(() => {
+    const pots = a.sipp?.pensions || a.pensions || a.pension?.pots || []
+    if (Array.isArray(pots)) return pots
+    return []
+  }, [])
+
+  // Property details (for drill-down)
+  const propertyList = safe(() => {
+    const arr = Array.isArray(a.property) ? a.property : []
+    const res = a.residence ? [{ name: a.residence.address || 'Primary residence', value: _num(a.residence), type: 'Residential' }] : []
+    return [...arr.map(p => ({ name: p.address || p.name || 'Property', value: +p.estimatedValue || +p.value || 0, type: p.type || 'Property' })), ...res]
+  }, [])
 
   const rows = [
-    { label: 'Pensions',     value: pensions,    colour: 'var(--c-acc)' },
-    { label: 'Property',     value: property,    colour: 'var(--c-gold)' },
-    { label: 'Investments',  value: portfolio,   colour: 'var(--c-success)' },
-    { label: 'Business',     value: business,    colour: 'var(--c-warning)' },
-    { label: 'Cash & savings', value: cash,      colour: 'var(--c-text2)' },
-    { label: 'Alternatives', value: altAssets,   colour: 'var(--c-text3)' },
+    { label: 'Pensions', key: 'pensions', value: pensions, colour: 'var(--c-acc2)', detail: pensionPots.map(p => ({ name: p.name, value: p.value, sub: `${p.provider || ''}${p.type ? ' · ' + p.type : ''}`, meta: p.nominationDate ? `Nomination: ${p.nominationDate}` : null, charge: p.charge ? `${(p.charge * 100).toFixed(2)}% p.a. charges` : null })) },
+    { label: 'ISA', key: 'isa', value: isa, colour: 'var(--c-acc)', detail: a.isa ? [{ name: 'Stocks & Shares ISA', value: _num(a.isa), sub: a.isa.provider || 'ISA wrapper', meta: null }] : [] },
+    { label: 'Property', key: 'property', value: property, colour: 'var(--c-gold)', detail: propertyList },
+    { label: 'Investments', key: 'portfolio', value: portfolio, colour: 'var(--c-success)', detail: a.portfolio ? [{ name: 'Investment portfolio', value: _num(a.portfolio), sub: `${((a.portfolio.ret || 0) * 100).toFixed(1)}% historical return`, meta: null }] : [] },
+    { label: 'Business', key: 'business', value: business, colour: 'var(--c-warning)', detail: [] },
+    { label: 'Cash & savings', key: 'cash', value: cash, colour: 'var(--c-text2)', detail: a.cash ? [{ name: 'Cash & savings', value: _num(a.cash), sub: a.cash.rate ? `${((a.cash.rate || 0) * 100).toFixed(1)}% interest rate` : 'Cash', meta: null }] : [] },
+    { label: 'Alternatives', key: 'alternatives', value: altAssets, colour: 'var(--c-text3)', detail: [] },
   ].filter(r => r.value > 0)
 
   return (
     <div
       className="screen"
       style={{
-        position: 'fixed', inset: 0, zIndex: 300, overflowY: 'auto',
+        position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto',
         background: 'var(--c-bg)',
         animation: 'nw-slide-up .28s cubic-bezier(0.16,1,0.3,1)',
         padding: '0 0 120px',
@@ -1226,15 +1650,7 @@ function NetWorthDrillPanel({ entity, onClose }) {
         position: 'sticky', top: 0,
         background: 'var(--c-bg)', zIndex: 10,
       }}>
-        <button
-          onClick={onClose}
-          className="sw-press"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}
-        >
+        <button onClick={onClose} className="sw-press" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-acc)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'var(--c-text)' }}>
@@ -1245,59 +1661,53 @@ function NetWorthDrillPanel({ entity, onClose }) {
 
       <div style={{ padding: '16px 16px 0' }}>
         {/* Hero */}
-        <div style={{
-          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-          borderRadius: 18, padding: '14px 18px', marginBottom: 12,
-        }}>
+        <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 18, padding: '14px 18px', marginBottom: 12 }}>
           <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Total net worth</div>
-          <div style={{
-            fontSize: 28, fontWeight: 800, letterSpacing: -0.8,
-            color: nw >= 0 ? 'var(--c-text)' : 'var(--c-danger)',
-          }}>
-            {fmt(nw)}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 4 }}>
-            Assets {fmt(totalAssets)} · Liabilities {fmt(liabilities)}
-          </div>
-          <span className="sw-chip sw-chip-sm" style={{ marginTop: 8, display: 'inline-block' }}>
-            From your data
-          </span>
+          <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.8, color: nw >= 0 ? 'var(--c-text)' : 'var(--c-danger)' }}>{fmt(nw)}</div>
+          <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 4 }}>Assets {fmt(totalAssets)} · Liabilities {fmt(liabilities)}</div>
+          <span className="sw-chip sw-chip-sm" style={{ marginTop: 8, display: 'inline-block' }}>From your data</span>
         </div>
 
-        {/* Asset waterfall bars */}
-        <div style={{
-          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-          borderRadius: 18, padding: '14px 18px', marginBottom: 12,
-        }}>
-          <div className="sw-eyebrow" style={{ marginBottom: 12 }}>Assets</div>
-          {rows.length === 0 && (
-            <div style={{ fontSize: 13, color: 'var(--c-text3)', fontStyle: 'italic' }}>
-              No asset data yet — add assets to see breakdown.
-            </div>
-          )}
-          {rows.map(({ label, value, colour }) => {
+        {/* Asset rows — each expandable to show individual holdings */}
+        <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 18, padding: '14px 18px', marginBottom: 12 }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 12 }}>Assets — tap any row for details</div>
+          {rows.length === 0 && <div style={{ fontSize: 13, color: 'var(--c-text3)', fontStyle: 'italic' }}>No asset data yet.</div>}
+          {rows.map(({ label, key, value, colour, detail }) => {
             const pctOfAssets = totalAssets > 0 ? (value / totalAssets) * 100 : 0
+            const isOpen = expandedRow === key
+            const hasDetail = detail && detail.length > 0
             return (
-              <div key={label} style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>{label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
-                    {fmt(value)}
-                  </span>
+              <div key={label} style={{ borderTop: rows.indexOf(rows.find(r => r.key === key)) > 0 ? '1px solid var(--c-sep)' : 'none', paddingTop: rows.indexOf(rows.find(r => r.key === key)) > 0 ? 10 : 0, marginBottom: 10 }}>
+                <div
+                  onClick={() => hasDetail && setExpandedRow(isOpen ? null : key)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, cursor: hasDetail ? 'pointer' : 'default' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <i style={{ width: 8, height: 8, borderRadius: 2, background: colour, display: 'inline-block', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: 'var(--c-text2)', fontWeight: 600 }}>{label}</span>
+                    {hasDetail && <span style={{ fontSize: 10, color: 'var(--c-text3)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s', display: 'inline-block' }}>›</span>}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{fmt(value)}</span>
                 </div>
-                <div style={{
-                  height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden',
-                }}>
-                  <div style={{
-                    height: '100%', borderRadius: 3,
-                    width: `${Math.max(0, Math.min(100, pctOfAssets))}%`,
-                    background: colour,
-                    transition: 'width 900ms var(--ease-out-expo, cubic-bezier(0.16,1,0.3,1))',
-                  }} />
+                <div style={{ height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginBottom: 2 }}>
+                  <div style={{ height: '100%', borderRadius: 3, width: `${Math.max(0, Math.min(100, pctOfAssets))}%`, background: colour, transition: 'width 900ms cubic-bezier(0.16,1,0.3,1)' }} />
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
-                  {pctOfAssets.toFixed(0)}% of assets
-                </div>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>{pctOfAssets.toFixed(0)}% of assets</div>
+                {isOpen && hasDetail && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--c-sep)' }}>
+                    {detail.map((item, di) => (
+                      <div key={di} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '8px 0', borderTop: di > 0 ? '1px solid var(--c-sep)' : 'none' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{item.name}</div>
+                          {item.sub && <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 1 }}>{item.sub}</div>}
+                          {item.meta && <div style={{ fontSize: 10, color: 'var(--c-acc)', marginTop: 2 }}>{item.meta}</div>}
+                          {item.charge && <div style={{ fontSize: 10, color: 'var(--c-warning)', marginTop: 2 }}>{item.charge}</div>}
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: colour, fontVariantNumeric: 'tabular-nums', marginLeft: 12, flexShrink: 0 }}>{fmt(item.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -1324,25 +1734,32 @@ function NetWorthDrillPanel({ entity, onClose }) {
           </div>
         )}
 
-        {/* Investable vs illiquid */}
+        {/* How quickly can I access my money? */}
         {inv > 0 && (
-          <div style={{
-            background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-            borderRadius: 18, padding: '14px 18px', marginBottom: 12,
-          }}>
-            <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Liquidity split</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>Investable / liquid</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-success)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(inv)}
-              </span>
+          <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 18, padding: '14px 18px', marginBottom: 12 }}>
+            <div className="sw-eyebrow" style={{ marginBottom: 4 }}>How quickly can I access my money?</div>
+            <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 12 }}>
+              Liquid wealth = cash, ISA, and other accessible funds you could use within days. Illiquid = property and business assets that can take months or years to sell.
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>Illiquid (property + business)</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
-                {fmt(Math.max(0, totalAssets - inv))}
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--c-text2)', fontWeight: 600 }}>Accessible now</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Cash, ISA, liquid investments</div>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-success)', fontVariantNumeric: 'tabular-nums' }}>{fmt(inv)}</span>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: lb?.months ? 8 : 0 }}>
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--c-text2)', fontWeight: 600 }}>Tied up</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>Property, business — takes time to sell</div>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{fmt(Math.max(0, totalAssets - inv))}</span>
+            </div>
+            {lb?.months != null && (
+              <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(93,219,194,0.08)', borderRadius: 10, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+                Your accessible cash covers <strong style={{ color: 'var(--c-acc)' }}>{lb.months.toFixed(1)} months</strong> of essential living costs — aim for 3–6 months minimum.
+              </div>
+            )}
           </div>
         )}
 
@@ -1358,6 +1775,13 @@ function NetWorthDrillPanel({ entity, onClose }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN EXPORT
    ═══════════════════════════════════════════════════════════════════════ */
+
+// Build stamp — updates on every HMR reload so both dev + founder can
+// verify which version is live without guessing.
+const BUILD = (() => {
+  const d = new Date()
+  return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+})()
 
 export default function HomeScreen({
   entity,
@@ -1391,7 +1815,9 @@ export default function HomeScreen({
   const [localDrill, setLocalDrill] = useState(null)
 
   const drillFn = (metric) => {
-    if (metric === 'netWorth' || metric === 'networth') { setLocalDrill('networth'); return }
+    if (typeof metric === 'string' && metric.startsWith('nav:')) { onNav?.(metric.slice(4)); return }
+    if (metric === 'netWorth' || metric === 'networth') { setLocalDrill('networth:'); return }
+    if (typeof metric === 'string' && metric.startsWith('netWorth:')) { setLocalDrill('networth:' + metric.split(':')[1]); return }
     if (metric === 'coi')                               { setLocalDrill('coi');      return }
     if (metric === 'apq' || metric === 'gaps')          { setLocalDrill('apq');      return }
     if (metric === 'pension-drawdown')                  { setLocalDrill('pension-drawdown'); return }
@@ -1411,7 +1837,7 @@ export default function HomeScreen({
   return (
     <>
       {/* Drill panels — float above everything (replaces early returns) */}
-      {localDrill === 'networth' && <NetWorthDrillPanel entity={entity} onClose={() => setLocalDrill(null)} />}
+      {localDrill?.startsWith('networth') && <NetWorthDrillPanel entity={entity} focusAsset={localDrill.split(':')[1] || null} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'apq'     && <APQDrillPanel entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'pension-drawdown' && (
@@ -1432,8 +1858,11 @@ export default function HomeScreen({
         onOpenBreakdown={onOpenBreakdown}
       />
 
+      {/* ── §Z10 SIPP-IHT countdown (regulatory: Finance Act 2026) ──── */}
+      <SippIhtCountdown entity={entity} onNav={onNav} />
+
       {/* ── Zone 4: State Tiles (spec §Z4) ────────────────────────────── */}
-      <StateTilesCard entity={entity} onNav={onNav} />
+      <StateTilesCard entity={entity} onNav={onNav} onDrillDim={drillFn} />
 
       {/* ── 2-column content grid (Task 2 scaffold) ───────────────────── */}
       <div style={{
@@ -1454,7 +1883,29 @@ export default function HomeScreen({
         <ActionsCard entity={entity} viewMode={viewMode} onNav={onNav} onDrillMetric={drillFn} />
       </div>
 
-      {/* CoI + SIPP-IHT countdown now embedded in AnchorRow (4-column layout) */}
+      {/* ── FUTURE / PLAN placeholder banner ────────────────────────── */}
+      {(viewMode === 'forecast' || viewMode === 'plan') && (
+        <div style={{
+          margin: '4px 16px 0', padding: '12px 16px',
+          background: 'var(--c-surface)', border: '1px dashed var(--c-sep)', borderRadius: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>
+              {viewMode === 'forecast' ? '5-year projection' : 'Plan detail'} — coming in Phase 2
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+              See your Timeline for projections available now
+            </div>
+          </div>
+          <button
+            onClick={() => onNav?.('timeline')}
+            style={{ background: 'none', border: '1px solid var(--c-acc)', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', padding: '5px 10px', borderRadius: 8, fontFamily: 'inherit', flexShrink: 0 }}
+          >
+            Timeline →
+          </button>
+        </div>
+      )}
 
       {/* ── Card 5: Plan progress strip ───────────────────────────────── */}
       <PlanProgressStrip entity={entity} onNav={onNav} />

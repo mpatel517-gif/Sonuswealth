@@ -166,30 +166,37 @@ export default function CategoryTile({
           const fillPath = `${path} L${xs[xs.length - 1].toFixed(1)},${H - pad} L${xs[0].toFixed(1)},${H - pad} Z`
           const stroke = liability ? 'var(--c-coral, #FF6F7D)' : 'var(--c-acc)'
           return (
-            <svg
-              viewBox={`0 0 ${W} ${H}`}
-              width={W}
-              height={H}
-              aria-hidden="true"
-              style={{ flexShrink: 0, opacity: 0.85 }}
-            >
-              <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={stroke} stopOpacity="0.32" />
-                  <stop offset="100%" stopColor={stroke} stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d={fillPath} fill={`url(#${gradientId})`} />
-              <path
-                d={path}
-                fill="none"
-                stroke={stroke}
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ filter: `drop-shadow(0 0 3px ${stroke}88)` }}
-              />
-            </svg>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <svg
+                viewBox={`0 0 ${W} ${H}`}
+                width={W}
+                height={H}
+                aria-hidden="true"
+                style={{ display: 'block', opacity: 0.85 }}
+              >
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={stroke} stopOpacity="0.32" />
+                    <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d={fillPath} fill={`url(#${gradientId})`} />
+                <path
+                  d={path}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ filter: `drop-shadow(0 0 3px ${stroke}88)` }}
+                />
+              </svg>
+              <span style={{
+                position: 'absolute', bottom: 1, left: 1,
+                fontSize: 9, color: 'var(--c-text3)', opacity: 0.7,
+                lineHeight: 1, pointerEvents: 'none',
+              }}>est.</span>
+            </div>
           )
         })()}
 

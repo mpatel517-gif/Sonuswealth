@@ -15,6 +15,8 @@
 // edit/add actions.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { TAX } from '../../engine/fq-calculator.js';
+
 function fmt(v) {
   const n = Math.round(+v || 0)
   const abs = Math.abs(n)
@@ -110,7 +112,7 @@ function IncomeView({ entity }) {
     rows.push({ label, annual: +annual, monthly: Math.round(+annual / 12), taxNote, tone })
   }
   add('Salary or director\'s pay',     income.employment || income.directorSalary, 'Taxed via PAYE plus National Insurance', 'neutral')
-  add('Dividends from your company',   income.directorDividends || income.dividends, 'First £500 tax-free, then 10.75% / 35.75% / 41.35%', 'warn')
+  add('Dividends from your company',   income.directorDividends || income.dividends, 'First £500 tax-free, then 8.75% / 33.75% / 39.35%', 'warn')
   add('Self-employed income',          income.selfEmploymentNet,                    'Income tax + Class 4 NI · digital records required above £50k', 'neutral')
   add('Rental income (after expenses)',income.rentalIncomeNet,                      'Taxed as income · only 20% rebate on mortgage interest', 'warn')
   add('State pension',                 income.statePension?.annual,                 'Taxed as income · paid gross', 'neutral')
@@ -174,9 +176,9 @@ function IncomeView({ entity }) {
       {/* Income deep-dive — tax band breakdown. Shows what proportion of
           income hits each band so the user can SEE the marginal-rate cliff. */}
       {totalAnnual > 0 && (() => {
-        const pa = Math.max(0, 12570 - Math.max(0, ani - 100000) / 2) // taper above £100k
-        const basicTop = 50270
-        const higherTop = 125140
+        const pa = Math.max(0, (TAX.pa ?? 12570) - Math.max(0, ani - 100000) / 2) // taper above £100k
+        const basicTop = TAX.brt ?? 50270
+        const higherTop = TAX.art ?? 125140
         // Band amounts based on ANI (taxable income), not totalAnnual
         const inPA = Math.min(ani, pa)
         const inBasic = Math.max(0, Math.min(ani, basicTop) - pa)
@@ -236,10 +238,13 @@ function IncomeView({ entity }) {
 
       <Group title="How much of your tax-free allowances you've used this year" sub="Every one of these resets on 6 April. Anything unused is lost.">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
-          <Tile label="ISA shelter" value={`${Math.round((income.allowance_use?.isa || 0) * 100)}%`} tone={(income.allowance_use?.isa || 0) >= 0.5 ? 'good' : 'warn'} sub="of £20,000 cap" />
-          <Tile label="Pension pay-in cap" value={`${Math.round((income.allowance_use?.pension_aa || 0) * 100)}%`} sub="of £60,000 cap" />
-          <Tile label="Tax-free capital gains" value={`${Math.round((income.allowance_use?.cgt_aea || 0) * 100)}%`} sub="of £3,000 cap" />
-          <Tile label="Tax-free dividends" value={`${Math.round((income.allowance_use?.dividend_allowance || 0) * 100)}%`} tone={(income.allowance_use?.dividend_allowance || 0) >= 1 ? 'bad' : 'neutral'} sub="of £500 cap" />
+          <Tile label="ISA shelter" value={`${Math.round((income.allowance_use?.isa || 0) * 100)}%`} tone={(income.allowance_use?.isa || 0) >= 0.5 ? 'good' : 'warn'} sub={`of ${fmt(TAX.isaAllowance ?? 20000)} cap`} />
+          {(() => {
+            const hasMPAA = entity.drawdownActive || entity.pension?.drawdownActive || (+(entity.income?.pensionDrawdown) > 0)
+            return <Tile label="Pension pay-in cap" value={`${Math.round((income.allowance_use?.pension_aa || 0) * 100)}%`} sub={hasMPAA ? 'of £10,000 cap (MPAA)' : `of ${fmt(TAX.pensionAA ?? 60000)} cap`} />
+          })()}
+          <Tile label="Tax-free capital gains" value={`${Math.round((income.allowance_use?.cgt_aea || 0) * 100)}%`} sub={`of ${fmt(TAX.cgaAllowance ?? 3000)} cap`} />
+          <Tile label="Tax-free dividends" value={`${Math.round((income.allowance_use?.dividend_allowance || 0) * 100)}%`} tone={(income.allowance_use?.dividend_allowance || 0) >= 1 ? 'bad' : 'neutral'} sub={`of ${fmt(TAX.dividendAllowance ?? 500)} cap`} />
         </div>
       </Group>
     </div>
@@ -307,9 +312,10 @@ function InsuranceView({ entity }) {
           || +(entity?.income?.employment)
           || +(entity?.income?.directorSalary)
           || 0
-        const essentials = +(entity?.expenses?.essential_annual)
+        const essentialsRaw = +(entity?.expenses?.essential_annual)
           || (+(entity?.expenses?.essential_monthly) * 12)
-          || (grossIncome * 0.55)
+        const essentials = essentialsRaw || (grossIncome * 0.55)
+        const essentialsEstimated = !essentialsRaw
         const lifeNeed = grossIncome > 0 ? grossIncome * 10 : 0
         const lifeCover = totalLifeCover
         const lifeGap = Math.max(0, lifeNeed - lifeCover)
@@ -333,8 +339,8 @@ function InsuranceView({ entity }) {
             label: 'If you get seriously ill',
             cover: ciCover, need: ciNeed, gap: ciGap,
             line: ciGap > 0
-              ? `Lump-sum cover is ${fmt(ciGap)} short of 5× essential expenses`
-              : ciNeed > 0 ? 'Cover meets the 5× essentials benchmark' : '—',
+              ? `Lump-sum cover is ${fmt(ciGap)} short of 5× essential expenses${essentialsEstimated ? ' (essentials estimated)' : ''}`
+              : ciNeed > 0 ? `Cover meets the 5× essentials benchmark${essentialsEstimated ? ' (essentials estimated)' : ''}` : '—',
           },
           {
             label: 'If you can\'t work',
@@ -405,7 +411,7 @@ function InsuranceView({ entity }) {
           <Group key={groupTitle} title={groupTitle}>
             <div style={{ background: 'var(--c-surface2)', borderRadius: 10, overflow: 'hidden' }}>
               {list.map((it, i) => (
-                <div key={i} style={{
+                <div key={it.id || it.label || i} style={{
                   padding: '11px 14px',
                   borderBottom: i < list.length - 1 ? '1px solid var(--c-sep)' : 'none',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
@@ -580,7 +586,11 @@ function BondsView({ entity }) {
                 </span>
               </div>
               <div style={{ background: 'var(--c-surface2)', borderRadius: 10, overflow: 'hidden' }}>
-                {items.map((it, i) => (
+                {items.map((it, i) => {
+                  const couponRate = +it.coupon_rate || +it.yield || 0
+                  const couponIncome = couponRate * (+it.value || +it.balance || 0)
+                  const hasCoupon = couponRate > 0
+                  return (
                   <div key={it.id || i} style={{
                     padding: '11px 14px',
                     borderBottom: i < items.length - 1 ? '1px solid var(--c-sep)' : 'none',
@@ -593,28 +603,44 @@ function BondsView({ entity }) {
                         {isInvBond && it.withdrawal_5pct_used_pct != null && ` · ${Math.round(it.withdrawal_5pct_used_pct * 100)}% of 5% used`}
                       </div>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
-                      {fmt(it.value || it.balance)}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
+                        {fmt(it.value || it.balance)}
+                      </div>
+                      {!isInvBond && (
+                        hasCoupon
+                          ? <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>{fmt(couponIncome)}/yr</div>
+                          : <button onClick={() => it.onTap?.() } style={{ fontSize: 10, color: 'var(--c-acc)', cursor: 'pointer', background: 'none', border: 'none', padding: 0, marginTop: 2 }}>Add coupon →</button>
+                      )}
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </Group>
           )
         })
       )}
 
-      <Group title="Not captured yet" sub="Other fixed-income instruments in the canonical taxonomy:">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {['UK gilt — short', 'UK gilt — long', 'Index-linked gilt', 'Corporate bond — IG', 'Corporate bond — HY', 'Bond ETF', 'With-profits bond', 'Endowment / MIP', 'Loan notes / debentures', 'QCB', 'NS&I Index-linked'].map(t => (
-            <span key={t} style={{
-              padding: '6px 12px', borderRadius: 100,
-              background: 'var(--c-surface2)', border: '1px dashed var(--c-border)',
-              color: 'var(--c-text3)', fontSize: 11, fontWeight: 600,
-            }}>+ {t}</span>
-          ))}
-        </div>
-      </Group>
+      {(() => {
+        const allTaxonomyTypes = ['UK gilt — short', 'UK gilt — long', 'Index-linked gilt', 'Corporate bond — IG', 'Corporate bond — HY', 'Bond ETF', 'With-profits bond', 'Endowment / MIP', 'Loan notes / debentures', 'QCB', 'NS&I Index-linked']
+        const capturedCats = Object.keys(byCat)
+        const missingTypes = allTaxonomyTypes.filter(t => !capturedCats.some(c => c.toLowerCase().includes(t.split(' — ')[0].toLowerCase())))
+        if (missingTypes.length === 0) return null
+        return (
+          <Group title="Not captured yet" sub="Other fixed-income instruments in the canonical taxonomy:">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {missingTypes.map(t => (
+                <span key={t} style={{
+                  padding: '6px 12px', borderRadius: 100,
+                  background: 'var(--c-surface2)', border: '1px dashed var(--c-border)',
+                  color: 'var(--c-text3)', fontSize: 11, fontWeight: 600,
+                }}>+ {t}</span>
+              ))}
+            </div>
+          </Group>
+        )
+      })()}
     </div>
   )
 }
@@ -645,7 +671,7 @@ function CashflowView({ entity }) {
 
   // Spending streams
   const spendRows = [
-    { label: 'Essential spending',       monthly: +expenses.essential_monthly || Math.round((totalMonthlyIncome * 0.55)), type: 'spend' },
+    { label: 'Essential spending',       monthly: +expenses.essential_monthly || Math.round((totalMonthlyIncome * 0.55)), type: 'spend', estimated: !+expenses.essential_monthly },
     { label: 'Mortgage / rent',          monthly: +expenses.housing_monthly || 0, type: 'spend' },
     { label: 'Debt repayments',          monthly: (() => {
       // H-09: exclude mortgage payment if Mortgage/rent row already shows it from expenses
@@ -719,7 +745,7 @@ function CashflowView({ entity }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ fontSize: 12, color: 'var(--c-text2)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: SPEND_COLORS[i % SPEND_COLORS.length], display: 'inline-block' }} />
-                  {r.label}
+                  {r.label}{r.estimated && <span style={{ fontSize: 11, color: 'var(--c-text3)', fontStyle: 'italic' }}> (est.)</span>}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(r.monthly)}/mo
@@ -742,7 +768,7 @@ function CashflowView({ entity }) {
       <Group title="What this means for you" sub="">
         <div style={{ fontSize: 13, color: 'var(--c-text)', lineHeight: 1.6 }}>
           {pos
-            ? `Your ${fmt(surplus)}/mo surplus is ${fmt(surplus * 12)}/yr you can redirect to wealth-building. Priority order: (1) top up your ISA — £20k/yr tax-free growth, (2) pension contributions — 40–47% tax relief at your rate, (3) overpay debt if mortgage rate > expected investment returns.`
+            ? `Your ${fmt(surplus)}/mo surplus is ${fmt(surplus * 12)}/yr you could redirect to wealth-building. Common approaches include using ISA allowances (tax-free growth), pension contributions (tax relief at your marginal rate), and debt reduction — the right order depends on your individual circumstances. Consider speaking with a financial adviser.`
             : `You're spending ${fmt(Math.abs(surplus))}/mo more than you earn. This won't show up immediately, but it compounds: after 12 months that's ${fmt(Math.abs(surplus) * 12)} of drawn-down savings or new debt. Review the spending categories above and identify the biggest item to cut.`}
         </div>
       </Group>
@@ -759,16 +785,20 @@ export function PivotToggle({ pivot, onPivot }) {
     { id: 'bonds',         label: 'Bonds' },
   ]
   return (
+    <div style={{ position: 'relative', maxWidth: '100%', marginBottom: 12,
+      WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent 100%)',
+      maskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent 100%)',
+    }}>
     <div style={{
       display: 'flex', gap: 4, padding: 4,
       background: 'var(--c-surface2)',
       border: '1px solid var(--c-border)',
       borderRadius: 100,
-      marginBottom: 12,
       width: 'fit-content',
       maxWidth: '100%',
       overflowX: 'auto',
       flexWrap: 'nowrap',
+      marginBottom: 0,
     }}>
       {opts.map(o => {
         const active = pivot === o.id
@@ -798,13 +828,15 @@ export function PivotToggle({ pivot, onPivot }) {
         )
       })}
     </div>
+    </div>
   )
 }
 
-export default function PivotView({ pivot, entity }) {
-  if (pivot === 'income')    return <IncomeView entity={entity} />
-  if (pivot === 'cashflow')  return <CashflowView entity={entity} />
-  if (pivot === 'insurance') return <InsuranceView entity={entity} />
-  if (pivot === 'bonds')     return <BondsView entity={entity} />
+export default function PivotView({ pivot, entity, scenarioEntity = null }) {
+  const activeEntity = scenarioEntity ?? entity
+  if (pivot === 'income')    return <IncomeView entity={activeEntity} />
+  if (pivot === 'cashflow')  return <CashflowView entity={activeEntity} />
+  if (pivot === 'insurance') return <InsuranceView entity={activeEntity} />
+  if (pivot === 'bonds')     return <BondsView entity={activeEntity} />
   return null
 }

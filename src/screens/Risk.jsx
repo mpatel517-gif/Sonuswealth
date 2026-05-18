@@ -40,7 +40,7 @@ import {
   calcRisk, riskBand, financialProfile,
   calcAPQ, planFor,
   calcRiskHistory,
-  riskShockSuite, whatWouldHelpMost as engineWhatHelpsMost, lifeEventPaths,
+  riskShockSuite, whatWouldHelpMost as engineWhatHelpsMost, lifeEventPaths, shockTrajectory,
 } from '../engine/fq-calculator.js'
 import { BRAND } from '../config/brand.js'
 // TripleAnchor intentionally NOT used on Risk — spec §2.3 + §2.7 D-ANCHOR-2
@@ -159,6 +159,7 @@ function RiskRing({ score, band }) {
           letterSpacing:-2, lineHeight:1,
         }}>
           <Num value={score} format="score" animate />
+          <span style={{ fontSize:14, fontWeight:400, color:'var(--c-text3)', marginLeft:2 }}>/100</span>
         </div>
       </foreignObject>
       <text x={100} y={120} textAnchor="middle"
@@ -847,13 +848,33 @@ function DimSheet({ dimCfg, score, entity, onClose, onCommit }) {
   )
 }
 
+// ── Shock card routing map (FD-CROSS-1) ──────────────────────────────────────
+const SHOCK_HANDOFF = {
+  job_loss:    { nav: 'money', label: 'Review my finances →' },
+  market_fall: { nav: 'money', label: 'Review drawdown plan →' },
+  illness:     { nav: 'money', label: 'Add protection →' },
+  rate_rise:   { nav: 'flow',  label: 'Review cashflow →' },
+  death:       { nav: 'tax',   label: 'Review estate plan →' },
+}
+
 // ── Shock card (uses runShock engine output, animated counter-up on expand) ─
-function ShockCard({ shock }) {
+function ShockCard({ shock, onNav, onAddProtection }) {
   const [open, setOpen] = useState(false)
   const colour =
     shock.rsDelta <= -10 ? 'var(--c-danger)' :
     shock.rsDelta <= -5  ? 'var(--c-danger)' :
     shock.rsDelta <= -2  ? 'var(--c-warning)' : 'var(--c-warning)'
+
+  const handoff = SHOCK_HANDOFF[shock.shockId]
+
+  function handleAct(e) {
+    e.stopPropagation()
+    if (shock.shockId === 'illness') {
+      onAddProtection?.('life-cover')
+    } else if (handoff?.nav) {
+      onNav?.(handoff.nav)
+    }
+  }
 
   return (
     <div onClick={() => setOpen(!open)} className="sw-lift sw-press" style={{
@@ -865,8 +886,15 @@ function ShockCard({ shock }) {
         justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, flex:1 }}>
           <div>
-            <div style={{ fontSize:13, fontWeight:700, color:'var(--c-text)' }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'var(--c-text)', display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
               {shock.label}
+              <span style={{
+                fontSize: 9, fontWeight: 600, letterSpacing: '0.04em',
+                color: 'var(--c-text3)',
+                background: 'var(--c-surface2)',
+                border: '1px solid var(--c-sep)',
+                borderRadius: 4, padding: '1px 5px',
+              }}>est · not advice</span>
             </div>
             <div style={{ fontSize:11, color:colour, marginTop:1, display:'flex',
               alignItems:'baseline', gap:4, flexWrap:'wrap' }}>
@@ -894,6 +922,55 @@ function ShockCard({ shock }) {
           <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.55 }}>
             {shock.description}
           </div>
+          {shock.traj && (() => {
+            const { baseline, shocked, survivalMonths, recoveryMonth } = shock.traj
+            const W = 120, H = 40
+            const all = baseline.map(p => p.value).concat(shocked.map(p => p.value))
+            const minV = Math.min(...all), maxV = Math.max(...all)
+            const range = maxV - minV || 1
+            const px = i => (i / (Math.max(baseline.length - 1, 1))) * W
+            const py = v => H - ((v - minV) / range) * (H - 4) - 2
+            const basePath    = baseline.map((p, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(p.value).toFixed(1)}`).join(' ')
+            const shockedPath = shocked.map((p, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(p.value).toFixed(1)}`).join(' ')
+            const survivesWindow = survivalMonths >= baseline.length - 1
+            const label = survivesWindow
+              ? (recoveryMonth ? `Recovers ~${recoveryMonth}mo` : null)
+              : `Portfolio lasts ~${survivalMonths}mo at current spend`
+            return (
+              <div style={{ marginTop:10 }}>
+                <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}
+                  style={{ display:'block', overflow:'visible' }}>
+                  <path d={basePath} fill="none"
+                    stroke="var(--c-text3)" strokeWidth="1.5"
+                    strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+                  <path d={shockedPath} fill="none"
+                    stroke="var(--c-danger)" strokeWidth="1.5"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {label && (
+                  <div style={{ fontSize:11, color: survivesWindow ? 'var(--c-text3)' : 'var(--c-danger)',
+                    marginTop:4, fontWeight:600 }}>
+                    {label}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+          {handoff && (onNav || onAddProtection) && (
+            <button
+              onClick={handleAct}
+              className="sw-press"
+              style={{
+                marginTop: 10, width: '100%',
+                background: 'var(--c-surface2)',
+                border: '1px solid var(--c-sep)',
+                borderRadius: 10, padding: '10px 14px',
+                fontSize: 12, fontWeight: 700,
+                color: 'var(--c-acc2)', cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >{handoff.label}</button>
+          )}
         </div>
       )}
     </div>
@@ -1018,8 +1095,28 @@ function TakeAction({ entity, onAct }) {
   )
 }
 
+// ── Mitigation action → owning surface routing (FD-CROSS-1) ─────────────────
+function mitigationRoute(action, onNav, onAddProtection) {
+  if (!action) return null
+  const a = action.toLowerCase()
+  if (a.includes('pension') || a.includes('sipp') || a.includes('diversify_income') ||
+      a.includes('emergency_fund') || a.includes('overpay')) {
+    return () => onNav?.('money')
+  }
+  if (a.includes('iht') || a.includes('estate') || a.includes('will') || a.includes('trust')) {
+    return () => onNav?.('tax')
+  }
+  if (a.includes('mortgage') || a.includes('rate') || a.includes('cash') || a.includes('income_protection') && !a.includes('add_income')) {
+    return () => onNav?.('flow')
+  }
+  if (a.includes('life_insurance') || a.includes('income_protection') || a.includes('protection')) {
+    return () => onAddProtection?.('life-cover')
+  }
+  return () => onNav?.('money')
+}
+
 // ── "What would help most" lens (Z11) — staggered table rows ──────────────
-function WhatHelpsMost({ entity }) {
+function WhatHelpsMost({ entity, onNav, onAddProtection }) {
   const [shockId, setShockId] = useState('job_loss')
   const SHOCKS = [
     { id:'job_loss',    label:'Job loss' },
@@ -1055,20 +1152,39 @@ function WhatHelpsMost({ entity }) {
       <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
         <thead>
           <tr style={{ color:'var(--c-text3)', textAlign:'left' }}>
-            <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, cursor:'pointer' }}>Action</th>
+            <th style={{ padding:'6px 8px', fontWeight:700 }}>
+              Action
+              <span style={{
+                marginLeft:6, fontSize:9, fontWeight:700, letterSpacing:'0.04em',
+                color:'var(--c-text3)', textTransform:'uppercase', opacity:0.7,
+              }}>est · not advice</span>
+            </th>
             <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, textAlign:'right', cursor:'pointer' }}>Effort</th>
             <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, textAlign:'right', cursor:'pointer' }}>Δ Risk</th>
           </tr>
         </thead>
         <tbody key={shockId}>
-          {mits.slice(0, 5).map((m, i) => (
+          {mits.slice(0, 5).map((m, i) => {
+            const route = mitigationRoute(m.action, onNav, onAddProtection)
+            return (
             <tr key={m.action} className="sw-fade-in-up"
+              onClick={route || undefined}
               style={{
                 borderTop:'1px solid var(--c-sep)',
                 animationDelay: `${i * 50}ms`,
+                cursor: route ? 'pointer' : 'default',
               }}>
               <td style={{ padding:'8px', color:'var(--c-text)' }}>
-                <div style={{ fontWeight:700 }}>#{i+1} {m.action.replace(/_/g, ' ')}</div>
+                <div style={{ fontWeight:700, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+                  <span>#{i+1} {m.action.replace(/_/g, ' ')}</span>
+                  {route && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      color: 'var(--c-acc2)',
+                      flexShrink: 0,
+                    }}>Act →</span>
+                  )}
+                </div>
                 <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2 }}>
                   {m.description}
                 </div>
@@ -1081,7 +1197,8 @@ function WhatHelpsMost({ entity }) {
                 {m.rsDeltaImprovement > 0 ? '+' : ''}{m.rsDeltaImprovement}
               </td>
             </tr>
-          ))}
+            )
+          })}
           {mits.length === 0 && (
             <tr><td colSpan={3} style={{ padding:'12px',
               textAlign:'center', color:'var(--c-text3)' }}>
@@ -1153,11 +1270,11 @@ function ProtectionPlanCard({ entity }) {
           if (typeof window !== 'undefined') {
             try {
               window.dispatchEvent(new CustomEvent('sonus:navigate', {
-                detail: { tab: 'plan', planType: 'protection' },
+                detail: { tab: 'timeline', planType: 'protection' },
               }))
             } catch {}
             try {
-              window.location.hash = '#tab=plan&planType=protection'
+              window.location.hash = '#tab=timeline&planType=protection'
             } catch {}
           }
         }}
@@ -1325,6 +1442,99 @@ function X25Header({ originLabel = 'Home', onBack }) {
   )
 }
 
+// ── Risk Perception Questionnaire — 3 questions, updates riskAppetite ────────
+const PERCEPTION_QUESTIONS = [
+  {
+    id: 'riskAppetite',
+    title: 'What best describes your investment approach?',
+    sub: 'Your psychological comfort with ups and downs in the value of your money.',
+    options: [
+      { value: 'cautious',   label: 'Cautious — I prioritise stability over returns',      tone: 'neutral' },
+      { value: 'balanced',   label: 'Balanced — mix of growth and security',               tone: 'neutral' },
+      { value: 'growth',     label: 'Growth — I accept volatility for higher long-term returns', tone: 'neutral' },
+      { value: 'aggressive', label: 'Aggressive — maximum growth, I can tolerate big swings', tone: 'warn' },
+    ],
+  },
+  {
+    id: 'timeHorizon',
+    title: 'How long before you need to draw on this wealth?',
+    sub: 'A longer horizon typically supports a higher risk tolerance.',
+    options: [
+      { value: 'under5',  label: 'Under 5 years',   tone: 'warn' },
+      { value: '5to10',   label: '5–10 years',       tone: 'neutral' },
+      { value: '10to20',  label: '10–20 years',      tone: 'neutral' },
+      { value: 'over20',  label: '20+ years',        tone: 'good' },
+    ],
+  },
+  {
+    id: 'lossReaction',
+    title: 'If your portfolio fell 20% in a year, what would you do?',
+    sub: 'Honest answer — this tests capacity for loss, not just stated preference.',
+    options: [
+      { value: 'sell',    label: 'Sell — reduce exposure immediately', tone: 'warn' },
+      { value: 'hold',    label: 'Hold — wait for recovery',           tone: 'neutral' },
+      { value: 'buy',     label: 'Buy more — take advantage of the dip', tone: 'good' },
+      { value: 'unsure',  label: 'Unsure — would need to review',      tone: 'warn' },
+    ],
+  },
+]
+
+function RiskPerceptionQuestionnaire({ entity, onClose, onCommit }) {
+  const [step, setStep] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const q = PERCEPTION_QUESTIONS[step]
+  const total = PERCEPTION_QUESTIONS.length
+
+  function selectAnswer(val) {
+    const next = { ...answers, [q.id]: val }
+    setAnswers(next)
+    if (step < total - 1) {
+      setStep(step + 1)
+    } else {
+      onCommit?.({ type: 'risk_perception_committed', ts: Date.now(), answers: next })
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 400,
+      background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 480,
+        background: 'var(--c-surface)',
+        borderRadius: '20px 20px 0 0',
+        padding: '20px 20px 36px',
+        maxHeight: '80vh', overflowY: 'auto',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="sw-eyebrow">Step {step + 1} of {total} · Risk perception</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text3)', fontSize: 18 }}>×</button>
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)', marginBottom: 6, lineHeight: 1.3 }}>{q.title}</div>
+        {q.sub && <div style={{ fontSize: 12, color: 'var(--c-text3)', marginBottom: 16, lineHeight: 1.5 }}>{q.sub}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {q.options.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => selectAnswer(opt.value)}
+              style={{
+                padding: '11px 14px', borderRadius: 12, textAlign: 'left',
+                background: answers[q.id] === opt.value ? 'rgba(45,242,195,0.12)' : 'var(--c-surface2)',
+                border: answers[q.id] === opt.value ? '1px solid var(--c-acc)' : '1px solid var(--c-sep)',
+                color: 'var(--c-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Reusable composed body — renders all zones. Used by Risk.jsx full-page
 // surface AND by RiskOverlay sheet variant.
@@ -1332,9 +1542,10 @@ function X25Header({ originLabel = 'Home', onBack }) {
 // sticky Risk-primary anchor at the top, hide the Z1 ring card here to avoid
 // the 4×-on-page score-78 duplication called out in HIGH 3.1.
 // ─────────────────────────────────────────────────────────────────────────────
-export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
+export function RiskBody({ entity, onAddProtection, onNav, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
   const [activeDim, setActiveDim] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [riskQOpen, setRiskQOpen] = useState(false)
 
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
@@ -1345,7 +1556,11 @@ export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, sup
   let shocks = []
   try {
     const suite = riskShockSuite(entity)
-    shocks = Object.values(suite || {})
+    shocks = Object.values(suite || {}).map(s => {
+      let traj = null
+      try { traj = shockTrajectory(entity, s.shockId) } catch {}
+      return { ...s, traj }
+    })
   } catch { shocks = [] }
 
   return (
@@ -1374,6 +1589,82 @@ export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, sup
       {/* Compact profile cell — elevated, hero band-name */}
       <ProfileCell profile={profile} />
 
+      {/* Attitude to Risk — stated appetite vs calculated resilience */}
+      {(() => {
+        const appetite = entity?.riskAppetite
+        const APPETITE_LABELS = {
+          cautious:   { label: 'Cautious',   desc: 'Prefer stability — lower returns accepted to reduce volatility.' },
+          balanced:   { label: 'Balanced',   desc: 'Mix of growth and stability — accepts moderate swings.' },
+          growth:     { label: 'Growth',     desc: 'Prioritises long-term growth — comfortable with higher volatility.' },
+          aggressive: { label: 'Aggressive', desc: 'Maximum growth focus — accepts significant short-term falls.' },
+        }
+        const current = appetite ? APPETITE_LABELS[appetite] : null
+        const band = risk.band || riskBand(risk.total)
+        const RISK_DECISIONS = {
+          vulnerable: 'Keep 12+ months in accessible cash. Avoid new debt. Prioritise income stability.',
+          cautious:   'Maintain 6–12 months cash buffer. Review protection cover. Conservative allocation appropriate.',
+          managed:    'Standard planning applies. Review stress scenarios annually. ISA/SIPP tax shelter priority.',
+          protected:  'Resilience is solid. Focus on growth optimisation and estate efficiency.',
+          resilient:  'Strong resilience. Opportunity to accept more investment risk and focus on legacy.',
+        }
+        const decision = RISK_DECISIONS[(band.name || '').toLowerCase()] || 'Review your dimensions to understand where resilience can improve.'
+        return (
+          <FadeInOnMount delay={100}>
+            <div className="card sw-lift" style={{ marginBottom: 12 }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Your risk profile</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>
+                    Stated appetite
+                  </div>
+                  {current ? (
+                    <>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: band.colour }}>{current.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>{current.desc}</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--c-text3)', fontStyle: 'italic' }}>Not set — update your profile</div>
+                  )}
+                </div>
+                <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>
+                    Calculated resilience
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: band.colour }}>{band.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>
+                    {risk.total}/100 — from your 7 dimensions
+                  </div>
+                </div>
+              </div>
+              <div style={{ background: 'rgba(45,242,195,0.06)', border: '1px solid rgba(45,242,195,0.15)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-acc)', marginBottom: 4 }}>
+                  What this means for decisions
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>{decision}</div>
+              </div>
+              <button
+                onClick={() => setRiskQOpen(true)}
+                style={{
+                  width: '100%', padding: '9px 14px', borderRadius: 100,
+                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                  fontSize: 12, fontWeight: 700, color: 'var(--c-acc)',
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                }}
+              >
+                Update your risk perception — 60-second questionnaire →
+              </button>
+              {riskQOpen && (
+                <RiskPerceptionQuestionnaire
+                  entity={entity}
+                  onClose={() => setRiskQOpen(false)}
+                  onCommit={(answers) => { onCommit?.(answers); setRiskQOpen(false) }}
+                />
+              )}
+            </div>
+          </FadeInOnMount>
+        )
+      })()}
+
       {/* Z2: 5×5 cross-map — staggered cells fan in */}
       <FadeInOnMount delay={180}>
         <div className="sw-eyebrow" style={{ marginBottom:6, marginLeft:4 }}>
@@ -1395,7 +1686,7 @@ export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, sup
       />
 
       {/* Z4: Protection gap card */}
-      <ProtectionGap entity={entity} />
+      <ProtectionGap entity={entity} onAction={() => onAddProtection?.('life-cover')} />
 
       {/* Z5: Shock scenarios — staggered cards */}
       <div className="card sw-lift">
@@ -1411,7 +1702,7 @@ export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, sup
           </div>
         ) : (
           <RevealStagger interval={70}>
-            {shocks.map(s => <ShockCard key={s.shockId} shock={s} />)}
+            {shocks.map(s => <ShockCard key={s.shockId} shock={s} onNav={onNav} onAddProtection={onAddProtection} />)}
           </RevealStagger>
         )}
       </div>
@@ -1443,7 +1734,7 @@ export function RiskBody({ entity, onAddProtection, onDrillMetric, onCommit, sup
       />
 
       {/* Z11: What would help most lens — staggered rows */}
-      <WhatHelpsMost entity={entity} />
+      <WhatHelpsMost entity={entity} onNav={onNav} onAddProtection={onAddProtection} />
 
       {/* Z12: Protection plan anchor (always rendered, pulses if no plan) */}
       <ProtectionPlanCard entity={entity} />
@@ -1510,7 +1801,7 @@ function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
           background: `linear-gradient(180deg, color-mix(in srgb, ${band.colour} 6%, var(--c-surface)), var(--c-surface))`,
         }}>
           <div className="sw-eyebrow" style={{ marginBottom: 4, color: band.colour }}>
-            Safety score · primary
+            Risk Score
           </div>
           <RiskRing score={risk.total} band={band} />
           <div style={{
@@ -1532,7 +1823,7 @@ function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
           minWidth: 0,
         }}>
           <SecondaryTile
-            label="Health score"
+            label="Wealth Score"
             value={fq.total}
             band={fq.band || fqBand(fq.total)}
             onTap={() => onDrillMetric?.('wealthScore')}
@@ -1598,7 +1889,7 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Default export — full-page Risk surface.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Risk({ entity, onHome, originLabel = 'Home', onDrillMetric, onCommit }) {
+export default function Risk({ entity, onHome, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)
@@ -1634,6 +1925,8 @@ export default function Risk({ entity, onHome, originLabel = 'Home', onDrillMetr
         entity={entity}
         onDrillMetric={onDrillMetric}
         onCommit={onCommit}
+        onAddProtection={onAddProtection}
+        onNav={onNav}
         suppressPrimaryRing
       />
 

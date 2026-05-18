@@ -665,7 +665,7 @@ function GiftClockRing({ pct, size = 22, colour = 'var(--c-warning)' }) {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function buildCalendarEntries(entity, windowMonths = 12) {
-  const coi    = costOfInaction(entity)
+  const coi    = costOfInaction(entity, 'sipp_iht')
   const dl     = daysLeft()
   const perDay = dl > 0 ? Math.round(coi / dl) : 0
   const age    = _age(entity)
@@ -678,10 +678,13 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   const horizonDays = Math.round(windowMonths * 30.44)
   const entries = []
 
-  // Statutory: April 2027 SIPP IHT deadline (spec §6.9)
+  // Statutory: SIPP IHT deadline (spec §6.9 — date from TAX.deadline, not hardcoded)
+  const sippDeadlineStr = TAX.deadline instanceof Date
+    ? TAX.deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '6 Apr 2027'
   if (coi > 0) {
     entries.push({
-      id:'sipp-iht', date:'6 Apr 2027', daysAway:dl, category:'statutory',
+      id:'sipp-iht', date: sippDeadlineStr, daysAway:dl, category:'statutory',
       title:'DC pensions enter estate for IHT',
       detail: perDay > 0 ? `${fmt(perDay)}/day accruing — ${fmt(coi)} total exposure` : `${fmt(coi)} at stake`,
       coiPerDay: perDay, coiTotal: coi,
@@ -796,7 +799,27 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   return entries
 }
 
-function CalendarEntryRow({ e, isLast }) {
+// Route a calendar entry to the owning screen (spec §6 action routing)
+function calendarEntryNav(e, onNav) {
+  if (!onNav) return
+  switch (e.id) {
+    case 'sipp-iht':
+    case 'sa-deadline':
+    case 'trust-gift':
+      onNav('tax'); break
+    case 'isa-reset':
+    case 'nominations':
+    case 'mortgage-fix':
+      onNav('money'); break
+    case 'state-pension':
+      onNav('flow'); break
+    default:
+      // APQ entries or unknown — try safeRoute from entry action field, else money
+      onNav(e.navTarget || 'money')
+  }
+}
+
+function CalendarEntryRow({ e, isLast, onNav }) {
   const isOverdue = (e.daysAway != null && e.daysAway < 0) || (e.daysAway === null && e.category === 'action')
   const chipClass = urgencyClass(e.daysAway, isOverdue)
   const showDayCounter = e.id === 'sipp-iht' && e.daysAway != null && e.daysAway > 0 && e.daysAway <= 365
@@ -804,10 +827,14 @@ function CalendarEntryRow({ e, isLast }) {
   const coiCount = useCounterAnimation(e.coiPerDay ?? 0, { duration: 900, format: (n) => `£${Math.round(n).toLocaleString('en-GB')}` })
 
   return (
-    <div style={{
-      padding: 'var(--space-sm) 0',
-      borderBottom: isLast ? 'none' : '1px solid var(--c-sep)',
-    }}>
+    <div
+      className="sw-press"
+      onClick={() => calendarEntryNav(e, onNav)}
+      style={{
+        padding: 'var(--space-sm) 0',
+        borderBottom: isLast ? 'none' : '1px solid var(--c-sep)',
+        cursor: 'pointer',
+      }}>
       <div style={{
         display:'flex', justifyContent:'space-between',
         alignItems:'flex-start', marginBottom: 4, gap: 'var(--space-sm)',
@@ -859,7 +886,7 @@ function CalendarEntryRow({ e, isLast }) {
   )
 }
 
-function SectionC({ entity, windowId }) {
+function SectionC({ entity, windowId, onNav }) {
   const [catFilter, setCatFilter] = useState([...CAT_CHIPS])
   // Window controls horizon: lifetime → 60mo, 12mo → 12, custom → 24, default 12
   const horizonMonths = useMemo(() => {
@@ -934,7 +961,7 @@ function SectionC({ entity, windowId }) {
       ) : (
         <RevealStagger interval={50}>
           {sorted.map((e, i) => (
-            <CalendarEntryRow key={e.id} e={e} isLast={i === sorted.length - 1} />
+            <CalendarEntryRow key={e.id} e={e} isLast={i === sorted.length - 1} onNav={onNav} />
           ))}
         </RevealStagger>
       )}
@@ -1445,20 +1472,33 @@ function SectionE({ entity, planRows, scenarios, onOpenGoalSeek, onEditGoalSeek 
 
 // ─── Goal-seek sheet (lifted from §E so it can be opened from §F.1 headline + PlanRow) ───
 function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
-  const [seekTarget, setSeekTarget]   = useState({ metric: initialMetric || 'wealthScore', value: 80 })
-  const [seekResults, setSeekResults] = useState(null)
+  const [seekTarget, setSeekTarget]     = useState({ metric: initialMetric || 'wealthScore', value: 80 })
+  const [seekResults, setSeekResults]   = useState(null)
+  const [seekComingSoon, setSeekComingSoon] = useState(false)
 
   // Sync metric when caller changes initialMetric (e.g. PlanRow Edit clicked for a different plan)
   useEffect(() => {
     if (open && initialMetric) {
       setSeekTarget(s => ({ ...s, metric: initialMetric }))
       setSeekResults(null)
+      setSeekComingSoon(false)
     }
   }, [open, initialMetric])
 
   if (!open) return null
 
+  // Metrics fully handled by goalSeek engine (all others fall through to scoreDelta — meaningless)
+  const SUPPORTED_METRICS = ['wealthScore', 'riskScore', 'netWorth', 'iht']
+
   function runGoalSeek() {
+    if (!SUPPORTED_METRICS.includes(seekTarget.metric)) {
+      // Plan-type metrics (retirement, estate, cashflow, debt, gift, protection, tax, custom)
+      // are not yet fully modelled in goalSeek — return null to show "coming soon" UI
+      setSeekResults(null)
+      setSeekComingSoon(true)
+      return
+    }
+    setSeekComingSoon(false)
     try {
       const paths = goalSeek(entity, seekTarget.metric, +seekTarget.value, '12mo', { maxAction: 200000 })
       setSeekResults(paths)
@@ -1468,8 +1508,24 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
   }
 
   function commitGoalSeekPath(path) {
+    // Map each metric to its correct envelope type so the matching PlanRow
+    // updates (e.g. selecting "Estate plan" must produce type:'estate').
+    const METRIC_TO_ENVELOPE = {
+      wealthScore:  'retirement',
+      netWorth:     'retirement',
+      iht:          'estate',
+      riskScore:    'protection',
+      retirement:   'retirement',
+      estate:       'estate',
+      cashflow:     'cashflow',
+      debt:         'debt',
+      gift:         'gift',
+      protection:   'protection',
+      tax:          'tax',
+      custom:       'custom',
+    }
     const planEnvelope = {
-      type: seekTarget.metric === 'wealthScore' ? 'retirement' : 'custom',
+      type: METRIC_TO_ENVELOPE[seekTarget.metric] ?? 'custom',
       target: +seekTarget.value,
       targetWindow: '12mo',
       actions: [path.action],
@@ -1499,7 +1555,7 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
         }}>
           <select
             value={seekTarget.metric}
-            onChange={e => setSeekTarget(s => ({ ...s, metric: e.target.value }))}
+            onChange={e => { setSeekTarget(s => ({ ...s, metric: e.target.value })); setSeekComingSoon(false) }}
             style={{
               padding: '10px 12px', borderRadius: 'var(--r-md)', fontSize: 13,
               background: 'var(--c-surface2)', color: 'var(--c-text)',
@@ -1584,6 +1640,22 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
             fontStyle: 'italic', padding: 'var(--space-sm) 0',
           }}>
             No paths found within constraints — try a less aggressive target.
+          </div>
+        )}
+
+        {seekComingSoon && (
+          <div style={{
+            padding: 'var(--space-md)', borderRadius: 'var(--r-md)',
+            background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>
+              Goal-seek for this plan type is coming soon
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.6 }}>
+              Full solver support for {seekTarget.metric} plans is in progress.
+              Use Wealth Score, Risk Score, Net Worth, or IHT exposure for now.
+            </div>
           </div>
         )}
 
@@ -2080,7 +2152,7 @@ function ScoreHistoryDrillPanel({ scoreJourneyData, entity, onClose }) {
 // Full-screen panel for a single milestone: status, progress, forward hint.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function MilestoneDrillPanel({ milestone, entity, onClose }) {
+function MilestoneDrillPanel({ milestone, entity, onClose, onOpenGoalSeek }) {
   if (!milestone) return null
 
   const isAchieved  = milestone.achieved === true || milestone.status === 'achieved'
@@ -2207,6 +2279,21 @@ function MilestoneDrillPanel({ milestone, entity, onClose }) {
           <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>
             {hint}
           </div>
+          {!milestone.achieved && (
+            <button
+              onClick={() => { onClose?.(); onOpenGoalSeek?.(milestone.metric || 'wealthScore') }}
+              className="sw-press"
+              style={{
+                marginTop: 14, width: '100%',
+                padding: '10px 0', borderRadius: 'var(--r-pill)',
+                fontSize: 13, fontWeight: 700,
+                border: 'none', background: 'var(--c-acc)', color: 'var(--c-bg)',
+                cursor: 'pointer',
+              }}
+            >
+              Set a target →
+            </button>
+          )}
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '4px 0 12px' }}>
@@ -2301,7 +2388,8 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
   }
 
   function handleCreateGoal(template) {
-    onNav?.('goal-create', { template })
+    // 'goal-create' is not a valid tab — open GoalSeek with the template's plan type instead
+    openGoalSeek(template?.template_id || 'wealthScore')
   }
 
   function handleRiskTap() {
@@ -2321,6 +2409,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
       milestone={activeMilestone}
       entity={entity}
       onClose={() => setActiveMilestone(null)}
+      onOpenGoalSeek={(metric) => { setActiveMilestone(null); openGoalSeek(metric) }}
     />
   }
 
@@ -2333,7 +2422,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         onWindowChange={setWindowId}
         onViewModeChange={setViewMode}
         rulesVersion={TAX.ver || 'UK-2026.1'}
-        dataDate={entity?.dataLastUpdated || 'UK-2026.1'}
+        dataDate={entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       />
 
       {/* Z1 — Triple Anchor (D-ANCHOR-1 · non-negotiable) — counter-up on each */}
@@ -2452,7 +2541,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         purpose="Statutory · personal · action — sorted by urgency"
         colour="var(--c-warning)"
       />
-      <SectionC entity={entity} windowId={windowId} />
+      <SectionC entity={entity} windowId={windowId} onNav={onNav} />
 
       {/* §D Decision Log (spec §7 · backward-only) */}
       <SectionHeader
@@ -2504,7 +2593,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         Not regulated financial advice. Sonuswealth models scenarios and surfaces statutory
         dates relevant to your position; final decisions and timing should be validated
         with a qualified adviser.
-        <br />{TAX.ver} · Last verified: {entity?.dataLastUpdated || 'UK-2026.1'}
+        <br />{TAX.ver} · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       </div>
       <div style={{ height: 78 }} />
     </>

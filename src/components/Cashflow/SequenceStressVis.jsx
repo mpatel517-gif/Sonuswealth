@@ -32,15 +32,32 @@ export default function SequenceStressVis({
   badSequence  = null,    // same shape, unfavourable sequence
   horizonYears = 30,
 }) {
-  // Default mock series — gentle compounding rise vs early-losses-then-recovery.
-  const rawGood = goodSequence ?? Array.from({ length: 24 }, (_, i) => 1_000_000 * Math.pow(1.045, i))
-  const rawBad  = badSequence  ?? Array.from({ length: 24 }, (_, i) => {
-    // First 5 steps decline 12% then recover at 4%/yr
-    if (i < 5) return 1_000_000 * Math.pow(0.88, i)
-    return 1_000_000 * Math.pow(0.88, 5) * Math.pow(1.04, i - 5)
-  })
-  const good = rawGood.length ? rawGood : [1_000_000]
-  const bad  = rawBad.length  ? rawBad  : [1_000_000]
+  // If no engine data, show an empty state — never render fabricated paths.
+  if (!goodSequence && !badSequence) {
+    return (
+      <div className="sw-card sw-card-elevated" style={{
+        padding: 16,
+        background: 'var(--card-bg2)',
+        border: '1px solid var(--c-border)',
+        borderRadius: 'var(--r-lg, 20px)',
+        boxShadow: 'var(--sh2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 100,
+        gap: 8,
+      }}>
+        <div className="sw-eyebrow">Sequence-of-returns vulnerability</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 260 }}>
+          Calculating… engine needs portfolio and drawdown data to model sequence risk.
+        </div>
+      </div>
+    )
+  }
+
+  const good = (goodSequence && goodSequence.length) ? goodSequence : [0]
+  const bad  = (badSequence  && badSequence.length)  ? badSequence  : [0]
 
   const goodEnd = good[good.length - 1]
   const badEnd = bad[bad.length - 1]

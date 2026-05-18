@@ -176,6 +176,7 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
   })
   const [chosen, setChosen] = useState(null)
   const [stressTested, setStressTested] = useState(false)
+  const [committed, setCommitted] = useState(false)
 
   // Computed paths: for DE-09 (property canonical example) use hardcoded
   // PROPERTY_PATHS; for all other live types use enumeratePaths() from engine.
@@ -272,7 +273,27 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
       timestamp: new Date().toISOString(),
     }
     onCommit?.(commitEvent)
-    onBack?.()
+    setCommitted(true)
+    // Show confirmation for 1.5s then close and navigate to Timeline
+    setTimeout(() => {
+      onBack?.({ committed: true })
+    }, 1500)
+  }
+
+  // Committed confirmation screen
+  if (committed) {
+    return (
+      <div className="screen" style={{
+        padding: '48px 24px', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 16, textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 40 }}>✓</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-acc)' }}>Decision committed</div>
+        <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+          Your decision is recorded in the event log. Taking you to Timeline…
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -774,7 +795,7 @@ function StepRecommendation({ path, weights, engineRec }) {
               <ImpactChip label="IHT saved" value={`£${Math.round(impact.ihtSave/1000)}k`} good />
             )}
             {impact.fqGain > 0 && (
-              <ImpactChip label="FQ boost" value={`+${impact.fqGain} pts`} good />
+              <ImpactChip label="Wealth Score boost" value={`+${impact.fqGain} pts`} good />
             )}
           </div>
         )}

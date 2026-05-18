@@ -17,6 +17,8 @@
 // commentary, never source of truth. Materiality threshold £500 or 0.5% NW.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { BRAND } from '../config/brand.js'
+
 // Imports for Phase 2 implementation. Currently unused — uncomment when generation wires.
 // import { netWorth, ihtDynamic, costOfInaction, incomeTax, cashflowHealth, trajectoryData, calcFQ, calcRisk } from '../engine/fq-calculator.js'
 
@@ -101,8 +103,7 @@ export default function Reports({ onBack, onGenerate }) {
 
       <div style={{ fontSize: 12, color: 'var(--c-text2)', marginBottom: 16, lineHeight: 1.55 }}>
         Each report will be generated from your current data + the rules bundle active
-        that day. Saved to your vault with a timestamp; you'll be able to share with
-        your adviser, accountant, or family.
+        that day. You'll be able to share with your adviser, accountant, or family.
       </div>
 
       {/* Period selector — stub. Disabled until Phase 2 wires Generate. */}
@@ -193,8 +194,15 @@ export default function Reports({ onBack, onGenerate }) {
         borderTop: '1px solid var(--c-sep)',
         fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.55,
       }}>
-        PDF/CSV export coming in Phase 2 (D-RPT-EXPORT-1).
+        PDF/CSV export coming in Phase 2.
       </div>
+
+      <p className="text-xs text-gray-400 text-center px-4 pb-4" style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', padding: '12px 16px 4px', lineHeight: 1.55 }}>
+        {BRAND.disclaimer}
+      </p>
+      <p style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', padding: '0 16px 16px', lineHeight: 1.55 }}>
+        {BRAND.rulesLabel()}
+      </p>
     </div>
   )
 }

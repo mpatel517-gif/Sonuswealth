@@ -1,3 +1,7 @@
+/* ── Hide scrollbars on tile rows while keeping scroll ── */
+.tile-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.tile-scroll::-webkit-scrollbar { display: none; }
+
 /* ═══════════════════════════════════════════════════
    SONUSWEALTH DESIGN TOKENS
    Dark = Mathematical Resonance (Google Stitch).

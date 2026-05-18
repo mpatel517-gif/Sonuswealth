@@ -45,7 +45,7 @@ const CHANNELS = [
     id: 'scan',
     icon: '◫',
     title: 'Scan with camera',
-    body: 'Snap a paper statement, policy, certificate, or deed. Phase 1 — single image upload. Phase 2 will add viewfinder + perspective correction + multi-page per 2-Product-document-scan-v1_0.md.',
+    body: 'Snap a paper statement, policy, certificate, or deed. Phase 1 — single image upload. Phase 2 will add viewfinder, perspective correction, and multi-page scanning.',
     badge: 'Paper · On-the-go',
     accept: 'image/*',
     capture: 'environment',
@@ -65,7 +65,7 @@ const CHANNELS = [
     id: 'connect',
     icon: '🔗',
     title: 'Connect bank / broker',
-    body: 'Pull balances + holdings via Open Banking and broker APIs. TrueLayer · Yapily · Salt Edge · India AA · Phase 2 (D-DC-CONNECT-1).',
+    body: 'Pull balances + holdings via Open Banking and broker APIs. TrueLayer · Yapily · Salt Edge · India AA. Coming in Phase 2.',
     badge: 'Phase 2',
     accept: null,
     capture: null,
@@ -75,7 +75,7 @@ const CHANNELS = [
     id: 'voice',
     icon: '🎙️',
     title: 'Voice entry',
-    body: 'Hands-free capture — say the wrapper, amount, and date; we fill the form. Phase 2 (D-DC-VOICE-1).',
+    body: 'Hands-free capture — say the wrapper, amount, and date; we fill the form. Coming in Phase 2.',
     badge: 'Phase 2',
     accept: null,
     capture: null,
@@ -95,7 +95,7 @@ const FP5 = [
 // arrive in Phase 2 (D-DC-PROV-1). Today the FP-5 modal demonstrates the
 // per-field accept/reject contract; the rest of the pipeline (event-store
 // dedup, provenance ledger, auth) is not yet enforced server-side.
-const FP5_HONESTY = 'Dedup, provenance, and step-up auth wiring — Phase 2 (D-DC-PROV-1).'
+const FP5_HONESTY = 'Dedup, provenance, and step-up auth wiring arrive in Phase 2.'
 
 // Parser is now vendor-agnostic via services/parser.js. The mock provider lives
 // in services/parsers/mock.js. Swapping to Anthropic Vision (or any other
@@ -734,7 +734,17 @@ function FP5Modal({ parsed, onDecide, onEdit, onCommit, onClose }) {
 }
 
 // ── Manual entry form (highest-trust path, confidence = 1.0) ───────────────
-const WRAPPERS = ['SIPP', 'ISA', 'GIA', 'CASH', 'PROPERTY', 'BOND_ON', 'EIS', 'VCT', null]
+const WRAPPERS = [
+  { id: 'SIPP',     label: 'SIPP (Self-Invested Personal Pension)' },
+  { id: 'ISA',      label: 'ISA (Individual Savings Account)' },
+  { id: 'GIA',      label: 'General Investment Account' },
+  { id: 'CASH',     label: 'Cash / Savings' },
+  { id: 'PROPERTY', label: 'Property' },
+  { id: 'BOND_ON',  label: 'Onshore Bond' },
+  { id: 'EIS',      label: 'EIS (Enterprise Investment Scheme)' },
+  { id: 'VCT',      label: 'VCT (Venture Capital Trust)' },
+  { id: null,       label: 'None' },
+]
 function ManualEntryForm({ onCancel, onSubmit }) {
   const [label, setLabel] = useState('')
   const [value, setValue] = useState('')
@@ -773,10 +783,10 @@ function ManualEntryForm({ onCancel, onSubmit }) {
         <Label>Wrapper</Label>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
           {WRAPPERS.map(w => (
-            <button key={String(w)} onClick={() => setWrapper(w)}
-              className={`sw-chip sw-chip-sm ${wrapper === w ? 'sw-chip-blue' : ''}`}
+            <button key={String(w.id)} onClick={() => setWrapper(w.id)}
+              className={`sw-chip sw-chip-sm ${wrapper === w.id ? 'sw-chip-blue' : ''}`}
               style={{ cursor: 'pointer', fontWeight: 700 }}>
-              {w || 'None'}
+              {w.label}
             </button>
           ))}
         </div>

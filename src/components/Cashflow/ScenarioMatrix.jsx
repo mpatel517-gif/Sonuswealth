@@ -63,15 +63,31 @@ export default function ScenarioMatrix({
   activeId = null,
   onSelect,
 }) {
-  // Provide a sensible default if no scenarios passed (so the component is
-  // visually meaningful in isolation / Storybook-style rendering).
-  const items = (scenarios && scenarios.length) ? scenarios : [
-    { id: 'do-nothing', name: 'Do nothing',       desc: 'Current trajectory unchanged.',           drawdownAnnual: 0,      pos: 0.0,  spark: [10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10, -12] },
-    { id: 'optimal',    name: 'Optimal',          desc: 'Engine-modelled best path.',              drawdownAnnual: 38_000, pos: 0.94, spark: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21] },
-    { id: 'guardrail',  name: 'Guardrail-adjust', desc: 'Guyton-Klinger dynamic drawdown.',        drawdownAnnual: 34_000, pos: 0.88, spark: [10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16] },
-    { id: 'cautious',   name: 'Cautious',         desc: 'Lower draw, longer runway.',              drawdownAnnual: 28_000, pos: 0.97, spark: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22] },
-    { id: 'ambitious',  name: 'Ambitious',        desc: 'Higher draw, accept sequence risk.',      drawdownAnnual: 46_000, pos: 0.68, spark: [10, 10, 10, 9, 9, 8, 7, 6, 5, 4, 3, 2] },
-  ]
+  // Empty state when engine hasn't returned scenarios — never show fabricated figures.
+  if (!scenarios || !scenarios.length) {
+    return (
+      <div className="sw-card sw-card-elevated" style={{
+        padding: 14,
+        background: 'var(--card-bg2)',
+        border: '1px solid var(--c-border)',
+        borderRadius: 'var(--r-lg, 20px)',
+        boxShadow: 'var(--sh2)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 120,
+        gap: 8,
+      }}>
+        <div className="sw-eyebrow">Cashflow scenarios</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 260 }}>
+          Calculating… engine needs drawdown targets to model your cashflow scenarios.
+        </div>
+      </div>
+    )
+  }
+
+  const items = scenarios
 
   return (
     <div className="sw-card sw-card-elevated" style={{

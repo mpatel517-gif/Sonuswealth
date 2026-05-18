@@ -89,7 +89,18 @@ function BandBar({ total }) {
   )
 }
 
-export default function FQBreakdown({ entity, onClose, initialTab='radar', activeDimKey=null, embedded=false }) {
+const DIM_ROUTES = {
+  behaviour: 'money',
+  capital:   'money',
+  tax:       'tax',
+  protection:'risk',
+  cashflow:  'flow',
+  debt:      'money',
+  estate:    'tax',
+}
+const SCREEN_LABELS = { money: 'MyMoney', tax: 'Tax & Estate', risk: 'Risk', flow: 'Cashflow', timeline: 'Timeline' }
+
+export default function FQBreakdown({ entity, onClose, onNav, initialTab='radar', activeDimKey=null, embedded=false }) {
   const fqData = calcFQ(entity)
   const traj   = fqTrajectory(entity)
   const [view, setView]   = useState(initialTab)
@@ -239,27 +250,41 @@ export default function FQBreakdown({ entity, onClose, initialTab='radar', activ
                     {dim.label}
                   </div>
                 )}
-                {dim.actions.map((a,i)=>(
-                  <div key={i} style={{
-                    display:'flex',alignItems:'center',gap:12,
-                    background:'rgba(255,255,255,.04)',
-                    border:'1px solid rgba(255,255,255,.06)',
-                    borderRadius:12, padding:'12px 14px', marginBottom:8,
-                  }}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:600,color:'rgba(240,244,255,.9)',marginBottom:2}}>{a.label}</div>
-                      <div style={{fontSize:11,color:'rgba(138,155,192,.65)'}}>{a.note}</div>
+                {dim.actions.map((a,i)=>{
+                  const route = a.route || DIM_ROUTES[dim.key]
+                  return (
+                    <div key={i} style={{
+                      background:'rgba(255,255,255,.04)',
+                      border:'1px solid rgba(255,255,255,.06)',
+                      borderRadius:12, padding:'12px 14px', marginBottom:8,
+                    }}>
+                      <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:600,color:'rgba(240,244,255,.9)',marginBottom:2}}>{a.label}</div>
+                          <div style={{fontSize:11,color:'rgba(138,155,192,.65)'}}>{a.note}</div>
+                        </div>
+                        {a.pts > 0 && (
+                          <div style={{
+                            width:40,height:40,borderRadius:'50%',
+                            background:`${dim.colour}22`,
+                            display:'flex',alignItems:'center',justifyContent:'center',
+                            fontSize:13,fontWeight:800,color:dim.colour,flexShrink:0,
+                          }}>+{a.pts}</div>
+                        )}
+                      </div>
+                      {onNav && route && (
+                        <button onClick={()=>{ onNav(route); onClose?.() }} style={{
+                          marginTop:8, padding:'6px 14px', borderRadius:100,
+                          background:'rgba(45,242,195,0.15)', border:'1px solid rgba(45,242,195,0.3)',
+                          color:'#2df2c3', fontSize:11, fontWeight:700, cursor:'pointer',
+                          fontFamily:'inherit',
+                        }}>
+                          Go to {SCREEN_LABELS[route] || route} →
+                        </button>
+                      )}
                     </div>
-                    {a.pts > 0 && (
-                      <div style={{
-                        width:40,height:40,borderRadius:'50%',
-                        background:`${dim.colour}22`,
-                        display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:13,fontWeight:800,color:dim.colour,flexShrink:0,
-                      }}>+{a.pts}</div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ))}
           </div>

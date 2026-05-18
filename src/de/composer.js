@@ -345,6 +345,7 @@ const RESPONSE_CONTRACT = `
   "events": ["event_id"],
   "decision": "The core question being decided",
   "statement": "2–3 sentence contextual summary using the user's actual numbers",
+  "horizon": "ISO date string — the relevant planning horizon (e.g. '2027-04-05' for current tax year end). REQUIRED.",
   "yourAnswers": { "key": "value or null for unanswered" },
 
   "research": [
@@ -396,7 +397,8 @@ const RESPONSE_CONTRACT = `
 }
 
 RULES:
-- Return 3–4 options always. Option D must be the unconsidered path.
+- horizon is REQUIRED. Use "2027-04-05" (current tax year end) if the event has no natural horizon.
+- Return exactly 4 options always: A, B, C as main paths + D as the unconsidered path.
 - Every option needs 2–4 consequences with engineCall populated.
 - consequences[].value is a placeholder only — the validator will replace it.
 - conflicts[] must reference active deadlines from the deadlines block above.

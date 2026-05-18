@@ -6,7 +6,7 @@
 
 import { fmt } from '../../engine/fq-calculator.js'
 
-export default function ProtectionGap({ entity }) {
+export default function ProtectionGap({ entity, onAction }) {
   const a    = entity.assets || {}
   const prot = a.protection  || {}
   const target = entity.targetIncome || 0
@@ -22,9 +22,31 @@ export default function ProtectionGap({ entity }) {
   const ipHave = (prot.incomeProtection?.monthlyBenefit || 0) * 12
   const ipGap = Math.max(0, ipNeed - ipHave)
 
+  const hasGap = lifeGap + ipGap > 0
+
   return (
-    <div className="card">
-      <div className="card-title">Protection Gap</div>
+    <div
+      className={`card sw-lift${hasGap && onAction ? ' sw-press' : ''}`}
+      onClick={hasGap && onAction ? () => onAction() : undefined}
+      style={hasGap && onAction ? { cursor: 'pointer' } : undefined}
+    >
+      <div className="card-title" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span>Protection Gap</span>
+        {hasGap && onAction && (
+          <button
+            onClick={e => { e.stopPropagation(); onAction?.() }}
+            className="sw-press"
+            style={{
+              fontSize: 11, fontWeight: 700,
+              background: 'var(--c-acc3-bg)',
+              color: 'var(--c-acc3)',
+              border: '1px solid var(--c-acc3)',
+              borderRadius: 100, padding: '4px 10px',
+              cursor: 'pointer',
+            }}
+          >Review →</button>
+        )}
+      </div>
       <GapRow
         label="Life cover"
         have={lifeCoverHave} need={lifeCoverNeed}

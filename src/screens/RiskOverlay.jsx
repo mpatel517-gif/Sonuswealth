@@ -21,7 +21,7 @@ import { BRAND } from '../config/brand.js'
 import { RiskBody } from './Risk.jsx'  // re-use composed body
 import { Num, FadeInOnMount } from '../components/shared/index.js'
 
-export default function RiskOverlay({ entity, onClose, originLabel = 'Home' }) {
+export default function RiskOverlay({ entity, onClose, originLabel = 'Home', onNav, onDrillMetric, onCommit, onAddProtection }) {
   const risk = calcRisk(entity)
   const band = risk.band || riskBand(risk.total)
   const fq   = calcFQ(entity)
@@ -89,7 +89,7 @@ export default function RiskOverlay({ entity, onClose, originLabel = 'Home' }) {
               fontSize: 'var(--fs-small)', color: fqB.colour,
               fontWeight: 600, marginLeft: 12,
             }}>
-              · Wealth <Num value={fq.total} format="score" animate />
+              · Wealth Score <Num value={fq.total} format="score" animate />
             </span>
           </div>
           <div style={{
@@ -154,7 +154,14 @@ export default function RiskOverlay({ entity, onClose, originLabel = 'Home' }) {
         )}
 
         {/* All zones — same composition as full-page Risk.jsx */}
-        <RiskBody entity={entity} />
+        <RiskBody
+          entity={entity}
+          onNav={onNav}
+          onDrillMetric={onDrillMetric}
+          onCommit={onCommit}
+          onAddProtection={onAddProtection}
+          suppressPrimaryRing={true}
+        />
 
         {/* Disclaimer */}
         <div style={{

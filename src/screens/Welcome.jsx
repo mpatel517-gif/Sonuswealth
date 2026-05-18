@@ -122,10 +122,7 @@ export default function Welcome({ onStart, onDemo }) {
             border:'1px solid var(--c-border2)', borderRadius:12,
             display:'flex', alignItems:'center', justifyContent:'center',
           }}>
-            {/* TODO: replace with <img src="/assets/logo/sonuswealth-mark.svg" /> when shipped */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-label="Sonuswealth mark">
-              <path d="M5 12h5M8 9v6M13 9h5l-2.5 3 2.5 3h-5" stroke="var(--c-text)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <img src="/assets/logo/logo-app-icon.png" width={24} height={24} alt="Sonuswealth" style={{ borderRadius: 4, display: 'block' }} />
           </div>
           <div style={{ fontSize:26, fontWeight:800, color:'var(--c-text)', letterSpacing:-1 }}>
             {BRAND.nameDisplay}

@@ -599,7 +599,10 @@ export function drawdownMatrix(entity, range = { from: 0, to: 150000, step: 5000
 export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
   const a       = _assetVals(entity);
   const today   = new Date();
-  const postPensionIHT = today >= PENSION_IHT_DATE;
+  // scenario?.postPension forces the post-2027 regime (SIPP in estate) regardless
+  // of today's date — used by the After-6-Apr-2027 tile to stay on the same
+  // code path as IHTDrillPanel rather than diverging via ihtDynamic.
+  const postPensionIHT = scenario?.postPension === true ? true : today >= PENSION_IHT_DATE;
 
   // Gross estate
   const sippInEstate = postPensionIHT ? a.sipp : 0;
@@ -1450,4 +1453,97 @@ export function bprAllowanceTracker(entity, bundle = 'UK-2026.1') {
     provenance: { holdings: 'entity.assets.portfolio.holdings', trusts: 'entity.estate.trusts', gifts: 'entity.estate.gifts' },
     bundle,
   };
+}
+
+// ── §8.20 ihtProjection — year-by-year IHT exposure over a horizon ────────────
+
+/**
+ * Projects IHT exposure year by year, applying asset growth, the annual gift
+ * exemption, and the pension phase-in on 6 Apr 2027.
+ *
+ * @param {object} entity
+ * @param {number} horizonYears  — number of years to project (default 10)
+ * @returns {Array<{year, estateValue, ihtDue, pensionIncluded, gifts, netEstate}>}
+ */
+export function ihtProjection(entity, horizonYears = 10) {
+  const a           = _assetVals(entity);
+  const growthRate  = entity.expectedReturn ?? 0.04;
+  const annualGift  = IHT.annualGiftExemption || 3000;
+  const hasRNRB     = !!(entity.assets?.residence?.value || (entity.assets?.property || []).length) &&
+                      entity.estate?.directDescendant !== false;
+
+  // NRB (static for projection — thresholds frozen per current policy)
+  const nrb  = NRB  * (entity.isCouple ? 2 : 1);
+  const baseRnrb = hasRNRB ? RNRB * (entity.isCouple ? 2 : 1) : 0;
+
+  // RNRB taper threshold (£2m; tapers to £0 at £2.35m single / £2.7m couple)
+  const rnrbTaperThreshold = IHT.residenceNilRateBandTaperStart || 2000000;
+
+  // BPR: pre-compute qualifying value once (holdings don't change year-to-year in projection)
+  const bprResult  = bprQualifyingValue(entity);
+  const bprRelief  = bprResult.tier1_100pct +
+                     Math.round(bprResult.tier2_50pct_above_allowance * 0.5) +
+                     Math.round(bprResult.tier2_50pct_aim_or_not_listed * 0.5);
+
+  // Gift deduction: only apply if entity actually plans gifts
+  const hasGifts        = (entity.annualGifts || 0) > 0 || (entity.plannedGifts || 0) > 0;
+  const annualGiftDeduction = hasGifts ? annualGift : 0;
+
+  // Base estate excluding pension (pension added from 2027)
+  const basePre2027 = a.property + a.isa + a.gia + a.cash;
+  const sipp        = a.sipp;
+
+  const currentYear = new Date().getFullYear();
+  const rows = [];
+
+  let runningEstate = basePre2027;        // non-pension assets, compounding
+  let runningSipp   = sipp;               // pension, compounding separately
+
+  for (let i = 0; i < horizonYears; i++) {
+    const year = currentYear + i;
+
+    // Apply growth for years after the first
+    if (i > 0) {
+      runningEstate *= (1 + growthRate);
+      runningSipp   *= (1 + growthRate);
+    }
+
+    // Pension phase-in: included from April 2027
+    const pensionIncluded = year >= PENSION_IHT_DATE.getFullYear();
+    const sippInEstate    = pensionIncluded ? runningSipp : 0;
+
+    // Gross estate before gifts
+    const grossEstate = Math.max(0, runningEstate + sippInEstate);
+
+    // Gift deduction: actual if planned, else headroom (not assumed)
+    const gifts     = annualGiftDeduction;
+    const netEstate = Math.max(0, grossEstate - gifts);
+
+    // RNRB taper: reduce by £1 per £2 over £2m threshold (mirrors ihtExposure pattern)
+    let rnrb = baseRnrb;
+    if (hasRNRB && grossEstate > rnrbTaperThreshold) {
+      rnrb = Math.max(0, baseRnrb - Math.floor((grossEstate - rnrbTaperThreshold) / 2));
+    }
+
+    // IHT calc — deduct NRB, tapered RNRB, and BPR relief
+    const taxable = Math.max(0, netEstate - nrb - rnrb - bprRelief);
+    const ihtDue  = Math.round(taxable * IHT_RATE);
+
+    rows.push({
+      year,
+      estateValue:      Math.round(grossEstate),
+      ihtDue,
+      pensionIncluded,
+      gifts,
+      giftHeadroom:     hasGifts ? 0 : annualGift,
+      netEstate:        Math.round(netEstate),
+      rnrb:             Math.round(rnrb),
+      bprRelief:        Math.round(bprRelief),
+    });
+
+    // Subtract gift from running estate for next year (only if actually giving)
+    if (hasGifts) runningEstate = Math.max(0, runningEstate - annualGift);
+  }
+
+  return rows;
 }

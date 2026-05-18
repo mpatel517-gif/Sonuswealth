@@ -614,6 +614,14 @@ export function portfolioEfficiency(entity, cma = null) {
   const frontWE      = Math.min(1, portVol / vE);
   const frontWC      = Math.max(0, 1 - frontWE);
 
+  // 60/40 reference derived from CMA data (not hardcoded)
+  const ref6040Return = 0.6 * rE + 0.4 * rB;
+  const ref6040Vol    = Math.sqrt(
+    0.6 * 0.6 * vE * vE +
+    0.4 * 0.4 * vB * vB +
+    2 * 0.6 * 0.4 * corrEB * vE * vB
+  );
+
   const r = n => Math.round(n * 1000) / 1000;
   return {
     portfolio_expected_return: r(portRet),
@@ -630,6 +638,11 @@ export function portfolioEfficiency(entity, cma = null) {
       equity: r(frontWE - wE),
       bonds:  r(-wB),
       cash:   r(frontWC - wC),
+    },
+    reference: {
+      label:          '60/40 blend',
+      volatility:     r(ref6040Vol),
+      expectedReturn: r(ref6040Return),
     },
     confidence:  _confidence(cma, 'MEDIUM'),
     cma_bundle:  _cmaBundle(cma),

@@ -349,59 +349,26 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           <div style={{
             width:44, height:44, borderRadius:14, flexShrink:0,
             background: theme === 'light'
-              ? 'linear-gradient(145deg,#ffffff,#f0f3fa)'
-              : 'linear-gradient(145deg,#07111f,#112a43)',
+              ? 'linear-gradient(145deg,#f5f0ff,#ede6ff)'
+              : 'linear-gradient(145deg,#0d0822,#1a0d3d)',
             border: theme === 'light'
-              ? '1px solid rgba(35,48,68,.10)'
-              : '1px solid rgba(255,255,255,.16)',
+              ? '1px solid rgba(134,59,255,.15)'
+              : '1px solid rgba(134,59,255,.30)',
             display:'flex', alignItems:'center', justifyContent:'center',
             boxShadow: theme === 'light'
-              ? '0 4px 14px rgba(28,63,231,.10), 0 1px 3px rgba(35,48,68,.08)'
-              : '0 12px 32px rgba(17,42,67,.3)',
+              ? '0 4px 14px rgba(134,59,255,.15), 0 1px 3px rgba(35,48,68,.08)'
+              : '0 8px 24px rgba(134,59,255,.25)',
             overflow:'hidden',
           }}>
-            <svg viewBox="0 0 64 64" width={34} height={34} style={{ overflow:'visible' }} aria-label="Sonuswealth mark">
-              <defs>
-                <linearGradient id="tbC" x1="16" y1="12" x2="45" y2="52" gradientUnits="userSpaceOnUse">
-                  {theme === 'light' ? (
-                    <><stop stopColor="#1c3fe7"/><stop offset="1" stopColor="#3d5afe"/></>
-                  ) : (
-                    <><stop stopColor="#7dffcf"/><stop offset="1" stopColor="#20c7ff"/></>
-                  )}
-                </linearGradient>
-                <linearGradient id="tbX" x1="39" y1="20" x2="55" y2="44" gradientUnits="userSpaceOnUse">
-                  {theme === 'light' ? (
-                    <><stop stopColor="#3d5afe"/><stop offset="1" stopColor="#7f57d9"/></>
-                  ) : (
-                    <><stop stopColor="#f8fcff"/><stop offset="1" stopColor="#8ca7ff"/></>
-                  )}
-                </linearGradient>
-              </defs>
-              <path fill="url(#tbC)" d="M46 13.5A22.5 22.5 0 1 0 46 50.5l-7.5-8.4A11.5 11.5 0 1 1 38.5 21.9Z"
-                style={{ filter: theme === 'light'
-                  ? 'drop-shadow(0 0 4px rgba(28,63,231,.25))'
-                  : 'drop-shadow(0 0 6px rgba(45,242,195,.36))' }}/>
-              <path fill="none" stroke="url(#tbX)" strokeWidth="5.4" strokeLinecap="round" strokeLinejoin="round"
-                d="M42 23 53 41M53 23 42 41"
-                style={{ filter: theme === 'light'
-                  ? 'drop-shadow(0 0 3px rgba(61,90,254,.30))'
-                  : 'drop-shadow(0 0 5px rgba(140,167,255,.5))' }}/>
-              <circle fill={theme === 'light' ? '#ffffff' : '#07111f'}
-                stroke={theme === 'light' ? 'rgba(35,48,68,.40)' : 'rgba(255,255,255,.72)'}
-                strokeWidth="1.4" cx="47.5" cy="32" r="3.4"/>
-              <circle fill={theme === 'light' ? '#1c3fe7' : '#7dffcf'} cx="19" cy="20" r="2.7"
-                style={{ filter: theme === 'light'
-                  ? 'drop-shadow(0 0 4px rgba(28,63,231,.50))'
-                  : 'drop-shadow(0 0 6px rgba(125,255,207,.7))' }}/>
-            </svg>
+            <img src="/assets/logo/logo-app-icon.png" width={36} height={36} alt="Sonuswealth" style={{ display:'block', borderRadius: 8 }} />
           </div>
           <div style={{ minWidth:0 }}>
             <div style={{ fontSize:22, fontWeight:870, color:'var(--c-text)', letterSpacing:.02, lineHeight:1 }}>Sonuswealth</div>
-            <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2, letterSpacing:.02 }}>Intelligence without the noise.</div>
+            <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2, letterSpacing:.02 }}>Your wealth, in one place.</div>
           </div>
         </div>
 
-        {/* Right: avatar (persona) + FQ score + settings */}
+        {/* Right: avatar (persona) + Wealth Score + settings */}
         <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
           {/* Avatar button — theme-aware (2026-05-12 parity fix).
              Dark: warm peach gradient + dark text.
@@ -501,7 +468,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           />
         )}
         {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} />}
-        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onDrillMetric={pushDetail} onCommit={handleCommit} />}
+        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
         {tab === 'timeline'  && <Timeline     entity={entity} onNav={setTabSafe} onDrillMetric={pushDetail} />}
       </div>
 
@@ -553,6 +520,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             initialTab={fqInitialTab}
             activeDimKey={fqActiveDim}
             onClose={() => setShowFQBreak(false)}
+            onNav={(tab) => { setShowFQBreak(false); setTabSafe(tab) }}
             embedded={true}
           />
         </OverlayShell>
@@ -576,6 +544,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           onThemeChange={onThemeChange}
           onClose={() => setShowSettings(false)}
           onHome={goHome}
+          onNav={(tab) => { setShowSettings(false); setTabSafe(tab) }}
         />
       )}
 
@@ -712,7 +681,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       {moreScreen === 'decision' && (
         <OverlayShell title="Decision Engine" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngine
-            onBack={() => setMoreScreen(null)}
+            onBack={(opts) => {
+              setMoreScreen(null)
+              // Navigate to Timeline after a commit so user sees their plan.
+              if (opts?.committed) setTabSafe('timeline')
+            }}
             onCommit={handleCommit}
           />
         </OverlayShell>
@@ -723,7 +696,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             entity={wireEntity}
             initialQuery={dePayload.query}
             initialEventIds={dePayload.eventId ? [dePayload.eventId] : undefined}
-            onClose={() => setDePayload(null)}
+            onClose={(result) => {
+              setDePayload(null)
+              // Navigate to Timeline after a commit so user sees their plan.
+              if (result?.committed) setTabSafe('timeline')
+            }}
           />
         </OverlayShell>
       )}

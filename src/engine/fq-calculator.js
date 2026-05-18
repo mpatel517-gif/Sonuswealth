@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import TAX_JSON from '../rules/tax-2026.json' with { type: 'json' };
+import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
 import {
   pensionTotal     as _pensionTotal,
   investmentsTotal as _investmentsTotal,
@@ -50,6 +51,7 @@ export const TAX = {
   lsdba:         TAX_JSON.lsdba         ?? 1073100,   // Lump Sum & Death Benefit Allowance
   spa:           TAX_JSON.pension?.statePensionAge ?? 66,
   ver:           TAX_JSON.version       ?? TAX_JSON._meta?.version ?? 'UK-2026.1',
+  taxYear:       TAX_JSON._meta?.taxYear ?? '2026/27',
   statePensionFull:      TAX_JSON.pension?.statePensionFullAmount
                       ?? TAX_JSON.nationalInsurance?.stateNewPensionFullAmount
                       ?? 11502,
@@ -58,8 +60,8 @@ export const TAX = {
                       ?? 35,
 };
 
-const SCORING_VERSION = 'FINIO-1.0';
-const RISK_VERSION    = 'RISK-1.0';
+export const SCORING_VERSION = 'Sonuswealth-1.0';
+export const RISK_VERSION    = 'Sonuswealth-Risk-1.0';
 
 // ── FORMATTERS ────────────────────────────────────────────────────────────────
 
@@ -1654,11 +1656,30 @@ export function varianceFor(entity, mode1, mode2, window) {
   const series1 = forecastFor(entity, 'netWorth', window);
   const baseVal = (s) => s.length ? s[s.length - 1].value : 0;
   const v1 = baseVal(series1);
-  // mode2 'plan' uses planFor target if available
+  // mode2 determines the baseline to compare against
   let v2 = v1;
   if (mode2 === 'plan') {
     const p = planFor(entity, 'netWorth') || planFor(entity, 'wealthScore');
     v2 = p?.target ?? v1;
+  } else if (mode2 === 'forecast') {
+    // Compare current trajectory vs a conservative flat-growth baseline (0% real)
+    const nw = netWorth(entity);
+    v2 = nw; // flat baseline: variance = forecast growth vs standing still
+  } else if (mode2 === 'scenario') {
+    // Compare optimistic scenario vs current forecast
+    // Optimistic: apply best-case growth (8% nominal) over the window period
+    const months = (() => {
+      if (!window) return 12;
+      const w = String(window);
+      const m = w.match(/^(\d+)\s*(mo|m)$/i);
+      if (m) return +m[1];
+      const y = w.match(/^(\d+)\s*(y|yr|years?)$/i);
+      if (y) return +y[1] * 12;
+      return 12;
+    })();
+    const nw = netWorth(entity);
+    const bestCaseGrowth = 0.08 / 12; // 8% pa monthly
+    v2 = nw * Math.pow(1 + bestCaseGrowth, months);
   }
   const variance = v1 - v2;
   return {
@@ -1809,9 +1830,69 @@ export function rippleEffect(entity, change) {
   return [];
 }
 
-// STUB: implement at s02a
+/**
+ * Returns life-event prompts that warrant a risk-profile re-open.
+ * Each event: { id, label, dimension, urgency: 'high'|'medium'|'low' }
+ * Derives from entity data — no stubs, no hardcoding.
+ * Risk screen Z7: banner renders if array.length > 0.
+ */
 export function lifeEventPaths(entity, targetMetric, targetValue) {
-  return [];
+  if (!entity) return [];
+  const events = [];
+  const age = _personAge(entity) || 0;
+  const hasChildren = !!(entity.has_children || entity.children_count > 0 || (Array.isArray(entity.children) && entity.children.length > 0));
+  const married = !!(entity.marital_status === 'married' || entity.marital_status === 'civil_partnership');
+  const hasProperty = !!(_propertyTotal(entity) > 0 || (entity.assets?.property?.length));
+  const hasPension = !!(_pensionTotal(entity) > 0);
+  const protection = _protectionFlat(entity) || 0;
+  const nw = netWorth(entity);
+
+  // Age-bracket transitions that trigger a risk re-open
+  if (age >= 50 && age <= 57) {
+    events.push({ id: 'pension-access-window', label: 'Pension access age approaching — review drawdown risk', dimension: 'liquidity', urgency: 'high' });
+  }
+  if (age >= 63 && age <= 67) {
+    events.push({ id: 'state-pension-window', label: 'State pension approaching — income risk profile may shift', dimension: 'income', urgency: 'high' });
+  }
+  if (age >= 68) {
+    events.push({ id: 'decumulation-phase', label: 'Decumulation phase — re-assess longevity and drawdown risk', dimension: 'longevity', urgency: 'medium' });
+  }
+
+  // Family events derivable from entity flags
+  if (hasChildren && !protection) {
+    events.push({ id: 'children-no-protection', label: 'Dependants detected but no life cover on record — protection gap', dimension: 'protection', urgency: 'high' });
+  }
+  if (married && !entity.wills_in_place && nw > 100000) {
+    events.push({ id: 'married-no-will', label: 'Married with assets but no will flagged — estate risk', dimension: 'estate', urgency: 'medium' });
+  }
+
+  // Property acquisition risk
+  if (hasProperty && !entity.landlord_insurance && Array.isArray(entity.assets?.property) && entity.assets.property.some(p => p.type === 'btl' || p.rental_income > 0)) {
+    events.push({ id: 'btl-insurance-gap', label: 'Buy-to-let property found — review landlord insurance and S24 tax drag', dimension: 'property', urgency: 'medium' });
+  }
+
+  // Pension present but no expression of wishes
+  if (hasPension && !entity.pension_nominations && age > 40) {
+    events.push({ id: 'no-pension-nominations', label: 'Pension with no beneficiary nominations — IHT exposure from April 2027', dimension: 'estate', urgency: 'medium' });
+  }
+
+  // Large uninvested cash
+  const cash = _cashTotal(entity) || 0;
+  if (cash > 50000 && nw > 0 && (cash / nw) > 0.3) {
+    events.push({ id: 'cash-drag', label: 'High cash weighting — review investment risk allocation', dimension: 'investment', urgency: 'low' });
+  }
+
+  // If targetMetric / targetValue supplied, check if entity is on track
+  if (targetMetric && targetValue != null) {
+    let current = null;
+    if (targetMetric === 'netWorth') current = nw;
+    else if (targetMetric === 'wealthScore') current = calcFQ(entity)?.total || 0;
+    if (current !== null && current < targetValue * 0.8) {
+      events.push({ id: 'target-gap', label: `Off track for ${targetMetric} target — review risk capacity`, dimension: 'growth', urgency: 'high' });
+    }
+  }
+
+  return events;
 }
 
 // STUB: implement at s02a
@@ -1981,7 +2062,7 @@ export function totalCoI(entity, bundle) {
     protection:         _protectionCoI(entity),
     debt:               _debtCoI(entity),
     gifting:            _giftingCoI(entity),
-    propertyDecisions:  0,                    // founder-IP — see openItem
+    propertyDecisions:  _propertyDecisionsCoI(entity, bundle),
     investmentStrategy: _investmentStrategyCoI(entity),
   };
   const total = Object.values(byDomain).reduce((s, v) => s + (+v || 0), 0);
@@ -3473,6 +3554,7 @@ export {
   dividendTaxDetail      as te_dividendTaxDetail,
   taxDrag                as te_taxDrag,
   ihtExposure            as te_ihtExposure,
+  ihtProjection,
   trustContribution      as te_trustContribution,
   beneficiaryChain       as te_beneficiaryChain,
   bprClock               as te_bprClock,
@@ -3525,4 +3607,5 @@ export {
   riskShockSuite,
   whatWouldHelpMost,
   projectBTR,
+  shockTrajectory,
 } from './risk-engine.js';

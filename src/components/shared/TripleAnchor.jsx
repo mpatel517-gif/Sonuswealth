@@ -64,14 +64,14 @@ export default function TripleAnchor({
       </Tile>
 
       {/* ─── Tile 2 — Sonuswealth Wealth Score ─── */}
-      <Tile label="Health score" borderColour={`${safeFqBand.colour}44`} onTap={onWealthTap}>
+      <Tile label="Wealth Score" borderColour={`${safeFqBand.colour}44`} onTap={onWealthTap}>
         <ArcGauge value={fqTotal ?? 0} colour={safeFqBand.colour} />
         {isSimulating && deltaFQ !== 0 && <DeltaChip delta={deltaFQ} />}
         <BandLabel colour={safeFqBand.colour}>{safeFqBand.name}</BandLabel>
       </Tile>
 
       {/* ─── Tile 3 — Sonuswealth Risk Score ─── */}
-      <Tile label="Safety score" borderColour={`${safeRiskBand.colour}44`} onTap={onRiskTap}>
+      <Tile label="Risk Score" borderColour={`${safeRiskBand.colour}44`} onTap={onRiskTap}>
         <ArcGauge value={riskTotal ?? 0} colour={safeRiskBand.colour} />
         <BandLabel colour={safeRiskBand.colour}>{safeRiskBand.name}</BandLabel>
       </Tile>

@@ -25,21 +25,35 @@ import {
   protectionFlat, getWrapper,
 } from './_helpers.js';
 
-const HIGHER_RATE = 0.40;
-const ADDITIONAL_RATE = 0.45;
-const BASIC_RATE = 0.20;
-const CGT_HIGHER = 0.24;
-const IHT_RATE = 0.40;
-const ISA_CAP = 20000;
-const PENSION_AA = 60000;
-const RNRB = 175000;
-const NRB = 325000;
+// All tax constants drawn from the centralised bundle via fq-calculator's TAX object.
+// CLAUDE.md §6.2: never hardcode tax rates, allowances, or thresholds.
+import { TAX } from './fq-calculator.js';
+
+// ── MARKET ASSUMPTIONS ───────────────────────────────────────────────────────
+// Overridable assumptions for interest rates and drawdown efficiency.
+// Callers may merge userAssumptions via spread: { ...defaultMarketAssumptions, ...userAssumptions }
+export const defaultMarketAssumptions = {
+  cashInterestRate:     0.04,   // assumed gross interest rate on cash savings
+  mortgageInterestRate: 0.045,  // assumed mortgage / BTL loan interest rate
+  debtInterestRate:     0.05,   // assumed general (non-mortgage) debt interest rate
+  drawdownRate:         0.045,  // assumed safe/optimal drawdown rate for efficiency calc
+};
+
+/**
+ * Merge user-supplied overrides into defaultMarketAssumptions.
+ * Returns a frozen snapshot — callers destructure what they need.
+ * @param {object} [overrides]
+ * @returns {object}
+ */
+export function mergeAssumptions(overrides) {
+  return Object.freeze({ ...defaultMarketAssumptions, ...(overrides || {}) });
+}
 
 function marginalRate(entity) {
   const inc = annualIncome(entity);
-  if (inc > 125140) return ADDITIONAL_RATE;
-  if (inc > 50270)  return HIGHER_RATE;
-  return BASIC_RATE;
+  if (inc > TAX.art) return TAX.ar;
+  if (inc > TAX.brt) return TAX.hr;
+  return TAX.br;
 }
 
 // ── §1 propertyDecisionsCoI ──────────────────────────────────────────────────
@@ -49,7 +63,8 @@ function marginalRate(entity) {
 //   3. Excess SDLT on second-home stamp duty (post-purchase, sunk)
 //   4. Insurance gaps on let property
 // Returns conservative annual £ drag (one year).
-export function propertyDecisionsCoI(entity, _bundle) {
+export function propertyDecisionsCoI(entity, _bundle, marketAssumptions = defaultMarketAssumptions) {
+  const { mortgageInterestRate } = mergeAssumptions(marketAssumptions);
   const a = entity?.assets || {};
   const btls = [
     ...(Array.isArray(a.property) ? a.property : []),
@@ -65,11 +80,11 @@ export function propertyDecisionsCoI(entity, _bundle) {
 
   for (const p of btls) {
     if (p.status === 'disposed') continue;
-    // S24 — mortgage interest × (marginal − 20%) is the extra tax landlords pay.
-    const annualInterest = +p.annual_mortgage_interest
-      || (+p.outstanding_balance || +p.mortgage?.outstanding || 0) * 0.045; // assume 4.5% if no rate
-    assetSideInterest += annualInterest;
-    const s24Drag = Math.max(0, annualInterest * Math.max(0, marg - BASIC_RATE));
+    // S24: interest tax-relief restricted to basic rate
+    const interest = +p.annual_interest_cost
+      || (+p.outstanding_balance || +p.mortgage?.outstanding || 0) * mortgageInterestRate;
+    assetSideInterest += interest;
+    const s24Drag = Math.max(0, interest * Math.max(0, marg - TAX.br));
     coi += s24Drag;
 
     // Uninsured / underinsured rental
@@ -86,8 +101,8 @@ export function propertyDecisionsCoI(entity, _bundle) {
     const liabBtlInterest = (entity?.liabilities?.otherLoans || [])
       .filter(l => /buy-to-let|btl/i.test(l.type || ''))
       .reduce((s, l) => s + ((+l.outstanding || +l.outstanding_balance || 0)
-                           * (+l.interest_rate || +l.apr || 0.045)), 0);
-    coi += Math.max(0, liabBtlInterest * Math.max(0, marg - BASIC_RATE));
+                           * (+l.interest_rate || +l.apr || mortgageInterestRate)), 0);
+    coi += Math.max(0, liabBtlInterest * Math.max(0, marg - TAX.br));
   }
 
   return Math.round(coi);
@@ -104,22 +119,22 @@ export function taxEfficiencyScore(entity, _bundle) {
   const isaContrib = (Array.isArray(a.investments) ? a.investments : [])
     .filter(i => /isa/i.test(i.type || ''))
     .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0);
-  const isaPct = Math.min(100, (isaContrib / ISA_CAP) * 100);
+  const isaPct = Math.min(100, (isaContrib / TAX.isaAllowance) * 100);
 
   // AA usage
   const pensionContrib = +entity?.pensionContributions
     || +(a.pensionContributions || 0)
     || ((Array.isArray(a.pensions) ? a.pensions : [])
         .reduce((s, p) => s + (+p.annual_contribution || 0), 0));
-  const aaPct = Math.min(100, (pensionContrib / PENSION_AA) * 100);
+  const aaPct = Math.min(100, (pensionContrib / TAX.pensionAA) * 100);
 
   // AEA usage — assume 0 if no disposal data; cap if cgt_realised_current_year present
-  const aeaCap = 3000;
+  const aeaCap = TAX.cgaAllowance;
   const realisedGains = +entity?.cgt_realised_current_year || 0;
   const aeaPct = Math.min(100, (realisedGains / aeaCap) * 100);
 
   // Annual gift allowance — £3k
-  const giftCap = 3000;
+  const giftCap = TAX.giftExemption;
   const giftsThisYear = +entity?.gifts_current_tax_year || 0;
   const giftPct = Math.min(100, (giftsThisYear / giftCap) * 100);
 
@@ -195,14 +210,15 @@ export function prcPccSpread(entity, _bundle) {
 // Actual drawdown rate vs the engine's recommended optimal (Guyton-Klinger
 // guardrail). 1.0 = on the optimal path. > 1.0 = over-drawing. < 1.0 =
 // leaving income on the table (and growing the IHT-exposed pension pot post-2027).
-export function drawdownEfficiencyRatio(entity, _bundle) {
+export function drawdownEfficiencyRatio(entity, _bundle, marketAssumptions = defaultMarketAssumptions) {
+  const { drawdownRate } = mergeAssumptions(marketAssumptions);
   const drawdown = +entity?.drawdown || 0;
   const pension = pensionTotal(entity);
   if (pension <= 0 || drawdown <= 0) {
     return { actual: drawdown, optimal: 0, ratio: 0, status: 'no-drawdown', confidence: 'HIGH' };
   }
-  // Guyton-Klinger style optimal ≈ 4.5% of pot
-  const optimal = pension * 0.045;
+  // Guyton-Klinger style optimal — default rate from market assumptions
+  const optimal = pension * drawdownRate;
   const ratio = optimal > 0 ? drawdown / optimal : 0;
   let status;
   if (ratio < 0.5)  status = 'under-drawing';
@@ -239,11 +255,11 @@ export function effectiveBeneficiaryRate(entity, _bundle) {
   }
 
   // Nil-rate bands available
-  let bands = NRB;
+  let bands = TAX.nrb;
   const residenceUsed = entity?.residence_to_descendants !== false; // default true if children present
   const hasChildren = (entity?.dependants || []).some(d => d.relationship === 'child')
     || (entity?.family_obligations || []).some(d => d.relationship === 'child');
-  if (residenceUsed && hasChildren && propVal > 0) bands += RNRB;
+  if (residenceUsed && hasChildren && propVal > 0) bands += TAX.rnrb;
 
   // BPR / APR shelter
   const bprShelter = Math.min(
@@ -259,7 +275,7 @@ export function effectiveBeneficiaryRate(entity, _bundle) {
   const spouseExempt = estate * Math.max(0, Math.min(1, spouseLeg));
 
   const taxable = Math.max(0, estate - bands - spouseExempt);
-  const ihtDue = Math.round(taxable * IHT_RATE);
+  const ihtDue = Math.round(taxable * TAX.ihtRate);
   const netToHeirs = Math.round(estate - ihtDue);
   const rate = Math.max(0, Math.min(1, netToHeirs / estate));
 
@@ -277,10 +293,11 @@ export function effectiveBeneficiaryRate(entity, _bundle) {
 // ── §6 Domain-specific CoI breakdown for MyMoney tiles ───────────────────────
 // Each tile asks for its CoI line. Canonical computation per tile here so the
 // UI doesn't carry per-domain math.
-export function coiForDomain(entity, domain, bundle) {
+export function coiForDomain(entity, domain, bundle, marketAssumptions = defaultMarketAssumptions) {
+  const { cashInterestRate, debtInterestRate } = mergeAssumptions(marketAssumptions);
   switch (domain) {
     case 'pensions': {
-      const aa = PENSION_AA;
+      const aa = TAX.pensionAA;
       const used = +entity?.pensionContributions
         || ((entity?.assets?.pensions || []).reduce((s, p) => s + (+p.annual_contribution || 0), 0));
       const left = Math.max(0, aa - used);
@@ -293,11 +310,11 @@ export function coiForDomain(entity, domain, bundle) {
       const isaUsed = ((entity?.assets?.investments) || [])
         .filter(i => /isa/i.test(i.type || ''))
         .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0);
-      const left = Math.max(0, ISA_CAP - isaUsed);
+      const left = Math.max(0, TAX.isaAllowance - isaUsed);
       const cash = cashTotal(entity);
       if (cash <= 0 || left < 1000) return null;
       const protect = Math.min(left, cash);
-      const annualDrag = protect * 0.035 * marginalRate(entity);
+      const annualDrag = protect * cashInterestRate * marginalRate(entity);
       return `£${(annualDrag / 1000).toFixed(1)}k/yr of tax saved if you shelter £${(protect/1000).toFixed(0)}k into your ISA`;
     }
     case 'property': {
@@ -311,14 +328,14 @@ export function coiForDomain(entity, domain, bundle) {
         .reduce((s, b) => s + (+b.value_gbp || +b.value || 0), 0);
       if (bpr <= 0) return null;
       const sheltered = Math.min(bpr, 1_000_000);
-      const saved = sheltered * IHT_RATE;
+      const saved = sheltered * TAX.ihtRate;
       const partial = bpr > 1_000_000;
       return `Inheritance tax ${partial ? 'partially' : 'fully'} sheltered: £${(saved / 1000).toFixed(0)}k saved at current values · protect the 2-year qualifying hold`;
     }
     case 'protection': {
       const prot = protectionFlat(entity);
       if (prot.life.exists && !prot.life.inTrust) {
-        const bite = prot.life.amount * IHT_RATE;
+        const bite = prot.life.amount * TAX.ihtRate;
         return `If you die today, £${(bite / 1000).toFixed(0)}k of the life-cover payout would go to HMRC — placing the policy in trust fixes it`;
       }
       return null;
@@ -326,14 +343,14 @@ export function coiForDomain(entity, domain, bundle) {
     case 'liabilities': {
       const debt = liabilitiesTotal(entity);
       if (debt < 1000) return null;
-      const annualInterest = debt * 0.05;
+      const annualInterest = debt * debtInterestRate;
       return `£${(annualInterest / 1000).toFixed(1)}k/yr in interest while this debt runs`;
     }
     case 'cash': {
       const cash = cashTotal(entity);
       if (cash < 10000) return null;
-      const psa = entity?.isHigherRateTaxpayer ? 500 : 1000;
-      const rate = 0.04;
+      const psa = entity?.isHigherRateTaxpayer ? TAX.psaHigher : TAX.psaBasic;
+      const rate = cashInterestRate;
       const interest = cash * rate;
       const taxable = Math.max(0, interest - psa);
       const tax = taxable * marginalRate(entity);

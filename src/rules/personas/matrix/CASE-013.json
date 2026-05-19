@@ -1,0 +1,26 @@
+{
+  "id": "CASE-013",
+  "meta": {
+    "description": "TaperedPA | CorporateHeavy | UK_Dom"
+  },
+  "financial_vectors": {
+    "employment": {
+      "salary": 115000,
+      "dividends": 5000
+    },
+    "assets": {
+      "sipp_balance": 450000,
+      "isa_balance": 85000,
+      "unquoted_trading_shares": 1500000,
+      "overseas_accounts": 0
+    },
+    "liabilities": {
+      "directors_loan_balance": 120000,
+      "s455_tax_due": 45000
+    },
+    "residency": {
+      "uk_years": 35,
+      "remittance_basis_elected": false
+    }
+  }
+}

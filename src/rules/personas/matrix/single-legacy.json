@@ -1,0 +1,28 @@
+{
+  "id": "single-legacy",
+  "meta": {
+    "type": "base",
+    "group": "single",
+    "stage": "legacy"
+  },
+  "financial_vectors": {
+    "employment": {
+      "salary": 45000,
+      "dividends": 500
+    },
+    "assets": {
+      "sipp_balance": 380000,
+      "isa_balance": 45000,
+      "unquoted_trading_shares": 0,
+      "overseas_accounts": 0
+    },
+    "liabilities": {
+      "directors_loan_balance": 0,
+      "s455_tax_due": 0
+    },
+    "residency": {
+      "uk_years": 35,
+      "thai_ltr_visa": false
+    }
+  }
+}

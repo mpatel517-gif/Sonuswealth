@@ -16,7 +16,7 @@
 //   · Per-driver confidence (PP-7 — manual=1.0, AI=variable)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { netWorth, calcFQ, calcRisk, monthlySurplus, totalCoI } from './fq-calculator.js'
+import { netWorth, calcFQ, calcRisk, monthlySurplus, totalCoI, TAX } from './fq-calculator.js'
 import {
   ihtExposure,
   willLpaStatus,
@@ -225,7 +225,7 @@ function drvPlanEstate(entity, level) {
 }
 
 function drvPlanGift(entity, level) {
-  const giftExemption = 3000  // UK annual gift exemption 2026-27
+  const giftExemption = TAX.giftExemption  // UK annual gift exemption
   const estate        = entity?.estate || {}
   const gifts         = estate.gifts || []
   const trustGifts    = estate.trustGifts ? [estate.trustGifts] : []
@@ -262,7 +262,7 @@ function drvPlanGift(entity, level) {
     terminal: false,
     drivers: level >= 1 ? [] : [
       { metric: 'annualExemption', value: giftRemaining, unit: 'gbp',
-        formula: `£3,000 annual gift exemption. £${giftUsed.toLocaleString()} used this tax year, £${giftRemaining.toLocaleString()} remaining. Unused exemption carries forward one year.`,
+        formula: `£${giftExemption.toLocaleString()} annual gift exemption. £${giftUsed.toLocaleString()} used this tax year, £${giftRemaining.toLocaleString()} remaining. Unused exemption carries forward one year.`,
         source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
       { metric: 'petWindow', value: totalPETs, unit: 'gbp',
         formula: within7yr.length > 0

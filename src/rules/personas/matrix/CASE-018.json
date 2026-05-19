@@ -1,0 +1,25 @@
+{
+  "id": "CASE-018",
+  "meta": {
+    "description": "TaperedPA | BTL_Saturated | NonDom_Remittance"
+  },
+  "financial_vectors": {
+    "employment": {
+      "salary": 115000,
+      "dividends": 5000
+    },
+    "assets": {
+      "sipp_balance": 450000,
+      "isa_balance": 85000,
+      "unquoted_trading_shares": 500000,
+      "overseas_accounts": 1200000
+    },
+    "liabilities": {
+      "directors_loan_balance": 0
+    },
+    "residency": {
+      "uk_years": 4,
+      "remittance_basis_elected": true
+    }
+  }
+}

@@ -46,6 +46,12 @@ export const TAX = {
   swr:           TAX_JSON.swr           ?? TAX_JSON.pension?.safeWithdrawalRate     ?? 0.04,
   deadline:      new Date(TAX_JSON.deadline ?? TAX_JSON.iht?.sippsEnterEstateDate   ?? '2027-04-06'),
   giftExemption: TAX_JSON.giftAnnualExemption ?? TAX_JSON.iht?.giftAnnualExemption  ?? 3000,
+  // Personal Savings Allowance
+  psaBasic:      TAX_JSON.income?.savingsAllowanceBasicRate    ?? 1000,
+  psaHigher:     TAX_JSON.income?.savingsAllowanceHigherRate   ?? 500,
+  psaAdditional: TAX_JSON.income?.savingsAllowanceAdditionalRate ?? 0,
+  // HICBC taper width: 1% per £200 → full clawback at threshold + £20,000
+  hicbcTaperWidth: TAX_JSON.income?.hicbcTaperWidth ?? 20000,
   // Post-LTA allowances (in force from 6 April 2024)
   lsa:           TAX_JSON.lsa           ?? 268275,    // Lump Sum Allowance
   lsdba:         TAX_JSON.lsdba         ?? 1073100,   // Lump Sum & Death Benefit Allowance
@@ -53,11 +59,20 @@ export const TAX = {
   ver:           TAX_JSON.version       ?? TAX_JSON._meta?.version ?? 'UK-2026.1',
   taxYear:       TAX_JSON._meta?.taxYear ?? '2026/27',
   statePensionFull:      TAX_JSON.pension?.statePensionFullAmount
-                      ?? TAX_JSON.nationalInsurance?.stateNewPensionFullAmount
-                      ?? 11502,
+                     ?? TAX_JSON.nationalInsurance?.stateNewPensionFullAmount
+                     ?? 11502,
   statePensionQualYears: TAX_JSON.pension?.statePensionQualifyingYears
-                      ?? TAX_JSON.nationalInsurance?.statePensionQualifyingYears
-                      ?? 35,
+                     ?? TAX_JSON.nationalInsurance?.statePensionQualifyingYears
+                     ?? 35,
+  // Scottish bands (UK-2026/27)
+  scottishBands: [
+    { name: 'Starter',      from: TAX_JSON.income?.scottishStarterBandFrom      ?? 12570,  to: TAX_JSON.income?.scottishStarterBandTo        ?? 14876,  rate: TAX_JSON.income?.scottishStarterRate      ?? 0.19 },
+    { name: 'Basic',        from: TAX_JSON.income?.scottishBasicBandFrom        ?? 14876,  to: TAX_JSON.income?.scottishBasicBandTo          ?? 26561,  rate: TAX_JSON.income?.scottishBasicRate        ?? 0.20 },
+    { name: 'Intermediate', from: TAX_JSON.income?.scottishIntermediateBandFrom ?? 26561,  to: TAX_JSON.income?.scottishIntermediateBandTo   ?? 43662,  rate: TAX_JSON.income?.scottishIntermediateRate ?? 0.21 },
+    { name: 'Higher',       from: TAX_JSON.income?.scottishHigherBandFrom       ?? 43662,  to: TAX_JSON.income?.scottishHigherBandTo         ?? 75000,  rate: TAX_JSON.income?.scottishHigherRate       ?? 0.42 },
+    { name: 'Advanced',     from: TAX_JSON.income?.scottishAdvancedBandFrom     ?? 75000,  to: TAX_JSON.income?.scottishAdvancedBandTo       ?? 125140, rate: TAX_JSON.income?.scottishAdvancedRate     ?? 0.45 },
+    { name: 'Top',          from: TAX_JSON.income?.scottishTopBandFrom          ?? 125140, to: null,                                                rate: TAX_JSON.income?.scottishTopRate          ?? 0.48 },
+  ],
 };
 
 export const SCORING_VERSION = 'Sonuswealth-1.0';
@@ -343,16 +358,36 @@ export function calcGuardrail(entity) {
 /**
  * UK income tax on pension drawdown including state pension.
  * @param {number} drawdown - annual drawdown amount
- * @param {number} [statePension=11973] - annual state pension
+ * @param {number} [statePension=TAX.statePensionFull] - annual state pension from bundle
  * @returns {number} tax due (rounded)
  */
-export function incomeTax(drawdown, statePension = 11973) {
+/**
+ * UK income tax on pension drawdown including state pension.
+ * 2026/27 bands: basic-rate £0–£37,700 at 20%, higher-rate £37,701–£112,570
+ * at 40%, additional-rate above £112,570 at 45%. Thresholds expressed as
+ * taxable income (gross minus personal allowance). The additional-rate
+ * threshold of £125,140 gross equates to £112,570 taxable when full PA
+ * (£12,570) is available; when PA is tapered the effective threshold is
+ * £125,140 − effectivePA.
+ *
+ * @param {number} drawdown - annual drawdown amount
+ * @param {number} [statePension=TAX.statePensionFull] - annual state pension
+ * @param {number} [personalAllowance=TAX.pa] - effective personal allowance (may be tapered)
+ * @returns {number} tax due (rounded)
+ */
+export function incomeTax(drawdown, statePension, personalAllowance) {
   if (drawdown <= 0) return 0;
-  const gross    = drawdown + statePension;
-  const taxable  = Math.max(0, gross - TAX.pa);
-  let   tax      = Math.min(taxable, TAX.brl) * TAX.br;
-  if (taxable > TAX.brl) tax += Math.min(taxable - TAX.brl, TAX.art - TAX.brt) * TAX.hr;
-  if (taxable > TAX.art - TAX.pa) tax += (taxable - (TAX.art - TAX.pa)) * TAX.ar;
+  const sp      = statePension ?? TAX.statePensionFull;
+  const effPA   = personalAllowance ?? TAX.pa;
+  const gross   = drawdown + sp;
+  const taxable = Math.max(0, gross - effPA);
+  // Basic-rate band: £0 – £37,700 taxable at 20%
+  let tax = Math.min(taxable, TAX.brl) * TAX.br;
+  // Higher-rate band: £37,701 – (ART − effPA) at 40%
+  const hrUpper = TAX.art - effPA;   // e.g. 125140 − 12570 = 112570
+  if (taxable > TAX.brl) tax += Math.min(taxable - TAX.brl, hrUpper - TAX.brl) * TAX.hr;
+  // Additional-rate band: above (ART − effPA) at 45%
+  if (taxable > hrUpper) tax += (taxable - hrUpper) * TAX.ar;
   return Math.round(tax);
 }
 
@@ -457,7 +492,7 @@ export function fundedRatio(entity, cma = null) {
   const targetIncome  = e.targetIncome ?? 0;
 
   const sipp     = e.assets?.sipp?.total ?? 0;
-  const isa      = typeof e.assets?.isa === 'number' ? e.assets.isa : (e.assets?.isa?.total ?? 0);
+  const isa      = typeof e.assets?.isa === 'number' ? e.assets.isa : (e.assets?.isa?.value ?? 0);
   const invRaw   = e.assets?.investments;
   const invest   = typeof invRaw === 'number' ? invRaw : (invRaw?.total ?? 0);
   const retStack = sipp + isa + invest;
@@ -567,8 +602,19 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
   const gross = resShare + sippVal + isaVal + giaVal + cashVal + protEstate;
 
   let nrb  = TAX.nrb;  if (e.isCouple) nrb  *= 2;
-  let rnrb = TAX.rnrb; if (e.isCouple) rnrb *= 2;
-  if (gross > TAX.rnrbTaper) rnrb = Math.max(0, rnrb - (gross - TAX.rnrbTaper) / 2);
+  let rnrb;
+  if (e.isCouple) {
+    // RNRB is per-individual with transferable allowance. Each individual's
+    // £175k RNRB tapers against their own share of the estate at £2M, not
+    // against the combined living assets. 50/50 split assumed absent evidence.
+    const shareEach = gross / 2;
+    const rnrb1 = shareEach > TAX.rnrbTaper ? Math.max(0, TAX.rnrb - (shareEach - TAX.rnrbTaper) / 2) : TAX.rnrb;
+    const rnrb2 = shareEach > TAX.rnrbTaper ? Math.max(0, TAX.rnrb - (shareEach - TAX.rnrbTaper) / 2) : TAX.rnrb;
+    rnrb = rnrb1 + rnrb2;
+  } else {
+    rnrb = TAX.rnrb;
+    if (gross > TAX.rnrbTaper) rnrb = Math.max(0, rnrb - (gross - TAX.rnrbTaper) / 2);
+  }
 
   const taxable = Math.max(0, gross - nrb - rnrb);
   const iht     = Math.round(taxable * TAX.ihtRate);
@@ -636,8 +682,8 @@ export function trajectoryData(e) {
   const ages  = [62, 65, 68, 71, 74, 77, 80, 83, 86, 90];
   const base  = e.age || 62;
   const a     = e.assets || {};
-  const sp    = e.income?.statePension?.annual  || 11973;
-  const spAge = e.income?.statePension?.startAge || 67;
+  const sp    = e.income?.statePension?.annual  || TAX.statePensionFull;
+  const spAge = e.income?.statePension?.startAge || TAX.spa;
   const living = e.targetIncome || 50000;
 
   function proj(dd) {
@@ -1191,7 +1237,7 @@ export function calcAPQ(e) {
   }
 
   // ISA allowance
-  if ((a.cash?.total || 0) > 20000) {
+  if ((a.cash?.total || 0) > TAX.isaAllowance) {
     actions.push({
       id: 'isa-allowance', priority: 3, colour: '#4D8EFF',
       title: `Use ${fmt(TAX.isaAllowance)} ISA allowance`,
@@ -2908,7 +2954,7 @@ export function calcIncomeTax(entity, bundle) {
       { type: 'div_higher',         amount: dvHigher, rate: dhr },
     ],
     byType: income.byType,
-    marginalRate: ani > ART ? AR : ani > 50270 ? HR : BR,
+    marginalRate: ani > ART ? AR : ani > (PA + BRL) ? HR : BR,
   };
 }
 
@@ -2946,7 +2992,7 @@ export function calcDividendTax(divIncome, otherTaxable, bundle) {
 export function calcHICBC(entity, bundle) {
   const ani = calcANI(entity, bundle).ani;
   const threshold = TAX_JSON.income?.highIncomeChildBenefitThreshold || 60000;
-  const cap = threshold + 20000;
+  const cap = threshold + TAX.hicbcTaperWidth;
   const kids = (entity?.dependants || []).filter(d => d.type === 'child' && (d.age || 0) < 18 && d.financiallyDependent !== false);
   if (kids.length === 0 || ani <= threshold) return { charge: 0, ani, threshold, dependantsCount: kids.length, eligible: kids.length > 0 };
   // Approximate child benefit: £25.60/wk first child + £16.95/wk each additional
@@ -3476,20 +3522,13 @@ export function welshIncomeTax(entity) {
 export function scottishIncomeTax(entity) {
   const isScottish = /^(S|Scotland)/i.test(entity?.jurisdiction?.subRegion || entity?.region || '') ||
                      entity?.taxResidency === 'scottish';
+  const bands = TAX.scottishBands;
+  const rates = {};
+  for (const b of bands) rates[b.name.toLowerCase()] = b.rate;
   return {
-    rates: {
-      starter: 0.19, basic: 0.20, intermediate: 0.21,
-      higher: 0.42, advanced: 0.45, top: 0.48,
-    },
+    rates,
     applies: isScottish,
-    bands: [
-      { name: 'Starter',      from: 12570,  to: 14876,  rate: 0.19 },
-      { name: 'Basic',        from: 14876,  to: 26561,  rate: 0.20 },
-      { name: 'Intermediate', from: 26561,  to: 43662,  rate: 0.21 },
-      { name: 'Higher',       from: 43662,  to: 75000,  rate: 0.42 },
-      { name: 'Advanced',     from: 75000,  to: 125140, rate: 0.45 },
-      { name: 'Top',          from: 125140, to: null,   rate: 0.48 },
-    ],
+    bands,
   };
 }
 

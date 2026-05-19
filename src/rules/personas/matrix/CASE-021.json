@@ -1,0 +1,26 @@
+{
+  "id": "CASE-021",
+  "meta": {
+    "description": "SuperHigh | StandardISA | NonDom_Remittance"
+  },
+  "financial_vectors": {
+    "employment": {
+      "salary": 280000,
+      "dividends": 45000
+    },
+    "assets": {
+      "sipp_balance": 450000,
+      "isa_balance": 85000,
+      "unquoted_trading_shares": 0,
+      "overseas_accounts": 1200000
+    },
+    "liabilities": {
+      "directors_loan_balance": 0,
+      "s455_tax_due": 0
+    },
+    "residency": {
+      "uk_years": 4,
+      "remittance_basis_elected": true
+    }
+  }
+}

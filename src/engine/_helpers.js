@@ -1,6 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // CAELIXA / FINIO — UNIVERSAL ENGINE HELPERS  (CANONICAL)
 // Schema-agnostic readers that return consistent values from EITHER persona shape:
+
+import TAX_JSON from '../rules/tax-2026.json'
 //
 //   LEGACY FLAT (persona-a..g.json):
 //     entity.assets.sipp.total, .isa.value, .residence.value, .portfolio.value,
@@ -267,8 +269,14 @@ export function targetIncome(entity) {
 export function statePensionAnnual(entity) {
   if (entity?.income?.statePension?.annual != null) return +entity.income.statePension.annual || 0;
   const accrued = entity?.individual?.state_pension_accrued_years;
+  const full = TAX_JSON.nationalInsurance?.stateNewPensionFullAmount
+            ?? TAX_JSON.pension?.statePensionFullAmount
+            ?? 11502;
+  const yrs  = TAX_JSON.nationalInsurance?.statePensionQualifyingYears
+            ?? TAX_JSON.pension?.statePensionQualifyingYears
+            ?? 35;
   if (accrued != null) {
-    return Math.round((accrued / 35) * 11502);
+    return Math.round((accrued / yrs) * full);
   }
   return 0;
 }

@@ -121,14 +121,14 @@ function _applyDeath(e) {
   }
   m.drawdown = 0;
 
-  // IHT liability on estate (worst-case: SIPP included post-Apr 2027 deadline)
+  // IHT liability on estate (worst-case: SIPP included post-Apr 2027 deadline).
+  // netWorth() already includes SIPP — do not add it again (double-count bugfix).
   const nw        = netWorth(e);
-  const sippVal   = e.assets?.sipp?.total || 0;
   const lifeAmt   = e.assets?.protection?.lifeInsurance?.amount || 0;
   const inTrust   = e.assets?.protection?.lifeInsurance?.inTrust || false;
   const hasResi   = (e.assets?.residence?.value || 0) > 0;
 
-  const grossEstate  = nw + sippVal + (inTrust ? 0 : lifeAmt);
+  const grossEstate  = nw + (inTrust ? 0 : lifeAmt);
   const nrb          = TAX.nrb;
   const rnrb         = hasResi ? TAX.rnrb : 0;
   const taxable      = Math.max(0, grossEstate - nrb - rnrb);

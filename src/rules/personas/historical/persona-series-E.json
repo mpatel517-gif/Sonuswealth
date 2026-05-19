@@ -1,0 +1,301 @@
+{
+  "persona": "E",
+  "name": "Willy Wonka",
+  "displayName": "Willy Wonka · Confectionery Industrialist",
+  "isHigherRateTaxpayer": true,
+  "taxResidency": "uk",
+  "lifeStage": "Preservation",
+  "description": "Elderly business founder with substantial pension, estate, and complex beneficiary chains. Critical test: 2021 snapshot (age 73) is PRE-75 — death benefits tax-FREE to nominated beneficiary. 2026 snapshot (age 78) is POST-75 — death benefits taxed as INCOME at recipient's marginal rate. Also tests: post-75 drawdown sequencing, BPR on long-held company (42yr holding in 2026), nomination staleness, discretionary trust 10-year charge.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 73,
+      "targetIncome": 72000,
+      "annualIncome": 79500,
+      "isMarried": true,
+      "maritalStatus": "married",
+      "estate_to_spouse_pct": 0.6,
+      "residence_to_descendants": true,
+      "pensionContributions": 0,
+      "drawdown": 52000,
+      "cgt_realised_current_year": 0,
+      "gifts_current_tax_year": 6000,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [],
+      "post_age_75": false,
+      "assets": {
+        "pensions": [
+          {
+            "type": "SIPP",
+            "total": 2200000,
+            "provider": "Hargreaves Lansdown",
+            "annual_contribution": 0,
+            "crystallised_amount": 1400000,
+            "uncrystallised_amount": 800000,
+            "tfc_taken_lifetime": 265000,
+            "drawdown_annual": 52000,
+            "last_valuation_date": "2021-04-01",
+            "nomination": {
+              "beneficiary": "Charlie Bucket (granddaughter)",
+              "type": "discretionary",
+              "date_set": "2019-03-10",
+              "stale": false
+            },
+            "note": "PRE-75: death benefits on this date = tax-free to nominated beneficiary. Crucial distinction from 2026 snapshot."
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 380000,
+            "provider": "Hargreaves Lansdown",
+            "contribution_current_tax_year": 0,
+            "last_valuation_date": "2021-05-01"
+          },
+          {
+            "type": "GIA",
+            "subtype": "uk-equities",
+            "value": 620000,
+            "provider": "Charles Stanley",
+            "last_valuation_date": "2021-05-01"
+          }
+        ],
+        "property": [
+          {
+            "type": "residence",
+            "use": "main-residence",
+            "value": 3800000,
+            "address": "Wonka Mansion, Buckinghamshire",
+            "mortgage_outstanding": 0,
+            "last_valuation_date": "2021-01-15"
+          },
+          {
+            "type": "second-home",
+            "use": "leisure",
+            "value": 1200000,
+            "address": "Lake District Estate, Cumbria",
+            "mortgage_outstanding": 0,
+            "last_valuation_date": "2021-01-15"
+          }
+        ],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 65000,
+            "bank": "Coutts"
+          },
+          {
+            "type": "savings",
+            "total": 220000,
+            "bank": "NS&I",
+            "note": "NS&I Premium Bonds — unlimited FSCS protection"
+          }
+        ]
+      },
+      "liabilities": [],
+      "income": {
+        "gross": 79500,
+        "byType": { "non_savings": 79500, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "drawdown", "amount": 52000, "frequency": "annual" },
+          { "type": "state-pension", "amount": 9339, "frequency": "annual" },
+          { "type": "dividends", "amount": 18161, "frequency": "annual", "from": "The Wonka Company Ltd" }
+        ],
+        "statePension": { "annual": 9339, "startAge": 65, "accrued_years": 35, "note": "Full basic + new state pension under transitional rules" }
+      },
+      "business_assets": [
+        {
+          "type": "private-company-shares",
+          "name": "The Wonka Company Ltd",
+          "value_gbp": 2600000,
+          "qualifies_for_bpr": true,
+          "shareholding_pct": 90,
+          "bpr_holding_years": 37,
+          "role": "Chairman",
+          "note": "BPR 100% — 37 years held in 2021 (well beyond 2yr threshold). HMRC challenged trading company status in 2019 — resolved. BPR intact."
+        }
+      ],
+      "trusts": [
+        {
+          "type": "discretionary",
+          "name": "Wonka Family Trust",
+          "established": "2014-06-01",
+          "value": 450000,
+          "assets": "mixed — UK equities and bonds",
+          "next_10yr_charge": "2024-06-01",
+          "note": "10-year anniversary charge due 2024 (during 2021 snapshot): 6% of value above NRB at anniversary date. Engine must flag upcoming charge."
+        }
+      ],
+      "protection": {
+        "life": { "exists": false, "note": "No term cover at 73 — not cost-effective. Wealth self-insures." }
+      },
+      "gifts_and_trusts_history": [
+        { "type": "PET", "amount": 50000, "date": "2015-06-01", "recipient": "Son", "within_7yr": false, "note": "Outside 7-year PET window — no longer in cumulation" },
+        { "type": "CLT-into-trust", "amount": 325000, "date": "2014-06-01", "note": "CLT into Wonka Family Trust — used 2014 NRB. Running taper now." }
+      ],
+      "tax_params_applicable": "UK-2021.1",
+      "engine_notes": [
+        "PRE-75 SIPP: death benefits tax-free if Wonka dies on this date (before age 75). Engine must detect age < 75.",
+        "CGT AEA £12,300 applies — significantly more valuable than 2026 (£3,000).",
+        "Pension AA £40k but pensionContributions=0 — no AA issue.",
+        "AIM BPR 100% in 2021 — no £1m cap. Wonka Company qualifies.",
+        "Discretionary trust 10-yr charge approaching June 2024 — flag in cashflow.",
+        "ISA in estate — no IHT shelter despite large balance."
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [8200000, 8800000],
+        "finio_score_range": [72, 82],
+        "confidence": "high",
+        "iht_exposure_range": [3100000, 3400000],
+        "iht_notes": "Estate ~£8.5m. NRB £325k + RNRB £175k (residence to descendants). Wonka Company BPR: £2.6m × 100% relief = £2.6m exempt. SIPP OUTSIDE estate in 2021. Net chargeable: ~£5.4m. IHT ~£2.16m. Couple spousal: offset 60% to Mrs Wonka.",
+        "cost_of_inaction_range": [120000, 180000],
+        "coi_notes": "Drawdown strategy suboptimal — ISA unused; Bed-and-ISA not maximised. AEA £12,300 vs currently using 0."
+      }
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 78,
+      "targetIncome": 80000,
+      "annualIncome": 88000,
+      "isMarried": true,
+      "maritalStatus": "married",
+      "estate_to_spouse_pct": 0.6,
+      "residence_to_descendants": true,
+      "pensionContributions": 0,
+      "drawdown": 45000,
+      "cgt_realised_current_year": 0,
+      "gifts_current_tax_year": 6000,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [],
+      "post_age_75": true,
+      "assets": {
+        "pensions": [
+          {
+            "type": "SIPP",
+            "total": 1850000,
+            "provider": "Hargreaves Lansdown",
+            "annual_contribution": 0,
+            "crystallised_amount": 1850000,
+            "uncrystallised_amount": 0,
+            "tfc_taken_lifetime": 268275,
+            "drawdown_annual": 45000,
+            "last_valuation_date": "2026-04-01",
+            "nomination": {
+              "beneficiary": "Charlie Bucket (granddaughter)",
+              "type": "discretionary",
+              "date_set": "2024-07-01",
+              "stale": false,
+              "note": "Updated after granddaughter turned 18. Engine must check post-75 tax treatment."
+            },
+            "note": "POST-75: death benefits taxed as INCOME at recipient's marginal rate. Charlie (24) would pay 20-40% on inherited pension. Engine must flag this vs 2021 pre-75 scenario."
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 520000,
+            "provider": "Hargreaves Lansdown",
+            "contribution_current_tax_year": 20000,
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "GIA",
+            "subtype": "uk-equities",
+            "value": 840000,
+            "provider": "Charles Stanley",
+            "last_valuation_date": "2026-05-01"
+          }
+        ],
+        "property": [
+          {
+            "type": "residence",
+            "use": "main-residence",
+            "value": 4500000,
+            "address": "Wonka Mansion, Buckinghamshire",
+            "mortgage_outstanding": 0,
+            "last_valuation_date": "2026-01-15"
+          },
+          {
+            "type": "second-home",
+            "use": "leisure",
+            "value": 1480000,
+            "address": "Lake District Estate, Cumbria",
+            "mortgage_outstanding": 0,
+            "last_valuation_date": "2026-01-15"
+          }
+        ],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 88000,
+            "bank": "Coutts"
+          },
+          {
+            "type": "savings",
+            "total": 280000,
+            "bank": "NS&I",
+            "note": "Premium Bonds at max £50k; remainder in NS&I savings"
+          }
+        ]
+      },
+      "liabilities": [],
+      "income": {
+        "gross": 88000,
+        "byType": { "non_savings": 88000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "drawdown", "amount": 45000, "frequency": "annual" },
+          { "type": "state-pension", "amount": 11502, "frequency": "annual" },
+          { "type": "dividends", "amount": 31498, "frequency": "annual", "from": "The Wonka Company Ltd" }
+        ],
+        "statePension": { "annual": 11502, "startAge": 65, "accrued_years": 35 }
+      },
+      "business_assets": [
+        {
+          "type": "private-company-shares",
+          "name": "The Wonka Company Ltd",
+          "value_gbp": 3200000,
+          "qualifies_for_bpr": true,
+          "shareholding_pct": 90,
+          "bpr_holding_years": 42,
+          "role": "Chairman",
+          "bpr_note": "BPR 100% on first £2.5m (APR/BPR combined limit from April 2026). 50% above £2.5m. Company value £3.2m: £2.5m × 0% IHT + £0.7m × 20% IHT = £140k IHT on excess.",
+          "aimBPR_does_not_apply": "Company is unquoted — not AIM. Full BPR rules apply."
+        }
+      ],
+      "trusts": [
+        {
+          "type": "discretionary",
+          "name": "Wonka Family Trust",
+          "established": "2014-06-01",
+          "value": 680000,
+          "assets": "UK equities",
+          "last_10yr_charge_paid": "2024-06-01",
+          "charge_paid_amount": 21300,
+          "next_10yr_charge": "2034-06-01",
+          "note": "10-year anniversary charge paid June 2024 (£21.3k). Next charge 2034."
+        }
+      ],
+      "protection": {
+        "life": { "exists": false }
+      },
+      "tax_params_applicable": "UK-2026.1",
+      "engine_notes": [
+        "POST-75 SIPP: death benefits taxed as income to recipient. Engine must apply post_age_75=true flag.",
+        "SIPP enters IHT estate from April 2027 (Finance Act 2026). Engine must calculate deadline days and flag urgency.",
+        "BPR combined cap £2.5m from April 2026: first £2.5m of Wonka Company at 100%, excess at 50%.",
+        "CGT AEA only £3,000 — significant from 2021 where it was £12,300. More GIA CGT exposure.",
+        "ISA still in estate — no relief. APS for Mrs Wonka if she survives.",
+        "Discretionary trust 10-year charge managed: £21.3k paid 2024, next 2034."
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [10500000, 11500000],
+        "finio_score_range": [74, 84],
+        "confidence": "high",
+        "iht_exposure_range": [3800000, 4200000],
+        "iht_notes": "Estate ~£11m. NRB+RNRB £500k × 2 (couple) = £1m. Wonka Company: £2.5m exempt, £0.7m × 20% = £140k IHT. SIPP: £1.85m NOW in estate from Apr 2027. Net chargeable ~£8.4m. IHT ~£3.36m. Reduced by spousal exemption 60%.",
+        "cost_of_inaction_range": [680000, 850000],
+        "coi_notes": "SIPP not structured for post-75 tax efficiency. £140k BPR excess. ISA estate inclusion. Nomination last updated 2024 — current."
+      }
+    }
+  ]
+}

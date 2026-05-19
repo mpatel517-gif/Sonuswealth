@@ -1,0 +1,254 @@
+{
+  "persona": "F",
+  "name": "Anna Finch",
+  "displayName": "Anna Finch · Life-Arc Baseline",
+  "isHigherRateTaxpayer": false,
+  "taxResidency": "uk",
+  "lifeStage": "Accumulation",
+  "description": "Life-arc demonstration persona spanning Foundation through Legacy stages across 67 years. The 2021 snapshot anchors age 32 (mid-accumulation); the 2026 snapshot anchors age 37 (late-accumulation, approaching Consolidation). Designed to validate trajectory calculations, Finio Score growth curves, and life-event cascade modelling across all 7 archetypes a single user traverses.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 32,
+      "targetIncome": 48000,
+      "annualIncome": 52000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": false,
+      "pensionContributions": 4160,
+      "drawdown": 0,
+      "cgt_realised_current_year": 0,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [],
+      "assets": {
+        "pensions": [
+          {
+            "type": "workplace-DC",
+            "total": 21400,
+            "provider": "Aviva",
+            "employer": "Finch & Partners Ltd",
+            "annual_contribution": 3120,
+            "employer_contribution": 1040,
+            "last_valuation_date": "2021-04-01"
+          },
+          {
+            "type": "workplace-DC-legacy",
+            "total": 4800,
+            "provider": "Standard Life",
+            "employer": "Previous employer (2015-2018)",
+            "annual_contribution": 0,
+            "last_valuation_date": "2020-11-01",
+            "note": "Orphan pot from early career. Consolidation candidate."
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 12800,
+            "provider": "Vanguard",
+            "contribution_current_tax_year": 6000,
+            "last_valuation_date": "2021-05-01"
+          }
+        ],
+        "property": [],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 4200,
+            "bank": "Monzo"
+          },
+          {
+            "type": "savings",
+            "total": 14600,
+            "bank": "Marcus by Goldman Sachs",
+            "interest_rate": 0.005,
+            "note": "Emergency fund 3.5 months expenses + first-home deposit savings"
+          }
+        ]
+      },
+      "liabilities": [
+        {
+          "type": "student-loan-plan-2",
+          "outstanding": 22800,
+          "interest_rate": 0.047,
+          "repayment_from_salary_monthly": 222,
+          "write_off_year": 2051
+        }
+      ],
+      "income": {
+        "gross": 52000,
+        "byType": { "non_savings": 52000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 52000, "frequency": "annual" }
+        ],
+        "statePension": { "annual": 9339, "startAge": 67, "accrued_years": 10 }
+      },
+      "protection": {
+        "life": { "exists": false, "note": "No dependants — no immediate need. Gap flag: if property bought with a partner, joint life cover required." },
+        "incomeProtection": { "exists": false, "note": "No IP — gap. On employer sick pay for 3 months only." }
+      },
+      "tax_params_applicable": "UK-2021.1",
+      "engine_notes": [
+        "AA £40,000 — far below limit; no AA issue",
+        "CGT AEA £12,300 — ISA balance small; no GIA; no CGT event",
+        "HICBC threshold £50,000 — income £52,000 > £50,000. Check child benefit: no children, so HICBC not applicable.",
+        "Income in higher rate band (£52k > £50,270). Pension contributions get 40% relief.",
+        "SIPP/pension OUTSIDE estate in 2021",
+        "Student loan Plan 2: 9% above £27,295; repayment reduces cashflow"
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [30000, 42000],
+        "net_worth_note": "Student loan £22,800 deducted. Gross assets ~£57,800 (pension £26,200 + ISA £12,800 + cash £18,800). Net = £35,000.",
+        "finio_score_range": [38, 52],
+        "confidence": "high",
+        "iht_exposure": 0,
+        "cost_of_inaction_range": [0, 800],
+        "coi_notes": "Small orphan pension pot — consolidation opportunity. No GIA, no property CoI."
+      }
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 37,
+      "targetIncome": 75000,
+      "annualIncome": 82000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": false,
+      "pensionContributions": 8200,
+      "drawdown": 0,
+      "cgt_realised_current_year": 1800,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [],
+      "assets": {
+        "pensions": [
+          {
+            "type": "SIPP",
+            "total": 48200,
+            "provider": "Vanguard",
+            "annual_contribution": 6150,
+            "employer_contribution": 2050,
+            "last_valuation_date": "2026-05-01",
+            "note": "Consolidated main pension — transferred in 3 legacy pots."
+          },
+          {
+            "type": "workplace-DC",
+            "total": 14800,
+            "provider": "Aviva",
+            "employer": "Finch & Partners Ltd (current)",
+            "annual_contribution": 0,
+            "note": "Still enrolled in employer scheme; primary now SIPP via salary sacrifice."
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 48600,
+            "provider": "Vanguard",
+            "contribution_current_tax_year": 10000,
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "GIA",
+            "subtype": "uk-equities",
+            "value": 22400,
+            "provider": "Freetrade",
+            "last_valuation_date": "2026-05-01",
+            "cost_basis": 19200,
+            "unrealised_gain": 3200
+          }
+        ],
+        "property": [
+          {
+            "type": "residence",
+            "use": "main-residence",
+            "value": 385000,
+            "address": "2-bed flat, Hackney, London E8",
+            "purchase_date": "2023-11-01",
+            "purchase_price": 340000,
+            "mortgage_outstanding": 280000,
+            "last_valuation_date": "2026-01-01"
+          }
+        ],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 5800,
+            "bank": "Monzo"
+          },
+          {
+            "type": "savings",
+            "total": 18400,
+            "bank": "Chase",
+            "interest_rate": 0.048
+          }
+        ]
+      },
+      "liabilities": [
+        {
+          "type": "residential-mortgage",
+          "outstanding": 280000,
+          "lender": "Halifax",
+          "interest_rate": 0.0479,
+          "monthly_payment": 1680,
+          "rate_type": "fixed",
+          "fixed_rate_expiry": "2028-11-01",
+          "term_remaining_years": 27
+        },
+        {
+          "type": "student-loan-plan-2",
+          "outstanding": 14200,
+          "interest_rate": 0.056,
+          "repayment_from_salary_monthly": 495,
+          "write_off_year": 2051
+        }
+      ],
+      "income": {
+        "gross": 82000,
+        "byType": { "non_savings": 82000, "savings": 1200, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 82000, "frequency": "annual" }
+        ],
+        "statePension": { "annual": 11502, "startAge": 67, "accrued_years": 15 }
+      },
+      "protection": {
+        "life": {
+          "exists": true,
+          "amount": 280000,
+          "type": "decreasing-term",
+          "inTrust": false,
+          "premium": 18,
+          "provider": "Legal & General",
+          "note": "Decreasing term linked to mortgage. Not in trust — on own death, goes via probate into estate."
+        },
+        "incomeProtection": {
+          "exists": true,
+          "cover_pct_of_salary": 0.5,
+          "deferred_period_weeks": 13,
+          "premium": 38,
+          "provider": "Vitality"
+        }
+      },
+      "tax_params_applicable": "UK-2026.1",
+      "engine_notes": [
+        "CGT AEA only £3,000 — GIA unrealised gain £3,200 approaching the limit. Bed-and-ISA opportunity.",
+        "Mortgage interest: residential (no S24 restriction applies — own home).",
+        "Life insurance not in trust: on death, £280k into estate. NRB £325k still covers. But should be in trust.",
+        "SIPP OUTSIDE estate until April 2027 — then included.",
+        "Income £82k: higher rate taxpayer. 40% pension relief claim via SA.",
+        "HICBC threshold £60k (2026) — no children, not applicable."
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [188000, 215000],
+        "finio_score_range": [52, 66],
+        "confidence": "high",
+        "iht_exposure": 0,
+        "cost_of_inaction_range": [800, 3000],
+        "coi_notes": "Life insurance not in trust — CoI on death is probate delay and potential IHT in future. GIA CGT approaching limit. Bed-and-ISA available."
+      }
+    }
+  ]
+}

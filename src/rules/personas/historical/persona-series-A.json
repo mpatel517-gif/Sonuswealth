@@ -1,0 +1,117 @@
+{
+  "persona": "A",
+  "name": "Bruce Wayne",
+  "displayName": "Bruce Wayne · Retired Executive",
+  "isHigherRateTaxpayer": false,
+  "taxResidency": "uk",
+  "lifeStage": "Decumulation",
+  "description": "Wealthy retiree in drawdown phase. DB pension, SIPP, GIA, ISA, substantial property — testing drawdown efficiency, IHT exposure, and trust strategies.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 57,
+      "targetIncome": 100000,
+      "annualIncome": 95000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": true,
+      "pensionContributions": 0,
+      "drawdown": 105000,
+      "cgt_realised_current_year": 15000,
+      "gifts_current_tax_year": 6000,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [{ "relationship": "child", "age": 29, "type": "child", "financiallyDependent": false }],
+      "assets": {
+        "pensions": [
+          { "type": "SIPP", "total": 2100000, "provider": "Interactive Investor", "annual_contribution": 0, "last_valuation_date": "2021-04-01" },
+          { "type": "DB", "total": 280000, "provider": "Wayne Enterprises Pension Scheme", "cetv": 820000, "annual_benefit": 35000, "last_valuation_date": "2020-12-31" }
+        ],
+        "investments": [
+          { "type": "stocks-and-shares-ISA", "value": 350000, "provider": "Hargreaves Lansdown", "contribution_current_tax_year": 20000, "last_valuation_date": "2021-05-01" },
+          { "type": "GIA", "subtype": "uk-equities", "value": 620000, "provider": "Charles Stanley", "last_valuation_date": "2021-05-01" },
+          { "type": "GIA", "subtype": "intl-equities", "value": 340000, "provider": "Charles Stanley", "last_valuation_date": "2021-05-01" },
+          { "type": "onshore-bond", "value": 180000, "provider": "Aviva", "purchase_date": "2015-03-01", "surrender_value": 175000, "last_valuation_date": "2021-03-31" }
+        ],
+        "property": [
+          { "type": "residence", "use": "main-residence", "value": 1900000, "address": "Wayne Manor, Surrey", "last_valuation_date": "2021-02-01" }
+        ],
+        "cash": [
+          { "type": "current-account", "total": 45000, "bank": "Coutts" },
+          { "type": "savings", "total": 85000, "bank": "Aldermore", "interest_rate": 0.005 }
+        ]
+      },
+      "liabilities": [
+        { "type": "residential-mortgage", "outstanding": 0, "lender": "Coutts", "interest_rate": 0, "monthly_payment": 0 }
+      ],
+      "income": {
+        "gross": 95000,
+        "byType": { "non_savings": 95000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "drawdown", "amount": 60000, "frequency": "annual" },
+          { "type": "state-pension", "amount": 11502, "frequency": "annual", "startAge": 67 },
+          { "type": "dividends", "amount": 35000, "frequency": "annual", "from": "GIA portfolio" }
+        ],
+        "statePension": { "annual": 11502, "startAge": 67, "accrued_years": 35 }
+      },
+      "protection": {
+        "life": { "exists": true, "amount": 1500000, "type": "whole-of-life", "inTrust": true, "premium": 3500 }
+      },
+      "business_assets": [],
+      "trusts": [
+        { "type": "discretionary", "name": "Wayne Family Trust", "assets_value": 600000, "settlor": "Bruce Wayne", "trustees": "RBC Wealth Management", "established": "2010-06-01", "periodic_charge_date": "2020-06-01", "ten_year_charge_paid": true }
+      ]
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 62,
+      "targetIncome": 120000,
+      "annualIncome": 120000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": true,
+      "pensionContributions": 0,
+      "drawdown": 126000,
+      "cgt_realised_current_year": 22000,
+      "gifts_current_tax_year": 3000,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [{ "relationship": "child", "age": 34, "type": "child", "financiallyDependent": false }],
+      "assets": {
+        "pensions": [
+          { "type": "SIPP", "total": 2800000, "provider": "Interactive Investor", "annual_contribution": 0, "last_valuation_date": "2026-04-01" },
+          { "type": "DB", "total": 305000, "provider": "Wayne Enterprises Pension Scheme", "cetv": 910000, "annual_benefit": 38000, "last_valuation_date": "2025-12-31" }
+        ],
+        "investments": [
+          { "type": "stocks-and-shares-ISA", "value": 420000, "provider": "Hargreaves Lansdown", "contribution_current_tax_year": 20000, "last_valuation_date": "2026-05-01" },
+          { "type": "GIA", "subtype": "uk-equities", "value": 850000, "provider": "Charles Stanley", "last_valuation_date": "2026-05-01" }
+        ],
+        "property": [
+          { "type": "residence", "use": "main-residence", "value": 2200000, "address": "Wayne Manor, Surrey", "last_valuation_date": "2026-02-01" }
+        ],
+        "cash": [
+          { "type": "current-account", "total": 55000, "bank": "Coutts" },
+          { "type": "savings", "total": 40000, "bank": "Aldermore", "interest_rate": 0.038 }
+        ]
+      },
+      "liabilities": [],
+      "income": {
+        "gross": 120000,
+        "byType": { "non_savings": 120000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "drawdown", "amount": 88000, "frequency": "annual" },
+          { "type": "DB-pension", "amount": 38000, "frequency": "annual" },
+          { "type": "state-pension", "amount": 0, "frequency": "annual", "startAge": 67 }
+        ],
+        "statePension": { "annual": 11502, "startAge": 67, "accrued_years": 35 }
+      },
+      "protection": {
+        "life": { "exists": true, "amount": 1500000, "type": "whole-of-life", "inTrust": true, "premium": 3800 }
+      },
+      "business_assets": [],
+      "trusts": [
+        { "type": "discretionary", "name": "Wayne Family Trust", "assets_value": 800000, "settlor": "Bruce Wayne", "trustees": "RBC Wealth Management", "established": "2010-06-01", "periodic_charge_date": "2030-06-01" }
+      ]
+    }
+  ]
+}

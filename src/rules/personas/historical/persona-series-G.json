@@ -1,0 +1,425 @@
+{
+  "persona": "G",
+  "name": "Priya Sharma",
+  "displayName": "Priya Sharma · UK/India NRI",
+  "isHigherRateTaxpayer": true,
+  "taxResidency": "uk",
+  "lifeStage": "Accumulation",
+  "description": "Senior engineer / tech lead; UK tax resident, Indian NRI. NRE account (tax-free interest in UK under DTAA), NRO account (interest taxable in UK above PSA), EPF (Employees' Provident Fund, India), Indian equity mutual funds (LTCG/STCG under Indian rules + UK treatment as foreign income). 2021 snapshot age 33: smaller UK portfolio, active Indian investments. 2026 snapshot age 38: expanded UK wealth, DTAA relief claimed, LRS remittance tracking. Tests: cross-border wrapper detection, DTAA credit, Indian MF tax treatment, NRE vs NRO income handling, RBI LRS tracker.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 33,
+      "targetIncome": 65000,
+      "annualIncome": 72000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": false,
+      "pensionContributions": 5760,
+      "drawdown": 0,
+      "cgt_realised_current_year": 4800,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": {
+        "primary": "UK",
+        "secondary": "India",
+        "subRegion": "England",
+        "note": "NRI status maintained. UK statutory residency test: automatic UK resident (183 days+ in UK). India: non-resident per FEMA/IT Act for financial purposes."
+      },
+      "cross_border": {
+        "uk_tax_resident": true,
+        "indian_nri": true,
+        "uk_residence_years": 8,
+        "dtaa_applicable": true,
+        "dtaa_article_applicable": ["Article 20-21 (pensions/government service)", "Article 22 (other income)"],
+        "deemed_domicile_uk": false,
+        "note_2021": "In 2021 UK deemed domicile required 17 of 20 UK tax years (old rules). Priya has 8 years — not yet deemed domiciled. FIG (Foreign Income and Gains) regime not applicable in 2021 — arose from April 2025.",
+        "lrs_remittance_fy_2021": {
+          "amount_remitted_inr": 5000000,
+          "amount_remitted_gbp": 50000,
+          "purpose": "family maintenance + Indian mutual fund investment"
+        }
+      },
+      "assets": {
+        "pensions": [
+          {
+            "type": "workplace-DC",
+            "total": 38400,
+            "provider": "Legal & General",
+            "employer": "TechNova UK Ltd",
+            "annual_contribution": 4320,
+            "employer_contribution": 1440,
+            "last_valuation_date": "2021-04-01"
+          },
+          {
+            "type": "SIPP",
+            "total": 8200,
+            "provider": "Vanguard",
+            "annual_contribution": 1440,
+            "last_valuation_date": "2021-04-15"
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 22400,
+            "provider": "Freetrade",
+            "contribution_current_tax_year": 8000,
+            "last_valuation_date": "2021-05-01"
+          },
+          {
+            "type": "GIA",
+            "subtype": "uk-equities",
+            "value": 14800,
+            "provider": "Interactive Investor",
+            "last_valuation_date": "2021-05-01",
+            "cost_basis": 11200,
+            "unrealised_gain": 3600
+          }
+        ],
+        "indian_assets": [
+          {
+            "type": "NRE-account",
+            "currency": "INR",
+            "balance_inr": 3200000,
+            "balance_gbp_approx": 32000,
+            "bank": "HDFC Bank",
+            "interest_rate_india": 0.055,
+            "uk_tax_treatment": "Interest EXEMPT in UK under DTAA Art 11(3) — NRE account interest specifically exempted in India-UK treaty. Must claim exemption on SA return.",
+            "last_valuation_date": "2021-05-01",
+            "note": "NRE account: Indian tax-free interest AND UK DTAA exemption. Most efficient Indian cash holding for NRI."
+          },
+          {
+            "type": "NRO-account",
+            "currency": "INR",
+            "balance_inr": 1800000,
+            "balance_gbp_approx": 18000,
+            "bank": "ICICI Bank",
+            "interest_rate_india": 0.055,
+            "indian_tds_rate": 0.30,
+            "uk_tax_treatment": "Interest taxable in UK at marginal rate. Credit for Indian TDS paid (30% in India; UK reduces to treaty rate). PSA £1,000 applies first.",
+            "last_valuation_date": "2021-05-01"
+          },
+          {
+            "type": "EPF",
+            "currency": "INR",
+            "balance_inr": 4800000,
+            "balance_gbp_approx": 48000,
+            "employer": "Tata Consultancy Services (2010-2017)",
+            "interest_rate_india": 0.0850,
+            "uk_tax_treatment": "EPF interest: taxable as savings income in UK if NRI and UK tax resident. DTAA may reduce double taxation — treaty analysis needed. Maturity: tax-free in India under sec 10(12) EEA. UK may tax growth accrued during UK residency.",
+            "last_valuation_date": "2021-03-31",
+            "nri_note": "As NRI, cannot contribute further to EPF. Balance grows at Indian declared rate. Withdrawal possible on 2-month non-employment notice."
+          },
+          {
+            "type": "Indian-equity-MF",
+            "currency": "INR",
+            "balance_inr": 8500000,
+            "balance_gbp_approx": 85000,
+            "fund_house": "HDFC Mutual Fund",
+            "fund_name": "HDFC Nifty 50 Index Fund",
+            "stcg_exposure_inr": 220000,
+            "ltcg_exposure_inr": 480000,
+            "indian_stcg_rate": 0.15,
+            "indian_ltcg_rate": 0.10,
+            "uk_tax_treatment": "Gains taxable in UK as CGT on disposal. Indian tax paid is creditable. Non-reporting fund for UK purposes — gains likely taxable as INCOME not CGT unless reporting status obtained. Must check HMRC reporting fund status for each fund.",
+            "last_valuation_date": "2021-05-01",
+            "reporting_fund_status": "non-reporting",
+            "uk_cgt_alert": "Non-reporting Indian MF: gains taxed as income (not CGT) in UK. Material adverse treatment for HR taxpayer."
+          },
+          {
+            "type": "PPF",
+            "currency": "INR",
+            "balance_inr": 1200000,
+            "balance_gbp_approx": 12000,
+            "interest_rate_india": 0.0770,
+            "uk_tax_treatment": "PPF interest: Indian tax-exempt under Sec 80C. UK position unclear — HMRC has not issued definitive guidance on PPF. Conservative position: taxable as savings income in UK above PSA. Treaty credit if Indian tax applied.",
+            "maturity_year": 2028,
+            "last_valuation_date": "2021-03-31",
+            "nri_note": "NRIs cannot open new PPF accounts. Existing accounts: can continue until maturity; cannot extend beyond 15-year term."
+          }
+        ],
+        "property": [],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 5200,
+            "bank": "Starling"
+          },
+          {
+            "type": "savings",
+            "total": 24000,
+            "bank": "Chase",
+            "interest_rate": 0.005
+          }
+        ]
+      },
+      "liabilities": [
+        {
+          "type": "student-loan-plan-2",
+          "outstanding": 31400,
+          "interest_rate": 0.046,
+          "repayment_from_salary_monthly": 412,
+          "write_off_year": 2056
+        }
+      ],
+      "income": {
+        "gross": 72000,
+        "byType": { "non_savings": 72000, "savings": 800, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 72000, "frequency": "annual" },
+          { "type": "NRE-interest", "amount": 1760, "frequency": "annual", "dtaa_exempt": true, "note": "DTAA exemption — not taxable in UK" },
+          { "type": "NRO-interest", "amount": 800, "frequency": "annual", "dtaa_credit_applicable": true }
+        ],
+        "statePension": { "annual": 9339, "startAge": 67, "accrued_years": 8 }
+      },
+      "protection": {
+        "life": { "exists": false },
+        "incomeProtection": { "exists": false }
+      },
+      "tax_params_applicable": "UK-2021.1",
+      "engine_notes": [
+        "NRE interest: DTAA Art 11(3) exemption. Engine must detect NRE wrapper and apply nil UK tax.",
+        "NRO interest: taxable in UK; Indian TDS 30% creditable to UK rate (higher rate = 40%). Net UK tax if HR = 40% - 30% = 10% additional.",
+        "Indian MF: non-reporting fund — gains taxable as INCOME in UK (not CGT). In 2021 this means income tax at 40%.",
+        "EPF: continuing growth taxable as savings income in UK above PSA (£1,000 for HR taxpayer = £500).",
+        "CGT AEA £12,300 in 2021 — partially used (£4,800 realised). Still £7,500 remaining.",
+        "Deemed domicile NOT triggered: 8 years, not 17. Remittance basis potentially available (charge applies from year 8). Priya uses arising basis — simpler.",
+        "LRS remittance tracking: RBI limit $250k/year. £50k remitted outward — well within limit."
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [250000, 290000],
+        "finio_score_range": [44, 58],
+        "confidence": "medium",
+        "confidence_notes": "Medium confidence: Indian MF reporting status uncertain; PPF UK treatment requires HMRC guidance; EPF repatriation cost unknown.",
+        "iht_exposure": 0,
+        "cost_of_inaction_range": [2000, 6000],
+        "coi_notes": "Non-reporting Indian MF: gains taxed as income vs CGT — material drag. NRO restructuring opportunity."
+      }
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 38,
+      "targetIncome": 95000,
+      "annualIncome": 108000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": false,
+      "pensionContributions": 11400,
+      "drawdown": 0,
+      "cgt_realised_current_year": 2800,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": {
+        "primary": "UK",
+        "secondary": "India",
+        "subRegion": "England",
+        "note": "UK deemed domicile: 13 years in 2026. Still below 15-of-20 test for IHT. Pre-April 2025 rules: 17 years. New rules from April 2025: 10-year IHT test. Priya now has 13 years — EXCEEDS new 10-year IHT threshold. Full worldwide IHT exposure from April 2025."
+      },
+      "cross_border": {
+        "uk_tax_resident": true,
+        "indian_nri": true,
+        "uk_residence_years": 13,
+        "dtaa_applicable": true,
+        "dtaa_relief_claimed": true,
+        "dtaa_articles_claimed": ["Art 11 (NRE interest)", "Art 13 (capital gains)"],
+        "iht_deemed_domicile_uk": true,
+        "iht_deemed_domicile_note": "From April 2025, new 10-year residence test for IHT. Priya has 13 years UK residence → worldwide IHT exposure. Indian assets now IN scope of UK IHT.",
+        "lrs_remittance_fy_2026": {
+          "amount_remitted_inr": 2500000,
+          "amount_remitted_gbp": 23000,
+          "purpose": "EPF partial withdrawal + Indian MF redemption"
+        }
+      },
+      "assets": {
+        "pensions": [
+          {
+            "type": "SIPP",
+            "total": 82000,
+            "provider": "Vanguard",
+            "annual_contribution": 9100,
+            "employer_contribution": 2300,
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "workplace-DC-legacy",
+            "total": 58000,
+            "provider": "Legal & General",
+            "employer": "TechNova UK Ltd (prev)",
+            "annual_contribution": 0,
+            "last_valuation_date": "2025-11-01",
+            "note": "Legacy DC pot — consolidation into SIPP pending."
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 68000,
+            "provider": "Freetrade",
+            "contribution_current_tax_year": 15000,
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "GIA",
+            "subtype": "uk-equities",
+            "value": 38400,
+            "provider": "Interactive Investor",
+            "last_valuation_date": "2026-05-01",
+            "cost_basis": 28600,
+            "unrealised_gain": 9800
+          }
+        ],
+        "indian_assets": [
+          {
+            "type": "NRE-account",
+            "currency": "INR",
+            "balance_inr": 4800000,
+            "balance_gbp_approx": 44000,
+            "bank": "HDFC Bank",
+            "interest_rate_india": 0.060,
+            "uk_tax_treatment": "DTAA exemption applied — NRE interest claimed exempt on 2025/26 SA return. Confirmed with UK tax adviser.",
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "NRO-account",
+            "currency": "INR",
+            "balance_inr": 950000,
+            "balance_gbp_approx": 8800,
+            "bank": "ICICI Bank",
+            "interest_rate_india": 0.060,
+            "indian_tds_rate": 0.30,
+            "uk_tax_treatment": "Taxable in UK. DTAA credit for TDS reduces liability. NRO balance reduced — repatriating to ISA via LRS.",
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "EPF",
+            "currency": "INR",
+            "balance_inr": 6200000,
+            "balance_gbp_approx": 57000,
+            "employer": "Tata Consultancy Services (2010-2017)",
+            "interest_rate_india": 0.0810,
+            "uk_tax_treatment": "EPF interest: HMRC issued guidance 2024 — EPF treated as registered pension-equivalent for UK purposes IF contributions made pre-UK residency. Priya joined EPF in India 2010-2017 before UK arrival (2013). Mixed treatment: pre-2013 accretion potentially exempt; post-2013 accrual taxable.",
+            "last_valuation_date": "2026-03-31",
+            "now_in_iht_estate": true,
+            "iht_note": "From April 2025, Priya is IHT-deemed-domicile. EPF now IN UK IHT estate."
+          },
+          {
+            "type": "Indian-equity-MF",
+            "currency": "INR",
+            "balance_inr": 11200000,
+            "balance_gbp_approx": 103000,
+            "fund_house": "Mirae Asset Mutual Fund",
+            "fund_name": "Mirae Asset Large Cap Fund",
+            "stcg_exposure_inr": 180000,
+            "ltcg_exposure_inr": 980000,
+            "indian_stcg_rate": 0.20,
+            "indian_ltcg_rate": 0.125,
+            "uk_tax_treatment": "Partially converted to UK reporting fund status via adviser. UK CGT applies on disposal; Indian tax credited.",
+            "last_valuation_date": "2026-05-01",
+            "reporting_fund_status": "reporting",
+            "uk_cgt_note": "Reporting status obtained — gains now CGT not income. Significant improvement vs 2021. CGT AEA only £3k in 2026."
+          },
+          {
+            "type": "PPF",
+            "currency": "INR",
+            "balance_inr": 1580000,
+            "balance_gbp_approx": 14600,
+            "interest_rate_india": 0.0710,
+            "uk_tax_treatment": "PPF: HMRC clarified 2024 — PPF treated as exempt savings account for UK purposes (similar to ISA) where contributions made before UK arrival. Priya's PPF opened 2008 — pre-UK arrival. Interest EXEMPT from UK tax per extra-statutory concession.",
+            "maturity_year": 2028,
+            "last_valuation_date": "2026-03-31"
+          }
+        ],
+        "property": [
+          {
+            "type": "residence",
+            "use": "main-residence",
+            "value": 520000,
+            "address": "2-bed flat, Canary Wharf, London E14",
+            "purchase_date": "2024-03-01",
+            "purchase_price": 480000,
+            "mortgage_outstanding": 384000,
+            "last_valuation_date": "2026-01-01"
+          }
+        ],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 6800,
+            "bank": "Starling"
+          },
+          {
+            "type": "savings",
+            "total": 32000,
+            "bank": "Chase",
+            "interest_rate": 0.049
+          }
+        ]
+      },
+      "liabilities": [
+        {
+          "type": "residential-mortgage",
+          "outstanding": 384000,
+          "lender": "HSBC",
+          "interest_rate": 0.0489,
+          "monthly_payment": 2140,
+          "rate_type": "fixed",
+          "fixed_rate_expiry": "2029-03-01"
+        },
+        {
+          "type": "student-loan-plan-2",
+          "outstanding": 22100,
+          "interest_rate": 0.058,
+          "repayment_from_salary_monthly": 730
+        }
+      ],
+      "income": {
+        "gross": 108000,
+        "byType": { "non_savings": 108000, "savings": 2400, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 108000, "frequency": "annual" },
+          { "type": "NRE-interest", "amount": 2640, "frequency": "annual", "dtaa_exempt": true },
+          { "type": "NRO-interest", "amount": 480, "frequency": "annual" }
+        ],
+        "statePension": { "annual": 11502, "startAge": 67, "accrued_years": 13 }
+      },
+      "protection": {
+        "life": {
+          "exists": true,
+          "amount": 384000,
+          "type": "decreasing-term",
+          "inTrust": false,
+          "premium": 22,
+          "provider": "Aviva"
+        },
+        "incomeProtection": {
+          "exists": true,
+          "cover_pct_of_salary": 0.6,
+          "deferred_period_weeks": 26,
+          "premium": 52,
+          "provider": "Royal London"
+        }
+      },
+      "tax_params_applicable": "UK-2026.1",
+      "engine_notes": [
+        "IHT: deemed domicile from April 2025 (10-yr rule). Indian assets NOW in UK IHT estate. Engine must detect this threshold crossing.",
+        "EPF: mixed pre/post-UK arrival treatment. Conservative: all taxable in UK above PSA.",
+        "Indian MF: reporting fund status obtained — CGT treatment, not income. CGT AEA only £3k (2026 rate).",
+        "NRE: DTAA exemption still applies regardless of deemed domicile status.",
+        "SIPP enters estate April 2027 — 354 days. Engine must flag deadline.",
+        "Higher rate taxpayer: income £108k + NRO interest. PA taper starts at £100k. Adjusted net income £108k - £11,400 (pension) = £96,600. Below £100k — PA retained.",
+        "CGT realised £2,800 (within £3,000 AEA). No additional CGT liability."
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [440000, 490000],
+        "finio_score_range": [56, 70],
+        "confidence": "medium",
+        "confidence_notes": "Medium: Indian assets cross-border treatment complex; EPF historical split needs specialist verification.",
+        "iht_exposure_range": [0, 40000],
+        "iht_notes": "Estate ~£380k. NRB £325k. Modest IHT exposure on Indian assets above NRB now that deemed-domicile triggered.",
+        "cost_of_inaction_range": [3000, 8000],
+        "coi_notes": "Indian MF reporting status now correct — main CoI was remediated. Remaining CoI: life cover not in trust; DC legacy pot unconsolidated."
+      }
+    }
+  ]
+}

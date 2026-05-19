@@ -1,0 +1,117 @@
+{
+  "persona": "B",
+  "name": "Fred & Wilma Flintstone",
+  "displayName": "Fred & Wilma Flintstone · Married Working Couple",
+  "isHigherRateTaxpayer": false,
+  "taxResidency": "uk",
+  "lifeStage": "Consolidation",
+  "description": "Married couple, both working, mortgage, two young kids. Moderate wealth, testing married-couple IHT spouse exemption, child benefit HICBC, AA usage trajectory.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 43,
+      "targetIncome": 70000,
+      "annualIncome": 68000,
+      "isMarried": true,
+      "maritalStatus": "married",
+      "estate_to_spouse_pct": 1.0,
+      "residence_to_descendants": true,
+      "pensionContributions": 12000,
+      "drawdown": 0,
+      "cgt_realised_current_year": 0,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [{ "relationship": "child", "age": 7, "type": "child", "financiallyDependent": true }, { "relationship": "child", "age": 4, "type": "child", "financiallyDependent": true }],
+      "assets": {
+        "pensions": [
+          { "type": "workplace-dc", "total": 210000, "provider": "Scottish Widows", "employer": "Slate & Co", "annual_contribution": 6000, "last_valuation_date": "2021-04-01" },
+          { "type": "workplace-dc", "total": 110000, "provider": "Standard Life", "employer": "Bedrock NHS Trust", "annual_contribution": 4800, "last_valuation_date": "2021-04-01" }
+        ],
+        "investments": [
+          { "type": "stocks-and-shares-ISA", "value": 32000, "provider": "Vanguard", "contribution_current_tax_year": 8000, "last_valuation_date": "2021-05-01" },
+          { "type": "GIA", "value": 28000, "provider": "Hargreaves Lansdown", "last_valuation_date": "2021-04-15" }
+        ],
+        "property": [
+          { "type": "residence", "use": "main-residence", "value": 520000, "address": "34 Granite Way, Bedrock", "last_valuation_date": "2021-01-01" }
+        ],
+        "cash": [
+          { "type": "current-account", "total": 8000, "bank": "Barclays" },
+          { "type": "savings", "total": 15000, "bank": "Nationwide", "interest_rate": 0.005 }
+        ]
+      },
+      "liabilities": [
+        { "type": "residential-mortgage", "outstanding": 320000, "lender": "Halifax", "interest_rate": 0.0225, "monthly_payment": 1350 },
+        { "type": "personal-loan", "outstanding": 18000, "lender": "Barclays", "note": "car loan", "interest_rate": 0.039, "monthly_payment": 400 },
+        { "type": "credit-card", "outstanding": 3500, "provider": "Barclaycard", "interest_rate": 0.189 }
+      ],
+      "income": {
+        "gross": 68000,
+        "byType": { "non_savings": 68000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "employment", "amount": 42000, "frequency": "annual", "earner": "Fred" },
+          { "type": "employment", "amount": 26000, "frequency": "annual", "earner": "Wilma" }
+        ],
+        "statePension": { "annual": 0, "startAge": 67, "accrued_years": 18 }
+      },
+      "protection": {
+        "life": { "exists": true, "amount": 350000, "type": "decreasing-term", "inTrust": false, "premium": 180 }
+      },
+      "business_assets": [],
+      "obligations": [
+        { "type": "school-fees", "annual_amount": 0, "note": "state school" }
+      ]
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 48,
+      "targetIncome": 85000,
+      "annualIncome": 85000,
+      "isMarried": true,
+      "maritalStatus": "married",
+      "estate_to_spouse_pct": 1.0,
+      "residence_to_descendants": true,
+      "pensionContributions": 18000,
+      "drawdown": 0,
+      "cgt_realised_current_year": 5000,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [{ "relationship": "child", "age": 12, "type": "child", "financiallyDependent": true }, { "relationship": "child", "age": 9, "type": "child", "financiallyDependent": true }],
+      "assets": {
+        "pensions": [
+          { "type": "workplace-dc", "total": 350000, "provider": "Scottish Widows", "employer": "Slate & Co", "annual_contribution": 9000, "last_valuation_date": "2026-04-01" },
+          { "type": "workplace-dc", "total": 185000, "provider": "Standard Life", "employer": "Bedrock NHS Trust", "annual_contribution": 7200, "last_valuation_date": "2026-04-01" },
+          { "type": "SIPP", "total": 35000, "provider": "Vanguard", "annual_contribution": 1800, "last_valuation_date": "2026-04-01" }
+        ],
+        "investments": [
+          { "type": "stocks-and-shares-ISA", "value": 75000, "provider": "Vanguard", "contribution_current_tax_year": 8000, "last_valuation_date": "2026-05-01" },
+          { "type": "GIA", "value": 45000, "provider": "Hargreaves Lansdown", "last_valuation_date": "2026-04-15" }
+        ],
+        "property": [
+          { "type": "residence", "use": "main-residence", "value": 650000, "address": "34 Granite Way, Bedrock", "last_valuation_date": "2026-01-01" }
+        ],
+        "cash": [
+          { "type": "current-account", "total": 12000, "bank": "Barclays" },
+          { "type": "savings", "total": 20000, "bank": "Nationwide", "interest_rate": 0.035 }
+        ]
+      },
+      "liabilities": [
+        { "type": "residential-mortgage", "outstanding": 285000, "lender": "Halifax", "interest_rate": 0.0425, "monthly_payment": 1650 },
+        { "type": "personal-loan", "outstanding": 12000, "lender": "Barclays", "note": "car loan", "interest_rate": 0.039, "monthly_payment": 280 },
+        { "type": "credit-card", "outstanding": 2000, "provider": "Barclaycard", "interest_rate": 0.189 }
+      ],
+      "income": {
+        "gross": 85000,
+        "byType": { "non_savings": 85000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "employment", "amount": 52000, "frequency": "annual", "earner": "Fred" },
+          { "type": "employment", "amount": 33000, "frequency": "annual", "earner": "Wilma" }
+        ],
+        "statePension": { "annual": 0, "startAge": 67, "accrued_years": 23 }
+      },
+      "protection": {
+        "life": { "exists": true, "amount": 500000, "type": "decreasing-term", "inTrust": false, "premium": 220 }
+      },
+      "business_assets": []
+    }
+  ]
+}

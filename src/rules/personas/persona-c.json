@@ -47,37 +47,263 @@
   },
   "assets": {
     "sipp": {
-      "total": 380000,
+      "total": 1430000,
       "growth": 0.07,
       "crystalised": 0,
       "tfcTaken": 0,
+      "taxonomy_stress_test": true,
+      "taxonomy_note": "Saturated with all Domain A + B pension/decumulation types per 3-Engine-mm-asset-taxonomy-v1_0.md",
       "pensions": [
         {
+          "name": "Stark SIPP (AJ Bell)",
+          "value": 450000,
+          "type": "SIPP",
+          "provider": "AJ Bell",
+          "charge": 0.0015,
+          "chargeIsEstimate": false,
+          "transferEligible": false,
+          "nominationDate": "2025-02-01",
+          "taxonomy_id": "A08"
+        },
+        {
           "name": "Stark Industries SSAS",
-          "value": 280000,
+          "value": 380000,
           "type": "SSAS",
-          "provider": "Self-administered",
+          "provider": "Barnett Waddingham",
           "charge": 0.0025,
           "chargeIsEstimate": false,
           "transferEligible": false,
-          "nominationDate": "2025-02-01"
+          "nominationDate": "2025-02-01",
+          "taxonomy_id": "A09",
+          "ssas_loan_to_employer": 120000,
+          "ssas_loan_interest_rate": 0.03
         },
         {
-          "name": "Previous employer DC (MIT Tech)",
-          "value": 100000,
+          "name": "TechNova Workplace DC (legacy)",
+          "value": 95000,
           "type": "Workplace DC",
           "provider": "Legal & General",
           "charge": 0.006,
           "chargeIsEstimate": true,
           "transferEligible": true,
-          "nominationDate": "2020-11-01"
+          "nominationDate": "2020-11-01",
+          "taxonomy_id": "A03"
+        },
+        {
+          "name": "BT Group DB Deferred",
+          "value": 0,
+          "type": "Occupational DB",
+          "provider": "BT Pension Scheme",
+          "cetv": 280000,
+          "annual_benefit_deferred": 7200,
+          "normal_retirement_age": 65,
+          "taxonomy_id": "A12",
+          "note": "CETV only — balance not in net worth; entitlement only"
+        },
+        {
+          "name": "Stakeholder pension (legacy mid-90s)",
+          "value": 18000,
+          "type": "Stakeholder",
+          "provider": "Prudential",
+          "charge": 0.01,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "taxonomy_id": "A06"
+        },
+        {
+          "name": "GPP from previous employer",
+          "value": 48000,
+          "type": "GPP",
+          "provider": "Aviva",
+          "charge": 0.0075,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "taxonomy_id": "A04"
+        },
+        {
+          "name": "RAC (pre-1988 legacy)",
+          "value": 58000,
+          "type": "RAC",
+          "provider": "Legal & General",
+          "has_gar": true,
+          "gar_rate": 0.11,
+          "taxonomy_id": "A10",
+          "note": "Guaranteed Annuity Rate 11% — engine must NOT recommend transfer without GAR assessment"
+        },
+        {
+          "name": "Flexi-access drawdown tranche",
+          "value": 0,
+          "type": "FAD",
+          "provider": "AJ Bell",
+          "drawdown_annual": 0,
+          "tfc_taken": 0,
+          "taxonomy_id": "B01",
+          "note": "Not yet entered drawdown. Placeholder for drawdown modelling."
         }
       ]
     },
     "isa": {
       "value": 220000,
-      "growth": 0.07
+      "growth": 0.07,
+      "breakdown": {
+        "stocks_and_shares_isa": 208000,
+        "cash_isa": 12000
+      }
     },
+    "isaDetail": [
+      {
+        "name": "Hargreaves Lansdown S&S ISA",
+        "value": 208000,
+        "type": "stocks-and-shares-ISA",
+        "provider": "Hargreaves Lansdown",
+        "contribution_this_tax_year": 15000,
+        "taxonomy_id": "C03"
+      },
+      {
+        "name": "Nationwide Cash ISA",
+        "value": 12000,
+        "type": "cash-ISA",
+        "provider": "Nationwide",
+        "interest_rate": 0.042,
+        "taxonomy_id": "C01",
+        "note": "Cash ISA sub-limit £12k for under-65 from April 2026"
+      }
+    ],
+    "taxEfficientInvestments": [
+      {
+        "name": "Octopus Ventures EIS Portfolio",
+        "type": "EIS",
+        "value": 320000,
+        "cost_basis": 280000,
+        "investment_date": "2023-06-01",
+        "bpr_qualifying": true,
+        "bpr_qualifying_from": "2025-06-01",
+        "cgt_exempt": false,
+        "cgt_exempt_from": "2026-06-01",
+        "it_relief_claimed": 84000,
+        "taxonomy_id": "E01"
+      },
+      {
+        "name": "Seedrs SEIS Portfolio",
+        "type": "SEIS",
+        "value": 76000,
+        "cost_basis": 60000,
+        "investment_date": "2024-03-01",
+        "it_relief_claimed": 30000,
+        "taxonomy_id": "E02"
+      },
+      {
+        "name": "Octopus Titan VCT",
+        "type": "VCT",
+        "value": 95000,
+        "cost_basis": 80000,
+        "investment_date": "2022-03-31",
+        "it_relief_claimed": 24000,
+        "holding_period_years": 4.1,
+        "cgt_exempt_on_qualifying_disposal": true,
+        "dividends_exempt": true,
+        "taxonomy_id": "E03",
+        "note": "VCT IT relief 20% from April 2026. 5yr hold required for CGT exemption — expires March 2027."
+      },
+      {
+        "name": "Albion Capital VCT",
+        "type": "VCT",
+        "value": 42000,
+        "cost_basis": 40000,
+        "investment_date": "2023-04-01",
+        "it_relief_claimed": 12000,
+        "holding_period_years": 3.1,
+        "cgt_exempt_on_qualifying_disposal": false,
+        "dividends_exempt": true,
+        "taxonomy_id": "E03"
+      }
+    ],
+    "investmentBonds": [
+      {
+        "name": "Prudential Onshore Investment Bond",
+        "type": "onshore-bond",
+        "value": 520000,
+        "purchase_price": 380000,
+        "purchase_date": "2019-07-01",
+        "policy_years_held": 6.8,
+        "cumulative_5pct_allowance_used": 129200,
+        "cumulative_5pct_allowance_available": 170800,
+        "basic_rate_credit_applies": true,
+        "top_slicing_available": true,
+        "surrender_value": 515000,
+        "taxonomy_id": "F01",
+        "note": "5% cumulative withdrawal allowance: £380k × 5% × 6.8yr = £129.2k used. £170.8k remaining."
+      }
+    ],
+    "gia": [
+      {
+        "name": "Interactive Brokers — UK Equities",
+        "type": "GIA",
+        "subtype": "uk-equities",
+        "value": 185000,
+        "cost_basis": 142000,
+        "unrealised_gain": 43000,
+        "provider": "Interactive Brokers",
+        "taxonomy_id": "D01"
+      },
+      {
+        "name": "Interactive Brokers — International Equities",
+        "type": "GIA",
+        "subtype": "intl-equities",
+        "value": 240000,
+        "cost_basis": 195000,
+        "unrealised_gain": 45000,
+        "provider": "Interactive Brokers",
+        "taxonomy_id": "D02"
+      },
+      {
+        "name": "HL — UK Gilts",
+        "type": "GIA",
+        "subtype": "gilts",
+        "value": 85000,
+        "cost_basis": 82000,
+        "cgt_exempt_on_disposal": true,
+        "provider": "Hargreaves Lansdown",
+        "taxonomy_id": "D03",
+        "note": "UK gilts: CGT-exempt on disposal"
+      },
+      {
+        "name": "Interactive Brokers — Corporate Bonds",
+        "type": "GIA",
+        "subtype": "corp-bonds",
+        "value": 95000,
+        "cost_basis": 91000,
+        "provider": "Interactive Brokers",
+        "taxonomy_id": "D04"
+      }
+    ],
+    "alternatives": [
+      {
+        "name": "Coinbase — Ethereum",
+        "type": "crypto",
+        "subtype": "ETH",
+        "value": 48000,
+        "cost_basis": 22000,
+        "unrealised_gain": 26000,
+        "carf_reporting": true,
+        "taxonomy_id": "U01"
+      },
+      {
+        "name": "Brink's — Physical Gold Bars",
+        "type": "gold",
+        "subtype": "physical-bullion",
+        "value": 72000,
+        "storage": "Brink's vault London",
+        "taxonomy_id": "U02"
+      },
+      {
+        "name": "Art Collection (3 works)",
+        "type": "art",
+        "value": 195000,
+        "taxonomy_id": "U03",
+        "chattel_note": "Non-wasting chattel. Pieces individually >£6k; >£15k — full CGT applies."
+      }
+    ],
     "residence": {
       "value": 1100000,
       "ownership": "sole",
@@ -97,6 +323,95 @@
       "rate": 0.048
     },
     "trustGifts": null,
+    "property": [
+      {
+        "name": "Stark Tower, Canary Wharf",
+        "address": "Stark Tower, 1 Canada Square, London E14",
+        "type": "main-residence",
+        "use": "main-residence",
+        "value": 4500000,
+        "value_gbp": 4500000,
+        "beneficial_interest_this_individual": 1.0,
+        "ownership": "sole",
+        "isRental": false,
+        "growth": 0.04,
+        "purchaseDate": "2018-03-01",
+        "purchasePrice": 2800000,
+        "status": "active",
+        "taxonomy_id": "G01",
+        "pprRelief": true
+      },
+      {
+        "name": "BTL 1 — Mayfair Apartment",
+        "address": "14 Grosvenor Square, London W1K",
+        "type": "buy-to-let",
+        "use": "buy-to-let",
+        "value": 1420000,
+        "value_gbp": 1420000,
+        "beneficial_interest_this_individual": 1.0,
+        "ownership": "sole",
+        "isRental": true,
+        "rentalGrossAnnual": 54000,
+        "rentalNetAnnual": 43200,
+        "growth": 0.03,
+        "purchaseDate": "2015-06-01",
+        "purchasePrice": 980000,
+        "status": "active",
+        "mortgage_outstanding": 420000,
+        "mortgage_rate": 0.042,
+        "taxonomy_id": "G02",
+        "section24_applies": true,
+        "s24_interest_cost_annual": 17640
+      },
+      {
+        "name": "BTL 2 — Chelsea Townhouse",
+        "address": "22 Cheyne Walk, London SW3",
+        "type": "buy-to-let",
+        "use": "buy-to-let",
+        "value": 980000,
+        "value_gbp": 980000,
+        "beneficial_interest_this_individual": 1.0,
+        "ownership": "sole",
+        "isRental": true,
+        "rentalGrossAnnual": 38400,
+        "rentalNetAnnual": 30720,
+        "growth": 0.03,
+        "purchaseDate": "2019-09-01",
+        "purchasePrice": 760000,
+        "status": "active",
+        "mortgage_outstanding": 280000,
+        "mortgage_rate": 0.0449,
+        "taxonomy_id": "G02",
+        "section24_applies": true,
+        "s24_interest_cost_annual": 12572
+      }
+    ],
+    "directorLoanAccounts": [
+      {
+        "name": "DLA — Stark Industries UK Ltd (in credit)",
+        "type": "DLA-asset",
+        "value": 185000,
+        "direction": "company_owes_director",
+        "interest_rate": 0.0225,
+        "repayable_on_demand": true,
+        "taxonomy_id": "H07",
+        "note": "Stark lent £185k to company. Company owes Stark. Interest bearing at HMRC official rate (2.25%). In estate at death."
+      },
+      {
+        "name": "DLA — Stark Industries UK Ltd (overdrawn)",
+        "type": "DLA-liability",
+        "value": 48000,
+        "direction": "director_owes_company",
+        "s455_tax_charged": 16200,
+        "s455_rate": 0.3375,
+        "s455_company_year_end": "2026-03-31",
+        "repayment_deadline": "2026-12-31",
+        "interest_rate": 0.0225,
+        "bik_if_over_10k": true,
+        "taxonomy_id": "H08",
+        "note": "Director borrowed £48k from company. S455 tax £16.2k charged on company (33.75%). Must repay by 9 months after year-end (31 Dec 2026) or S455 stands. BIK applies as loan >£10k."
+      }
+    ],
     "protection": {
       "lifeInsurance": {
         "exists": true,

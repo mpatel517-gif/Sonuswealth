@@ -1,0 +1,260 @@
+{
+  "persona": "D",
+  "name": "Hermione Granger",
+  "displayName": "Hermione Granger · IFA Practice",
+  "isHigherRateTaxpayer": false,
+  "taxResidency": "uk",
+  "lifeStage": "Foundation",
+  "description": "Junior financial planner building her own practice. At 23 (2021) she had just obtained her Level 4 Diploma and was working under supervision. By 28 (2026) she has her own authorised firm, 24 clients, and £14.2m AUA. Tests: IFA practice data aggregation, client-level CoI, HMRC practice registration, small-firm compliance flags.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 23,
+      "targetIncome": 32000,
+      "annualIncome": 29500,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": false,
+      "pensionContributions": 1770,
+      "drawdown": 0,
+      "cgt_realised_current_year": 0,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [],
+      "persona_mode": "ifa_practice",
+      "ifa_practice": {
+        "status": "supervised",
+        "supervision_firm": "Sterling Wealth Partners LLP",
+        "fca_status": "appointed_representative",
+        "fca_number_pending": true,
+        "aum": 0,
+        "own_clients": 0,
+        "supervising_clients": 4,
+        "qualifications": ["CII Level 4 Diploma in Financial Planning"],
+        "annual_practice_income": 29500,
+        "note": "AR under Sterling Wealth Partners. No own practice yet. Studying for Level 6 Advanced Diploma."
+      },
+      "assets": {
+        "pensions": [
+          {
+            "type": "workplace-DC",
+            "total": 3800,
+            "provider": "Nest",
+            "employer": "Sterling Wealth Partners LLP",
+            "annual_contribution": 1770,
+            "employer_contribution": 885,
+            "last_valuation_date": "2021-04-01"
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 2400,
+            "provider": "Vanguard",
+            "contribution_current_tax_year": 2400,
+            "last_valuation_date": "2021-05-01"
+          },
+          {
+            "type": "LISA",
+            "value": 1250,
+            "provider": "Moneybox",
+            "contribution_current_tax_year": 1000,
+            "government_bonus_received": 250,
+            "last_valuation_date": "2021-04-30",
+            "note": "LISA opened age 22. Using for first-home purchase target. £4k annual limit."
+          }
+        ],
+        "property": [],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 1800,
+            "bank": "Monzo"
+          },
+          {
+            "type": "savings",
+            "total": 4200,
+            "bank": "Marcus by Goldman Sachs",
+            "interest_rate": 0.005,
+            "note": "Emergency fund — building to 3 months expenses"
+          }
+        ]
+      },
+      "liabilities": [
+        {
+          "type": "student-loan-plan-2",
+          "outstanding": 48200,
+          "interest_rate": 0.045,
+          "repayment_from_salary_monthly": 190,
+          "write_off_year": 2058,
+          "note": "Plan 2 — 9% above £27,295 threshold. Income-contingent. Written off 2058. Not in estate."
+        }
+      ],
+      "income": {
+        "gross": 29500,
+        "byType": { "non_savings": 29500, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 29500, "frequency": "annual" }
+        ],
+        "statePension": { "annual": 9339, "startAge": 67, "accrued_years": 1 }
+      },
+      "protection": {
+        "life": { "exists": false },
+        "incomeProtection": { "exists": false },
+        "note": "No protection in place. Gap flagged — critical for IFA practice continuity."
+      },
+      "business_assets": [],
+      "tax_params_applicable": "UK-2021.1",
+      "engine_notes": [
+        "Auto-enrolment pension small — engine must not apply MPAA (no drawdown yet)",
+        "LISA: engine validates first-home property price £450k target; exit penalty if non-qualifying",
+        "Student loan Plan 2: repayment threshold £27,295 in 2021; not in estate on death",
+        "No SIPP; no IHT exposure; standard accumulation metrics apply"
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [-42000, -26000],
+        "net_worth_note": "Negative net worth: student loan £48,200 exceeds total assets ~£13,450. Student loans ARE included as liabilities in balance-sheet net worth (written-off-on-death basis is a planning adjustment, not a balance-sheet adjustment).",
+        "finio_score_range": [22, 35],
+        "confidence": "high",
+        "iht_exposure": 0,
+        "cost_of_inaction": "near-zero — no pension inefficiency at this age/balance"
+      }
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 28,
+      "targetIncome": 75000,
+      "annualIncome": 68000,
+      "isMarried": false,
+      "maritalStatus": "single",
+      "estate_to_spouse_pct": 0,
+      "residence_to_descendants": false,
+      "pensionContributions": 5600,
+      "drawdown": 0,
+      "cgt_realised_current_year": 0,
+      "gifts_current_tax_year": 0,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [],
+      "persona_mode": "ifa_practice",
+      "ifa_practice": {
+        "status": "authorised",
+        "firm_name": "Granger Financial Planning Ltd",
+        "fca_number": "FCA-GFP-4421",
+        "fca_status": "directly_authorised",
+        "aum": 14200000,
+        "own_clients": 24,
+        "supervising_clients": 0,
+        "qualifications": [
+          "CII Level 4 Diploma in Financial Planning",
+          "CII Level 6 Advanced Diploma in Financial Planning",
+          "Chartered Financial Planner (in progress)"
+        ],
+        "annual_practice_income": 68000,
+        "professional_indemnity_cover": 5000000,
+        "pi_premium_annual": 3800,
+        "clients_with_urgent_actions": 4,
+        "total_iht_at_risk_across_clients": 2180000,
+        "note": "Directly authorised DA firm. 24 clients in 2 years. Specialises in pre-retirement IHT planning."
+      },
+      "assets": {
+        "pensions": [
+          {
+            "type": "SIPP",
+            "total": 18400,
+            "provider": "Vanguard",
+            "annual_contribution": 5600,
+            "last_valuation_date": "2026-04-15"
+          },
+          {
+            "type": "workplace-DC-legacy",
+            "total": 6200,
+            "provider": "Nest",
+            "employer": "Sterling Wealth Partners LLP",
+            "annual_contribution": 0,
+            "last_valuation_date": "2026-01-01",
+            "note": "Legacy pot from AR period 2020-2023. Consolidation candidate."
+          }
+        ],
+        "investments": [
+          {
+            "type": "stocks-and-shares-ISA",
+            "value": 18600,
+            "provider": "Vanguard",
+            "contribution_current_tax_year": 5000,
+            "last_valuation_date": "2026-05-01"
+          },
+          {
+            "type": "LISA",
+            "value": 7200,
+            "provider": "Moneybox",
+            "contribution_current_tax_year": 4000,
+            "government_bonus_received_total": 1500,
+            "target_first_home_price": 420000,
+            "last_valuation_date": "2026-04-30"
+          }
+        ],
+        "property": [],
+        "cash": [
+          {
+            "type": "current-account",
+            "total": 4800,
+            "bank": "Monzo"
+          },
+          {
+            "type": "savings",
+            "total": 22000,
+            "bank": "Chase",
+            "interest_rate": 0.05,
+            "note": "3 months expenses emergency fund achieved. Building first-home deposit."
+          }
+        ]
+      },
+      "liabilities": [
+        {
+          "type": "student-loan-plan-2",
+          "outstanding": 41600,
+          "interest_rate": 0.056,
+          "repayment_from_salary_monthly": 374,
+          "write_off_year": 2058
+        }
+      ],
+      "income": {
+        "gross": 68000,
+        "byType": { "non_savings": 68000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 68000, "frequency": "annual", "from": "Granger Financial Planning Ltd" }
+        ],
+        "statePension": { "annual": 11502, "startAge": 67, "accrued_years": 6 }
+      },
+      "protection": {
+        "life": { "exists": false, "note": "Gap — IFA practice continuity risk; should consider relevant life plan via company" },
+        "incomeProtection": { "exists": false, "note": "Gap — sole-director business owner with no IP" }
+      },
+      "business_assets": [
+        {
+          "type": "ifa-practice-goodwill",
+          "name": "Granger Financial Planning Ltd",
+          "estimated_value": 204000,
+          "valuation_basis": "3x recurring revenue (~£68k)",
+          "bpr_qualifying": false,
+          "note": "IFA goodwill — personal service business typically not BPR qualifying (investment business test)"
+        }
+      ],
+      "tax_params_applicable": "UK-2026.1",
+      "engine_notes": [
+        "LISA: first-home target £420k within £450k limit; no exit penalty on qualifying withdrawal",
+        "IFA practice goodwill: not BPR-qualifying; in estate for IHT",
+        "Higher rate taxpayer — SIPP contributions attract 40% relief via SA claim",
+        "Student loan Plan 2: 9% above £27,295; ongoing cashflow drag"
+      ],
+      "expected_output_envelope": {
+        "net_worth_range": [75000, 95000],
+        "finio_score_range": [42, 55],
+        "confidence": "high",
+        "iht_exposure": 0,
+        "cost_of_inaction": "low — below NRB; no estate IHT at current wealth"
+      }
+    }
+  ]
+}

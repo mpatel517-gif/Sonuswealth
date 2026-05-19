@@ -1,0 +1,209 @@
+{
+  "persona": "C",
+  "name": "Tony Stark",
+  "displayName": "Tony Stark · Industrialist/Engineer",
+  "isHigherRateTaxpayer": true,
+  "taxResidency": "uk",
+  "lifeStage": "Consolidation",
+  "description": "High-net-worth tech founder with diversified asset base spanning every wrapper, instrument, and tax-advantaged scheme in the 3-Engine taxonomy. Designed for worst-case edge-case stress testing.",
+  "series": [
+    {
+      "asOf": "2021-05-19",
+      "age": 49,
+      "targetIncome": 225000,
+      "annualIncome": 285000,
+      "isMarried": true,
+      "maritalStatus": "married",
+      "estate_to_spouse_pct": 0.5,
+      "residence_to_descendants": true,
+      "pensionContributions": 40000,
+      "drawdown": 0,
+      "cgt_realised_current_year": 18000,
+      "gifts_current_tax_year": 3000,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [{ "relationship": "child", "age": 17, "type": "child", "financiallyDependent": true }],
+      "assets": {
+        "pensions": [
+          { "type": "SIPP", "total": 900000, "provider": "AJ Bell", "annual_contribution": 10000, "last_valuation_date": "2021-04-01" },
+          { "type": "SSAS", "total": 1000000, "provider": "Barnett Waddingham", "annual_contribution": 30000, "last_valuation_date": "2021-03-31" },
+          { "type": "workplace-dc", "total": 120000, "provider": "Aviva", "employer": "Stark Industries Ltd", "annual_contribution": 0, "last_valuation_date": "2021-04-01" },
+          { "type": "DB", "total": 150000, "provider": "BT Pension Scheme", "cetv": 480000, "annual_benefit": 8500, "last_valuation_date": "2020-12-31" }
+        ],
+        "investments": [
+          { "type": "stocks-and-shares-ISA", "value": 620000, "provider": "Hargreaves Lansdown", "contribution_current_tax_year": 20000, "last_valuation_date": "2021-05-01" },
+          { "type": "cash-isa", "value": 85000, "provider": "Nationwide", "contribution_current_tax_year": 0, "last_valuation_date": "2021-05-01" },
+          { "type": "lifetime-isa", "value": 28000, "provider": "Nutmeg", "contribution_current_tax_year": 4000, "last_valuation_date": "2021-04-01" },
+          { "type": "GIA", "subtype": "uk-equities", "value": 420000, "provider": "Interactive Brokers", "last_valuation_date": "2021-05-01" },
+          { "type": "GIA", "subtype": "intl-equities", "value": 310000, "provider": "Interactive Brokers", "last_valuation_date": "2021-05-01" },
+          { "type": "GIA", "subtype": "gilts", "value": 180000, "provider": "Hargreaves Lansdown", "last_valuation_date": "2021-04-15" },
+          { "type": "GIA", "subtype": "corp-bonds", "value": 95000, "provider": "Interactive Brokers", "last_valuation_date": "2021-04-15" },
+          { "type": "EIS", "value": 150000, "provider": "Octopus Investments", "investment_date": "2020-08-12", "qualifies_for_bpr": false, "last_valuation_date": "2021-03-31" },
+          { "type": "onshore-bond", "value": 200000, "provider": "Prudential", "purchase_date": "2018-06-01", "surrender_value": 195000, "last_valuation_date": "2021-03-31" },
+          { "type": "offshore-bond", "value": 350000, "provider": "Isle of Man Assurance", "purchase_date": "2016-04-15", "surrender_value": 340000, "last_valuation_date": "2021-03-31" },
+          { "type": "crypto", "value": 85000, "provider": "Coinbase", "acquisition_cost": 38000, "last_valuation_date": "2021-05-15" },
+          { "type": "private-equity", "value": 120000, "provider": "Augmentum Fintech", "investment_date": "2019-10-01", "last_valuation_date": "2021-03-31" },
+          { "type": "commodity", "value": 55000, "subtype": "gold-etf", "provider": "WisdomTree Physical Gold", "last_valuation_date": "2021-05-01" }
+        ],
+        "property": [
+          { "type": "residence", "use": "main-residence", "value": 2800000, "address": "10880 Malibu Point, CA (UK resident)", "last_valuation_date": "2021-01-15" },
+          { "type": "buy-to-let", "use": "rental", "value": 0, "address": "N/A — not acquired", "status": "not-acquired", "annual_interest_cost": 0 },
+          { "type": "commercial", "use": "commercial", "value": 0, "address": "N/A — not acquired", "status": "not-acquired" },
+          { "type": "land", "use": "agricultural", "value": 380000, "address": "Kent farmland", "qualifies_for_apr": true, "last_valuation_date": "2021-02-01" }
+        ],
+        "cash": [
+          { "type": "current-account", "total": 95000, "bank": "Barclays" },
+          { "type": "savings", "total": 180000, "bank": "Marcus by Goldman Sachs", "interest_rate": 0.005 },
+          { "type": "fixed-term-deposit", "total": 75000, "bank": "Aldermore", "maturity_date": "2022-06-01", "interest_rate": 0.012 },
+          { "type": "premium-bonds", "total": 50000, "provider": "NS&I" }
+        ],
+        "business": [
+          { "type": "private-company-shares", "name": "Stark Industries Ltd", "value_gbp": 1800000, "qualifies_for_bpr": true, "shareholding_pct": 62, "role": "CEO & CTO" },
+          { "type": "EMI", "name": "Stark Industries EMI Options", "value_gbp": 320000, "vesting_date": "2022-06-01", "strike_price_gbp": 120000 },
+          { "type": "DLA", "name": "Director's Loan Account (in credit)", "value_gbp": 85000, "status": "in_credit" }
+        ],
+        "alternatives": [
+          { "type": "gold", "subtype": "physical-bullion", "value": 65000, "storage": "Brink's vault", "last_valuation_date": "2021-05-01" },
+          { "type": "art", "value": 180000, "description": "Contemporary collection — 3 works", "last_valuation_date": "2021-02-01" },
+          { "type": "wine", "value": 42000, "description": "Bordeaux Cru Classé — 200 cases", "last_valuation_date": "2021-03-01" }
+        ]
+      },
+      "liabilities": [
+        { "type": "residential-mortgage", "outstanding": 550000, "lender": "Barclays", "interest_rate": 0.025, "monthly_payment": 3200 },
+        { "type": "personal-loan", "outstanding": 28000, "lender": "HSBC", "interest_rate": 0.039, "monthly_payment": 850 },
+        { "type": "credit-card", "outstanding": 12000, "provider": "Amex Platinum", "interest_rate": 0.229 }
+      ],
+      "income": {
+        "gross": 285000,
+        "byType": { "non_savings": 285000, "savings": 0, "dividends": 0 },
+        "streams": [
+          { "type": "salary", "amount": 165000, "frequency": "annual" },
+          { "type": "dividends", "amount": 120000, "frequency": "annual", "from": "Stark Industries Ltd" }
+        ],
+        "statePension": { "annual": 0, "startAge": 67, "accrued_years": 28 }
+      },
+      "protection": {
+        "life": { "exists": true, "amount": 2000000, "type": "term", "inTrust": true, "premium": 1200 },
+        "relevantLife": { "exists": true, "amount": 1500000, "inTrust": true, "premium": 1800 },
+        "incomeProtection": { "exists": true, "monthly_benefit": 8000, "deferred_period_months": 3, "premium": 2200 },
+        "criticalIllness": { "exists": true, "amount": 500000, "type": "standalone", "premium": 950 }
+      },
+      "obligations": [
+        { "type": "school-fees", "annual_amount": 28000, "recipient": "Son — Eton College" },
+        { "type": "parent-care", "annual_amount": 18000, "recipient": "Mother — domiciliary care" }
+      ],
+      "business_assets": [
+        { "name": "Stark Industries Ltd ordinary shares", "value_gbp": 1800000, "qualifies_for_bpr": true },
+        { "name": "Stark Industries EMI Options", "value_gbp": 320000, "qualifies_for_bpr": false }
+      ],
+      "trusts": [
+        { "type": "discretionary", "name": "Stark Family Trust", "assets_value": 750000, "settlor": "Tony Stark", "trustees": "RBC Wealth Management", "established": "2019-03-15", "periodic_charge_date": "2029-03-15", "qualifies_for_rnrb": false }
+      ]
+    },
+    {
+      "asOf": "2026-05-19",
+      "age": 54,
+      "targetIncome": 350000,
+      "annualIncome": 480000,
+      "isMarried": true,
+      "maritalStatus": "married",
+      "estate_to_spouse_pct": 0.5,
+      "residence_to_descendants": true,
+      "pensionContributions": 10000,
+      "drawdown": 0,
+      "cgt_realised_current_year": 42000,
+      "gifts_current_tax_year": 5000,
+      "jurisdiction": { "subRegion": "England" },
+      "dependants": [{ "relationship": "child", "age": 22, "type": "child", "financiallyDependent": true }],
+      "assets": {
+        "pensions": [
+          { "type": "SIPP", "total": 1200000, "provider": "AJ Bell", "annual_contribution": 10000, "last_valuation_date": "2026-04-01" },
+          { "type": "SSAS", "total": 1550000, "provider": "Barnett Waddingham", "annual_contribution": 0, "last_valuation_date": "2026-03-31" },
+          { "type": "workplace-dc", "total": 160000, "provider": "Aviva", "employer": "Stark Industries Ltd", "annual_contribution": 0, "last_valuation_date": "2026-04-01" },
+          { "type": "DB", "total": 165000, "provider": "BT Pension Scheme", "cetv": 550000, "annual_benefit": 9200, "last_valuation_date": "2025-12-31" }
+        ],
+        "investments": [
+          { "type": "stocks-and-shares-ISA", "value": 850000, "provider": "Hargreaves Lansdown", "contribution_current_tax_year": 20000, "last_valuation_date": "2026-05-01" },
+          { "type": "cash-isa", "value": 92000, "provider": "Nationwide", "contribution_current_tax_year": 0, "last_valuation_date": "2026-05-01" },
+          { "type": "lifetime-isa", "value": 38000, "provider": "Nutmeg", "contribution_current_tax_year": 4000, "last_valuation_date": "2026-04-01" },
+          { "type": "GIA", "subtype": "uk-equities", "value": 580000, "provider": "Interactive Brokers", "last_valuation_date": "2026-05-01" },
+          { "type": "GIA", "subtype": "intl-equities", "value": 440000, "provider": "Interactive Brokers", "last_valuation_date": "2026-05-01" },
+          { "type": "GIA", "subtype": "gilts", "value": 220000, "provider": "Hargreaves Lansdown", "last_valuation_date": "2026-04-15" },
+          { "type": "GIA", "subtype": "corp-bonds", "value": 115000, "provider": "Interactive Brokers", "last_valuation_date": "2026-04-15" },
+          { "type": "EIS", "value": 280000, "provider": "Octopus Investments", "investment_date": "2020-08-12", "qualifies_for_bpr": false, "last_valuation_date": "2026-03-31" },
+          { "type": "SEIS", "value": 85000, "provider": "Seedrs", "investment_date": "2024-03-01", "qualifies_for_bpr": false, "last_valuation_date": "2026-03-31" },
+          { "type": "VCT", "value": 120000, "provider": "Octopus Titan VCT", "investment_date": "2023-11-15", "qualifies_for_bpr": false, "last_valuation_date": "2026-03-31" },
+          { "type": "onshore-bond", "value": 280000, "provider": "Prudential", "purchase_date": "2018-06-01", "surrender_value": 275000, "withdrawals_5pc": 38000, "last_valuation_date": "2026-03-31" },
+          { "type": "offshore-bond", "value": 480000, "provider": "Isle of Man Assurance", "purchase_date": "2016-04-15", "surrender_value": 470000, "last_valuation_date": "2026-03-31" },
+          { "type": "crypto", "value": 210000, "provider": "Coinbase", "acquisition_cost": 72000, "last_valuation_date": "2026-05-15" },
+          { "type": "p2p", "value": 65000, "provider": "Funding Circle", "last_valuation_date": "2026-04-01" },
+          { "type": "private-equity", "value": 190000, "provider": "Augmentum Fintech", "investment_date": "2019-10-01", "last_valuation_date": "2026-03-31" },
+          { "type": "commodity", "value": 72000, "subtype": "gold-etf", "provider": "WisdomTree Physical Gold", "last_valuation_date": "2026-05-01" }
+        ],
+        "property": [
+          { "type": "residence", "use": "main-residence", "value": 3200000, "address": "10880 Malibu Point (UK resident)", "last_valuation_date": "2026-01-15" },
+          { "type": "buy-to-let", "use": "rental", "value": 450000, "address": "12 Grosvenor Square, London", "status": "rental", "outstanding_balance": 180000, "annual_interest_cost": 8100, "monthly_rent": 2200, "landlord_insurance": "Aviva", "last_valuation_date": "2026-03-01" },
+          { "type": "buy-to-let", "use": "rental", "value": 320000, "address": "45 Marine Parade, Brighton", "status": "rental", "outstanding_balance": 140000, "annual_interest_cost": 6300, "monthly_rent": 1500, "landlord_insurance": "Direct Line", "last_valuation_date": "2026-03-01" },
+          { "type": "commercial", "use": "commercial", "value": 620000, "address": "Unit 3, Slough Trading Estate", "status": "let", "annual_rent": 42000, "last_valuation_date": "2026-02-01" },
+          { "type": "land", "use": "agricultural", "value": 420000, "address": "Kent farmland", "qualifies_for_apr": true, "last_valuation_date": "2026-02-01" }
+        ],
+        "cash": [
+          { "type": "current-account", "total": 110000, "bank": "Barclays" },
+          { "type": "savings", "total": 210000, "bank": "Marcus by Goldman Sachs", "interest_rate": 0.042 },
+          { "type": "fixed-term-deposit", "total": 0, "bank": "Aldermore", "maturity_date": "2022-06-01", "interest_rate": 0.012 },
+          { "type": "premium-bonds", "total": 50000, "provider": "NS&I" }
+        ],
+        "business": [
+          { "type": "private-company-shares", "name": "Stark Industries Ltd", "value_gbp": 2800000, "qualifies_for_bpr": true, "shareholding_pct": 62, "role": "CEO & CTO" },
+          { "type": "EMI", "name": "Stark Industries EMI Options", "value_gbp": 580000, "vesting_date": "2022-06-01", "strike_price_gbp": 120000 },
+          { "type": "RSU", "name": "Stark Industries RSUs", "value_gbp": 140000, "vesting_schedule": "quarterly", "tax_treatment": "income_on_vest" },
+          { "type": "DLA", "name": "Director's Loan Account (in credit)", "value_gbp": 120000, "status": "in_credit" },
+          { "type": "DLA_S455", "name": "Director's Loan Account (overdrawn)", "outstanding_balance": 45000, "status": "overdrawn", "s455_tax_applicable": true, "date_overdrawn": "2025-06-01" }
+        ],
+        "alternatives": [
+          { "type": "gold", "subtype": "physical-bullion", "value": 85000, "storage": "Brink's vault", "last_valuation_date": "2026-05-01" },
+          { "type": "art", "value": 240000, "description": "Contemporary collection — 5 works", "last_valuation_date": "2026-02-01" },
+          { "type": "wine", "value": 62000, "description": "Bordeaux Cru Classé — 200 cases + 2019 En Primeur", "last_valuation_date": "2026-03-01" },
+          { "type": "private-equity", "value": 90000, "name": "Antler VC LP stake", "investment_date": "2023-06-01", "last_valuation_date": "2026-03-31" }
+        ]
+      },
+      "liabilities": [
+        { "type": "residential-mortgage", "outstanding": 420000, "lender": "Barclays", "interest_rate": 0.045, "monthly_payment": 3800 },
+        { "type": "btl-mortgage", "outstanding": 180000, "lender": "Metro Bank", "property": "12 Grosvenor Square", "interest_rate": 0.0525, "monthly_payment": 1100 },
+        { "type": "btl-mortgage", "outstanding": 140000, "lender": "Metro Bank", "property": "45 Marine Parade", "interest_rate": 0.0525, "monthly_payment": 880 },
+        { "type": "personal-loan", "outstanding": 15000, "lender": "HSBC", "interest_rate": 0.039, "monthly_payment": 450 },
+        { "type": "credit-card", "outstanding": 8000, "provider": "Amex Platinum", "interest_rate": 0.229 },
+        { "type": "bridging", "outstanding": 95000, "lender": "Shawbrook Bank", "purpose": "Commercial acquisition shortfall", "interest_rate": 0.0875, "maturity_date": "2026-09-01" }
+      ],
+      "income": {
+        "gross": 480000,
+        "byType": { "non_savings": 225000, "savings": 18000, "dividends": 237000 },
+        "streams": [
+          { "type": "salary", "amount": 200000, "frequency": "annual" },
+          { "type": "dividends", "amount": 250000, "frequency": "annual", "from": "Stark Industries Ltd" },
+          { "type": "rental", "amount": 44400, "frequency": "annual", "from": "2x BTL + commercial" },
+          { "type": "savings-interest", "amount": 13000, "frequency": "annual" },
+          { "type": "dividend", "amount": 12000, "subtype": "GIA-portfolio", "frequency": "annual" }
+        ],
+        "statePension": { "annual": 0, "startAge": 67, "accrued_years": 33 }
+      },
+      "protection": {
+        "life": { "exists": true, "amount": 2500000, "type": "term", "inTrust": true, "premium": 1500 },
+        "relevantLife": { "exists": true, "amount": 2000000, "inTrust": true, "premium": 2200 },
+        "incomeProtection": { "exists": true, "monthly_benefit": 10000, "deferred_period_months": 3, "premium": 2800 },
+        "criticalIllness": { "exists": true, "amount": 750000, "type": "standalone", "premium": 1400 }
+      },
+      "obligations": [
+        { "type": "school-fees", "annual_amount": 35000, "recipient": "Son — Oxford University" },
+        { "type": "parent-care", "annual_amount": 24000, "recipient": "Mother — care home" }
+      ],
+      "business_assets": [
+        { "name": "Stark Industries Ltd ordinary shares", "value_gbp": 2800000, "qualifies_for_bpr": true },
+        { "name": "Stark Industries EMI Options", "value_gbp": 580000, "qualifies_for_bpr": false },
+        { "name": "Stark RSUs (unvested)", "value_gbp": 140000, "qualifies_for_bpr": false }
+      ],
+      "trusts": [
+        { "type": "discretionary", "name": "Stark Family Trust", "assets_value": 950000, "settlor": "Tony Stark", "trustees": "RBC Wealth Management", "established": "2019-03-15", "periodic_charge_date": "2029-03-15", "qualifies_for_rnrb": false }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,9 @@
 // will follow as practitioner panel signs them off.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { lens as taxAccountant } from './tax-accountant.js';
+import { lens as taxAccountant }     from './tax-accountant.js';
+import { lens as pensionSpecialist } from './pension-specialist.js';
+import { lens as trustLawyer }       from './trust-lawyer.js';
 
 // Shells — not yet implemented (return empty arrays). Placeholder for v0.1+.
 const placeholderLens = (id, name, avatar, expertise) => ({
@@ -18,9 +20,6 @@ const placeholderLens = (id, name, avatar, expertise) => ({
   red_flags: () => [],
   what_if_prompts: () => [],
 });
-
-const pensionSpecialist     = placeholderLens('pension-specialist', 'Pension Specialist', '🏦', ['pensions', 'state_pension', 'mpaa', 'lsa', 'drawdown']);
-const trustLawyer           = placeholderLens('trust-lawyer', 'Trust Lawyer', '⚖️', ['iht', 'trusts', 'wills', 'lpa', 'domicile']);
 const ifaHolistic           = placeholderLens('ifa-holistic', 'IFA (Holistic)', '📊', ['holistic', 'asset_allocation', 'risk', 'cashflow', 'suitability']);
 const mortgageAdviser       = placeholderLens('mortgage-adviser', 'Mortgage Adviser', '🏠', ['mortgages', 'btl', 'remortgage', 'affordability']);
 const insuranceAdviser      = placeholderLens('insurance-adviser', 'Insurance / Protection', '🛡️', ['life', 'income_protection', 'critical_illness', 'whole_of_life']);

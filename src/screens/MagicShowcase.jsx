@@ -12,7 +12,17 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { lens as taxAccountantLens } from '../lenses/tax-accountant.js'
+import { lens as taxAccountantLens }    from '../lenses/tax-accountant.js'
+import { lens as pensionSpecialistLens } from '../lenses/pension-specialist.js'
+import { lens as trustLawyerLens }       from '../lenses/trust-lawyer.js'
+
+// Live lens registry — keyed by lens id, used by ElevenAdvisorsDemo to swap
+// hand-crafted scaffold cards with real lens output where the engine exists.
+const LIVE_LENSES = {
+  'tax':     taxAccountantLens,
+  'pension': pensionSpecialistLens,
+  'trust':   trustLawyerLens,
+}
 
 // ── Section 1: CoI Odometer ──────────────────────────────────────────────────
 
@@ -318,17 +328,16 @@ function fmtRecImpact(rec) {
   return '—'
 }
 
-// Build the LIVE Tax Accountant card from the lens output.
-// Falls back to the hardcoded entry if the lens throws.
-function buildLiveTaxAccountantCard(entity) {
+// Build a LIVE card from any registered lens. Returns null if the lens throws
+// or produces no output — caller falls back to the hand-crafted scaffold card.
+function buildLiveLensCard(lensId, lens, fallbackCard) {
   try {
-    const obs = taxAccountantLens.observe(entity) || []
-    const recs = taxAccountantLens.recommend(entity) || []
+    const obs = lens.observe(fallbackCard.__entity) || []
+    const recs = lens.recommend(fallbackCard.__entity) || []
     if (obs.length === 0 && recs.length === 0) return null
     return {
-      id: 'tax', avatar: '🧾', name: 'Tax Accountant',
-      tagline: 'wrappers, allowances, sequencing',
-      _live: true,  // marker so UI can show "LIVE" badge
+      ...fallbackCard,
+      _live: true,
       insights: obs.slice(0, 3).map(o => ({
         sev: sevLabel(o.severity),
         text: o.text,
@@ -341,7 +350,7 @@ function buildLiveTaxAccountantCard(entity) {
       })),
     }
   } catch (err) {
-    console.warn('[MagicShowcase] Tax Accountant lens failed — using hand-crafted fallback', err)
+    console.warn(`[MagicShowcase] ${lensId} lens failed — using hand-crafted fallback`, err)
     return null
   }
 }
@@ -349,12 +358,15 @@ function buildLiveTaxAccountantCard(entity) {
 function ElevenAdvisorsDemo({ entity }) {
   const [expanded, setExpanded] = useState(null)
 
-  // Live lens output replaces the hand-crafted Tax Accountant card when entity present.
+  // Replace hand-crafted scaffold cards with live lens output where engines exist.
   const lensesWithLive = useMemo(() => {
     if (!entity) return LENSES
-    const live = buildLiveTaxAccountantCard(entity)
-    if (!live) return LENSES
-    return LENSES.map(l => l.id === 'tax' ? live : l)
+    return LENSES.map(card => {
+      const lens = LIVE_LENSES[card.id]
+      if (!lens) return card
+      const live = buildLiveLensCard(card.id, lens, { ...card, __entity: entity })
+      return live || card
+    })
   }, [entity])
 
   return (
@@ -788,12 +800,298 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
   )
 }
 
+// ── Section 4: £100k taper trap (live engine) ────────────────────────────────
+
+// UK 2025-26 income-tax calculation. Inline rather than importing engine —
+// keeps this section self-contained for demo robustness.
+function computeIncomeTax(income) {
+  const PA       = 12570
+  const TAPER_S  = 100000
+  const TAPER_E  = 125140
+  const BR_CAP   = 50270   // basic-rate ceiling
+  const AR_START = 125140
+  // Tapered PA: lose £1 for every £2 over £100k
+  let effectivePA = PA
+  if (income > TAPER_S) {
+    effectivePA = Math.max(0, PA - (income - TAPER_S) / 2)
+  }
+  const taxable = Math.max(0, income - effectivePA)
+  let tax = 0
+  // 20% band: first 37,700 of taxable
+  const brBand = Math.min(taxable, 37700)
+  tax += brBand * 0.20
+  let remaining = taxable - brBand
+  // 40% band: up to (AR_START - effectivePA) of taxable.
+  // Additional rate fires at £125,140 of GROSS income, regardless of PA, so
+  // hrCap in taxable terms shrinks as PA tapers.
+  const hrCapTaxable = AR_START - effectivePA
+  const hrBand = Math.max(0, Math.min(remaining, hrCapTaxable - 37700))
+  tax += hrBand * 0.40
+  remaining -= hrBand
+  // 45% on the rest
+  tax += Math.max(0, remaining) * 0.45
+  return { effectivePA, taxable, tax: Math.round(tax), lostPA: PA - effectivePA }
+}
+
+function computeMarginalRate(income) {
+  // Smooth small step to estimate the effective marginal rate
+  const a = computeIncomeTax(income)
+  const b = computeIncomeTax(income + 100)
+  return (b.tax - a.tax) / 100
+}
+
+function TaperTrapDemo({ entity }) {  // eslint-disable-line no-unused-vars
+  const [income, setIncome] = useState(120000)
+  const [sacrifice, setSacrifice] = useState(0)
+  const taxBefore = useMemo(() => computeIncomeTax(income),                [income])
+  const taxAfter  = useMemo(() => computeIncomeTax(income - sacrifice),    [income, sacrifice])
+  const marginal  = useMemo(() => computeMarginalRate(income),             [income])
+  const saving    = taxBefore.tax - taxAfter.tax
+
+  // Compute the visual band — colours by zone
+  const inTaper = income > 100000 && income < 125140
+
+  // Suggested sacrifice = move income just under £100k
+  const suggestedSacrifice = useMemo(() => {
+    if (income <= 100000) return 0
+    return Math.min(income - 100000, 60000)  // cap at AA
+  }, [income])
+
+  return (
+    <div style={{ padding: '24px 20px' }}>
+      <div style={{
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        borderRadius: 18, padding: '20px 22px', marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+          <div className="sw-eyebrow">The £100k taper trap</div>
+          <span style={{
+            padding: '2px 8px', borderRadius: 100,
+            background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.45)',
+            fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: 'var(--c-acc)',
+          }}>
+            LIVE ENGINE
+          </span>
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55, marginTop: 6 }}>
+          Between £100,000 and £125,140 your Personal Allowance tapers away at £1 for every £2 of income. Combined with the 40% higher-rate band, your effective marginal rate is <strong style={{ color: 'var(--c-acc3)' }}>60%</strong> in this zone. Move the slider to see.
+        </div>
+      </div>
+
+      {/* Income slider */}
+      <div style={{
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        borderRadius: 18, padding: '18px 22px', marginBottom: 14,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Your gross income
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
+            £{income.toLocaleString()}
+          </div>
+        </div>
+        <input
+          type="range"
+          min={80000}
+          max={150000}
+          step={1000}
+          value={income}
+          onChange={e => { setIncome(parseInt(e.target.value)); setSacrifice(0) }}
+          style={{
+            width: '100%', accentColor: inTaper ? 'var(--c-acc3)' : 'var(--c-acc)',
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--c-text3)', marginTop: 4 }}>
+          <span>£80k</span>
+          <span>£100k</span>
+          <span style={inTaper ? { color: 'var(--c-acc3)', fontWeight: 700 } : {}}>£125k</span>
+          <span>£150k</span>
+        </div>
+      </div>
+
+      {/* Tax breakdown */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14,
+      }}>
+        <div style={{
+          padding: '12px 14px', borderRadius: 12,
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Personal allowance
+          </div>
+          <div style={{
+            fontSize: 18, fontWeight: 800,
+            color: taxBefore.effectivePA < 12570 ? 'var(--c-acc3)' : 'var(--c-text)',
+            marginTop: 4, fontVariantNumeric: 'tabular-nums',
+          }}>
+            £{Math.round(taxBefore.effectivePA).toLocaleString()}
+          </div>
+          {taxBefore.lostPA > 0 && (
+            <div style={{ fontSize: 10, color: 'var(--c-acc3)', marginTop: 2 }}>
+              -£{Math.round(taxBefore.lostPA).toLocaleString()} lost
+            </div>
+          )}
+        </div>
+        <div style={{
+          padding: '12px 14px', borderRadius: 12,
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Income tax due
+          </div>
+          <div style={{
+            fontSize: 18, fontWeight: 800, color: 'var(--c-text)',
+            marginTop: 4, fontVariantNumeric: 'tabular-nums',
+          }}>
+            £{taxBefore.tax.toLocaleString()}
+          </div>
+        </div>
+        <div style={{
+          padding: '12px 14px', borderRadius: 12,
+          background: inTaper ? 'rgba(255,111,125,0.10)' : 'var(--c-surface)',
+          border: '1px solid ' + (inTaper ? 'var(--c-acc3)' : 'var(--c-sep)'),
+        }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Marginal rate
+          </div>
+          <div style={{
+            fontSize: 18, fontWeight: 800,
+            color: marginal >= 0.59 ? 'var(--c-acc3)' : 'var(--c-text)',
+            marginTop: 4, fontVariantNumeric: 'tabular-nums',
+          }}>
+            {(marginal * 100).toFixed(0)}%
+          </div>
+          {marginal >= 0.59 && (
+            <div style={{ fontSize: 10, color: 'var(--c-acc3)', marginTop: 2 }}>
+              taper trap
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Strategy: pension sacrifice */}
+      {income > 100000 && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(93,219,194,0.10) 0%, rgba(93,219,194,0.02) 100%)',
+          border: '1px solid rgba(93,219,194,0.35)',
+          borderRadius: 18, padding: '18px 22px', marginBottom: 14,
+        }}>
+          <div className="sw-eyebrow" style={{ color: 'var(--c-acc)', marginBottom: 8 }}>
+            🧾 Tax Accountant recommends
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>
+            Salary-sacrifice into pension to escape the taper
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 14 }}>
+            Sacrificing income below £100,000 restores the full Personal Allowance and clears the 60% marginal-rate zone. The sacrificed amount goes into your pension — not lost, just relocated.
+          </div>
+
+          {/* Sacrifice slider */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Pension sacrifice
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>
+              £{sacrifice.toLocaleString()}
+            </div>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={Math.min(income - 80000, 60000)}
+            step={500}
+            value={sacrifice}
+            onChange={e => setSacrifice(parseInt(e.target.value))}
+            style={{ width: '100%', accentColor: 'var(--c-acc)' }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+            <button
+              onClick={() => setSacrifice(suggestedSacrifice)}
+              style={{
+                padding: '5px 10px', borderRadius: 100,
+                background: 'rgba(93,219,194,0.18)', border: '1px solid var(--c-acc)',
+                color: 'var(--c-acc)', fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Set to escape taper (£{suggestedSacrifice.toLocaleString()})
+            </button>
+            <button
+              onClick={() => setSacrifice(0)}
+              style={{
+                padding: '5px 10px', borderRadius: 100,
+                background: 'transparent', border: '1px solid var(--c-sep)',
+                color: 'var(--c-text2)', fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Reset
+            </button>
+          </div>
+
+          {sacrifice > 0 && (
+            <div style={{
+              marginTop: 14, padding: '14px 16px', borderRadius: 12,
+              background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+              animation: 'magic-fade-up .3s ease-out',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    New tax bill
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+                    £{taxAfter.tax.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+                    was £{taxBefore.tax.toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-acc)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    Tax saved this year
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-acc)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+                    £{saving.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+                    + pension fund grows
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--c-sep)', fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+                The £{sacrifice.toLocaleString()} you sacrificed is in your pension, growing tax-free until you draw it. Effective cost to your take-home: £{(sacrifice - saving).toLocaleString()}.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div style={{
+        padding: '14px 16px', borderRadius: 12,
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.6,
+      }}>
+        <div style={{ fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4 }}>How this works</div>
+        Numbers are computed live in your browser using 2025-26 UK income tax rules (PA £12,570 · BR 20% to £50,270 · HR 40% to £125,140 · AR 45%). The "Tax Accountant recommends" panel above fires the same logic the live lens (<code style={{ fontSize: 10, background: 'var(--c-surface2)', padding: '1px 5px', borderRadius: 3 }}>STRAT-100K-TAPER-ESCAPE</code>) would produce against your real persona.
+      </div>
+
+      <style>{`@keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  )
+}
+
 // ── Main screen ──────────────────────────────────────────────────────────────
 
 const SECTIONS = [
   { id: 'coi',        label: 'Watch the cost drop',     sub: 'Cost of Inaction in real time' },
   { id: 'lenses',     label: 'Talk to 11 advisors',     sub: 'The synthesised professional brain' },
   { id: 'strategies', label: '£70k drawdown',           sub: '8 ways to cut the tax' },
+  { id: 'taper',      label: '£100k taper trap',         sub: 'Live engine · drag to play' },
 ]
 
 export default function MagicShowcase({ entity, onClose }) {
@@ -858,6 +1156,7 @@ export default function MagicShowcase({ entity, onClose }) {
       {section === 'coi' && <CoIOdometerDemo />}
       {section === 'lenses' && <ElevenAdvisorsDemo entity={entity} />}
       {section === 'strategies' && <DrawdownDemo entity={entity} />}
+      {section === 'taper' && <TaperTrapDemo entity={entity} />}
 
       {/* Footer */}
       <div style={{

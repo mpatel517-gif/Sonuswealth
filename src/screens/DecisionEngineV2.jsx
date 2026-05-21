@@ -304,8 +304,8 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
           </div>
         )}
 
-        {/* Empty result — tree null after run completed */}
-        {!orc.isLoading && !orc.isIdle && !orc.tree && !orc.error && currentQuery && (
+        {/* Empty result — tree null after run completed OR pipeline cancelled mid-flight */}
+        {!orc.isLoading && !orc.tree && !orc.error && currentQuery && !orc.followUp?.needsFollowUp && (
           <div style={{ margin: '20px', padding: '16px 18px', borderRadius: 14, background: 'var(--c-surface)', border: '1px solid var(--c-sep)' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Couldn't generate a decision tree</div>
             <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>

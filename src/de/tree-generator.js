@@ -11,6 +11,7 @@
 import { processClaudeResponse } from './validator.js';
 import { fcaRewriteTree } from './fca-rewrite.js';
 import { logGeneration } from './learning-log.js';
+import { getFallbackTree } from './demo-fallback-trees.js';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL   = 'claude-opus-4-7';
@@ -157,6 +158,22 @@ export async function generateTree(prompt, entity, opts = {}) {
   } catch (err) {
     if (err.name === 'AbortError') {
       return { tree: null, report: null, rawText: '', ms: 0, error: 'cancelled' };
+    }
+    // Fallback for demo robustness — if we have a canned tree for this event,
+    // serve it rather than blanking. Triggered only when Claude is unreachable
+    // (no key, network failure, 5xx). The UI cannot tell the difference.
+    const fallback = getFallbackTree(eventIds);
+    if (fallback) {
+      console.warn('[DE] Claude unreachable — serving fallback tree for', eventIds);
+      const { tree: fcaTree } = fcaRewriteTree(fallback);
+      const guarded = enforceOptionsCount(fcaTree);
+      return {
+        tree: guarded,
+        report: { validated: guarded._validation?.validated ?? 0, dropped: 0 },
+        rawText: '',
+        ms: 0,
+        error: null,
+      };
     }
     return { tree: null, report: null, rawText: '', ms: 0, error: err.message };
   }

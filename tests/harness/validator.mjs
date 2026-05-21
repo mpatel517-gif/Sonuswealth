@@ -38,10 +38,13 @@ function fmt(n) {
 }
 
 function personaSummary(p) {
-  const age = p.age ?? p.dob ? new Date().getFullYear() - new Date(p.dob).getFullYear() : 'unknown';
-  const arch = p.archetype || p.family || 'unknown';
-  const status = p.household_status || p.status || '';
-  return `${arch}${status ? ' / ' + status : ''}, age ${age}`;
+  const name = p.name || p.displayName || 'unnamed';
+  const age = p.age ?? (p.dob ? new Date().getFullYear() - new Date(p.dob).getFullYear() : 'unknown');
+  const arch = p.archetype || p.lifeStageName || p.type || 'individual';
+  const status = p.household_status || p.status || (p.isCouple ? 'couple' : 'single');
+  const hr = p.isHigherRateTaxpayer ? 'higher-rate taxpayer' : 'basic-rate taxpayer';
+  const target = p.targetIncome ? `target income £${p.targetIncome.toLocaleString()}` : '';
+  return `${name}, age ${age}, ${arch} (${status}, ${hr})${target ? '; ' + target : ''}`;
 }
 
 export function buildPrompt(persona, taxYear, macroVars, engineOutput) {
@@ -64,15 +67,24 @@ UK macro context for ${taxYear}:
 
 Engine output:
 - Net worth: ${fmt(engineOutput.net_worth)}
-- Caelixa Wealth Score: ${engineOutput.fq_score ?? 'n/a'}/100
-- Caelixa Risk Score: ${engineOutput.risk_score ?? 'n/a'}/100
-- Income tax: ${fmt(pl.income_tax)}
-- NI contributions: ${fmt(pl.ni)}
+- Caelixa Wealth Score: ${engineOutput.fq_score ?? 'n/a'}/100 (band: ${engineOutput.fq_band ?? 'n/a'})
+- Caelixa Risk Score: ${engineOutput.risk_score ?? 'n/a'}/100 (band: ${engineOutput.risk_band ?? 'n/a'})
+- Gross income: ${fmt(pl.gross_income)} (drawdown ${fmt(pl.drawdown)}, employment ${fmt(pl.employment_income)})
+- Income tax (engine): ${fmt(pl.income_tax)}
+- NI contributions (estimate): ${fmt(pl.ni)}
 - Pension contributions: ${fmt(pl.pension_contributions)}
+- Monthly expenditure: ${fmt(pl.monthly_expenditure)}
 - ISA balance: ${fmt(bs.isa)}
+- SIPP balance: ${fmt(bs.sipp)}
+- Cash: ${fmt(bs.cash)}
+- Property: ${fmt(bs.property)}
+- Mortgage: ${fmt(bs.mortgage)}
 - IHT exposure: ${fmt(est.iht_exposure || engineOutput.iht_exposure)}
+- IHT breakdown: ${engineOutput.iht_breakdown ? `gross ${fmt(engineOutput.iht_breakdown.gross)}, NRB ${fmt(engineOutput.iht_breakdown.nrb)}, RNRB ${fmt(engineOutput.iht_breakdown.rnrb)}, taxable ${fmt(engineOutput.iht_breakdown.taxable)}` : 'n/a'}
 - Annual cashflow surplus: ${fmt(cf.annual_surplus || cf.surplus)}
-- Cost of Inaction (10yr): ${fmt(engineOutput.cost_of_inaction)}
+- Funded ratio: ${cf.funded_ratio ?? 'n/a'}
+- Cost of Inaction (IHT, current): ${fmt(engineOutput.cost_of_inaction)}
+- SIPP IHT inclusion: ${parseInt(taxYear.split('/')[0]) >= 2027 ? 'YES (post-April 2027 effective date)' : 'NO (pre-April 2027 — SIPPs outside estate)'}
 
 Validate each category. Respond with the JSON schema only.`;
 }

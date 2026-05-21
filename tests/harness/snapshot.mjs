@@ -6,7 +6,8 @@
 import {
   netWorth, calcNetWorth, calcFQ, calcRisk, calcAPQ,
   financialProfile, costOfInaction, ihtDynamic,
-  guardrail, investable, calcAge,
+  guardrail, investable, calcAge, incomeTax,
+  monthlySurplus, fundedRatio,
 } from '../../src/engine/fq-calculator.js';
 
 import {
@@ -87,6 +88,34 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
   try { gr         = guardrail(adjustedPersona); } catch (e) { errors.push(`guardrail: ${e.message}`); gr = 0; }
   try { inv        = investable(adjustedPersona); } catch (e) { errors.push(`investable: ${e.message}`); inv = 0; }
 
+  // Income tax + NI + cashflow computation
+  let incTax = null, niEst = null, surplus = null, funded = null;
+  const drawdown = adjustedPersona.drawdown
+                || adjustedPersona.drawdownPlan?.targetAnnual
+                || adjustedPersona.income?.drawdown
+                || 0;
+  const targetIncome = adjustedPersona.targetIncome ?? 0;
+  const employmentInc = adjustedPersona.income?.salary || adjustedPersona.income?.employment || 0;
+  const grossIncome = drawdown + employmentInc + (targetIncome > 0 && drawdown === 0 ? targetIncome : 0);
+
+  try {
+    if (drawdown > 0) {
+      incTax = incomeTax(drawdown, null, null);
+    } else if (employmentInc > 0) {
+      incTax = incomeTax(employmentInc, 0, null);
+    }
+  } catch (e) { errors.push(`incomeTax: ${e.message}`); }
+
+  // Rough NI estimate: 8% Class 1 employee on £12,570-£50,270, 2% above, on employment income
+  if (employmentInc > 0) {
+    const niBase = Math.max(0, Math.min(employmentInc, 50270) - 12570);
+    const niUpper = Math.max(0, employmentInc - 50270);
+    niEst = Math.round(niBase * 0.08 + niUpper * 0.02);
+  }
+
+  try { const ms = monthlySurplus(adjustedPersona); surplus = ms != null ? Math.round(ms * 12) : null; } catch (e) { /* skip */ }
+  try { const fr = fundedRatio(adjustedPersona); funded = typeof fr === 'object' ? fr.ratio ?? fr.value : fr; } catch (e) { /* skip */ }
+
   return {
     persona_id: personaId,
     tax_year: taxYear,
@@ -118,14 +147,21 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
       investable: Math.round(inv),
     },
     pl: {
-      // Engine doesn't expose direct income tax — extract from APQ or financial profile
-      income_tax: null,
-      ni: null,
-      pension_contributions: adjustedPersona.income?.pension_contributions ?? null,
+      gross_income: Math.round(grossIncome),
+      drawdown: Math.round(drawdown),
+      employment_income: Math.round(employmentInc),
+      target_income: Math.round(targetIncome),
+      income_tax: incTax != null ? Math.round(incTax) : null,
+      ni: niEst,
+      pension_contributions: adjustedPersona.income?.pension_contributions
+                          ?? adjustedPersona.pension?.annual_contribution
+                          ?? null,
+      monthly_expenditure: adjustedPersona.monthlyExpenditure ?? null,
     },
     cashflow: {
-      annual_surplus: null,
-      surplus: null,
+      annual_surplus: surplus,
+      surplus,
+      funded_ratio: funded,
     },
     estate: {
       iht_exposure: Math.round(iht?.iht ?? 0),

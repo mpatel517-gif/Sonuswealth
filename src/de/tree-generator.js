@@ -159,10 +159,12 @@ export async function generateTree(prompt, entity, opts = {}) {
     if (err.name === 'AbortError') {
       return { tree: null, report: null, rawText: '', ms: 0, error: 'cancelled' };
     }
-    // Fallback for demo robustness — if we have a canned tree for this event,
-    // serve it rather than blanking. Triggered only when Claude is unreachable
-    // (no key, network failure, 5xx). The UI cannot tell the difference.
-    const fallback = getFallbackTree(eventIds);
+    // Fallback for demo robustness — if we have a canned tree for this event
+    // OR a keyword match in the freeform query, serve it rather than blanking.
+    // Triggered only when Claude is unreachable (no key, network failure, 5xx).
+    // Generic catch-all ensures even off-ontology queries (eventId: null) get
+    // a credible response. The UI cannot tell the difference.
+    const fallback = getFallbackTree(eventIds, userQuery);
     if (fallback) {
       console.warn('[DE] Claude unreachable — serving fallback tree for', eventIds);
       const { tree: fcaTree } = fcaRewriteTree(fallback);

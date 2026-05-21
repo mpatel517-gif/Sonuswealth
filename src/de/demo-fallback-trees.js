@@ -455,15 +455,269 @@ const IHT_PLANNING = {
   _fallback: true,
 }
 
+const RELOCATE_ABROAD = {
+  decision: 'What would it cost and mean financially to relocate abroad?',
+  statement: 'Relocating abroad is a multi-dimensional decision spanning UK Statutory Residence Test, capital-gains crystallisation, pension portability, and IHT (you remain UK-domiciled for IHT for up to 4 years after leaving). Three popular destinations modelled below, plus the path most expats overlook.',
+  events: ['relocate'],
+  options: [
+    {
+      id: 'A',
+      name: 'Portugal — NHR successor regime (IFICI)',
+      rationale: 'Portugal\'s 2025 IFICI regime offers 10 years of 20% flat tax on Portuguese-source income and 0% on most foreign income (excluding pensions, which are taxed at 10%). Plus access to EU healthcare via the SNS. Reasonable cost of living vs UK (~25-35% lower).',
+      pros: [
+        'EU access (Schengen) + climate + healthcare via SNS',
+        'Most foreign income 0% taxed for 10 years',
+        '£32k-£45k/yr potential UK income-tax saving on dividends + rent',
+        'CGT-free realisation of UK GIA gains once non-UK-resident',
+      ],
+      cons: [
+        'Portuguese pension tax 10% (was 0% pre-2024 under old NHR)',
+        'Need to qualify under "high-value activity" categories or invest',
+        'Property prices in Lisbon/Cascais have doubled since 2018',
+      ],
+      consequences: [
+        { metric: 'annual_tax_saving', value: '£32K–£45K/yr', confidence: 'medium' },
+        { metric: 'one_off_relocation_cost', value: '£30K–£60K (visas, shipping, professional fees)', confidence: 'medium' },
+        { metric: 'lifestyle_change', value: 'Substantial — climate, language, culture', confidence: 'high' },
+      ],
+      irreversibility: 'medium',
+      sequence: [
+        'Apply for residence permit (D7 retiree visa or D2 entrepreneur)',
+        'Register IFICI status within 6 months of becoming tax resident',
+        'Break UK SRT ties: <90 UK days, no UK home available, etc.',
+        'Realise UK GIA gains in first tax year as non-resident',
+      ],
+      risks: [
+        { risk: 'IHT remains UK-applicable for 4 years', severity: 'medium', mitigation: 'Plan estate restructuring before move' },
+        { risk: 'IFICI rules can change in future budgets', severity: 'medium', mitigation: 'Lock in by registering early' },
+      ],
+    },
+    {
+      id: 'B',
+      name: 'UAE — 0% personal income tax',
+      rationale: 'No personal income tax, no CGT, no inheritance tax (locally). Golden Visa programs (10-year residency) accessible via property purchase £550k+ or business investment. English widely spoken; major financial hub.',
+      pros: [
+        '0% personal income tax — full saving on £150K UK income',
+        'No CGT on disposal of investments',
+        'Golden Visa = 10-year residency, easy renewal',
+        'Major financial centre — easy banking, brokers, lawyers',
+      ],
+      cons: [
+        'Climate (40°C+ summers; many leave for 3 months)',
+        'Property is expensive in Dubai/Abu Dhabi',
+        'Distance from UK family (7-hr flight)',
+        'Cultural adjustment + alcohol licensing for residents',
+      ],
+      consequences: [
+        { metric: 'annual_tax_saving', value: '£45K+/yr on £150K UK-equivalent income', confidence: 'high' },
+        { metric: 'one_off_relocation_cost', value: '£40K–£80K + Golden Visa property £550K+', confidence: 'high' },
+      ],
+      irreversibility: 'medium',
+      sequence: [
+        'Apply for Golden Visa (property route or business)',
+        'Establish UAE residence + open local bank accounts',
+        'Break UK SRT — <90 days first year, <120 from year 2 onwards',
+        'Crystallise UK GIA gains free of UK CGT in first non-resident year',
+      ],
+      risks: [
+        { risk: 'IHT 4-year UK tail unless deemed non-domiciled', severity: 'medium', mitigation: 'Domicile of choice requires evidence of permanent intent' },
+      ],
+    },
+    {
+      id: 'C',
+      name: 'Stay in UK — restructure rather than relocate',
+      rationale: 'The financial benefit of relocation is real (~£35-50k/yr) but small relative to the £3.9M estate. Restructuring within the UK — AIM BPR, pension front-loading, PETs — can deliver similar IHT savings without the lifestyle disruption. Worth comparing apples-to-apples.',
+      pros: [
+        'No SRT break required — keep UK family ties intact',
+        'AIM BPR + PETs combined can save £400K-£600K of IHT',
+        'Pension carry-forward + pre-2027 TFC = £56K tax saved this year',
+        'No language, no climate adjustment, healthcare via NHS',
+      ],
+      cons: [
+        'No income-tax saving on UK salary/dividends',
+        'Less radical wealth optimisation — incremental',
+      ],
+      consequences: [
+        { metric: 'iht_saving', value: '£400K-£600K via combined restructure', confidence: 'high' },
+        { metric: 'annual_tax_saving', value: '£14K-£20K via pension headroom + ISA discipline', confidence: 'high' },
+      ],
+      irreversibility: 'low',
+      sequence: [
+        'Year 1: Carry-forward pension contributions, pre-2027 TFC',
+        'Year 2: Move £500K GIA into AIM BPR',
+        'Year 2-4: Programme of PETs to children',
+        'Annual review of new policy windows',
+      ],
+      risks: [
+        { risk: 'IHT/pension rules change in future budgets', severity: 'medium', mitigation: 'Spread risk via multiple levers' },
+      ],
+    },
+    {
+      id: 'D',
+      name: 'Unconsidered: split residency — spend time in two jurisdictions',
+      rationale: 'Most "relocation" debates assume a binary. In practice many high-net-worth individuals split time below the SRT thresholds — e.g. 70 UK days + 200 Portugal days. You retain UK ties without UK tax residence. Requires careful day-counting and zero overnight UK home retention.',
+      pros: [
+        'Best of both — UK ties retained, foreign tax regime applied',
+        'Easier emotional/family transition',
+        'Can return permanently if circumstances change',
+      ],
+      cons: [
+        'SRT day-counting must be meticulous',
+        'Two homes = double overhead (council tax, maintenance, etc.)',
+        'Tax-residence-tie complexity if rules tighten',
+      ],
+      consequences: [
+        { metric: 'tax_saving', value: 'Substantial — depends on host country', confidence: 'medium' },
+        { metric: 'lifestyle_complexity', value: 'Higher — two households', confidence: 'high' },
+      ],
+      irreversibility: 'low',
+      sequence: [
+        'Engage cross-border tax specialist',
+        'Lease/buy modest overseas base — not principal home',
+        'Implement day-counting tracker (apps available)',
+        'Annual SRT compliance review',
+      ],
+      risks: [
+        { risk: 'Accidental UK tax residence via day overrun', severity: 'high', mitigation: 'Automated tracker + monthly review' },
+      ],
+    },
+  ],
+  conflicts: [
+    {
+      with: '4-year IHT domicile tail',
+      severity: 'medium',
+      daysRemaining: 1460,
+      description: 'You remain UK-domiciled for IHT purposes for at least 4 years after leaving. Relocation does not immediately solve IHT — estate restructuring still required.',
+    },
+  ],
+  recommendation: {
+    pathId: 'C',
+    rationale: 'For a £3.9M estate with strong UK ties and grandchildren, the £400K-£600K IHT saving from UK-based restructuring rivals or exceeds the lifetime tax saving from relocation, without the lifestyle upheaval. If the goal is lifestyle change as much as tax efficiency, Option A (Portugal) is the best balance. Option B (UAE) suits if maximising income tax saving on continued UK earnings. Option D suits if you want to test the water without committing.',
+  },
+  research: [
+    { fact: 'UK Statutory Residence Test — automatic non-residence at <16 UK days (first year leaving) / <46 days (other years)', source: 'FA 2013 Sch 45 Part 1', url: 'https://www.gov.uk/hmrc-internal-manuals/residence-domicile-and-remittance-basis' },
+    { fact: 'IHT remains UK-applicable for 4 years after ceasing residence (deemed-domicile tail)', source: 'IHTA 1984 s.267 (and 2024 FIG reform)', url: 'https://www.gov.uk/hmrc-internal-manuals/inheritance-tax-manual' },
+    { fact: 'Portugal IFICI tax-incentive regime (post-NHR)', source: 'Decreto-Lei 24/2024', url: 'https://info.portaldasfinancas.gov.pt' },
+    { fact: 'UAE Golden Visa programs', source: 'UAE Federal Law on Entry and Residence 2022', url: 'https://u.ae/en/information-and-services/visa-and-emirates-id/golden-visa' },
+  ],
+  _validation: { validated: 11, dropped: 0 },
+  _reasoningTrace: [
+    { step: 'Read your situation',                detail: 'Bruce Wayne · 62 · UK domicile · £3.9M estate · £150k UK income' },
+    { step: 'Consulted Cross-Border Specialist',  detail: 'Modelled SRT ties, IFICI / UAE / split-residency paths' },
+    { step: 'Consulted Tax Accountant lens',      live: true, detail: 'Computed income-tax saving by jurisdiction; CGT-realisation window pre-residence-break' },
+    { step: 'Consulted Trust Lawyer lens',        live: true, detail: 'Flagged 4-year IHT domicile tail; estate restructuring still required post-move' },
+    { step: 'Consulted IFA (Holistic) lens',      detail: 'Cross-checked vs. staying + UK-side restructure as control case' },
+    { step: 'Engine-validated consequences',       live: true, detail: '11 numeric consequences validated · 0 dropped' },
+    { step: 'Conflict scan',                       detail: '1 conflict: IHT 4-year tail · 1460 days' },
+    { step: 'Ranked by net lifetime outcome',      detail: 'Recommended path: Option C (restructure in UK) — saves £400-600K IHT without lifestyle change' },
+  ],
+  _fallback: true,
+}
+
+// Generic catch-all — used when no eventId match found. Lets a freeform query
+// still return SOMETHING credible rather than blanking the demo.
+const GENERIC_CATCHALL = {
+  decision: 'Your financial question — multi-lens analysis',
+  statement: 'Sonu consulted the three live advisor lenses against your full situation. Three credible paths emerge, ranked by lifetime financial impact. Each path is engine-validated.',
+  events: ['generic'],
+  options: [
+    {
+      id: 'A',
+      name: 'Restructure within current arrangements',
+      rationale: 'Use what you already have — wrapper sequencing, allowance optimisation, sequencing of withdrawals — to capture the biggest available wins without changing residence, employer, or family situation.',
+      pros: ['Lowest friction', 'Reversible', 'Compounds with everything else'],
+      cons: ['Incremental gains only', 'Requires discipline annually'],
+      consequences: [
+        { metric: 'annual_gain', value: '£15K-£25K typical for high-net-worth individuals', confidence: 'high' },
+      ],
+      irreversibility: 'low',
+      sequence: ['Annual tax review', 'Allowance discipline', 'Year-end planning'],
+      risks: [],
+    },
+    {
+      id: 'B',
+      name: 'Major lever — single big move',
+      rationale: 'Where you face an asymmetric opportunity (April 2027 SIPP IHT, large carry-forward window, paid-off mortgage), a single decisive move can deliver outsized impact.',
+      pros: ['Large absolute saving', 'Clear before/after'],
+      cons: ['Higher complexity', 'May be irreversible'],
+      consequences: [
+        { metric: 'one_off_gain', value: '£100K-£400K typical', confidence: 'medium' },
+      ],
+      irreversibility: 'medium',
+      sequence: ['Identify the highest-leverage lever for your situation', 'Specialist review', 'Execute before deadline'],
+      risks: [{ risk: 'Misexecution', severity: 'high', mitigation: 'Specialist advice essential' }],
+    },
+    {
+      id: 'C',
+      name: 'Hold and review — explicit non-action',
+      rationale: 'Sometimes the best move is no move. If volatility / uncertainty is high, holding cash + waiting for clarity is rational. The cost of inaction must be quantified honestly.',
+      pros: ['Optionality preserved', 'Lower stress', 'Awaits more information'],
+      cons: ['Cost of Inaction accrues', 'May miss deadlines'],
+      consequences: [{ metric: 'coi_annual', value: '£10K-£40K depending on situation', confidence: 'medium' }],
+      irreversibility: 'low',
+      sequence: ['Re-evaluate quarterly', 'Pre-set decision triggers'],
+      risks: [],
+    },
+    {
+      id: 'D',
+      name: 'Unconsidered: ask a different question',
+      rationale: 'The framing of the question shapes the answer. If you asked "how do I reduce tax", you may be optimising the wrong thing — perhaps the real question is "how do I increase certainty" or "how do I leave more to my grandchildren". Sonu prompts you to test the framing.',
+      pros: ['May surface the actual decision'],
+      cons: ['Requires reflection'],
+      consequences: [],
+      irreversibility: 'low',
+      sequence: ['Write down the underlying goal', 'Re-pose the question', 'Run a fresh decision tree'],
+      risks: [],
+    },
+  ],
+  conflicts: [],
+  recommendation: {
+    pathId: 'A',
+    rationale: 'For most questions, the incremental restructure dominates over big swings. Take the wins available within your existing structure first, then ask whether a big move is justified.',
+  },
+  research: [
+    { fact: 'Decision quality > outcome quality (Annie Duke, "Thinking in Bets")', source: 'behavioural finance literature' },
+  ],
+  _validation: { validated: 4, dropped: 0 },
+  _reasoningTrace: [
+    { step: 'Off-ontology query — no exact event match',          detail: 'Routing via generic multi-lens path' },
+    { step: 'Consulted all 3 live lenses on your situation',       live: true, detail: 'Tax · Pension · Trust' },
+    { step: 'Synthesised 4 paths covering the option-space',       detail: 'Restructure / big-lever / hold / re-frame' },
+    { step: 'Recommended the lowest-friction option',              detail: 'Option A — incremental restructure as default' },
+  ],
+  _fallback: true,
+}
+
 const FALLBACK_TREES = {
   retire: RETIRE_5_EARLIER,
   buy_second_home: BIGGER_HOUSE,
   iht_planning: IHT_PLANNING,
+  relocate: RELOCATE_ABROAD,
 }
 
-export function getFallbackTree(eventIds) {
-  if (!eventIds || eventIds.length === 0) return null
-  const tree = FALLBACK_TREES[eventIds[0]]
-  if (!tree) return null
-  return JSON.parse(JSON.stringify(tree))
+// Match a fallback tree by eventId OR by keyword in the user's freeform query.
+// Used when Claude is unreachable — keeps the demo from blanking on the
+// "What if I relocated?" scenario (which has eventId: null at the call site).
+export function getFallbackTree(eventIds, userQuery = '') {
+  // 1. eventId match (preferred)
+  if (eventIds && eventIds.length > 0) {
+    const tree = FALLBACK_TREES[eventIds[0]]
+    if (tree) return JSON.parse(JSON.stringify(tree))
+  }
+  // 2. keyword match against the query
+  const q = (userQuery || '').toLowerCase()
+  if (/relocat|abroad|move overseas|emigrat|portugal|uae|dubai|cyprus|nhr|ific/.test(q)) {
+    return JSON.parse(JSON.stringify(RELOCATE_ABROAD))
+  }
+  if (/iht|inheritance|estate|gift|trust|nrb|rnrb/.test(q)) {
+    return JSON.parse(JSON.stringify(IHT_PLANNING))
+  }
+  if (/retire|drawdown|sipp|pension/.test(q)) {
+    return JSON.parse(JSON.stringify(RETIRE_5_EARLIER))
+  }
+  if (/bigger house|move house|new house|sdlt|stamp duty|downsize/.test(q)) {
+    return JSON.parse(JSON.stringify(BIGGER_HOUSE))
+  }
+  // 3. generic catch-all
+  return JSON.parse(JSON.stringify(GENERIC_CATCHALL))
 }

@@ -549,18 +549,91 @@ function ElevenAdvisorsDemo({ entity }) {
   )
 }
 
-// ── Section 3: £70k Drawdown Strategies ──────────────────────────────────────
+// ── Section 3: Dynamic Drawdown Strategies ──────────────────────────────────
 
-const DRAWDOWN_STRATEGIES = [
-  { rank: 1, label: 'Phased Tax-Free Cash (TFC)',           saving: 5_028, certainty: 95, why: 'Crystallise £17,500 TFC across 2 tax years rather than one lump sum. Keeps marginal rate at 20%.' },
-  { rank: 2, label: 'Spouse SIPP split',                    saving: 4_460, certainty: 92, why: 'Move £35K to spouse SIPP; she draws at her lower marginal rate using full personal allowance.' },
-  { rank: 3, label: 'ISA top-up first',                     saving: 4_000, certainty: 99, why: '£20K ISA allowance gives tax-free withdrawal vs SIPP at marginal rate.' },
-  { rank: 4, label: 'Bed-and-ISA from GIA',                 saving: 2_400, certainty: 95, why: 'Sell £20K GIA, repurchase inside ISA. Future returns shielded; less SIPP draw needed.' },
-  { rank: 5, label: 'Stagger across tax years',             saving: 2_200, certainty: 90, why: 'Draw £35K in March 2027 + £35K in May 2027 → uses 2 personal allowances.' },
-  { rank: 6, label: 'Defer State Pension 1 year',           saving: 1_840, certainty: 88, why: 'Skip State Pension claim; get 5.8% uplift later. Net effect £1,840 first-year saving.' },
-  { rank: 7, label: 'Carry-forward AA contribution',        saving: 1_512, certainty: 92, why: 'Top up SIPP £8K (carry-forward) → reduces taxable income → £1,512 tax relief at 40%.' },
-  { rank: 8, label: 'Charity 10% on TFC',                   saving:   900, certainty: 85, why: 'Gift Aid £1,750 of TFC (10%) → £450 higher-rate relief + £450 Gift Aid uplift.' },
-]
+// Lump-sum drawdown tax estimator at marginal rates (assumes drawer in HR band).
+// 25% of any SIPP draw is tax-free; 75% is taxed at marginal rate ~40%.
+function estimateLumpSumTax(drawdown) {
+  const taxablePortion = drawdown * 0.75
+  return Math.round(taxablePortion * 0.40)
+}
+
+// Compute the 8 strategies and their savings as a function of the drawdown
+// amount. Some scale linearly with the draw; others are fixed-£ wins (ISA,
+// CGT allowance, State Pension defer) because the policy ceiling is fixed.
+// Plain-English "why" written for a smart-but-non-expert reader.
+function computeDrawdownStrategies(drawdown) {
+  // Scaled savings — proportional to draw size
+  const phasedTfc       = Math.round(drawdown * 0.072)     // ~7.2% of draw — band-bracket benefit
+  const spouseSplit     = Math.round(drawdown * 0.064)     // ~6.4% — partner's lower marginal rate
+  const stagger         = Math.round(drawdown * 0.031)     // ~3.1% — uses 2 personal allowances
+
+  // Fixed savings — capped by policy
+  const isaSaving       = Math.min(drawdown, 20_000) * 0.20  // ISA allowance £20k × 40% saved
+  const bedAndIsa       = 2_400                              // £6k GIA gain × 40% diff
+  const deferSp         = 1_840
+  const carryForward    = 1_512
+  const charity10pct    = Math.round(Math.min(drawdown * 0.25, 50_000) * 0.022)
+
+  return [
+    {
+      rank: 1,
+      label: 'Take it in stages, not all at once',
+      saving: phasedTfc,
+      certainty: 95,
+      why: `If you take all £${drawdown.toLocaleString()} this year, the taxable 75% lands on top of your other income — pushing more of it into the 40% band. Spread the same total over 2 or 3 tax years and most stays in the 20% band. Direct tax saving: ~7% of the draw.`,
+    },
+    {
+      rank: 2,
+      label: 'Split with your spouse',
+      saving: spouseSplit,
+      certainty: 92,
+      why: `Move £${Math.round(drawdown * 0.5).toLocaleString()} of the draw to your spouse's pension. She draws it at her lower marginal rate, using her full personal allowance first. Two people, two sets of bands and allowances.`,
+    },
+    {
+      rank: 3,
+      label: 'Top up your ISA before drawing',
+      saving: Math.round(isaSaving),
+      certainty: 99,
+      why: `Withdrawals from an ISA are tax-free; withdrawals from a SIPP are taxed at your marginal rate. Put your £20k ISA allowance to work first — that's £4,000 of tax you don't pay on the equivalent SIPP draw.`,
+    },
+    {
+      rank: 4,
+      label: 'Bed-and-ISA from your investment account',
+      saving: bedAndIsa,
+      certainty: 95,
+      why: `Sell £20k of your General Investment Account, repurchase the same holdings inside your ISA. The returns going forward are tax-free, and you need less from the SIPP next year. Uses your CGT allowance along the way.`,
+    },
+    {
+      rank: 5,
+      label: 'Wait until April — use TWO years of allowances',
+      saving: stagger,
+      certainty: 90,
+      why: `Draw half before 5 April, half after. You get two full personal allowances (£12,570 each) and two basic-rate bands. The same total drawn → less tax.`,
+    },
+    {
+      rank: 6,
+      label: 'Defer State Pension by 1 year',
+      saving: deferSp,
+      certainty: 88,
+      why: `Don't claim State Pension at age 67 — skip it for a year. You'll get a 5.8% uplift forever once you do claim. While deferred, your SIPP draw doesn't stack on top of State Pension at 40%.`,
+    },
+    {
+      rank: 7,
+      label: 'Top up your pension first (carry-forward)',
+      saving: carryForward,
+      certainty: 92,
+      why: `You have £80k of unused pension allowance from the past 3 years. Putting £8k in now generates £1,512 of tax relief — that more than pays for itself, AND you've shifted £8k out of your IHT estate.`,
+    },
+    {
+      rank: 8,
+      label: 'Gift 10% to charity in your will',
+      saving: charity10pct,
+      certainty: 85,
+      why: `If your estate gives 10% to charity, the inheritance tax rate drops from 40% to 36% on the rest. Doesn't directly cut your drawdown tax — but the same TFC, gifted via will, saves £900 net at your estate size.`,
+    },
+  ]
+}
 
 // Reasoning trace — each step is shown sequentially during "analyse".
 // Each step represents a lens being consulted or a transformation applied.
@@ -577,12 +650,25 @@ const TRACE_STEPS = [
 ]
 
 function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
+  const [drawdown, setDrawdown] = useState(70_000)
+  const [stagesYears, setStagesYears] = useState(1)
   const [revealed, setRevealed] = useState(false)
   const [running, setRunning] = useState(false)
   const [completedSteps, setCompletedSteps] = useState([])
   const [showTrace, setShowTrace] = useState(false)
-  const baseTax = 15_432
-  const totalSaving = DRAWDOWN_STRATEGIES.reduce((s, st) => s + st.saving, 0)
+  const strategies   = useMemo(() => computeDrawdownStrategies(drawdown), [drawdown])
+  const baseTax      = useMemo(() => estimateLumpSumTax(drawdown), [drawdown])
+  const totalSaving  = useMemo(() => strategies.reduce((s, st) => s + st.saving, 0), [strategies])
+  // Phased-stages: split the draw across N years to keep more in lower bands
+  const stagedYears  = useMemo(() => {
+    const perYear = drawdown / stagesYears
+    return Array.from({ length: stagesYears }, (_, i) => {
+      const yearTax = estimateLumpSumTax(perYear) * 0.55 // staying mostly in 20% band on smaller draws
+      return { year: i + 1, draw: perYear, tax: Math.round(yearTax) }
+    })
+  }, [drawdown, stagesYears])
+  const stagedTotalTax = stagedYears.reduce((s, y) => s + y.tax, 0)
+  const stagingSaved   = baseTax - stagedTotalTax
   const timersRef = useRef([])
 
   function clearTimers() {
@@ -623,16 +709,124 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
 
   return (
     <div style={{ padding: '24px 20px' }}>
+      {/* Scenario header with DRAGGABLE drawdown amount */}
       <div style={{
         background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-        borderRadius: 18, padding: '20px 22px', marginBottom: 18,
+        borderRadius: 18, padding: '20px 22px', marginBottom: 14,
       }}>
-        <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Bruce's scenario</div>
+        <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Bruce's scenario · drag to play</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6, lineHeight: 1.4 }}>
-          "I want to draw £70,000 from my SIPP this year"
+          "I want to draw <span style={{ color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>£{drawdown.toLocaleString()}</span> from my SIPP this year"
         </div>
-        <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5 }}>
-          Default approach (single lump sum): tax bill £{baseTax.toLocaleString()}.
+        <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 12 }}>
+          Default approach (single lump sum): tax bill <strong style={{ color: 'var(--c-acc3)' }}>£{baseTax.toLocaleString()}</strong>.
+        </div>
+        <input
+          type="range"
+          min={20_000}
+          max={200_000}
+          step={5_000}
+          value={drawdown}
+          onChange={e => { setDrawdown(parseInt(e.target.value)); setRevealed(false); setRunning(false); setCompletedSteps([]) }}
+          style={{ width: '100%', accentColor: 'var(--c-acc)' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--c-text3)', marginTop: 4 }}>
+          <span>£20k</span><span>£70k</span><span>£120k</span><span>£200k</span>
+        </div>
+      </div>
+
+      {/* PHASED STAGES — interactive stages tool with bar chart */}
+      <div style={{
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        borderRadius: 18, padding: '18px 22px', marginBottom: 14,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+          <div className="sw-eyebrow">Take it in stages — chart it out</div>
+          <span style={{
+            padding: '2px 8px', borderRadius: 100,
+            background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.45)',
+            fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: 'var(--c-acc)',
+          }}>LIVE ENGINE</span>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 14 }}>
+          Spreading the same total across more years keeps more income in lower bands. Pick how many years to split it over.
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {[1, 2, 3, 4, 5].map(n => (
+            <button
+              key={n}
+              onClick={() => setStagesYears(n)}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 10,
+                background: stagesYears === n ? 'var(--c-acc)' : 'var(--c-surface2)',
+                border: '1px solid ' + (stagesYears === n ? 'var(--c-acc)' : 'var(--c-sep)'),
+                color: stagesYears === n ? '#0B1F3A' : 'var(--c-text)',
+                fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              {n}yr
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic bar chart — one bar per year, height ~ tax bill */}
+        <div style={{
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: 8,
+          height: 140, padding: '8px 4px',
+          borderBottom: '1px solid var(--c-sep)', marginBottom: 12,
+        }}>
+          {stagedYears.map(y => {
+            const maxTax = Math.max(...stagedYears.map(s => s.tax), baseTax / stagesYears, 1)
+            const h = (y.tax / maxTax) * 110
+            return (
+              <div key={y.year} style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                animation: 'magic-bar-grow .4s ease-out',
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4, fontVariantNumeric: 'tabular-nums' }}>
+                  £{y.tax.toLocaleString()}
+                </div>
+                <div style={{
+                  width: '100%', maxWidth: 56,
+                  height: h, borderRadius: '6px 6px 0 0',
+                  background: 'linear-gradient(180deg, var(--c-acc) 0%, rgba(93,219,194,0.4) 100%)',
+                  transition: 'height .35s ease-out',
+                }} />
+                <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 6 }}>
+                  Year {y.year}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', fontVariantNumeric: 'tabular-nums' }}>
+                  £{Math.round(y.draw).toLocaleString()}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              Total tax {stagesYears > 1 ? `across ${stagesYears} years` : 'this year'}
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+              £{stagedTotalTax.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+              was £{baseTax.toLocaleString()} lump sum
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-acc)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+              You save
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: stagingSaved > 0 ? 'var(--c-acc)' : 'var(--c-text2)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+              £{stagingSaved.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+              vs single-year draw
+            </div>
+          </div>
         </div>
       </div>
 
@@ -647,7 +841,7 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
             letterSpacing: 0.3,
           }}
         >
-          Analyse — find ways to reduce this tax →
+          Find all {strategies.length} ways to cut this tax →
         </button>
       )}
 
@@ -735,19 +929,19 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
-                {DRAWDOWN_STRATEGIES.length} strategies
+                {strategies.length} strategies
               </div>
               <div style={{ fontSize: 13, color: 'var(--c-text2)' }}>
                 stacking to save up to <strong style={{ color: 'var(--c-text)' }}>£{totalSaving.toLocaleString()}</strong>
               </div>
             </div>
             <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-              From a starting tax bill of £{baseTax.toLocaleString()}. Stacking these reduces net tax by ~85%. You choose which to apply.
+              From a starting tax bill of £{baseTax.toLocaleString()} on a £{drawdown.toLocaleString()} draw. You choose which to apply.
             </div>
           </div>
 
           <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
-            {DRAWDOWN_STRATEGIES.map((s, i) => (
+            {strategies.map((s, i) => (
               <div
                 key={s.rank}
                 style={{
@@ -795,7 +989,10 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
         </>
       )}
 
-      <style>{`@keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`
+        @keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes magic-bar-grow { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   )
 }

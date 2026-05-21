@@ -14,6 +14,8 @@ import {
   loadBundle, loadMacroVariablesForYear, loadPersona,
 } from '../../src/lib/data-source.js';
 
+import { evaluate as evaluateEligibility } from '../../src/engine/eligibility.js';
+
 // Year delta from 2026/27 baseline (the year personas are profiled for)
 const BASELINE_YEAR = 2026;
 function yearOffset(taxYear) {
@@ -197,6 +199,24 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
     spousal_nrb_available: !!adjustedPersona.isCouple,
     effective_nrb: adjustedPersona.isCouple ? 650000 : 325000,
     effective_rnrb: adjustedPersona.isCouple ? 350000 : 175000,
+    // Eligibility verdicts (Phase 8A — 15 rules)
+    eligibility: (() => {
+      try {
+        const asOf = new Date(`${parseInt(taxYear.split('/')[0]) + 1}-04-05`);
+        const verdicts = evaluateEligibility(adjustedPersona, asOf);
+        return verdicts
+          .filter(v => v.qualifies && v.qualifies !== 'NA')
+          .map(v => ({
+            rule: v.id,
+            title: v.title,
+            status: v.qualifies,
+            grade: v.grade,
+            amount: v.applicableAmount,
+            reason: v.reason,
+            fix: v.fixHint,
+          }));
+      } catch (e) { errors.push(`eligibility: ${e.message}`); return []; }
+    })(),
     profile,
     apq_count: Array.isArray(apqResult) ? apqResult.length : null,
     macro_used: macroVars,

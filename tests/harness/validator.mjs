@@ -65,13 +65,20 @@ UK macro context for ${taxYear}:
 - ISA limit: ${fmt(macroVars.isa_limit || 20000)}
 - Pension AA: ${fmt(macroVars.pension_aa || 60000)}
 
+Household context:
+- Status: ${engineOutput.is_couple ? 'COUPLE (married/civil partnership)' : 'SINGLE'}
+- Spousal nil-rate transfer available: ${engineOutput.spousal_nrb_available ? 'YES — combined NRB £' + (engineOutput.effective_nrb || 650000).toLocaleString() + ' + RNRB £' + (engineOutput.effective_rnrb || 350000).toLocaleString() : 'NO — single NRB £325,000 + RNRB £175,000'}
+- State pension active: ${pl.state_pension > 0 ? 'YES, £' + pl.state_pension.toLocaleString() + '/yr' : 'NO (pre-state-pension-age)'}
+
 Engine output:
 - Net worth: ${fmt(engineOutput.net_worth)}
 - Caelixa Wealth Score: ${engineOutput.fq_score ?? 'n/a'}/100 (band: ${engineOutput.fq_band ?? 'n/a'})
 - Caelixa Risk Score: ${engineOutput.risk_score ?? 'n/a'}/100 (band: ${engineOutput.risk_band ?? 'n/a'})
-- Gross income: ${fmt(pl.gross_income)} (drawdown ${fmt(pl.drawdown)}, employment ${fmt(pl.employment_income)})
+- Gross taxable income: ${fmt(pl.gross_income)} (drawdown ${fmt(pl.effective_drawdown)} + employment ${fmt(pl.employment_income)} + state pension ${fmt(pl.state_pension)})
 - Income tax (engine): ${fmt(pl.income_tax)}
-- NI contributions (estimate): ${fmt(pl.ni)}
+- NI contributions: ${fmt(pl.ni)}
+- Net income after tax+NI: ${fmt(pl.net_income)}
+- Effective tax rate: ${pl.effective_tax_rate ?? 'n/a'}%
 - Pension contributions: ${fmt(pl.pension_contributions)}
 - Monthly expenditure: ${fmt(pl.monthly_expenditure)}
 - ISA balance: ${fmt(bs.isa)}
@@ -85,6 +92,8 @@ Engine output:
 - Funded ratio: ${cf.funded_ratio ?? 'n/a'}
 - Cost of Inaction (IHT, current): ${fmt(engineOutput.cost_of_inaction)}
 - SIPP IHT inclusion: ${parseInt(taxYear.split('/')[0]) >= 2027 ? 'YES (post-April 2027 effective date)' : 'NO (pre-April 2027 — SIPPs outside estate)'}
+
+NOTE on IHT for couples: When status=COUPLE, the engine correctly returns IHT=£0 even if gross estate > single NRB+RNRB, because spousal nil-rate transfer doubles the threshold to £1M (£650k NRB + £350k RNRB) provided assets pass to a UK-domiciled spouse. Do NOT flag IHT=£0 as wrong for a couple with estate < £1M.
 
 Validate each category. Respond with the JSON schema only.`;
 }

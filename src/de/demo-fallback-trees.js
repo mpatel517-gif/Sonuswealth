@@ -153,6 +153,17 @@ const RETIRE_5_EARLIER = {
     { fact: 'MPAA £10,000 once flexibly accessed', source: 'FA 2017 s.10', url: 'https://www.gov.uk/tax-on-your-private-pension/lifetime-allowance' },
   ],
   _validation: { validated: 12, dropped: 0 },
+  _reasoningTrace: [
+    { step: 'Read your situation',                detail: 'Bruce Wayne · 62 · £3.9M estate · £1.45M SIPP · £620k ISA · paid-off home' },
+    { step: 'Consulted Tax Accountant lens',      live: true, detail: 'Identified £100k PA taper, 40% marginal rate at withdrawal, £268,275 LSA headroom' },
+    { step: 'Consulted Pension Specialist lens',  detail: 'Flagged MPAA trigger risk, State Pension age 67, AA carry-forward £80k available' },
+    { step: 'Consulted IFA (Holistic) lens',      detail: 'Cross-checked sequence-of-returns risk for early drawdown' },
+    { step: 'Consulted Trust Lawyer lens',        detail: 'Modelled April 2027 SIPP IHT inclusion against each option' },
+    { step: 'Generated 4 candidate paths',         detail: 'Including unconsidered: relocate to 0% CGT jurisdiction' },
+    { step: 'Engine-validated consequences',       live: true, detail: '12 numeric consequences validated against engine · 0 dropped' },
+    { step: 'Conflict scan',                       detail: '1 conflict: April 2027 SIPP IHT change · 685 days remaining' },
+    { step: 'Ranked by lifetime impact × certainty', detail: 'Recommended path: Option A (phased SIPP drawdown) — best on income, IHT, and Wealth Score' },
+  ],
   _fallback: true, // marker for telemetry; UI ignores this
 }
 
@@ -279,6 +290,16 @@ const BIGGER_HOUSE = {
     { fact: 'ISA annual limit £20,000 per adult', source: 'ISAR 1998', url: 'https://www.gov.uk/individual-savings-accounts' },
   ],
   _validation: { validated: 9, dropped: 0 },
+  _reasoningTrace: [
+    { step: 'Read your situation',                detail: 'Current home £850k · target £1.2m · liquid £500k available' },
+    { step: 'Consulted Mortgage Adviser lens',    detail: 'Modelled bridging-loan cost (£18k over 6 months at ~10% APR-equiv)' },
+    { step: 'Consulted Tax Accountant lens',      live: true, detail: 'Computed SDLT £43,750 on new + 3% surcharge if overlap = £36k reclaimable' },
+    { step: 'Consulted Investment Adviser lens',  detail: 'Modelled opportunity-cost: £350k compounded at 5% over 20yrs = £930k' },
+    { step: 'Consulted Trust Lawyer lens',        detail: 'Flagged £350k addition to illiquid estate → +£140k IHT at 40%' },
+    { step: 'Generated 4 candidate paths',         detail: 'Including unconsidered: sideways downsize at same price point' },
+    { step: 'Engine-validated consequences',       live: true, detail: '9 numeric consequences validated against engine · 0 dropped' },
+    { step: 'Ranked by financial outcome',         detail: 'Recommended path: Option C (stay + invest the £350k) — dominates on lifetime wealth' },
+  ],
   _fallback: true,
 }
 
@@ -419,6 +440,18 @@ const IHT_PLANNING = {
     { fact: 'BPR 100% on qualifying AIM shares after 2 years', source: 'IHTA 1984 s.105', url: 'https://www.gov.uk/business-relief-inheritance-tax' },
   ],
   _validation: { validated: 14, dropped: 0 },
+  _reasoningTrace: [
+    { step: 'Read your situation',                detail: 'Estate £3.9M · current IHT exposure £1.16M · April 2027 SIPP change in 685 days' },
+    { step: 'Consulted Trust Lawyer lens',        detail: 'Modelled NRB £325k + RNRB £175k transferable; PETs 7-year clock; AIM BPR 2-year hold' },
+    { step: 'Consulted Tax Accountant lens',      live: true, detail: 'Front-loaded pre-2027 SIPP withdrawal saves £340k lifetime IHT' },
+    { step: 'Consulted Insurance Adviser lens',   detail: 'Quoted whole-of-life £1M cover at ~£8k/yr, normal-expenditure exemption qualifying' },
+    { step: 'Consulted Philanthropy Adviser lens', detail: 'Identified Charity 10% rule: estate reduced rate 36% vs 40%' },
+    { step: 'Consulted Investment Adviser lens',  detail: 'AIM BPR-qualifying portfolio: 100% IHT exempt after 2yrs vs 7 for PETs' },
+    { step: 'Generated 4 candidate paths',         detail: 'Including unconsidered: AIM BPR (2-year horizon, faster than PETs)' },
+    { step: 'Engine-validated consequences',       live: true, detail: '14 numeric consequences validated against engine · 0 dropped' },
+    { step: 'Conflict scan',                       detail: '1 conflict: April 2027 SIPP IHT inclusion · path B optimal pre-change' },
+    { step: 'Ranked by IHT lifetime saving',       detail: 'Recommended path: Option B (pre-2027 SIPP drawdown) — captures the deadline window' },
+  ],
   _fallback: true,
 }
 

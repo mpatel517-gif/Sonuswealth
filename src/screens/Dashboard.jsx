@@ -697,7 +697,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           />
         </OverlayShell>
       )}
-      {showMagic && <MagicShowcase onClose={() => setShowMagic(false)} />}
+      {showMagic && <MagicShowcase entity={wireEntity} onClose={() => setShowMagic(false)} />}
       {dePayload !== null && (
         <OverlayShell title="Decision Engine" onBack={() => setDePayload(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngineV2

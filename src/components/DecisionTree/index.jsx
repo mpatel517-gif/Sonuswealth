@@ -128,6 +128,114 @@ function ResearchSources({ research }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+// ── Reasoning trace ──────────────────────────────────────────────────────────
+// Renders the path that produced the recommendation: which lenses were
+// consulted, what each contributed, how options were ranked. Sourced from
+// tree._reasoningTrace (canned trees) or synthesised from tree fields when
+// Claude returns a tree without an explicit trace.
+function ReasoningTrace({ tree }) {
+  const [open, setOpen] = useState(false)
+
+  // Synthesise a trace from the tree shape if none provided.
+  const trace = tree._reasoningTrace || (() => {
+    const t = []
+    t.push({ step: 'Read your situation', detail: `Event: ${(tree.events ?? []).join(', ') || 'general'}` })
+    t.push({
+      step: 'Generated candidate paths',
+      detail: `${tree.options?.length ?? 0} options including the unconsidered alternative`,
+    })
+    if (tree._validation) {
+      t.push({
+        step: 'Engine-validated consequences',
+        detail: `${tree._validation.validated} validated · ${tree._validation.dropped} dropped`,
+        live: true,
+      })
+    }
+    if (tree.conflicts?.length) {
+      t.push({
+        step: 'Conflict scan',
+        detail: `${tree.conflicts.length} conflict${tree.conflicts.length === 1 ? '' : 's'} surfaced (deadlines, dependencies)`,
+      })
+    }
+    if (tree.recommendation) {
+      t.push({
+        step: 'Ranked by lifetime impact × certainty',
+        detail: `Recommended path: Option ${tree.recommendation.pathId}`,
+      })
+    }
+    return t
+  })()
+
+  if (!trace || trace.length === 0) return null
+
+  return (
+    <div style={{
+      margin: '14px 0', borderRadius: 10,
+      background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+      overflow: 'hidden',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, padding: '12px 16px',
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'inherit', textAlign: 'left',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: 0.4 }}>
+            HOW DID SONU GET HERE?
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
+            {trace.length} reasoning steps · click to {open ? 'hide' : 'expand'}
+          </div>
+        </div>
+        <span style={{
+          fontSize: 14, color: 'var(--c-text3)',
+          transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+        }}>⌄</span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 16px 16px' }}>
+          {trace.map((s, i) => (
+            <div key={i} style={{
+              display: 'flex', gap: 12, padding: '10px 0',
+              borderTop: '1px solid var(--c-sep)',
+            }}>
+              <span style={{
+                flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                background: 'var(--c-acc)', color: '#0B1F3A',
+                fontSize: 10, fontWeight: 800,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {i + 1}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                  {s.step}
+                  {s.live && (
+                    <span style={{
+                      padding: '1px 5px', borderRadius: 100, fontSize: 8, fontWeight: 800, letterSpacing: 0.3,
+                      background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.4)',
+                      color: 'var(--c-acc)',
+                    }}>LIVE</span>
+                  )}
+                </div>
+                {s.detail && (
+                  <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.5 }}>
+                    {s.detail}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DecisionTree({ tree, events, onCommit, onSaveScenario, onDropEvent }) {
   const [expandedId, setExpandedId] = useState(null)
   const [showUnconsidered, setShowUnconsidered] = useState(false)
@@ -295,6 +403,9 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
           </div>
         </div>
       )}
+
+      {/* Reasoning trace — how Sonu got to the recommendation */}
+      <ReasoningTrace tree={tree} />
 
       {/* Adviser CTA */}
       {tree._adviserCTA?.show && (

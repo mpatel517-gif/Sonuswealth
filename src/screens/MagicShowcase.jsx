@@ -11,7 +11,8 @@
  *   3. £70k Drawdown — how would you reduce tax on a £70k SIPP draw?
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { lens as taxAccountantLens } from '../lenses/tax-accountant.js'
 
 // ── Section 1: CoI Odometer ──────────────────────────────────────────────────
 
@@ -303,8 +304,59 @@ const LENSES = [
   },
 ]
 
-function ElevenAdvisorsDemo({ }) {
+// Map severity number (3/2/1) to label, since the lens uses numeric severity.
+function sevLabel(severity) {
+  return severity === 3 ? 'HIGH' : severity === 2 ? 'MED' : 'LOW'
+}
+
+// Format the £-impact line from a lens recommendation.
+function fmtRecImpact(rec) {
+  const imp = rec?.impact || {}
+  if (imp.gbp_per_year)   return `£${imp.gbp_per_year.toLocaleString()}/yr`
+  if (imp.gbp_lifetime)   return `£${imp.gbp_lifetime.toLocaleString()} lifetime`
+  if (imp.gbp_one_off)    return `£${imp.gbp_one_off.toLocaleString()} one-off`
+  return '—'
+}
+
+// Build the LIVE Tax Accountant card from the lens output.
+// Falls back to the hardcoded entry if the lens throws.
+function buildLiveTaxAccountantCard(entity) {
+  try {
+    const obs = taxAccountantLens.observe(entity) || []
+    const recs = taxAccountantLens.recommend(entity) || []
+    if (obs.length === 0 && recs.length === 0) return null
+    return {
+      id: 'tax', avatar: '🧾', name: 'Tax Accountant',
+      tagline: 'wrappers, allowances, sequencing',
+      _live: true,  // marker so UI can show "LIVE" badge
+      insights: obs.slice(0, 3).map(o => ({
+        sev: sevLabel(o.severity),
+        text: o.text,
+        citation: o.citation,
+      })),
+      recs: recs.slice(0, 3).map(r => ({
+        headline: r.headline,
+        impact: fmtRecImpact(r),
+        citation: r.citation,
+      })),
+    }
+  } catch (err) {
+    console.warn('[MagicShowcase] Tax Accountant lens failed — using hand-crafted fallback', err)
+    return null
+  }
+}
+
+function ElevenAdvisorsDemo({ entity }) {
   const [expanded, setExpanded] = useState(null)
+
+  // Live lens output replaces the hand-crafted Tax Accountant card when entity present.
+  const lensesWithLive = useMemo(() => {
+    if (!entity) return LENSES
+    const live = buildLiveTaxAccountantCard(entity)
+    if (!live) return LENSES
+    return LENSES.map(l => l.id === 'tax' ? live : l)
+  }, [entity])
+
   return (
     <div style={{ padding: '24px 20px' }}>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 18 }}>
@@ -317,13 +369,14 @@ function ElevenAdvisorsDemo({ }) {
         gap: 10,
         marginBottom: 24,
       }}>
-        {LENSES.map(lens => {
+        {lensesWithLive.map(lens => {
           const isExpanded = expanded === lens.id
           return (
             <button
               key={lens.id}
               onClick={() => setExpanded(isExpanded ? null : lens.id)}
               style={{
+                position: 'relative',
                 padding: '14px 12px', borderRadius: 14,
                 background: isExpanded ? 'var(--c-acc)' : 'var(--c-surface)',
                 border: `1px solid ${isExpanded ? 'var(--c-acc)' : 'var(--c-sep)'}`,
@@ -332,6 +385,18 @@ function ElevenAdvisorsDemo({ }) {
                 transform: isExpanded ? 'scale(1.02)' : 'scale(1)',
               }}
             >
+              {lens._live && (
+                <span style={{
+                  position: 'absolute', top: 6, right: 6,
+                  padding: '2px 6px', borderRadius: 100,
+                  background: isExpanded ? 'rgba(11,31,58,0.18)' : 'rgba(93,219,194,0.18)',
+                  border: '1px solid ' + (isExpanded ? 'rgba(11,31,58,0.3)' : 'rgba(93,219,194,0.45)'),
+                  fontSize: 8, fontWeight: 800, letterSpacing: 0.4,
+                  color: isExpanded ? '#0B1F3A' : 'var(--c-acc)',
+                }}>
+                  LIVE
+                </span>
+              )}
               <div style={{ fontSize: 26, marginBottom: 8 }}>{lens.avatar}</div>
               <div style={{
                 fontSize: 12, fontWeight: 700,
@@ -353,7 +418,8 @@ function ElevenAdvisorsDemo({ }) {
       </div>
 
       {expanded && (() => {
-        const lens = LENSES.find(l => l.id === expanded)
+        const lens = lensesWithLive.find(l => l.id === expanded)
+        if (!lens) return null
         return (
           <div style={{
             background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
@@ -362,9 +428,32 @@ function ElevenAdvisorsDemo({ }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ fontSize: 32 }}>{lens.avatar}</div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)' }}>{lens.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{lens.tagline}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)' }}>{lens.name}</div>
+                  {lens._live ? (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 100,
+                      background: 'rgba(93,219,194,0.18)',
+                      border: '1px solid rgba(93,219,194,0.45)',
+                      fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                      color: 'var(--c-acc)',
+                    }}>
+                      LIVE ENGINE
+                    </span>
+                  ) : (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 100,
+                      background: 'var(--c-surface2)',
+                      border: '1px solid var(--c-sep)',
+                      fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                      color: 'var(--c-text3)',
+                    }}>
+                      SCAFFOLD
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>{lens.tagline}</div>
               </div>
             </div>
 
@@ -372,20 +461,29 @@ function ElevenAdvisorsDemo({ }) {
             <div style={{ marginBottom: 16 }}>
               {lens.insights.map((o, i) => (
                 <div key={i} style={{
-                  display: 'flex', gap: 10, padding: '8px 0',
+                  padding: '8px 0',
                   borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
-                  fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5,
                 }}>
-                  <span style={{
-                    flexShrink: 0, padding: '2px 7px', borderRadius: 4,
-                    fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
-                    background: o.sev === 'HIGH' ? 'rgba(255,111,125,0.15)' : o.sev === 'MED' ? 'rgba(255,214,110,0.15)' : 'rgba(127,140,159,0.15)',
-                    color: o.sev === 'HIGH' ? 'var(--c-acc3)' : o.sev === 'MED' ? 'var(--c-gold)' : 'var(--c-text3)',
-                    alignSelf: 'flex-start',
+                  <div style={{
+                    display: 'flex', gap: 10,
+                    fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5,
                   }}>
-                    {o.sev}
-                  </span>
-                  <span style={{ flex: 1 }}>{o.text}</span>
+                    <span style={{
+                      flexShrink: 0, padding: '2px 7px', borderRadius: 4,
+                      fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                      background: o.sev === 'HIGH' ? 'rgba(255,111,125,0.15)' : o.sev === 'MED' ? 'rgba(255,214,110,0.15)' : 'rgba(127,140,159,0.15)',
+                      color: o.sev === 'HIGH' ? 'var(--c-acc3)' : o.sev === 'MED' ? 'var(--c-gold)' : 'var(--c-text3)',
+                      alignSelf: 'flex-start',
+                    }}>
+                      {o.sev}
+                    </span>
+                    <span style={{ flex: 1 }}>{o.text}</span>
+                  </div>
+                  {o.citation && (
+                    <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, paddingLeft: 36, fontStyle: 'italic' }}>
+                      Source: {o.citation}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -393,19 +491,29 @@ function ElevenAdvisorsDemo({ }) {
             <div className="sw-eyebrow" style={{ marginBottom: 8 }}>What I'd recommend</div>
             {lens.recs.map((r, i) => (
               <div key={i} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 12, padding: '10px 0',
+                padding: '10px 0',
                 borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
               }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>★ {r.headline}</div>
                 <div style={{
-                  flexShrink: 0, padding: '3px 10px', borderRadius: 100,
-                  background: 'rgba(93,219,194,0.12)',
-                  border: '1px solid rgba(93,219,194,0.3)',
-                  fontSize: 11, fontWeight: 700, color: 'var(--c-acc)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 12,
                 }}>
-                  {r.impact}
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>★ {r.headline}</div>
+                  <div style={{
+                    flexShrink: 0, padding: '3px 10px', borderRadius: 100,
+                    background: 'rgba(93,219,194,0.12)',
+                    border: '1px solid rgba(93,219,194,0.3)',
+                    fontSize: 11, fontWeight: 700, color: 'var(--c-acc)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {r.impact}
+                  </div>
                 </div>
+                {r.citation && (
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
+                    Source: {r.citation}
+                  </div>
+                )}
               </div>
             ))}
 
@@ -415,7 +523,10 @@ function ElevenAdvisorsDemo({ }) {
               color: 'var(--c-text3)', lineHeight: 1.5,
               textAlign: 'center',
             }}>
-              Information only · Drawn from canonical UK rules ({lens.id}-2026.1) · Not regulated advice
+              {lens._live
+                ? 'Information only · Live computation from canonical UK rules · Not regulated advice'
+                : `Information only · Scaffold preview — wires to live lens engine in upcoming release · Not regulated advice`
+              }
             </div>
           </div>
         )
@@ -439,21 +550,64 @@ const DRAWDOWN_STRATEGIES = [
   { rank: 8, label: 'Charity 10% on TFC',                   saving:   900, certainty: 85, why: 'Gift Aid £1,750 of TFC (10%) → £450 higher-rate relief + £450 Gift Aid uplift.' },
 ]
 
-function DrawdownDemo() {
+// Reasoning trace — each step is shown sequentially during "analyse".
+// Each step represents a lens being consulted or a transformation applied.
+// Total runtime ~2.8s. Founder can pause on this screen to talk through the
+// reasoning path that produced the strategy list.
+const TRACE_STEPS = [
+  { id: 'situation',    label: 'Reading your situation',                  detail: 'Income £150k · SIPP £1M · Marginal rate 40%',                ms: 450 },
+  { id: 'tax',          label: 'Consulting Tax Accountant',                detail: '+5 strategies (TFC phasing, ISA, bed-and-ISA, CGT, carry-fwd)', ms: 500, live: true },
+  { id: 'pension',      label: 'Consulting Pension Specialist',            detail: '+3 strategies (spouse split, defer SP, AA top-up)',          ms: 500 },
+  { id: 'ifa',          label: 'Consulting IFA (Holistic)',                detail: '+2 strategies (stagger across years, asset location)',       ms: 500 },
+  { id: 'philanthropy', label: 'Consulting Philanthropy Adviser',          detail: '+1 strategy (Charity 10% on TFC)',                          ms: 400 },
+  { id: 'dedupe',       label: 'De-duplicating overlapping ideas',         detail: '11 raw → 8 distinct strategies',                            ms: 350 },
+  { id: 'rank',         label: 'Ranking by (£ saving × certainty)',         detail: '0 strategies dropped (all ≥ £500 minimum threshold)',       ms: 350 },
+]
+
+function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
   const [revealed, setRevealed] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [completedSteps, setCompletedSteps] = useState([])
+  const [showTrace, setShowTrace] = useState(false)
   const baseTax = 15_432
   const totalSaving = DRAWDOWN_STRATEGIES.reduce((s, st) => s + st.saving, 0)
+  const timersRef = useRef([])
+
+  function clearTimers() {
+    timersRef.current.forEach(t => clearTimeout(t))
+    timersRef.current = []
+  }
 
   function analyse() {
-    setLoading(true)
-    setTimeout(() => { setLoading(false); setRevealed(true) }, 1400)
+    setRunning(true)
+    setCompletedSteps([])
+    setRevealed(false)
+    let acc = 0
+    TRACE_STEPS.forEach((step, idx) => {
+      acc += step.ms
+      const t = setTimeout(() => {
+        setCompletedSteps(prev => [...prev, step.id])
+      }, acc)
+      timersRef.current.push(t)
+    })
+    // Reveal strategy list shortly after the last step
+    const t = setTimeout(() => {
+      setRevealed(true)
+      setRunning(false)
+    }, acc + 350)
+    timersRef.current.push(t)
   }
 
   function reset() {
+    clearTimers()
     setRevealed(false)
-    setLoading(false)
+    setRunning(false)
+    setCompletedSteps([])
+    setShowTrace(false)
   }
+
+  // Clean up timers on unmount
+  useEffect(() => () => clearTimers(), [])
 
   return (
     <div style={{ padding: '24px 20px' }}>
@@ -470,7 +624,7 @@ function DrawdownDemo() {
         </div>
       </div>
 
-      {!revealed && !loading && (
+      {!revealed && !running && (
         <button
           onClick={analyse}
           style={{
@@ -485,17 +639,61 @@ function DrawdownDemo() {
         </button>
       )}
 
-      {loading && (
-        <div style={{ textAlign: 'center', padding: 32 }}>
-          <div style={{
-            display: 'inline-block', width: 28, height: 28,
-            border: '3px solid var(--c-sep)', borderTopColor: 'var(--c-acc)',
-            borderRadius: '50%', animation: 'magic-spin 0.9s linear infinite',
-          }} />
-          <div style={{ fontSize: 13, color: 'var(--c-text2)', marginTop: 12 }}>
-            Sonu is consulting all 11 advisor lenses…
+      {(running || revealed) && (
+        <div style={{
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+          borderRadius: 14, padding: '16px 18px',
+          marginBottom: revealed ? 16 : 0,
+          display: revealed && !showTrace ? 'none' : 'block',
+        }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>How Sonu got to the answer</span>
+            {revealed && (
+              <button
+                onClick={() => setShowTrace(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--c-text3)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                hide ✕
+              </button>
+            )}
           </div>
-          <style>{`@keyframes magic-spin { to { transform: rotate(360deg) } }`}</style>
+          {TRACE_STEPS.map((step, i) => {
+            const done = completedSteps.includes(step.id)
+            const active = !done && i === completedSteps.length && running
+            return (
+              <div key={step.id} style={{
+                display: 'flex', gap: 10, padding: '7px 0',
+                opacity: done || active ? 1 : 0.3,
+                transition: 'opacity .25s',
+              }}>
+                <span style={{
+                  flexShrink: 0, width: 18, height: 18, borderRadius: '50%',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 800,
+                  background: done ? 'var(--c-acc)' : 'transparent',
+                  border: done ? 'none' : '1px solid var(--c-sep)',
+                  color: done ? '#0B1F3A' : 'var(--c-text3)',
+                }}>
+                  {done ? '✓' : active ? '·' : ''}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>
+                    {step.label}
+                    {step.live && (
+                      <span style={{
+                        padding: '1px 5px', borderRadius: 100, fontSize: 8, fontWeight: 800, letterSpacing: 0.3,
+                        background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.4)',
+                        color: 'var(--c-acc)',
+                      }}>LIVE</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>
+                    {step.detail}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -507,7 +705,22 @@ function DrawdownDemo() {
             borderRadius: 18, padding: '18px 20px', marginBottom: 16,
             animation: 'magic-fade-up .35s ease-out',
           }}>
-            <div className="sw-eyebrow" style={{ marginBottom: 6, color: 'var(--c-acc)' }}>Sonu found</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
+              <div className="sw-eyebrow" style={{ color: 'var(--c-acc)' }}>Sonu found</div>
+              {!showTrace && (
+                <button
+                  onClick={() => setShowTrace(true)}
+                  style={{
+                    padding: '4px 10px', borderRadius: 100,
+                    background: 'transparent', border: '1px solid var(--c-acc)',
+                    color: 'var(--c-acc)', fontSize: 10, fontWeight: 700, letterSpacing: 0.3,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  How did Sonu get here? ↑
+                </button>
+              )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
                 {DRAWDOWN_STRATEGIES.length} strategies
@@ -583,7 +796,7 @@ const SECTIONS = [
   { id: 'strategies', label: '£70k drawdown',           sub: '8 ways to cut the tax' },
 ]
 
-export default function MagicShowcase({ onClose }) {
+export default function MagicShowcase({ entity, onClose }) {
   const [section, setSection] = useState('coi')
 
   return (
@@ -643,8 +856,8 @@ export default function MagicShowcase({ onClose }) {
 
       {/* Section content */}
       {section === 'coi' && <CoIOdometerDemo />}
-      {section === 'lenses' && <ElevenAdvisorsDemo />}
-      {section === 'strategies' && <DrawdownDemo />}
+      {section === 'lenses' && <ElevenAdvisorsDemo entity={entity} />}
+      {section === 'strategies' && <DrawdownDemo entity={entity} />}
 
       {/* Footer */}
       <div style={{

@@ -2,7 +2,7 @@
 // CAELIXA / FINIO — UNIVERSAL ENGINE HELPERS  (CANONICAL)
 // Schema-agnostic readers that return consistent values from EITHER persona shape:
 
-import TAX_JSON from '../rules/tax-2026.json'
+import TAX_JSON from '../rules/UK-2026.1.1.json' with { type: 'json' };
 //
 //   LEGACY FLAT (persona-a..g.json):
 //     entity.assets.sipp.total, .isa.value, .residence.value, .portfolio.value,

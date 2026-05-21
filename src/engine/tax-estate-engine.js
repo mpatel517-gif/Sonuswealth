@@ -6,7 +6,7 @@
 // bundle param accepts 'UK-2026.1' string — functions read from TAX_JSON directly.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import TAX_JSON from '../rules/tax-2026.json' with { type: 'json' };
+import TAX_JSON from '../rules/UK-2026.1.1.json' with { type: 'json' };
 import {
   calcAge,
   ihtSippDelta,

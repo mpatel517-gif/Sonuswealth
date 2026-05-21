@@ -364,7 +364,7 @@ P5 All wired ─────────> P6 Validation ───> P7 Demo perso
 - `src/engine/monthly-flow-engine.js` — 5KB · flow
 
 ### Rules (3 files)
-- `src/rules/tax-2026.json` — UK tax rules
+- `src/rules/UK-2026.1.1.json` — UK tax rules (canonical, v1.1.1)
 - `src/rules/cma-2026.json` — Capital Market Assumptions
 - `src/rules/life-stages.json` — life stage definitions
 

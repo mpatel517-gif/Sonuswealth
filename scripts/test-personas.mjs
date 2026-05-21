@@ -17,7 +17,7 @@ const projectRoot = resolve(__dirname, '..');
 const require = createRequire(import.meta.url);
 
 // Load tax bundle via require (works for JSON in CJS compat mode)
-const TAX_JSON = require(resolve(projectRoot, 'src/rules/tax-2026.json'));
+const TAX_JSON = require(resolve(projectRoot, 'src/rules/UK-2026.1.1.json'));
 
 // ── TAX OBJECT (mirrors fq-calculator.js:30-68) ─────────────────────────────
 const TAX = {

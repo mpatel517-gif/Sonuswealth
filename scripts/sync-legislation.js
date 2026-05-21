@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-const CONFIG_PATH = './src/rules/tax-2026.json';
+const CONFIG_PATH = './src/rules/UK-2026.1.1.json';
 const ANOMALY_THRESHOLD = 0.10; // Strict 10% safety fence
 
 async function fetchLiveLegislation() {

@@ -17,7 +17,7 @@ function loadJSON(path) {
   return JSON.parse(readFileSync(fullPath, 'utf8'));
 }
 
-const TAX_2026 = loadJSON('../src/rules/tax-2026.json');
+const TAX_2026 = loadJSON('../src/rules/UK-2026.1.1.json');
 const TAX_2021 = loadJSON('../src/rules/tax-2021.json');
 
 const C = {

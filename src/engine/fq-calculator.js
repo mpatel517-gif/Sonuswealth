@@ -5,7 +5,7 @@
 // Every output carries rulesVersion + scoringVersion stamps.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import TAX_JSON from '../rules/tax-2026.json' with { type: 'json' };
+import TAX_JSON from '../rules/UK-2026.1.1.json' with { type: 'json' };
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
 import {
   pensionTotal     as _pensionTotal,

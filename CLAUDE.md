@@ -185,7 +185,7 @@ If you find yourself writing "built", stop and pick the right state.
 These are non-negotiable. Every line of code must comply.
 
 1. **Do not rebuild `fq-calculator.js`.** It is the financial engine. Extend at the bottom only. Never modify or rewrite an existing exported function. If a function does the wrong thing, add a new function alongside and migrate callers — do not edit in place. **Wave 1A exception (D-QUALITY-BAR-1):** the 9 X28 stubs at lines 1298+ marked "STUB: implement at s02a" are explicitly unblocked for stub-body-to-real-impl replacement. This is a one-time exception with founder go-ahead. The 7 chart-rendering function param expansions in Wave 1B remain strictly additive — new optional params with defaults, never modifying existing call shape.
-2. **Do not hardcode tax rates, allowances, thresholds, band boundaries, growth assumptions, or SWR rates.** All come from the bundle JSONs (`src/rules/tax-2026.json`, CMA bundles when wired). If you write `325000`, you are doing it wrong.
+2. **Do not hardcode tax rates, allowances, thresholds, band boundaries, growth assumptions, or SWR rates.** All come from the bundle JSONs (`src/rules/UK-2026.1.1.json` — canonical, CMA bundles when wired). If you write `325000`, you are doing it wrong.
 3. **Do not rewrite `TripleAnchor`, `TimeWindowSelector`, `CostOfInactionStrip`.** They are shared. Every primary screen imports them. If you need new behaviour, extend the existing component or wrap it — do not fork. **Wave 1C exception (D-QUALITY-BAR-1):** `TimeWindowSelector` window-ID refactor (current IDs → X28 canonical) is an atomic in-place rename across engine consumers + UI callers + Cashflow.jsx state strings + tests in **one coordinated commit**. No shim-and-migrate pattern. No backward-compat aliases.
 4. **`HomeV2.jsx` is superseded (D-HOMEV2-1, 4 May 2026).** HomeV2.jsx has been replaced by the radar component on `HomeScreen.jsx`. Home agents proceed normally on `HomeScreen.jsx` without a Jit coordination guard. **Exception:** the radar component within `HomeScreen.jsx` (rendered via `<DimensionRadar />` and adjacent compositions) remains Jit's domain — extend it through props (the existing `onWealthTap` / `onRiskTap` / `onNetWorthTap` pattern) or wrap it; do not modify its internals. If a Wave-1E Home task requires changes inside the radar component, escalate to founder before starting.
 5. **Agents do not push to git or deploy.** Local commits are encouraged (atomic, per task, with the message format in §7). `git push` and Vercel deploys are founder-only actions — never run them, never propose them as a next step. If a commit needs to land remotely, hand it to the founder.
@@ -289,7 +289,7 @@ If steps 1–2 slip, freeze new per-tab work — depth without cross-cuttings is
 | Event store adapter | `src/engine/eventStore.js` (Supabase wrapper · D-EVENTSTORE-1) |
 | Event store schema | `parts/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md` |
 | Design tokens | `src/index.css` |
-| Tax rules bundle | `src/rules/tax-2026.json` (UK-2026.1) |
+| Tax rules bundle | `src/rules/UK-2026.1.1.json` (UK-2026.1.1 — canonical, single source of truth as of Phase 1 consolidation 2026-05-21) |
 | Persona test data | `src/rules/personas/persona-{a..g}.json` |
 | Authority resolver | `parts/1-Foundation/AUTHORITY-MAP.md` |
 | Per-tab specs | `parts/2-Product/2-Product-{cashflow|home|mymoney|tax-estate|timeline|risk-layer|settings-master|onboarding}-v1_X.md` (use highest version) |

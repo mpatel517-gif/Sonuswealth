@@ -47,6 +47,8 @@ function parseArgs(argv) {
     else if (a === '--deepseek') args.provider = 'deepseek';
     else if (a === '--rules-only') args.provider = 'rules';
     else if (a === '--hybrid') args.provider = 'hybrid';
+    else if (a === '--matrix') args.matrix = true;
+    else if (a === '--all-personas') args.allPersonas = true;
   }
   return args;
 }
@@ -65,6 +67,20 @@ if (args.full) {
   // 7 main personas × all years = 42 runs
   workPersonas = ['persona-a','persona-b','persona-c','persona-d','persona-e','persona-f','persona-g'];
   workYears = [...ALL_YEARS];
+}
+if (args.matrix) {
+  // All 85 matrix personas
+  const matrixList = await listPersonas('matrix');
+  const matrixIds = matrixList.map(p => p.persona_id);
+  workPersonas = [...new Set([...workPersonas, ...matrixIds])];
+  if (workYears.length === 0) workYears = [...ALL_YEARS];
+}
+if (args.allPersonas) {
+  // 7 main + 85 matrix = 92 personas
+  const main = ['persona-a','persona-b','persona-c','persona-d','persona-e','persona-f','persona-g'];
+  const matrixList = await listPersonas('matrix');
+  workPersonas = [...main, ...matrixList.map(p => p.persona_id)];
+  if (workYears.length === 0) workYears = [...ALL_YEARS];
 }
 if (workPersonas.length === 0) {
   // Default to main 7

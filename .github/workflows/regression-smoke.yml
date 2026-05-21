@@ -1,0 +1,63 @@
+name: regression-smoke
+
+# Runs the rules-based regression harness on every push to main + nightly.
+# Catches engine regressions before they reach production.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/engine/**'
+      - 'src/rules/**'
+      - 'tests/harness/**'
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '15 3 * * *'   # 03:15 UTC daily
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: 7 personas × 2025/26 (rules-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run smoke
+        run: node tests/harness/runner.mjs --years 2025/26 --rules-only
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-smoke-${{ github.run_id }}
+          path: tests/reports/audit-*.md
+          retention-days: 30
+
+  full-rules:
+    name: 7 personas × 6 years (rules-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only run on schedule + manual dispatch (not every push)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: node tests/harness/runner.mjs --full --rules-only
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-full-${{ github.run_id }}
+          path: tests/reports/audit-*.md
+          retention-days: 90

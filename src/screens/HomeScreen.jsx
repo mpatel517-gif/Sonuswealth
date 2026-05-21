@@ -1797,6 +1797,7 @@ export default function HomeScreen({
   onAskAI,                  // eslint-disable-line no-unused-vars
   onOpenBreakdown,          // FQBreakdown overlay (used by Score Drillable)
   onDrillMetric,            // PP-3 — push detail frame onto Dashboard's stack
+  onShowMagic,              // Demo-day WOW showcase overlay
 }) {
   // ── viewMode lives here as LOCAL state (Task 2) ────────────────────────
   const [viewMode, setViewMode] = useState('actual')
@@ -1852,6 +1853,38 @@ export default function HomeScreen({
 
       {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
       <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
+
+      {/* ── See the difference — WOW showcase entry point ────────────── */}
+      {onShowMagic && (
+        <div style={{ padding: '8px 16px 0' }}>
+          <button
+            onClick={onShowMagic}
+            style={{
+              width: '100%',
+              padding: '14px 16px', borderRadius: 14,
+              background: 'linear-gradient(135deg, rgba(93,219,194,0.16) 0%, rgba(175,82,222,0.12) 100%)',
+              border: '1px solid rgba(93,219,194,0.35)',
+              color: 'var(--c-text)',
+              cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'transform .15s ease, border-color .15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.borderColor = 'var(--c-acc)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';   e.currentTarget.style.borderColor = 'rgba(93,219,194,0.35)' }}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1 }}>✨</span>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.2, marginBottom: 2 }}>
+                See what makes Sonuswealth different
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.4 }}>
+                Watch Cost of Inaction drop · 11 specialist advisors · £70k drawdown deconstructed
+              </div>
+            </div>
+            <span style={{ fontSize: 16, color: 'var(--c-acc)' }}>›</span>
+          </button>
+        </div>
+      )}
 
       {/* ── Anchor row (inline AnchorRow component defined above) ─────── */}
       <AnchorRow

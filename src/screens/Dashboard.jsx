@@ -30,6 +30,7 @@ import Reports         from './Reports.jsx'
 import IFAPractice     from './IFAPractice.jsx'
 import DecisionEngine  from './DecisionEngine.jsx'
 import DecisionEngineV2 from './DecisionEngineV2.jsx'
+import MagicShowcase   from './MagicShowcase.jsx'
 import Sidebar         from '../components/Shell/Sidebar.jsx'
 import { driver }      from '../engine/driver-engine.js'
 import { readDrill, recordDrill, drillAsWhisper } from '../state/drillMemory.js'
@@ -169,6 +170,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   // and applies the seed values. Cleared once consumed.
   const [scenarioSeed, setScenarioSeed] = useState(null)
   const [dePayload,    setDePayload]    = useState(null)
+  const [showMagic,    setShowMagic]    = useState(false)
 
   // Tab id migration shim (2026-05-15 rename 'plan' → 'timeline', coord FIX-10).
   // Children (HomeScreen onNav, NotificationCentre dest, persisted state) may
@@ -448,6 +450,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             onAskAI={handleAskAI}
             onOpenBreakdown={openBreakdown}
             onDrillMetric={pushDetail}
+            onShowMagic={() => setShowMagic(true)}
           />
         )}
         {tab === 'money' && (
@@ -694,6 +697,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           />
         </OverlayShell>
       )}
+      {showMagic && <MagicShowcase onClose={() => setShowMagic(false)} />}
       {dePayload !== null && (
         <OverlayShell title="Decision Engine" onBack={() => setDePayload(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngineV2

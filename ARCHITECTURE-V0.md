@@ -587,4 +587,215 @@ This document replaces the previous `DEMO-V0-DEFINITION.md` which proposed 5 sta
 
 ---
 
-*v1 architecture. Once locked, no scope additions to MVP-1 without re-sign. Backlog captures new ideas via `IDEAS-BACKLOG.md`.*
+## 18. DECISIONS LOCKED — 2026-05-21 (founder response)
+
+### Q1 — Lens activation: "they all need to come in when required — I don't know when"
+
+**Decision:** Build all 11 lens shells from day 1. Each lens declares its own `is_relevant(persona) → score 0..1` predicate. A **router** runs the predicates against persona state and surfaces only relevant lenses for THIS user. Bruce gets 6/11 lenses (Tax, Pension, Trust, IFA, Investment, Later-Life). Hugo gets 4/11 (Tax, IFA, Mortgage, Protection). No hardcoded "v0 lens set."
+
+**Implementation:**
+```js
+// Each lens implements
+is_relevant(persona): { score: 0..1, reason: string }
+
+// Router invokes
+function routeLenses(persona) {
+  return LENS_REGISTRY
+    .map(lens => ({ lens, relevance: lens.is_relevant(persona) }))
+    .filter(r => r.relevance.score > 0.3)
+    .sort((a, b) => b.relevance.score - a.relevance.score);
+}
+```
+
+**v0 doesn't pre-pick lenses.** It builds all 11 shells (~50 lines each, just the relevance predicate + skeleton methods) + Tax Accountant fully implemented (~500 lines). Other 10 lenses ship as shells; each is fleshed out as practitioner panel signs them off.
+
+### Q2 — Tax Accountant first
+
+Confirmed. MVP-1 builds Tax Accountant lens end-to-end. ~500 lines, citation-enforced, 6-8 observations + 6-8 strategies.
+
+### Q3 — Mr T fixtures for validation
+
+**Decision:** Use the 13 Mr T fixtures (already in `3-Engine/mrT-*.json`) as the canonical test bed for every lens. Each fixture has an `expected_output_envelope` block with pre-computed correct answers.
+
+**Test contract:** every new lens must pass regression against ALL 13 Mr T fixtures before flipping EXPERIMENTAL → LIVE. Specifically:
+- `expected_output_envelope.fq_score_range` matches engine output ± 2 points
+- `expected_output_envelope.iht_projection` matches ± £1k
+- Lens recommendations are deterministic across re-runs (same input → same output)
+- No untraceable numbers in rationalised prose
+
+Bruce, Catherine, Hugo become **demo personas only** (curated for narrative). Mr T fixtures are the **validation set**.
+
+New test file: `tests/lens-mrT-regression.mjs` — runs every lens against every fixture. Replaces `test-persona-snapshots.mjs` as the gate for engine + lens correctness.
+
+### Q4 — DeepSeek with arithmetic double-check
+
+**Decision:** Engine is single source of arithmetic truth. LLM is text-only.
+
+**Three-layer defence:**
+1. **LLM cannot generate numbers.** Rationalisation prompt explicitly provides engine outputs. LLM rephrases — never recomputes.
+2. **Post-rationalisation validator strips all £ values from LLM output and checks each against engine outputs.** Any £ value not in engine outputs = automatic rejection + retry with stricter prompt.
+3. **Rule-validator (offline, deterministic) runs in parallel** and flags any computation that violates UK rule invariants (e.g. PA > £12,570, ISA > £20k, etc.).
+
+```js
+// src/guardrails/arithmetic-traceability.js
+export function enforceArithmetic(llmText, engineOutputs) {
+  const pounds = llmText.match(/£[\d,]+(\.\d+)?/g) || [];
+  const known = new Set(formatAllOutputs(engineOutputs));
+  for (const p of pounds) {
+    if (!known.has(p)) {
+      throw new ValidationError(`Untraceable value: ${p} not in engine outputs`);
+    }
+  }
+  return llmText;
+}
+```
+
+If DeepSeek's prose contains a number not in `engineOutputs`, the LLM hallucinated and we retry. This makes DeepSeek's arithmetic weakness irrelevant — it can't break what it can't compute.
+
+**Backup model:** If DeepSeek output is rejected 3 times in a row for the same recommendation, fail over to Claude Sonnet 4.6 (more arithmetic-reliable, more expensive). Telemetry tracks failover rate.
+
+### Q5 — Expert-authored knowledge content
+
+**Decision:** Domain expert authors all knowledge content. No LLM generation of legal/tax facts. ~200 entries × 30 min = 100 hours of expert time.
+
+**Phasing:** content authored alongside its consuming lens. Tax Accountant lens ships with ~30 tax-related knowledge entries (PA, NIC, ISA, dividend allowance, etc.). Pension Specialist ships with ~25 pension entries. Etc.
+
+**Founder action:** identify/commission domain expert (or self-author if comfortable). Each entry follows a template:
+```markdown
+# Term
+## Plain English
+3 sentences max. No jargon without immediate definition.
+## How it works
+Bullet list of mechanics.
+## Common mistakes
+Bullet list of pitfalls.
+## When this changes
+Effective dates, anticipated future changes (e.g. SIPP IHT Apr 2027).
+## Sources
+- HMRC Manual ref
+- Finance Act section
+- Statutory instrument
+```
+
+Author quality more important than speed. 5 entries/week × 40 weeks = 200 entries. Or expert sprint.
+
+### Q6 — Practitioner panel
+
+**Decision:** Each lens stays EXPERIMENTAL until practitioner panel signs off. Sign-off requires:
+- 30 representative cases reviewed
+- 95%+ agreement between lens output and panel's independent verdict
+- Documented edge cases where lens deviates and why
+- Founder approval to flip flag
+
+Until flipped, lens output displays an "EXPERIMENTAL — under expert review" banner. Honest.
+
+Founder responsible for recruiting panel (already in vault notes — `PRACTITIONER-RECRUITMENT.md`). Budget TBD.
+
+### Q7 — Determinism + challenge mechanism
+
+**Decision:** Same input → same recommendation always. Rules are rules. BUT user can challenge any recommendation.
+
+**Determinism enforcement:**
+- LLM temperature = 0.0 for rationalisation
+- Cached output for (state_hash, lens, asOfDate) — return cached result on re-call
+- Rule outputs are pure functions of state — no random elements
+
+**Challenge mechanism (UI):**
+```
+[Recommendation card]
+"Sacrifice £20k into pension → save £10k tax"
+[Why?] [Sources] [⚠ Challenge this]
+
+[On tap "Challenge this":]
+   - "What's wrong?"
+     ○ The £ figure is wrong
+     ○ The rule doesn't apply to me
+     ○ There's a better strategy
+     ○ I disagree with the reasoning
+     ○ Other
+   - Explain (free text)
+   - [Submit]
+   
+[Submission goes to review queue:]
+   - Practitioner panel reviews within 7 days
+   - If valid: rule updated (versioned), all affected users see new output
+   - If invalid: explanation sent to user
+   - All challenges logged with disposition
+```
+
+**Database table:** `finio_rule_challenges` — challenger_id, recommendation_id, objection_type, free_text, status, panel_response, rule_version_before, rule_version_after.
+
+Implementation: add to Supabase migration 011 (already drafted) + simple admin dashboard for panel.
+
+### Q8 — Couples model: my decision
+
+**Decision: 2 linked persona states + 1 merged dashboard.**
+
+**Data shape:**
+- Each spouse is a full PersonaState
+- A `couple_link` block at top: marriage_date, jurisdiction_of_marriage, financial_arrangement (joint/separate), nomination_links (each spouse's SIPP/will beneficiaries)
+- Engine functions accept `(personaA, personaB?)` — partner is optional second argument
+
+**UI:**
+- Main dashboard shows merged household view (combined NW, combined risk, combined IHT)
+- Toggle: "View as [Spouse A] / [Spouse B] / Both"
+- Each spouse has their own Optimiser screen (different tiles based on their state)
+- Couple-specific tiles (e.g. Marriage Allowance) marked as 👥
+- Lenses run twice (once per spouse) for individual-only recommendations
+- Lenses run jointly (with both states) for couple-specific recommendations (spousal nil-rate, pension splitting, joint property)
+
+**Transitions handled:**
+- Divorce → unlink, optimiser re-routes (now shows divorced-* archetype patterns)
+- Death → unlink, surviving spouse gets transferable NRB recomputed
+- New marriage → relink
+
+This is more work than single-persona-with-spouse-fields but mathematically clean. Worth it.
+
+---
+
+## 19. WHAT NOW
+
+With Q1-Q8 locked, MVP-1 (~12 hours, was 10):
+
+**Phase A (2 hrs):** Build lens-routing infrastructure
+- `src/lenses/index.js` — registry
+- `src/lenses/_base.js` — base class with shared methods
+- 11 lens shells (each ~50 lines: relevance predicate + skeleton)
+- Router function
+
+**Phase B (5 hrs):** Build Tax Accountant lens fully
+- ~6 observations
+- ~8 strategies wired
+- Citations to HMRC manual sections
+- Rationalisation prompt + arithmetic guardrail
+- ~30 knowledge entries (founder authors in parallel)
+
+**Phase C (3 hrs):** Build validation
+- `tests/lens-mrT-regression.mjs` — runs Tax Accountant against all 13 Mr T fixtures
+- Deterministic re-run check (same input twice = same output)
+- Arithmetic traceability validator
+- Challenge mechanism scaffold (DB table + API endpoint)
+
+**Phase D (2 hrs):** Build HTML mock screen
+- Single page: persona selector + Tax Accountant view
+- Observations panel
+- Recommendations panel (top 5)
+- Red flags strip
+- "Challenge this" affordance on each recommendation
+- "Ask Sonnu" placeholder
+
+**Success criteria:**
+- Tax Accountant lens runs on all 13 Mr T fixtures with deterministic output
+- ≥6 observations on each fixture
+- ≥3 recommendations with citations on each fixture
+- Zero untraceable £ values in any output
+- "Challenge this" submits to DB queue
+- Re-run with same input = exact same output (byte-for-byte after caching)
+
+After MVP-1, you (and ideally practitioner panel) review Tax Accountant output. If convincing, MVP-2 adds 3 more lenses. If not, we iterate Tax Accountant.
+
+**Total path to demo-ready: ~30-40 hours across 4 sessions.**
+
+---
+
+*v2 — decisions locked 2026-05-21. Founder approved direction. Next session begins MVP-1 Phase A.*

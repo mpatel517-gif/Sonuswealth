@@ -31,3 +31,8 @@ dist-ssr
 # Local-only working dirs
 .claude/
 backups/
+
+# Phase 2/3 additions
+tests/reports/audit-*.md
+tests/harness/_probe*.mjs
+deepseek-output.txt

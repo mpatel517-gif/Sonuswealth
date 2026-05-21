@@ -43,6 +43,13 @@ export const TABLES = {
   SCHEDULED_ACTIVATIONS: 'finio_scheduled_activations',
   USER_CONNECTIONS: 'finio_user_connections',
   CMA_BUNDLE: 'finio_cma_bundle',
+  // Phase 2 data layer (migration 011)
+  RULES_BUNDLES: 'finio_rules_bundles',
+  MACRO_VARIABLES: 'finio_macro_variables',
+  MACRO_HISTORY: 'finio_macro_history',
+  PERSONAS: 'finio_personas',
+  PERSONA_SNAPSHOTS: 'finio_persona_snapshots',
+  TEST_AUDIT_LOG: 'finio_test_audit_log',
 };
 
 /**

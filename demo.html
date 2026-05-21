@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en-GB"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caelixa — Tax Accountant view (Bruce Wayne)</title>
+<style>
+:root{--bg:#0a0e1a;--surface:#131726;--surface-2:#1a1f33;--border:rgba(255,255,255,0.08);--text:#e8eaf0;--text-dim:#9aa0b4;--text-faint:#6a7088;--accent:#00E5A8;--accent-dim:#00b388;--warn:#FFB547;--danger:#FF6B6B;--info:#4D8EFF;--radius:12px;--radius-sm:8px}
+*{box-sizing:border-box}
+body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5}
+.container{max-width:1200px;margin:0 auto;padding:24px 32px 80px}
+.masthead{display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:-0.01em;font-size:18px}
+.brand-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));border-radius:8px;display:grid;place-items:center;font-weight:800;color:#001a14;font-size:16px}
+.brand-tag{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em}
+.persona-bar{display:flex;align-items:center;gap:14px;background:var(--surface);padding:10px 16px;border-radius:var(--radius);border:1px solid var(--border)}
+.persona-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3a3f55,#1a1f33);display:grid;place-items:center;font-weight:600;color:var(--text);font-size:14px}
+.persona-meta{line-height:1.3}
+.persona-name{font-weight:600}
+.persona-detail{font-size:12px;color:var(--text-dim)}
+.hero{background:linear-gradient(135deg,var(--surface),var(--surface-2));padding:32px 28px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:32px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center}
+.hero-lens{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.hero-lens-avatar{font-size:28px;width:48px;height:48px;background:rgba(255,255,255,0.06);border-radius:12px;display:grid;place-items:center}
+.hero-lens-name{font-weight:600;font-size:18px}
+.hero-lens-status{font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(0,229,168,0.12);color:var(--accent);letter-spacing:0.04em;text-transform:uppercase}
+.hero-headline{font-size:30px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin:0}
+.hero-savings{display:flex;gap:32px;margin-top:18px;flex-wrap:wrap}
+.hero-savings-item{line-height:1.2}
+.hero-savings-val{font-size:24px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.hero-savings-label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px}
+.hero-cta{display:flex;flex-direction:column;gap:10px}
+.btn{padding:12px 20px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#001a14;font-weight:600;cursor:pointer;font-size:13px;transition:transform 0.06s}
+.btn:hover{transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.lens-rail{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;margin-bottom:28px;border-bottom:1px solid var(--border)}
+.lens-tab{padding:10px 14px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:13px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all 0.12s}
+.lens-tab.active{background:rgba(0,229,168,0.12);color:var(--accent);border-color:rgba(0,229,168,0.3)}
+.lens-tab.placeholder{opacity:0.45;cursor:not-allowed}
+.lens-tab-badge{font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,0.08);color:var(--text-faint);letter-spacing:0.04em;text-transform:uppercase}
+.section{margin-bottom:36px}
+.section-title{font-size:14px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px;display:flex;align-items:baseline;gap:8px}
+.section-count{color:var(--text-faint);font-weight:400}
+.obs-list{display:flex;flex-direction:column;gap:10px}
+.obs{background:var(--surface);padding:14px 18px;border-radius:var(--radius);border:1px solid var(--border);border-left:3px solid var(--text-faint);display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start}
+.obs[data-severity="3"]{border-left-color:var(--danger)}
+.obs[data-severity="2"]{border-left-color:var(--warn)}
+.obs[data-severity="1"]{border-left-color:var(--info)}
+.obs-severity{font-size:10px;font-weight:700;padding:4px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em;min-width:56px;text-align:center}
+.obs[data-severity="3"] .obs-severity{background:rgba(255,107,107,0.16);color:var(--danger)}
+.obs[data-severity="2"] .obs-severity{background:rgba(255,181,71,0.16);color:var(--warn)}
+.obs[data-severity="1"] .obs-severity{background:rgba(77,142,255,0.16);color:var(--info)}
+.obs-text{font-size:14px;line-height:1.55}
+.obs-cite{font-size:11px;color:var(--text-faint);margin-top:8px;font-family:ui-monospace,'SF Mono',monospace}
+.rec-grid{display:flex;flex-direction:column;gap:12px}
+.rec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0;cursor:pointer;transition:border-color 0.12s}
+.rec:hover{border-color:rgba(0,229,168,0.4)}
+.rec[open]{border-color:rgba(0,229,168,0.4)}
+.rec-top{padding:18px 22px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;cursor:pointer;list-style:none}
+.rec-top::-webkit-details-marker{display:none}
+.rec-headline{font-size:16px;font-weight:600;line-height:1.4}
+.rec-impact{text-align:right;white-space:nowrap}
+.rec-impact-val{font-size:20px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.rec-impact-period{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em}
+.rec-impact-cert{display:inline-block;margin-top:4px;font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.06);color:var(--text-dim)}
+.rec-body{padding:0 22px 18px}
+.rec-section-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.06em;margin:14px 0 6px}
+.rec-drill{font-size:13px;color:var(--text-dim);line-height:1.65;padding-top:6px;border-top:1px solid var(--border)}
+.rec-actions{display:flex;flex-direction:column;gap:6px}
+.rec-step{background:var(--surface-2);padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;color:var(--text-dim);border:1px solid var(--border)}
+.rec-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text-faint)}
+.rec-meta-chunk{background:var(--surface-2);padding:6px 10px;border-radius:var(--radius-sm)}
+.rec-meta-chunk strong{color:var(--text-dim)}
+.rec-fca{margin-top:14px;padding:10px 14px;background:rgba(77,142,255,0.06);border-left:2px solid var(--info);border-radius:var(--radius-sm);font-size:12px;color:var(--text-dim);font-style:italic}
+.rec-footer{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px solid var(--border)}
+.rec-cite{font-size:11px;color:var(--text-faint);font-family:ui-monospace,'SF Mono',monospace}
+.challenge-btn{padding:8px 14px;font-size:12px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text-dim);cursor:pointer}
+.challenge-btn:hover{border-color:var(--warn);color:var(--warn)}
+.whatif-row{display:flex;flex-wrap:wrap;gap:8px}
+.whatif-chip{padding:9px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-size:13px;color:var(--text);cursor:pointer;transition:all 0.12s}
+.whatif-chip:hover{border-color:var(--accent);color:var(--accent)}
+.footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--text-faint);line-height:1.7}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px;z-index:100}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;max-width:480px;width:100%}
+.modal-title{font-size:18px;font-weight:600;margin-bottom:12px}
+.modal-body{font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:20px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+@media (max-width:720px){.container{padding:18px 18px 60px}.masthead{flex-direction:column;align-items:stretch;gap:14px}.hero{grid-template-columns:1fr;padding:22px 18px}.hero-headline{font-size:22px}.hero-savings{gap:16px}.hero-savings-val{font-size:18px}.rec-top{grid-template-columns:1fr}.rec-impact{text-align:left}}
+</style>
+</head><body>
+<div class="container">
+
+  <header class="masthead">
+    <div class="brand">
+      <div class="brand-logo">C</div>
+      <div>
+        <div>Caelixa</div>
+        <div class="brand-tag">Synthesised professional brain</div>
+      </div>
+    </div>
+    <div class="persona-bar">
+      <div class="persona-avatar">BW</div>
+      <div class="persona-meta">
+        <div class="persona-name">Bruce Wayne</div>
+        <div class="persona-detail">62 · Decumulation · UK-rUK · Net worth £3,725,605</div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="lens-rail"><button class="lens-tab active" ><span>🧾</span><span>Tax Accountant</span></button><button class="lens-tab placeholder" disabled><span>🏦</span><span>Pension Specialist</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>⚖️</span><span>Trust Lawyer</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>📊</span><span>IFA</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>🏠</span><span>Mortgage</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>🛡️</span><span>Protection</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>📈</span><span>Investment</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>🌍</span><span>Cross-Border</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>👨‍👩‍👧</span><span>Family Law</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>🏥</span><span>Later-Life</span><span class="lens-tab-badge">Soon</span></button><button class="lens-tab placeholder" disabled><span>💝</span><span>Philanthropy</span><span class="lens-tab-badge">Soon</span></button></nav>
+
+  <div class="hero">
+    <div>
+      <div class="hero-lens">
+        <div class="hero-lens-avatar">🧾</div>
+        <div>
+          <div class="hero-lens-name">Tax Accountant view</div>
+          <div class="hero-lens-status">Live</div>
+        </div>
+      </div>
+      <h1 class="hero-headline">Your tax accountant found £14,912/yr and £345,900 lifetime in tax savings across 5 actionable strategies.</h1>
+      <div class="hero-savings">
+        <div class="hero-savings-item">
+          <div class="hero-savings-val">£14,912/yr</div>
+          <div class="hero-savings-label">Annual saving</div>
+        </div>
+        <div class="hero-savings-item">
+          <div class="hero-savings-val">£345,900</div>
+          <div class="hero-savings-label">Lifetime saving</div>
+        </div>
+        <div class="hero-savings-item">
+          <div class="hero-savings-val">5</div>
+          <div class="hero-savings-label">Strategies</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-cta">
+      <a href="#rec-section" class="btn">View recommendations</a>
+      <a href="#obs-section" class="btn btn-ghost">See observations</a>
+    </div>
+  </div>
+
+  <section class="section" id="obs-section">
+    <h2 class="section-title">
+      What your tax accountant noticed
+      <span class="section-count">(5)</span>
+    </h2>
+    <div class="obs-list">
+  <div class="obs" data-severity="2">
+    <div class="obs-severity">MED</div>
+    <div>
+      <div class="obs-text">Income of £120,000 puts you in the £100k–£125,140 Personal Allowance taper band. PA reduced to £2,570, costing £4,000 in additional tax. Effective marginal rate in this band is 60%.</div>
+      <div class="obs-cite">ITA 2007 s.35</div>
+    </div>
+  </div>
+
+  <div class="obs" data-severity="1">
+    <div class="obs-severity">LOW</div>
+    <div>
+      <div class="obs-text">SIPP £850,000: 25% tax-free cash entitlement is £212,500, well within your £268,275 Lump Sum Allowance.</div>
+      <div class="obs-cite">FA 2004 s.166 + PTM063210</div>
+    </div>
+  </div>
+
+  <div class="obs" data-severity="2">
+    <div class="obs-severity">MED</div>
+    <div>
+      <div class="obs-text">You have £140,000 of pension contribution headroom this year (£60,000 current AA + £80,000 carry-forward). At your marginal rate of 40%, full use would generate up to £56,000 in tax relief.</div>
+      <div class="obs-cite">FA 2004 s.227 + PTM055100 (carry-forward)</div>
+    </div>
+  </div>
+
+  <div class="obs" data-severity="2">
+    <div class="obs-severity">MED</div>
+    <div>
+      <div class="obs-text">Your GIA holds £12,000 of unrealised capital gains. Unused £3,000 CGT Annual Exempt Amount expires April 5 (319 days). Cannot carry forward.</div>
+      <div class="obs-cite">TCGA 1992 s.3 + Sch 1 (annual exempt amount)</div>
+    </div>
+  </div>
+
+  <div class="obs" data-severity="3">
+    <div class="obs-severity">HIGH</div>
+    <div>
+      <div class="obs-text">SIPP of £850,000 enters Inheritance Tax estate from 6 April 2027 (320 days). At current value, this exposes £340,000 to 40% IHT on death post-2027 if estate exceeds nil-rate bands.</div>
+      <div class="obs-cite">Finance Act 2026 s.[pension-iht-inclusion] (Royal Assent 18 March 2026, effective 6 April 2027)</div>
+    </div>
+  </div>
+</div>
+  </section>
+
+  <section class="section" id="rec-section">
+    <h2 class="section-title">
+      Strategies ranked by tax impact
+      <span class="section-count">(5 — tap to expand)</span>
+    </h2>
+    <div class="rec-grid">
+    <details class="rec" id="rec-0">
+      <summary class="rec-top">
+        <div class="rec-headline">Sacrifice £20,000 into pension to escape the £100k taper trap</div>
+        <div class="rec-impact">
+          <div class="rec-impact-val">£12,000</div>
+          <div class="rec-impact-period">/year</div>
+          <div class="rec-impact-cert">95% certainty</div>
+        </div>
+      </summary>
+      <div class="rec-body">
+        <div class="rec-drill">Your income of £120,000 is in the £100k–£125,140 Personal Allowance taper band where your effective marginal rate is 60% (40% income tax + 20% from the lost £1-per-£2 PA reduction). Salary-sacrificing £20,000 into your pension would bring your taxable income to £100,000, restoring your full Personal Allowance and saving approximately £12,000 in tax this year. The sacrificed amount also accrues in your pension for retirement.</div>
+        <div class="rec-section-label">Action steps</div>
+        <div class="rec-actions"><div class="rec-step">Confirm employer offers salary sacrifice (most do)</div><div class="rec-step">Request £20,000 sacrifice — typically arranged for next payroll</div><div class="rec-step">Confirm employer NIC saving (13.8% / 15%) is rebated to you (some employers split this)</div></div>
+        <div class="rec-section-label">Context</div>
+        <div class="rec-meta"><div class="rec-meta-chunk"><strong>Assumes:</strong> requires employment income · within £60k Annual Allowance</div><div class="rec-meta-chunk"><strong>When this flips:</strong> If you need the cash now for liquidity, ISA may be preferred even with lower tax efficiency</div><div class="rec-meta-chunk"><strong>Common mistakes:</strong> Over-sacrificing past £60k AA → 45% Annual Allowance charge · Forgetting MPAA if you have already flexi-accessed any pension</div></div>
+        <div class="rec-fca">Information only — salary sacrifice has irreversible consequences. Speak to a qualified financial adviser before acting.</div>
+        <div class="rec-footer">
+          <div class="rec-cite">ITA 2007 s.35 (PA taper) + FA 2004 s.188 (pension contributions)</div>
+          <button class="challenge-btn" onclick="document.getElementById('modal').classList.add('open')">⚠ Challenge this</button>
+        </div>
+      </div>
+    </details>
+  
+    <details class="rec" id="rec-1">
+      <summary class="rec-top">
+        <div class="rec-headline">Phase your £212,500 tax-free cash over 10 years instead of lump sum</div>
+        <div class="rec-impact">
+          <div class="rec-impact-val">£2,696</div>
+          <div class="rec-impact-period">/year</div>
+          <div class="rec-impact-cert">85% certainty</div>
+        </div>
+      </summary>
+      <div class="rec-body">
+        <div class="rec-drill">Taking your full £212,500 25% tax-free cash in one year forces the remaining 75% (£637,500) into drawdown and likely additional-rate tax bands. Instead, crystallise £21,250 per year for 10 years. Each year you take £5,313 tax-free + £15,938 taxable. The taxable portion stays within basic-rate band where possible. Estimated tax saving vs lump-sum approach: ~£26,960 over the period, with the additional benefit that uncrystallised SIPP balance continues to grow tax-free.</div>
+        <div class="rec-section-label">Action steps</div>
+        <div class="rec-actions"><div class="rec-step">Open a flexible drawdown arrangement with your SIPP provider</div><div class="rec-step">Set up annual crystallisation of £21,250</div><div class="rec-step">Coordinate with state pension start (age 66/67) to avoid stacking</div><div class="rec-step">Review yearly — adjust if rules change or circumstances shift</div></div>
+        <div class="rec-section-label">Context</div>
+        <div class="rec-meta"><div class="rec-meta-chunk"><strong>Assumes:</strong> assumes ≥10 years to take advantage of phasing · phased over 10 years — Budgets may change rules · assumes pension grows at sustainable rate</div><div class="rec-meta-chunk"><strong>When this flips:</strong> If life expectancy &lt;5 years, lump-sum + spend may dominate. If estate already at IHT cap, accelerating drawdown may be preferred to push assets out via gifting.</div><div class="rec-meta-chunk"><strong>Common mistakes:</strong> Phasing across more years than life expectancy supports · Not factoring in state pension when it starts · Crystallising past £268,275 Lump Sum Allowance and triggering additional charges</div></div>
+        <div class="rec-fca">Information only. Pension crystallisation is irreversible — speak to a qualified pension specialist before acting.</div>
+        <div class="rec-footer">
+          <div class="rec-cite">FA 2004 s.166 + PTM063210 (PCLS) + PTM088100 (flexi-access drawdown)</div>
+          <button class="challenge-btn" onclick="document.getElementById('modal').classList.add('open')">⚠ Challenge this</button>
+        </div>
+      </div>
+    </details>
+  
+    <details class="rec" id="rec-2">
+      <summary class="rec-top">
+        <div class="rec-headline">Bed-and-ISA: move £12,000 from GIA to ISA before April 5</div>
+        <div class="rec-impact">
+          <div class="rec-impact-val">£216</div>
+          <div class="rec-impact-period">/year</div>
+          <div class="rec-impact-cert">90% certainty</div>
+        </div>
+      </summary>
+      <div class="rec-body">
+        <div class="rec-drill">You hold £380,000 in your General Investment Account (GIA), exposed to income tax on dividends and CGT on gains. Your ISA has £12,000 unused allowance this year. Sell £12,000 from your GIA — using your £3,000 CGT Annual Exempt Amount to minimise CGT — and immediately re-buy the same holdings inside your ISA. Future dividends and gains on this portion are then tax-free permanently. ISA allowances cannot be carried forward, so missing this deadline loses the wrapping opportunity for these specific funds.</div>
+        <div class="rec-section-label">Action steps</div>
+        <div class="rec-actions"><div class="rec-step">Calculate which GIA holdings have lowest unrealised gains (minimise CGT)</div><div class="rec-step">Sell £12,000 worth of these GIA holdings</div><div class="rec-step">Immediately re-buy the same holdings inside your ISA (most platforms automate this as &quot;Bed and ISA&quot;)</div><div class="rec-step">Complete before April 5</div></div>
+        <div class="rec-section-label">Context</div>
+        <div class="rec-meta"><div class="rec-meta-chunk"><strong>Assumes:</strong> assumes £3,000 CGT AEA not already used this year · assumes £12,000 of ISA allowance available</div><div class="rec-meta-chunk"><strong>When this flips:</strong> If GIA gains exceed £3,000 AEA, partial bed-and-ISA may be better than full sale.</div><div class="rec-meta-chunk"><strong>Common mistakes:</strong> Selling holdings with large gains and breaching CGT AEA · Forgetting to instruct re-purchase — leaving money in cash · Bed-and-ISA-ing a Lifetime ISA position (different rules)</div></div>
+        <div class="rec-fca">Information only. Bed-and-ISA timing matters — consult your platform and adviser.</div>
+        <div class="rec-footer">
+          <div class="rec-cite">ISAR 1998 Reg 4 (annual limit) + TCGA 1992 s.3 (CGT AEA)</div>
+          <button class="challenge-btn" onclick="document.getElementById('modal').classList.add('open')">⚠ Challenge this</button>
+        </div>
+      </div>
+    </details>
+  
+    <details class="rec" id="rec-3">
+      <summary class="rec-top">
+        <div class="rec-headline">Pre-April-2027 SIPP strategy: 320 days to plan</div>
+        <div class="rec-impact">
+          <div class="rec-impact-val">£340,000</div>
+          <div class="rec-impact-period">lifetime</div>
+          <div class="rec-impact-cert">75% certainty</div>
+        </div>
+      </summary>
+      <div class="rec-body">
+        <div class="rec-drill">From 6 April 2027, defined contribution pensions (including SIPPs) enter the estate for Inheritance Tax. Your £850,000 SIPP currently sits outside the estate. From April 2027, this exposes up to £340,000 to 40% IHT on death (subject to nil-rate bands). Strategies to consider: (a) accelerate phased crystallisation pre-2027 to spend SIPP first; (b) gift surplus drawdown income to remove from estate (s.21 IHTA exemption for regular gifts out of normal expenditure); (c) review nominations to favour adult children with own pension allowance. The April 2027 effective date is fixed — Royal Assent received 18 March 2026.</div>
+        <div class="rec-section-label">Action steps</div>
+        <div class="rec-actions"><div class="rec-step">Decide: spend SIPP first (favours pre-2027) vs preserve SIPP for beneficiaries (favours pre-75 death)</div><div class="rec-step">Review beneficiary nominations for tax efficiency</div><div class="rec-step">Project IHT exposure under both scenarios with adviser</div><div class="rec-step">Re-check April 2027 — possible scheme to delay further (legislation still evolving)</div></div>
+        <div class="rec-section-label">Context</div>
+        <div class="rec-meta"><div class="rec-meta-chunk"><strong>Assumes:</strong> assumes April 2027 implementation date holds (Government has confirmed)</div><div class="rec-meta-chunk"><strong>When this flips:</strong> If life expectancy &gt;20 years, the time value of SIPP growth may exceed IHT cost.</div><div class="rec-meta-chunk"><strong>Common mistakes:</strong> Treating April 2027 as the gift deadline (it is the IHT inclusion date — gifts still need 7-year clock) · Triggering MPAA early in haste</div></div>
+        <div class="rec-fca">Information only. SIPP and IHT planning is high-stakes — speak to a Chartered Tax Adviser AND pension specialist together.</div>
+        <div class="rec-footer">
+          <div class="rec-cite">Finance Act 2026 (Royal Assent 18 March 2026) — pension IHT inclusion from 6 April 2027</div>
+          <button class="challenge-btn" onclick="document.getElementById('modal').classList.add('open')">⚠ Challenge this</button>
+        </div>
+      </div>
+    </details>
+  
+    <details class="rec" id="rec-4">
+      <summary class="rec-top">
+        <div class="rec-headline">Realise £2,500 of capital losses to offset future gains</div>
+        <div class="rec-impact">
+          <div class="rec-impact-val">£500</div>
+          <div class="rec-impact-period">lifetime</div>
+          <div class="rec-impact-cert">85% certainty</div>
+        </div>
+      </summary>
+      <div class="rec-body">
+        <div class="rec-drill">You have £2,500 of unrealised losses in your GIA. Crystallising these before April 5 establishes them as offsettable losses — they can offset realised gains in the same year (after using your £3,000 AEA) and carry forward indefinitely. To avoid the 30-day &quot;bed-and-breakfast&quot; rule, replace the sold holding with a similar-but-not-identical fund (e.g. swap a Vanguard FTSE 100 tracker for an iShares FTSE 100 tracker).</div>
+        <div class="rec-section-label">Action steps</div>
+        <div class="rec-actions"><div class="rec-step">Identify GIA holdings with unrealised losses</div><div class="rec-step">Sell at a loss</div><div class="rec-step">Replace with a similar but not identical fund (different provider, same index)</div><div class="rec-step">Report on Self Assessment</div></div>
+        <div class="rec-section-label">Context</div>
+        <div class="rec-meta"><div class="rec-meta-chunk"><strong>When this flips:</strong> If you expect holdings to recover strongly within 30 days, holding may dominate.</div><div class="rec-meta-chunk"><strong>Common mistakes:</strong> Re-buying within 30 days (disallows loss) · Bed-and-breakfasting via spouse — also caught by anti-avoidance · Not declaring the loss — required on Self Assessment</div></div>
+        <div class="rec-fca">Information only. Loss harvesting is subject to anti-avoidance rules — speak to a Tax Adviser.</div>
+        <div class="rec-footer">
+          <div class="rec-cite">TCGA 1992 s.16 (allowable losses) + s.106A (bed-and-breakfast 30-day rule)</div>
+          <button class="challenge-btn" onclick="document.getElementById('modal').classList.add('open')">⚠ Challenge this</button>
+        </div>
+      </div>
+    </details>
+  </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">
+      Ask anything
+      <span class="section-count">(tap to explore — Sonnu chat coming v0.1)</span>
+    </h2>
+    <div class="whatif-row"><button class="whatif-chip" onclick="document.getElementById('modal').classList.add('open')">What if I sacrifice £20,000 of my bonus into pension this year?</button><button class="whatif-chip" onclick="document.getElementById('modal').classList.add('open')">What if I start phased pension crystallisation next year?</button><button class="whatif-chip" onclick="document.getElementById('modal').classList.add('open')">What if I delay state pension by 3 years?</button><button class="whatif-chip" onclick="document.getElementById('modal').classList.add('open')">What if I bed-and-ISA before April 5?</button><button class="whatif-chip" onclick="document.getElementById('modal').classList.add('open')">What if I move to Scotland — what would my income tax change to?</button></div>
+  </section>
+
+  <div class="footer">
+    Powered by Caelixa's lens-based AI engine. Designed to run 11 professional perspectives — Tax Accountant (live), Pension Specialist, Trust Lawyer, IFA, Mortgage Adviser, Insurance Adviser, Investment Adviser, Cross-Border Specialist, Family Law, Later-Life, Philanthropy. Where they disagree, the app surfaces the disagreement and lets you decide.
+    <br><br>
+    <strong>Information only.</strong> Caelixa does not provide regulated advice. Speak to a qualified professional before acting on any output.
+    <br><br>
+    Tax year 2025/26 · Rules version UK-2026.1.1 · Engine version Sonuswealth-1.0 · Generated: 2026-05-21 21:39
+  </div>
+
+</div>
+
+<div class="modal-bg" id="modal" onclick="if(event.target.id==='modal')this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">Challenge this recommendation</div>
+    <div class="modal-body">
+      Coming in v0.1: practitioner panel review. Your challenge would be logged, reviewed within 7 days, and — if valid — the rule updated and versioned. All challenges audit-trailed.
+      <br><br>
+      <strong>For today's demo:</strong> this affordance proves the mechanism exists. Submission queue ships next sprint.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+</body></html>

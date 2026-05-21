@@ -1,0 +1,254 @@
+{
+  "lens_id": "tax-accountant",
+  "lens_name": "Tax Accountant",
+  "avatar": "🧾",
+  "status": "LIVE",
+  "relevance": {
+    "score": 1,
+    "reason": "Higher-rate income or substantial wealth — significant tax planning opportunities"
+  },
+  "observations": [
+    {
+      "id": "TA-OBS-01",
+      "type": "observation",
+      "severity": 2,
+      "category": "income_tax",
+      "text": "Income of £120,000 puts you in the £100k–£125,140 Personal Allowance taper band. PA reduced to £2,570, costing £4,000 in additional tax. Effective marginal rate in this band is 60%.",
+      "citation": "ITA 2007 s.35",
+      "finding": {
+        "income": 120000,
+        "effPA": 2570,
+        "lostPA": 10000,
+        "taxCost": 4000
+      }
+    },
+    {
+      "id": "TA-OBS-03a",
+      "type": "observation",
+      "severity": 1,
+      "category": "pensions",
+      "text": "SIPP £850,000: 25% tax-free cash entitlement is £212,500, well within your £268,275 Lump Sum Allowance.",
+      "citation": "FA 2004 s.166 + PTM063210",
+      "finding": {
+        "sipp": 850000,
+        "sipp25pct": 212500,
+        "lsaRemaining": 268275
+      }
+    },
+    {
+      "id": "TA-OBS-04",
+      "type": "observation",
+      "severity": 2,
+      "category": "pensions",
+      "text": "You have £140,000 of pension contribution headroom this year (£60,000 current AA + £80,000 carry-forward). At your marginal rate of 40%, full use would generate up to £56,000 in tax relief.",
+      "citation": "FA 2004 s.227 + PTM055100 (carry-forward)",
+      "finding": {
+        "aaAvailable": 60000,
+        "carryForward": 80000,
+        "totalAaHeadroom": 140000
+      }
+    },
+    {
+      "id": "TA-OBS-05",
+      "type": "observation",
+      "severity": 2,
+      "category": "cgt",
+      "text": "Your GIA holds £12,000 of unrealised capital gains. Unused £3,000 CGT Annual Exempt Amount expires April 5 (319 days). Cannot carry forward.",
+      "citation": "TCGA 1992 s.3 + Sch 1 (annual exempt amount)",
+      "finding": {
+        "giaGain": 12000,
+        "aea": 3000
+      }
+    },
+    {
+      "id": "TA-OBS-06",
+      "type": "observation",
+      "severity": 3,
+      "category": "iht_pension",
+      "text": "SIPP of £850,000 enters Inheritance Tax estate from 6 April 2027 (320 days). At current value, this exposes £340,000 to 40% IHT on death post-2027 if estate exceeds nil-rate bands.",
+      "citation": "Finance Act 2026 s.[pension-iht-inclusion] (Royal Assent 18 March 2026, effective 6 April 2027)",
+      "finding": {
+        "sipp": 850000,
+        "days": 320,
+        "ihtIfDeathAfter": 340000
+      }
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "TA-REC-01",
+      "type": "recommendation",
+      "strategy_id": "STRAT-100K-TAPER-ESCAPE",
+      "headline": "Sacrifice £20,000 into pension to escape the £100k taper trap",
+      "drill_down": "Your income of £120,000 is in the £100k–£125,140 Personal Allowance taper band where your effective marginal rate is 60% (40% income tax + 20% from the lost £1-per-£2 PA reduction). Salary-sacrificing £20,000 into your pension would bring your taxable income to £100,000, restoring your full Personal Allowance and saving approximately £12,000 in tax this year. The sacrificed amount also accrues in your pension for retirement.",
+      "action_steps": [
+        "Confirm employer offers salary sacrifice (most do)",
+        "Request £20,000 sacrifice — typically arranged for next payroll",
+        "Confirm employer NIC saving (13.8% / 15%) is rebated to you (some employers split this)"
+      ],
+      "impact": {
+        "gbp_per_year": 12000,
+        "time_horizon": "this tax year + every future year you exceed £100k",
+        "certainty": 0.95
+      },
+      "risk": {
+        "reversibility": "irreversible once contributed — locked until age 55+",
+        "downside": "reduces take-home cashflow",
+        "complexity": "low"
+      },
+      "citation": "ITA 2007 s.35 (PA taper) + FA 2004 s.188 (pension contributions)",
+      "assumptions": {
+        "still_employed": "requires employment income",
+        "under_aa_cap": "within £60k Annual Allowance"
+      },
+      "flip_conditions": "If you need the cash now for liquidity, ISA may be preferred even with lower tax efficiency",
+      "fca_boundary": "Information only — salary sacrifice has irreversible consequences. Speak to a qualified financial adviser before acting.",
+      "common_mistakes": [
+        "Over-sacrificing past £60k AA → 45% Annual Allowance charge",
+        "Forgetting MPAA if you have already flexi-accessed any pension"
+      ]
+    },
+    {
+      "id": "TA-REC-02",
+      "type": "recommendation",
+      "strategy_id": "STRAT-PHASED-TFC",
+      "headline": "Phase your £212,500 tax-free cash over 10 years instead of lump sum",
+      "drill_down": "Taking your full £212,500 25% tax-free cash in one year forces the remaining 75% (£637,500) into drawdown and likely additional-rate tax bands. Instead, crystallise £21,250 per year for 10 years. Each year you take £5,313 tax-free + £15,938 taxable. The taxable portion stays within basic-rate band where possible. Estimated tax saving vs lump-sum approach: ~£26,960 over the period, with the additional benefit that uncrystallised SIPP balance continues to grow tax-free.",
+      "action_steps": [
+        "Open a flexible drawdown arrangement with your SIPP provider",
+        "Set up annual crystallisation of £21,250",
+        "Coordinate with state pension start (age 66/67) to avoid stacking",
+        "Review yearly — adjust if rules change or circumstances shift"
+      ],
+      "impact": {
+        "gbp_per_year": 2696,
+        "lifetime_gbp": 26960,
+        "certainty": 0.85
+      },
+      "risk": {
+        "reversibility": "each crystallisation irreversible",
+        "downside": "death post-75 means beneficiaries pay marginal tax on remaining funds",
+        "complexity": "medium"
+      },
+      "citation": "FA 2004 s.166 + PTM063210 (PCLS) + PTM088100 (flexi-access drawdown)",
+      "assumptions": {
+        "life_expectancy": "assumes ≥10 years to take advantage of phasing",
+        "tax_rules_stable": "phased over 10 years — Budgets may change rules",
+        "returns": "assumes pension grows at sustainable rate"
+      },
+      "flip_conditions": "If life expectancy <5 years, lump-sum + spend may dominate. If estate already at IHT cap, accelerating drawdown may be preferred to push assets out via gifting.",
+      "fca_boundary": "Information only. Pension crystallisation is irreversible — speak to a qualified pension specialist before acting.",
+      "common_mistakes": [
+        "Phasing across more years than life expectancy supports",
+        "Not factoring in state pension when it starts",
+        "Crystallising past £268,275 Lump Sum Allowance and triggering additional charges"
+      ]
+    },
+    {
+      "id": "TA-REC-03",
+      "type": "recommendation",
+      "strategy_id": "STRAT-BED-AND-ISA",
+      "headline": "Bed-and-ISA: move £12,000 from GIA to ISA before April 5",
+      "drill_down": "You hold £380,000 in your General Investment Account (GIA), exposed to income tax on dividends and CGT on gains. Your ISA has £12,000 unused allowance this year. Sell £12,000 from your GIA — using your £3,000 CGT Annual Exempt Amount to minimise CGT — and immediately re-buy the same holdings inside your ISA. Future dividends and gains on this portion are then tax-free permanently. ISA allowances cannot be carried forward, so missing this deadline loses the wrapping opportunity for these specific funds.",
+      "action_steps": [
+        "Calculate which GIA holdings have lowest unrealised gains (minimise CGT)",
+        "Sell £12,000 worth of these GIA holdings",
+        "Immediately re-buy the same holdings inside your ISA (most platforms automate this as \"Bed and ISA\")",
+        "Complete before April 5"
+      ],
+      "impact": {
+        "gbp_per_year": 216,
+        "gbp_lifetime": 5400,
+        "certainty": 0.9
+      },
+      "risk": {
+        "reversibility": "irreversible once sold — but can sell from ISA later if needed",
+        "downside": "one-day market exposure between sale and repurchase",
+        "complexity": "low"
+      },
+      "citation": "ISAR 1998 Reg 4 (annual limit) + TCGA 1992 s.3 (CGT AEA)",
+      "assumptions": {
+        "aea_unused": "assumes £3,000 CGT AEA not already used this year",
+        "isa_unused": "assumes £12,000 of ISA allowance available"
+      },
+      "flip_conditions": "If GIA gains exceed £3,000 AEA, partial bed-and-ISA may be better than full sale.",
+      "fca_boundary": "Information only. Bed-and-ISA timing matters — consult your platform and adviser.",
+      "common_mistakes": [
+        "Selling holdings with large gains and breaching CGT AEA",
+        "Forgetting to instruct re-purchase — leaving money in cash",
+        "Bed-and-ISA-ing a Lifetime ISA position (different rules)"
+      ]
+    },
+    {
+      "id": "TA-REC-04",
+      "type": "recommendation",
+      "strategy_id": "STRAT-SIPP-PRE-2027",
+      "headline": "Pre-April-2027 SIPP strategy: 320 days to plan",
+      "drill_down": "From 6 April 2027, defined contribution pensions (including SIPPs) enter the estate for Inheritance Tax. Your £850,000 SIPP currently sits outside the estate. From April 2027, this exposes up to £340,000 to 40% IHT on death (subject to nil-rate bands). Strategies to consider: (a) accelerate phased crystallisation pre-2027 to spend SIPP first; (b) gift surplus drawdown income to remove from estate (s.21 IHTA exemption for regular gifts out of normal expenditure); (c) review nominations to favour adult children with own pension allowance. The April 2027 effective date is fixed — Royal Assent received 18 March 2026.",
+      "action_steps": [
+        "Decide: spend SIPP first (favours pre-2027) vs preserve SIPP for beneficiaries (favours pre-75 death)",
+        "Review beneficiary nominations for tax efficiency",
+        "Project IHT exposure under both scenarios with adviser",
+        "Re-check April 2027 — possible scheme to delay further (legislation still evolving)"
+      ],
+      "impact": {
+        "gbp_lifetime": 340000,
+        "time_horizon": "until April 6 2027",
+        "certainty": 0.75
+      },
+      "risk": {
+        "reversibility": "crystallisation irreversible; gifting subject to 7-year clock",
+        "downside": "spending SIPP early loses tax-free growth",
+        "complexity": "high"
+      },
+      "citation": "Finance Act 2026 (Royal Assent 18 March 2026) — pension IHT inclusion from 6 April 2027",
+      "assumptions": {
+        "law_stable": "assumes April 2027 implementation date holds (Government has confirmed)"
+      },
+      "flip_conditions": "If life expectancy >20 years, the time value of SIPP growth may exceed IHT cost.",
+      "fca_boundary": "Information only. SIPP and IHT planning is high-stakes — speak to a Chartered Tax Adviser AND pension specialist together.",
+      "common_mistakes": [
+        "Treating April 2027 as the gift deadline (it is the IHT inclusion date — gifts still need 7-year clock)",
+        "Triggering MPAA early in haste"
+      ]
+    },
+    {
+      "id": "TA-REC-05",
+      "type": "recommendation",
+      "strategy_id": "STRAT-CGT-LOSS-HARVEST",
+      "headline": "Realise £2,500 of capital losses to offset future gains",
+      "drill_down": "You have £2,500 of unrealised losses in your GIA. Crystallising these before April 5 establishes them as offsettable losses — they can offset realised gains in the same year (after using your £3,000 AEA) and carry forward indefinitely. To avoid the 30-day \"bed-and-breakfast\" rule, replace the sold holding with a similar-but-not-identical fund (e.g. swap a Vanguard FTSE 100 tracker for an iShares FTSE 100 tracker).",
+      "action_steps": [
+        "Identify GIA holdings with unrealised losses",
+        "Sell at a loss",
+        "Replace with a similar but not identical fund (different provider, same index)",
+        "Report on Self Assessment"
+      ],
+      "impact": {
+        "gbp_lifetime": 500,
+        "certainty": 0.85
+      },
+      "risk": {
+        "reversibility": "partial — re-buying same security within 30 days disallows the loss",
+        "complexity": "medium"
+      },
+      "citation": "TCGA 1992 s.16 (allowable losses) + s.106A (bed-and-breakfast 30-day rule)",
+      "assumptions": {},
+      "flip_conditions": "If you expect holdings to recover strongly within 30 days, holding may dominate.",
+      "fca_boundary": "Information only. Loss harvesting is subject to anti-avoidance rules — speak to a Tax Adviser.",
+      "common_mistakes": [
+        "Re-buying within 30 days (disallows loss)",
+        "Bed-and-breakfasting via spouse — also caught by anti-avoidance",
+        "Not declaring the loss — required on Self Assessment"
+      ]
+    }
+  ],
+  "red_flags": [],
+  "what_if_prompts": [
+    "What if I sacrifice £20,000 of my bonus into pension this year?",
+    "What if I start phased pension crystallisation next year?",
+    "What if I delay state pension by 3 years?",
+    "What if I bed-and-ISA before April 5?",
+    "What if I move to Scotland — what would my income tax change to?"
+  ]
+}

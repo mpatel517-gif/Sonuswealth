@@ -14,6 +14,39 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { getPlayById } from './knowledge-graph.js'
+import { PLAY_INTENT } from './classifier.js'
+import { getActionSteps, getAdvisors } from './play-actions.js'
+
+// Self-critique: pick the first play in rankedPlays whose intent_type contains
+// the query intent. If none match, fall back to the highest-scoring play but
+// flag the mismatch so the UI can show "couldn't find a perfect match".
+function pickLeadByIntent(rankedPlays, intent) {
+  if (!rankedPlays.length) return { lead: null, mismatch: false }
+  if (!intent || intent === 'plan') {
+    // 'plan' is the catch-all — any play is valid
+    return { lead: rankedPlays[0], mismatch: false }
+  }
+  for (const r of rankedPlays) {
+    const allowed = PLAY_INTENT[r.play.id] || []
+    if (allowed.includes(intent)) {
+      return { lead: r, mismatch: r !== rankedPlays[0] }
+    }
+  }
+  return { lead: rankedPlays[0], mismatch: true }
+}
+
+// Build a one-sentence direct answer that ECHOES the user's intent.
+function buildDirectAnswer(lead, intent) {
+  if (!lead) return null
+  const openerByIntent = {
+    draw:        'The most tax-efficient path:',
+    preserve:    'The biggest lever to pull:',
+    restructure: 'The highest-impact move:',
+    plan:        'Where I\'d start:',
+  }
+  const opener = openerByIntent[intent] || 'Where I\'d start:'
+  return `${opener} ${lead.play.title}.`
+}
 
 const num = (v) => {
   if (v == null) return 0
@@ -108,9 +141,18 @@ export function synthesize(rankedPlays, persona, knownFacts = {}, classification
     }
   }
 
-  const lead = rankedPlays[0]
-  const supporting = rankedPlays.slice(1, 4)   // next 3
-  const others = rankedPlays.slice(4, 12)      // collapsed, up to 8 more
+  // ── SELF-CRITIQUE: intent-aware lead selection ────────────────────────────
+  // The highest-scoring play may CONTRADICT the user's intent (e.g. picking
+  // "preserve SIPP" when they asked "how to draw down"). Pick the first play
+  // that matches the intent instead.
+  const intent = classification?.intent || 'plan'
+  const { lead: chosenLead, mismatch } = pickLeadByIntent(rankedPlays, intent)
+  const lead = chosenLead
+
+  // Reorder rankedPlays so lead is first, then by score
+  const reordered = [lead, ...rankedPlays.filter(r => r !== lead)]
+  const supporting = reordered.slice(1, 4)
+  const others = reordered.slice(4, 12)
 
   // Compute impact for lead
   const leadImpact = lead.play.compute_impact ? lead.play.compute_impact(persona) : null
@@ -204,6 +246,11 @@ export function synthesize(rankedPlays, persona, knownFacts = {}, classification
     intro: buildPersonalIntro(persona),
     classification: classification ? { concerns: classification.concerns, off_ontology: classification.off_ontology } : null,
 
+    // ECHO the question back as a direct one-line answer
+    direct_answer: buildDirectAnswer(lead, intent),
+    intent,
+    intent_mismatch: mismatch,
+
     lead: {
       id: lead.play.id,
       title: lead.play.title,
@@ -214,11 +261,13 @@ export function synthesize(rankedPlays, persona, knownFacts = {}, classification
       score: lead.score,
       impact: leadImpact,
       fca_boundary: lead.play.fca_boundary,
+      action_steps: getActionSteps(lead.play.id),
+      advisors: getAdvisors(lead.play.category),
     },
 
-    supporting: supportingPayload,
-    otherConsiderations: othersPayload,
-    challenges,
+    supporting: supportingPayload.map(s => ({ ...s, advisors: getAdvisors(s.category) })),
+    otherConsiderations: othersPayload.map(o => ({ ...o, advisors: getAdvisors(o.category) })),
+    challenges: challenges.map(c => ({ ...c, advisors: c.id !== '__do_nothing' ? getAdvisors(getPlayById(c.id)?.category) : ['Yourself'] })),
 
     // For "How Sonu got here" expandable trace
     reasoning_trace: buildTrace(lead, rankedPlays, classification, persona, knownFacts),

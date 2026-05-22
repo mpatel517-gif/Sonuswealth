@@ -22,7 +22,7 @@ const RULES = [
     resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA],
   },
   {
-    match: /withdraw|take out|draw down|live off|live on/i,
+    match: /withdraw|take out|\bdraw[\s-]?down\b|\bdraw \d|\bdraw £?\d|live off|live on|extract.{0,15}(?:income|cash|money)|access.{0,15}(?:pension|sipp|isa)/i,
     concerns: { [CONCERNS.RETIREMENT]: 0.8, [CONCERNS.TAX]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.7 },
     resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA],
   },
@@ -43,9 +43,10 @@ const RULES = [
     concerns: { [CONCERNS.IHT_LEGACY]: 0.95, [CONCERNS.FAMILY_CHANGE]: 0.3 },
     resources: [RESOURCES.CASH, RESOURCES.GIA, RESOURCES.ISA],
   },
+  // Pre-2027 PRESERVATION signal — requires intent words alongside the date
   {
-    match: /sipp.*iht|2027|finance act 2026|pension.*estate/i,
-    concerns: { [CONCERNS.IHT_LEGACY]: 1.0, [CONCERNS.REGULATORY]: 1.0, [CONCERNS.RETIREMENT]: 0.5 },
+    match: /(?:before|prior to|ahead of|by) (?:april )?2027|protect.{0,20}(?:sipp|pension|estate)|preserve.{0,20}(?:sipp|pension|estate)|sipp.*iht|finance act 2026|pension.*estate.*before/i,
+    concerns: { [CONCERNS.IHT_LEGACY]: 1.0, [CONCERNS.REGULATORY]: 1.0 },
     resources: [RESOURCES.PENSION],
   },
 
@@ -69,7 +70,7 @@ const RULES = [
     resources: [RESOURCES.PENSION, RESOURCES.PROPERTY, RESOURCES.ISA, RESOURCES.GIA],
   },
   {
-    match: /marry|getting married|cohabit|living together|partner.*not married/i,
+    match: /marry|getting married|cohabit|living together|not married|unmarried|partner.{0,30}(?:not married|unmarried)|engaged/i,
     concerns: { [CONCERNS.FAMILY_CHANGE]: 1.0, [CONCERNS.IHT_LEGACY]: 0.6, [CONCERNS.PROTECTION]: 0.5 },
     resources: [],
   },
@@ -150,6 +151,62 @@ export function deriveImpliedFacts(query) {
   return out
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INTENT — what is the user trying to DO?
+// Drives the self-critique guard in the synthesizer. Mutually exclusive plays
+// (preserve_pension vs draw_pension) must not collide on the same intent.
+// ─────────────────────────────────────────────────────────────────────────────
+const INTENT_RULES = [
+  { id: 'draw',        match: /\bdraw[\s-]?down\b|\bdraw \d|\bdraw £?\d|withdraw|take.{0,15}(?:out|from|cash|income)|live (?:on|off)|income from|spend (?:my )?(?:pension|sipp|isa)|need.{0,15}(?:income|cash)|how.{0,15}(?:do|can|to).{0,20}(?:get|extract|access).{0,15}(?:income|cash|money)|\bfrom april|extract.{0,15}(?:income|cash|money)/i },
+  { id: 'preserve',    match: /preserve|protect|shield|shelter|keep.{0,15}(?:out of|away from)|reduce.{0,15}(?:iht|tax|estate)|legacy|pass.{0,15}(?:on|down|to)|leave.{0,15}(?:to|behind|for)|before (?:april )?2027/i },
+  { id: 'restructure', match: /restructur|rebalanc|switch|move.{0,15}(?:into|to|across)|sell.{0,15}(?:and|then)|change my (?:mix|allocation|portfolio)|simpler|consolidat/i },
+  { id: 'plan',        match: /plan|prepare|think about|considering|might|maybe|should i|what if|exploring/i },
+]
+
+export function deriveIntent(query) {
+  const q = query || ''
+  for (const rule of INTENT_RULES) {
+    if (rule.match.test(q)) return rule.id
+  }
+  return 'plan'  // default — exploratory
+}
+
+// Per-play "intent type" — which intents this play is appropriate for.
+// Used by synthesizer self-critique. If query intent = 'draw' but lead's
+// intent_type = 'preserve', the lead is wrong and must be demoted.
+export const PLAY_INTENT = {
+  // Drawdown plays
+  phase_tfc:                     ['draw'],
+  split_sipp_spouse:             ['draw'],
+  isa_topup_during_drawdown:     ['draw'],
+  defer_state_pension:           ['draw', 'plan'],
+  mpaa_avoidance:                ['draw', 'plan'],
+  // Preservation plays — must NOT fire for 'draw' intent
+  preserve_pension_pre_2027:     ['preserve'],
+  // IHT plays
+  surplus_income_gifting:        ['preserve', 'plan'],
+  aim_bpr:                       ['preserve', 'restructure'],
+  charity_10pct_iht:             ['preserve', 'plan'],
+  lasting_poa:                   ['plan'],
+  // Relocation
+  srt_day_count_discipline:      ['plan', 'restructure'],
+  fig_window_utilise:            ['restructure', 'draw'],
+  destination_cost_reality_check:['plan'],
+  healthcare_continuity_plan:    ['plan'],
+  schooling_continuity_plan:     ['plan'],
+  iht_tail_post_departure:       ['plan', 'preserve'],
+  // Family
+  cohab_ip_gap:                  ['preserve', 'plan'],
+  will_revocation_on_marriage:   ['plan'],
+  pension_sharing_divorce:       ['plan', 'restructure'],
+  // Tax
+  taper_pension_relief:          ['restructure', 'plan'],
+  bed_and_isa:                   ['restructure', 'preserve'],
+  // Healthcare / protection
+  care_fee_buffer:               ['plan', 'preserve'],
+  income_protection_gap:         ['plan'],
+}
+
 /**
  * Classify a free-text query into structured concerns + resources.
  *
@@ -192,6 +249,7 @@ export function classify(query) {
     raw_matches: matches,
     off_ontology: offOntology,
     implied_facts: deriveImpliedFacts(q),
+    intent: deriveIntent(q),
   }
 }
 

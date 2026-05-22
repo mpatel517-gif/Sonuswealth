@@ -203,7 +203,16 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
     }
   }, [orc?.tree])
 
-  if (!orc) return null
+  if (!orc) {
+    // Defensive — should never happen now that useOrchestrator uses ESM imports,
+    // but guards against future regressions blanking the screen entirely.
+    return (
+      <div style={{ padding: 24, color: 'var(--c-text)', textAlign: 'center' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Decision Engine unavailable</div>
+        <div style={{ fontSize: 13, color: 'var(--c-text2)' }}>Please refresh the page. If this persists, the React hook init failed.</div>
+      </div>
+    )
+  }
 
   const handleSubmit = (q, preEvents) => {
     setCurrentQuery(q)
@@ -265,7 +274,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
           <div style={{ fontWeight: 700, fontSize: 15 }}>Decision Engine</div>
           <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>60 life events · engine-pure · FCA-compliant</div>
         </div>
-        {orc.isLoading && (
+        {orc.loading && (
           <button onClick={orc.cancel} style={{
             padding: '4px 10px', borderRadius: 6, border: '1px solid var(--c-sep)',
             background: 'none', color: 'var(--c-text3)', fontSize: 12, cursor: 'pointer',
@@ -288,8 +297,22 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
           <IdleState onSelect={handleSubmit} />
         )}
 
-        {/* Loading */}
-        <LoadingIndicator fsm={orc.fsm} />
+        {/* Loading — show spinner whenever loading=true even if fsm has no label */}
+        {orc.loading && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '20px', color: 'var(--c-text2)', fontSize: 14,
+          }}>
+            <div style={{
+              width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+              border: '2px solid var(--c-acc)', borderTopColor: 'transparent',
+              animation: 'de-spin 0.8s linear infinite',
+            }} />
+            <LoadingIndicator fsm={orc.fsm} />
+            <span>Working on it…</span>
+            <style>{`@keyframes de-spin { to { transform: rotate(360deg) } }`}</style>
+          </div>
+        )}
 
         {/* Error */}
         {orc.error && (
@@ -305,7 +328,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
         )}
 
         {/* Empty result — tree null after run completed OR pipeline cancelled mid-flight */}
-        {!orc.isLoading && !orc.tree && !orc.error && currentQuery && !orc.followUp?.needsFollowUp && (
+        {!orc.loading && !orc.tree && !orc.error && currentQuery && !orc.followUp?.needsFollowUp && (
           <div style={{ margin: '20px', padding: '16px 18px', borderRadius: 14, background: 'var(--c-surface)', border: '1px solid var(--c-sep)' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Couldn't generate a decision tree</div>
             <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
@@ -345,7 +368,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
         )}
 
         {/* Follow-up */}
-        {orc.followUp?.needsFollowUp && !orc.isLoading && (
+        {orc.followUp?.needsFollowUp && !orc.loading && (
           <FollowUpPanel
             followUp={orc.followUp}
             round={followUpRound + 1}
@@ -357,7 +380,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
       {/* Input bar */}
       <InputBar
         onSubmit={handleSubmit}
-        loading={orc.isLoading}
+        loading={orc.loading}
         placeholder={orc.tree ? 'Ask a follow-up or try another question…' : 'Ask any life question…'}
       />
     </div>

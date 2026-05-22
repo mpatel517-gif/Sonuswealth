@@ -13,6 +13,7 @@
  * Spec: plan §Architecture — one engine + one ontology.
  */
 
+import { useState, useRef, useCallback } from 'react';
 import { matchEvent, mergeEventContexts } from './ontology.js';
 import { buildPrompt }                     from './composer.js';
 import { buildCompoundPrompt, isCompound as checkCompound, dropEvent as doDropEvent } from './multi-event-composer.js';
@@ -235,12 +236,6 @@ export function dropEvent(eventIds, dropId) {
  * @returns orchestrator API
  */
 export function useOrchestrator(entity) {
-  // Lazy import React to keep this file importable in Node (smoke tests)
-  const React = typeof window !== 'undefined' ? require('react') : null;
-  if (!React) return null; // node environment — use runPipeline directly
-
-  const { useState, useRef, useCallback } = React;
-
   const [fsm, setFsm]             = useState(DE_STATE.IDLE);
   const [tree, setTree]           = useState(null);
   const [report, setReport]       = useState(null);
@@ -277,6 +272,11 @@ export function useOrchestrator(entity) {
       setEventIds(result.eventIds);
       setFollowUp(result.followUpState);
       setFsm(DE_STATE.DONE);
+    } else if (result.error !== 'cancelled') {
+      // No tree, no error — guard against blank screen. Surface a generic error
+      // so the empty-result panel renders and the user has a way forward.
+      setError('no_tree_returned');
+      setFsm(DE_STATE.ERROR);
     }
 
     return result;

@@ -25,22 +25,32 @@ async function callClaude(prompt, signal = null) {
 
   if (!apiKey) throw new Error('service_unavailable');
 
+  // Hard timeout — Opus can hang on long prompts. 60s max, then abort.
+  const timeoutCtrl = new AbortController();
+  const timeoutId   = setTimeout(() => timeoutCtrl.abort(), 60000);
+  if (signal) signal.addEventListener?.('abort', () => timeoutCtrl.abort());
+
   const t0 = Date.now();
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    signal,
-    headers: {
-      'x-api-key':                              apiKey,
-      'anthropic-version':                       '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-      'content-type':                            'application/json',
-    },
-    body: JSON.stringify({
-      model:      MODEL,
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      signal: timeoutCtrl.signal,
+      headers: {
+        'x-api-key':                              apiKey,
+        'anthropic-version':                       '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+        'content-type':                            'application/json',
+      },
+      body: JSON.stringify({
+        model:      MODEL,
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText);

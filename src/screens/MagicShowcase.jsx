@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import AskSonuFlow                         from './AskSonuFlow.jsx'
 import { lens as taxAccountantLens }       from '../lenses/tax-accountant.js'
 import { lens as pensionSpecialistLens }   from '../lenses/pension-specialist.js'
 import { lens as trustLawyerLens }         from '../lenses/trust-lawyer.js'
@@ -2358,13 +2359,13 @@ function SonuArchitecture({ entity }) {  // eslint-disable-line no-unused-vars
 // ── Main screen ──────────────────────────────────────────────────────────────
 
 const SECTIONS = [
-  { id: 'situation', label: 'Tell Sonu your situation',  sub: 'Advisors auto-route — you don\'t pick' },
-  { id: 'coi',       label: 'Watch the cost drop',        sub: 'Cost of Inaction in real time' },
-  { id: 'panel',     label: 'How Sonu thinks',            sub: 'The 11-advisor architecture' },
+  { id: 'ask',       label: 'Ask Sonu anything',          sub: 'One lead + 3 supporting + 4 challenges' },
+  { id: 'situation', label: 'Chip-based scenarios',       sub: 'Auto-routes to specialists' },
+  { id: 'panel',     label: 'How Sonu thinks',            sub: 'The engine architecture' },
 ]
 
 export default function MagicShowcase({ entity, onClose }) {
-  const [section, setSection] = useState('situation')
+  const [section, setSection] = useState('ask')
 
   return (
     <div style={{
@@ -2422,8 +2423,8 @@ export default function MagicShowcase({ entity, onClose }) {
       </div>
 
       {/* Section content */}
+      {section === 'ask' && <AskSonuFlow entity={entity} />}
       {section === 'situation' && <SituationFlow entity={entity} />}
-      {section === 'coi' && <CoIOdometerDemo />}
       {section === 'panel' && <SonuArchitecture entity={entity} />}
 
       {/* Footer */}

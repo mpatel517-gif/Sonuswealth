@@ -298,6 +298,11 @@ export function useOrchestrator(entity) {
       setTree(result.tree);
       setReport(result.report);
       setFollowUp(result.followUpState);
+    } else {
+      // Pipeline failed on follow-up — clear stuck follow-up panel so the
+      // empty-result panel can render and the user has a way forward.
+      setFollowUp(null);
+      if (result.error) setError(result.error);
     }
     return result;
   }, [tree, entity, eventIds]);

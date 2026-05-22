@@ -1851,40 +1851,42 @@ export default function HomeScreen({
       )}
       {stubMetric && <DimExplainerStub metric={stubMetric} fqData={fq} onNav={onNav} onClose={() => setStubMetric(null)} />}
 
-      {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
-      <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
-
-      {/* ── See the difference — WOW showcase entry point ────────────── */}
+      {/* ── Ask Sonu — primary entry point, top of page ────────────────── */}
       {onShowMagic && (
-        <div style={{ padding: '8px 16px 0' }}>
+        <div style={{ padding: '12px 16px 4px' }} data-testid="ask-sonu-cta">
           <button
-            onClick={onShowMagic}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onShowMagic() }}
             style={{
               width: '100%',
-              padding: '14px 16px', borderRadius: 14,
-              background: 'linear-gradient(135deg, rgba(93,219,194,0.16) 0%, rgba(175,82,222,0.12) 100%)',
-              border: '1px solid rgba(93,219,194,0.35)',
+              padding: '18px 18px', borderRadius: 16,
+              background: 'linear-gradient(135deg, rgba(93,219,194,0.22) 0%, rgba(175,82,222,0.18) 100%)',
+              border: '1.5px solid var(--c-acc)',
               color: 'var(--c-text)',
               cursor: 'pointer', fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center', gap: 12,
-              transition: 'transform .15s ease, border-color .15s ease',
+              display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: '0 4px 16px rgba(93,219,194,0.18)',
+              transition: 'transform .15s ease, box-shadow .15s ease',
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.borderColor = 'var(--c-acc)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';   e.currentTarget.style.borderColor = 'rgba(93,219,194,0.35)' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(93,219,194,0.28)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';   e.currentTarget.style.boxShadow = '0 4px 16px rgba(93,219,194,0.18)' }}
           >
-            <span style={{ fontSize: 22, lineHeight: 1 }}>✨</span>
+            <span style={{ fontSize: 26, lineHeight: 1 }}>✨</span>
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.2, marginBottom: 2 }}>
-                See what makes Sonuswealth different
+              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2, marginBottom: 3 }}>
+                Ask Sonu anything
               </div>
-              <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.4 }}>
-                Watch Cost of Inaction drop · 11 specialist advisors · £70k drawdown deconstructed
+              <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.4 }}>
+                One clear answer + the path to get there · powered by 11 specialist lenses
               </div>
             </div>
-            <span style={{ fontSize: 16, color: 'var(--c-acc)' }}>›</span>
+            <span style={{ fontSize: 18, color: 'var(--c-acc)', fontWeight: 700 }}>›</span>
           </button>
         </div>
       )}
+
+      {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
+      <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
 
       {/* ── Anchor row (inline AnchorRow component defined above) ─────── */}
       <AnchorRow

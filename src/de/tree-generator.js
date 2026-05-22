@@ -125,10 +125,8 @@ export async function generateTree(prompt, entity, opts = {}) {
     const { tree: parsedTree, report } = processClaudeResponse(rawText, entity);
 
     if (!parsedTree) {
-      return {
-        tree: null, report, rawText, ms,
-        error: 'JSON parse failed — Claude did not return valid tree JSON',
-      };
+      // Parse failure — fall through to fallback (demo robustness)
+      throw new Error('JSON parse failed — Claude did not return valid tree JSON');
     }
 
     // 3. Horizon guard — supply default (current tax year end) if missing

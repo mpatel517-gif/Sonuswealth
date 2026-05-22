@@ -15,13 +15,17 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { lens as taxAccountantLens }    from '../lenses/tax-accountant.js'
 import { lens as pensionSpecialistLens } from '../lenses/pension-specialist.js'
 import { lens as trustLawyerLens }       from '../lenses/trust-lawyer.js'
+import { lens as ifaHolisticLens }       from '../lenses/ifa-holistic.js'
+import { lens as insuranceAdviserLens }  from '../lenses/insurance-adviser.js'
 
 // Live lens registry — keyed by lens id, used by ElevenAdvisorsDemo to swap
 // hand-crafted scaffold cards with real lens output where the engine exists.
 const LIVE_LENSES = {
-  'tax':     taxAccountantLens,
-  'pension': pensionSpecialistLens,
-  'trust':   trustLawyerLens,
+  'tax':         taxAccountantLens,
+  'pension':     pensionSpecialistLens,
+  'trust':       trustLawyerLens,
+  'ifa':         ifaHolisticLens,
+  'protection':  insuranceAdviserLens,
 }
 
 // ── Section 1: CoI Odometer ──────────────────────────────────────────────────

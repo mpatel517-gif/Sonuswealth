@@ -9,6 +9,8 @@
 import { lens as taxAccountant }     from './tax-accountant.js';
 import { lens as pensionSpecialist } from './pension-specialist.js';
 import { lens as trustLawyer }       from './trust-lawyer.js';
+import { lens as ifaHolistic }       from './ifa-holistic.js';
+import { lens as insuranceAdviser }  from './insurance-adviser.js';
 
 // Shells — not yet implemented (return empty arrays). Placeholder for v0.1+.
 const placeholderLens = (id, name, avatar, expertise) => ({
@@ -20,9 +22,9 @@ const placeholderLens = (id, name, avatar, expertise) => ({
   red_flags: () => [],
   what_if_prompts: () => [],
 });
-const ifaHolistic           = placeholderLens('ifa-holistic', 'IFA (Holistic)', '📊', ['holistic', 'asset_allocation', 'risk', 'cashflow', 'suitability']);
+// ifaHolistic — now LIVE (imported above)
 const mortgageAdviser       = placeholderLens('mortgage-adviser', 'Mortgage Adviser', '🏠', ['mortgages', 'btl', 'remortgage', 'affordability']);
-const insuranceAdviser      = placeholderLens('insurance-adviser', 'Insurance / Protection', '🛡️', ['life', 'income_protection', 'critical_illness', 'whole_of_life']);
+// insuranceAdviser — now LIVE (imported above)
 const investmentAdviser     = placeholderLens('investment-adviser', 'Investment Adviser', '📈', ['portfolio', 'costs', 'rebalancing', 'esg']);
 const crossBorderSpecialist = placeholderLens('cross-border', 'Cross-Border Specialist', '🌍', ['srt', 'fig', 'dta', 'deemed_dom', 'nri']);
 const familyLawSpecialist   = placeholderLens('family-law', 'Family Law Specialist', '👨‍👩‍👧', ['divorce', 'cohab', 'prenup', 'child_maintenance']);

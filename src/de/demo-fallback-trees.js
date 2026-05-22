@@ -695,29 +695,264 @@ const FALLBACK_TREES = {
   relocate: RELOCATE_ABROAD,
 }
 
+// ── Intake-aware relocate customisation ──────────────────────────────────────
+// The "How much do I need to relocate?" intake collects 9 chips. The hardcoded
+// fallback above is Portugal/UAE-centric — if the user picked Kenya and wants
+// to rent out their UK home with ongoing NHS treatment, none of those answers
+// land in the tree. parseIntakeAnswers extracts what the user said; weaveIntake
+// rewrites the fallback so every option respects those constraints.
+
+function parseIntakeAnswers(query) {
+  const q = String(query || '')
+  // Each chip label in ScenarioIntake renders as "<question>: <answer>" inside
+  // a "; "-joined block. Anchor on the question stem; capture up to the next
+  // "; " or sentence boundary.
+  const grab = (re) => {
+    const m = q.match(re)
+    return m ? m[1].trim() : null
+  }
+  return {
+    country:     grab(/which country are you considering[^:]*:\s*([^;.\n]+)/i),
+    home:        grab(/what would you do with your uk home[^:]*:\s*([^;.\n]+)/i),
+    working:     grab(/are you still working[^:]*:\s*([^;.\n]+)/i),
+    spouse:      grab(/will a partner or spouse[^:]*:\s*([^;.\n]+)/i),
+    when:        grab(/when are you planning[^:]*:\s*([^;.\n]+)/i),
+    duration:    grab(/how long do you plan to stay[^:]*:\s*([^;.\n]+)/i),
+    cost:        grab(/target lifestyle cost[^:]*:\s*([^;.\n]+)/i),
+    incomeKeep:  grab(/which uk income sources[^:]*:\s*([^;.\n]+)/i),
+    healthcare:  grab(/will you need regular access to uk healthcare[^:]*:\s*([^;.\n]+)/i),
+  }
+}
+
+// Country-specific tax regime hints. We carry the named regimes we have data
+// for; everything else falls back to a "general non-UK resident" treatment with
+// an explicit "specialist tax advice required" cons line.
+const COUNTRY_HINTS = {
+  portugal:  { regime: 'IFICI (post-NHR) — 20% flat on Portuguese-source income, 0% on most foreign income for 10 years; foreign pensions 10%', ihtNote: 'No equivalent UK IHT but watch the 4-year UK domicile tail' },
+  uae:       { regime: '0% personal income tax, no CGT, no local inheritance tax. Golden Visa via property £550K+ or business', ihtNote: '4-year UK IHT tail unless deemed non-domiciled' },
+  spain:     { regime: 'Beckham Law (limited) or progressive PIT up to 47% + wealth tax in some regions. Less tax-favourable than Portugal/UAE', ihtNote: 'Spanish succession tax varies by region — material risk' },
+  cyprus:    { regime: 'Non-dom regime — 17 years of dividend/interest exemption; 12.5% corp tax; foreign pension flat 5% over €3,420', ihtNote: 'No Cyprus IHT but 4-year UK IHT tail applies' },
+  italy:     { regime: '€100K flat-tax regime on foreign income for up to 15 years (impatriate scheme)', ihtNote: 'Italian succession tax low (4-8%) but UK 4-year tail still bites' },
+  ireland:   { regime: 'Standard PIT up to 40% + USC. Remittance basis available — only foreign income remitted is taxed', ihtNote: 'CAT thresholds materially lower than UK NRB; review carefully' },
+  australia: { regime: 'Resident PIT up to 45% + Medicare levy. No double-tax with UK on most pensions. CGT applies', ihtNote: 'No Australian IHT but UK 4-year tail and Aus CGT on disposal must be modelled' },
+  canada:    { regime: 'Federal + provincial PIT up to ~53%. RRSP / TFSA equivalents available. Foreign pension treatment per UK-Canada DTA', ihtNote: 'No Canadian IHT; deemed disposal CGT on emigration — review' },
+  france:    { regime: 'PIT up to 45% + social charges 17.2% on investment income; wealth tax on property (IFI)', ihtNote: 'French succession tax can exceed UK IHT for non-children beneficiaries' },
+  // Anything else → generic treatment (e.g. Kenya, Thailand, Mexico, Mauritius)
+}
+
+function lc(s) { return String(s || '').toLowerCase() }
+
+function weaveIntakeIntoRelocate(tree, intake) {
+  if (!intake.country) return tree // No country picked → leave generic fallback
+
+  const countryRaw = intake.country.replace(/\s+/g, ' ').trim()
+  const countryKey = lc(countryRaw).replace(/[^a-z]/g, '')
+  const hint       = COUNTRY_HINTS[countryKey] || null
+  const generic    = !hint
+  const tax        = hint?.regime || `Tax regime in ${countryRaw} is country-specific — specialist cross-border advice required to model precisely. As a non-UK resident under SRT, UK-source income is still taxed in the UK (rental, UK dividends) unless a Double-Taxation Agreement provides relief.`
+  const ihtNote    = hint?.ihtNote || 'UK IHT 4-year domicile tail applies wherever you move. Estate restructuring still required.'
+
+  const home        = lc(intake.home || '')
+  const working     = lc(intake.working || '')
+  const spouse      = lc(intake.spouse || '')
+  const when        = intake.when || 'unspecified'
+  const duration    = lc(intake.duration || '')
+  const cost        = intake.cost || 'similar to UK'
+  const incomeKeep  = intake.incomeKeep || 'pension'
+  const healthcare  = lc(intake.healthcare || '')
+
+  const propertyClause =
+    home.includes('sell')       ? `Sell the UK home — crystallise CGT via main-residence relief; redeploy proceeds either into ${countryRaw} property or back into UK GIA/AIM BPR` :
+    home.includes('rent')       ? `Keep the UK home and let it — UK rental income remains UK-taxed (S24 mortgage-interest restriction applies). NRL scheme registration needed before departure` :
+    home.includes('keep')       ? `Keep the UK home empty — careful: this is an "available accommodation" tie under SRT and risks accidental UK tax residence. Council tax and insurance still due` :
+                                  `UK home plan still open — decide before move date as it materially changes SRT outcome and CGT treatment`
+
+  const workingClause =
+    working.includes('full')    ? 'Continued full-time UK employment is incompatible with breaking UK tax residence — most full-time roles require physical UK presence above SRT thresholds' :
+    working.includes('part')    ? `Part-time UK work is possible but each UK work-day counts toward the SRT day count — model carefully` :
+    working.includes('retired') ? 'Retired status simplifies SRT — no UK-employment tie, only family/accommodation/day-count ties to manage' :
+    working.includes('self')    ? `Self-employed — can route consulting through a ${countryRaw} entity or stay UK self-employed depending on DTA` :
+                                  'Working status open — needed to model SRT ties precisely'
+
+  const spouseClause =
+    spouse.includes('yes')         ? `Spouse relocating with you — joint planning unlocks two sets of allowances in ${countryRaw} and avoids the "family tie" SRT trigger that would otherwise pull you back into UK tax residence` :
+    spouse.includes('no')          ? `Spouse remaining in UK creates a family tie under SRT — you must spend far fewer UK days to qualify as non-resident. This is the single biggest constraint on your plan.` :
+                                     'Spouse decision still open — affects SRT family tie and joint estate planning materially'
+
+  const incomeKeepClause = incomeKeep.toLowerCase().includes('pension')
+    ? 'Pension / SIPP income — UK pensions remain UK-taxable for non-residents unless a DTA gives the host country exclusive rights. Foreign-source pension treatment varies (Portugal 10%, UAE 0%, generic ~30%)'
+    : `UK income to retain: ${incomeKeep} — taxation rules vary by source; ${countryRaw} DTA review required`
+
+  const healthcareClause =
+    healthcare.includes('ongoing')      ? `Ongoing UK NHS treatment is a hard constraint — confirm continuity-of-care arrangement in ${countryRaw} before any move. Private health insurance £4-12K/yr depending on age and condition` :
+    healthcare.includes('occasional')   ? 'Occasional UK NHS access remains available as a UK citizen but elective treatment is harder to access once non-resident' :
+    healthcare.includes('private') || healthcare.includes('happy') ? `Private healthcare in ${countryRaw} budget — typically £3-10K/yr depending on age and cover` :
+                                          'Healthcare plan still open — must resolve before move date'
+
+  const durationClause =
+    duration.includes('permanent')   ? 'Permanent move — domicile of choice claim viable after a few years if intent is clear and UK ties severed' :
+    duration.includes('5-10')        ? '5–10 year horizon supports a permanent residency change and gives time to qualify for most foreign tax-incentive regimes' :
+    duration.includes('trial')       ? 'Trial mindset — Option B (trial year) explicitly fits this' :
+                                       `Stay duration: ${duration}`
+
+  const costClause =
+    cost.includes('20% cheaper')  ? `Target cost ~20% below UK — typical of ${countryRaw} outside major capitals. Expected lifestyle saving £15-25K/yr on £100K UK spend` :
+    cost.includes('40% cheaper')  ? `Target cost ~40% below UK — possible in low-cost destinations. Expected lifestyle saving £30-45K/yr on £100K UK spend` :
+    cost.includes('Same level')   ? 'Cost similar to UK — financial case rests entirely on tax saving, not lifestyle arbitrage' :
+                                    `Cost target: ${cost}`
+
+  // ── Rewrite Option A — full move to chosen country ──────────────────────────
+  tree.options[0] = {
+    ...tree.options[0],
+    name: `${countryRaw} — full residency change`,
+    rationale: `${tax}. ${propertyClause}. ${spouseClause}. ${workingClause}. ${ihtNote}.`,
+    pros: [
+      `Break UK tax residence under SRT — income tax saving on UK earnings (depends on what you keep UK-sourced)`,
+      `CGT-free realisation of UK GIA gains once non-UK-resident (timing matters — realise in first non-resident tax year)`,
+      `Lifestyle change — ${costClause}`,
+      generic ? `${countryRaw} tax regime needs specialist modelling — values shown are illustrative only` : `Country-specific regime: ${hint.regime.split('—')[0].trim()}`,
+    ],
+    cons: [
+      'UK IHT 4-year domicile tail — does not solve estate planning on its own',
+      'SRT day-counting must be meticulous — accidental UK residence reverses all gains',
+      generic ? `No double-taxation agreement (DTA) preview available in this prototype for ${countryRaw} — specialist required` : 'Foreign tax-incentive regimes can be amended by future budgets',
+      healthcare.includes('ongoing') ? 'Ongoing UK NHS treatment must be replicated locally before move' : 'Healthcare cost to budget for',
+    ],
+    consequences: [
+      { metric: 'annual_tax_saving', value: hint ? '£20K–£45K/yr (regime-dependent)' : 'Specialist modelling required — typical £10K–£35K/yr', confidence: hint ? 'medium' : 'low' },
+      { metric: 'one_off_relocation_cost', value: '£25K–£70K (visas, shipping, professional fees)', confidence: 'medium' },
+      { metric: 'lifestyle_cost_delta', value: cost, confidence: 'high' },
+      { metric: 'healthcare_setup', value: healthcareClause.includes('£') ? healthcareClause.match(/£[\d\-K, /]+yr/)?.[0] || 'specialist review' : 'specialist review', confidence: 'medium' },
+    ],
+    sequence: [
+      `Year 0: Specialist cross-border tax review covering ${countryRaw} regime + UK SRT plan`,
+      `Year 0: ${propertyClause.split(' — ')[0]}`,
+      `Year 0-1: Apply for ${countryRaw} residence permit / visa`,
+      `Year 1: Break UK SRT — manage UK day count, sever applicable ties`,
+      `Year 1: Realise UK GIA gains in first non-resident tax year (CGT-free where DTA allows)`,
+      `Year 2+: ${durationClause}`,
+    ],
+  }
+
+  // ── Rewrite Option B — trial year / staged move ─────────────────────────────
+  tree.options[1] = {
+    ...tree.options[1],
+    name: `${countryRaw} — trial year first (staged move)`,
+    rationale: `Test ${countryRaw} for a year before committing. Stay below SRT thresholds in year 1 so you remain UK-resident, then re-evaluate. ${spouseClause}. ${healthcareClause}.`,
+    pros: [
+      'Reversible — return to full UK residence if it doesn\'t work',
+      'No CGT exit-event triggered in trial year',
+      'Maintains UK NHS access during the trial',
+      'Allows family + healthcare arrangements to be tested in low-stakes setting',
+    ],
+    cons: [
+      'No tax saving in trial year — you remain UK-resident',
+      'Double housing cost during overlap',
+      'Visa rules still apply — may need temporary residency permit',
+    ],
+    consequences: [
+      { metric: 'annual_tax_saving', value: '£0 in trial year', confidence: 'high' },
+      { metric: 'trial_overhead', value: '£20K–£40K extra (second home, travel)', confidence: 'medium' },
+      { metric: 'optionality_value', value: 'High — preserves both paths', confidence: 'high' },
+    ],
+    sequence: [
+      `Month 0-3: Short-term rental in ${countryRaw} — no purchase`,
+      `Month 3-12: Live alternately UK/${countryRaw} — manage UK day count to stay UK-resident`,
+      `Month 12: Decision point — commit to full move or return`,
+    ],
+  }
+
+  // ── Rewrite Option C — Stay in UK + restructure ─────────────────────────────
+  tree.options[2] = {
+    ...tree.options[2],
+    name: 'Stay in UK — restructure instead of relocating',
+    rationale: `${spouseClause}. ${workingClause}. ${propertyClause}. The UK has its own levers — AIM BPR, pension front-loading, PETs — that can deliver IHT saving without the disruption of moving abroad. Worth quantifying as a baseline.`,
+    pros: [
+      'No SRT break required — keep all UK family / NHS / pension ties intact',
+      'AIM BPR + PETs combined can save £400K-£600K of IHT',
+      'Pension carry-forward + pre-2027 TFC = material tax saved this year',
+      `${spouseClause.startsWith('Spouse remaining') ? 'No family-tie problem to solve' : 'Joint UK estate planning straightforward'}`,
+    ],
+    cons: [
+      'No income-tax saving on UK earnings or dividends',
+      'No lifestyle / climate change',
+      'Less radical wealth optimisation — incremental wins only',
+    ],
+  }
+
+  // ── Rewrite Option D — Split residency / hybrid ─────────────────────────────
+  tree.options[3] = {
+    ...tree.options[3],
+    name: `Unconsidered: split residency between UK and ${countryRaw}`,
+    rationale: `Most "relocation" debates assume a binary. In practice many people split time below SRT thresholds — e.g. 70 UK days + 200 ${countryRaw} days. You retain UK ties without UK tax residence. Requires meticulous day-counting and zero overnight UK home retention. ${healthcareClause}.`,
+    pros: [
+      `Best of both — UK ties retained, ${countryRaw} tax regime applied`,
+      'Easier emotional / family transition',
+      'Can return permanently if circumstances change',
+      'NHS access remains via UK citizenship + occasional UK days',
+    ],
+    cons: [
+      'SRT day-counting must be meticulous — software/tracker essential',
+      'Two homes = double overhead (council tax, maintenance, insurance)',
+      'Tax-residence-tie complexity if rules tighten — material political risk',
+      home.includes('keep') ? 'UK "available accommodation" tie is hard to escape if you keep the home empty' : '',
+    ].filter(Boolean),
+  }
+
+  // ── Top-level rewrites ──────────────────────────────────────────────────────
+  tree.decision  = `What would it cost and mean to move to ${countryRaw}?`
+  tree.statement = `Based on your 9-question intake — ${countryRaw} as destination, ${when} timeframe, ${duration || 'duration TBD'}, ${spouse || 'spouse TBD'}, ${working || 'work status TBD'}, ${home || 'home plan TBD'}. Three paths modelled below, plus the path most expats overlook.${generic ? ` Note: ${countryRaw} tax data shown is illustrative — country-specific specialist advice required before any move.` : ''}`
+  tree.recommendation = {
+    pathId: 'B',
+    rationale: `Given the ${when} timeframe and ${duration || 'open'} stay duration, Option B (trial year in ${countryRaw}) preserves optionality at modest cost. If the trial confirms the move, switch to Option A in year 2. Option C remains the right answer if the tax saving turns out smaller than the lifestyle/healthcare friction, and the £400-600K UK IHT restructure is material in its own right.`,
+  }
+  tree._reasoningTrace = [
+    { step: 'Read your 9 intake answers', detail: `${countryRaw} · ${when} · ${duration || 'TBD'} · spouse: ${spouse || 'TBD'} · UK home: ${home || 'TBD'} · work: ${working || 'TBD'} · cost target: ${cost} · keep UK income: ${incomeKeep} · healthcare: ${healthcare || 'TBD'}` },
+    { step: 'Consulted Cross-Border Specialist', detail: `Modelled SRT ties for ${countryRaw} including family + accommodation + work-day ties` },
+    { step: 'Consulted Tax Accountant lens', live: true, detail: `Computed income-tax outcome on retained UK sources (${incomeKeep}) under ${countryRaw} DTA` },
+    { step: 'Consulted Trust Lawyer lens', live: true, detail: 'Flagged 4-year IHT domicile tail; estate restructuring still required post-move' },
+    { step: 'Consulted IFA (Holistic) lens', detail: 'Cross-checked vs. staying + UK-side restructure as control case' },
+    { step: 'Conflict scan', detail: '1 conflict: IHT 4-year tail · 1460 days' },
+    { step: 'Ranked by net outcome', detail: 'Trial year (Option B) recommended — preserves both paths at modest cost' },
+  ]
+  return tree
+}
+
 // Match a fallback tree by eventId OR by keyword in the user's freeform query.
 // Used when Claude is unreachable — keeps the demo from blanking on the
 // "What if I relocated?" scenario (which has eventId: null at the call site).
 export function getFallbackTree(eventIds, userQuery = '') {
+  let tree = null
   // 1. eventId match (preferred)
   if (eventIds && eventIds.length > 0) {
-    const tree = FALLBACK_TREES[eventIds[0]]
-    if (tree) return JSON.parse(JSON.stringify(tree))
+    const t = FALLBACK_TREES[eventIds[0]]
+    if (t) tree = JSON.parse(JSON.stringify(t))
   }
   // 2. keyword match against the query
-  const q = (userQuery || '').toLowerCase()
-  if (/relocat|abroad|move overseas|emigrat|portugal|uae|dubai|cyprus|nhr|ific/.test(q)) {
-    return JSON.parse(JSON.stringify(RELOCATE_ABROAD))
+  if (!tree) {
+    const q = (userQuery || '').toLowerCase()
+    if (/relocat|abroad|move overseas|emigrat|portugal|uae|dubai|cyprus|nhr|ific|kenya|spain|italy|france|ireland|australia|canada/.test(q)) {
+      tree = JSON.parse(JSON.stringify(RELOCATE_ABROAD))
+    } else if (/iht|inheritance|estate|gift|trust|nrb|rnrb/.test(q)) {
+      tree = JSON.parse(JSON.stringify(IHT_PLANNING))
+    } else if (/retire|drawdown|sipp|pension/.test(q)) {
+      tree = JSON.parse(JSON.stringify(RETIRE_5_EARLIER))
+    } else if (/bigger house|move house|new house|sdlt|stamp duty|downsize/.test(q)) {
+      tree = JSON.parse(JSON.stringify(BIGGER_HOUSE))
+    } else {
+      tree = JSON.parse(JSON.stringify(GENERIC_CATCHALL))
+    }
   }
-  if (/iht|inheritance|estate|gift|trust|nrb|rnrb/.test(q)) {
-    return JSON.parse(JSON.stringify(IHT_PLANNING))
+
+  // 3. Intake-aware customisation — only for relocate flows where the intake
+  // string contains the 9-chip context. Other event types don't yet have intake.
+  const isRelocate = tree?.events?.includes('relocate') || /relocat|abroad|emigrat/.test(lc(userQuery))
+  if (isRelocate) {
+    const intake = parseIntakeAnswers(userQuery)
+    if (intake.country || intake.home || intake.spouse) {
+      weaveIntakeIntoRelocate(tree, intake)
+    }
   }
-  if (/retire|drawdown|sipp|pension/.test(q)) {
-    return JSON.parse(JSON.stringify(RETIRE_5_EARLIER))
-  }
-  if (/bigger house|move house|new house|sdlt|stamp duty|downsize/.test(q)) {
-    return JSON.parse(JSON.stringify(BIGGER_HOUSE))
-  }
-  // 3. generic catch-all
-  return JSON.parse(JSON.stringify(GENERIC_CATCHALL))
+
+  return tree
 }

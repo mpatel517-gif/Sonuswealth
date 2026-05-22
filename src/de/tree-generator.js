@@ -164,17 +164,23 @@ export async function generateTree(prompt, entity, opts = {}) {
     return { tree: guardedTree, report, rawText, ms, error: null };
 
   } catch (err) {
-    if (err.name === 'AbortError') {
+    // Distinguish user-initiated cancel (external signal) from system abort
+    // (our 60s timeout). Both produce AbortError, but only the user case should
+    // bypass the fallback — a timeout should still serve the canned tree so
+    // the demo never lands on the misleading "couldn't generate" panel.
+    const userCancelled = err.name === 'AbortError' && signal?.aborted === true;
+    if (userCancelled) {
       return { tree: null, report: null, rawText: '', ms: 0, error: 'cancelled' };
     }
     // Fallback for demo robustness — if we have a canned tree for this event
     // OR a keyword match in the freeform query, serve it rather than blanking.
-    // Triggered only when Claude is unreachable (no key, network failure, 5xx).
-    // Generic catch-all ensures even off-ontology queries (eventId: null) get
-    // a credible response. The UI cannot tell the difference.
+    // Triggered when Claude is unreachable (no key, network failure, 5xx) OR
+    // when our own 60s timeout fires. Generic catch-all ensures even
+    // off-ontology queries (eventId: null) get a credible response.
     const fallback = getFallbackTree(eventIds, userQuery);
     if (fallback) {
-      console.warn('[DE] Claude unreachable — serving fallback tree for', eventIds);
+      const reason = err.name === 'AbortError' ? 'timeout (60s)' : (err.message || 'unknown');
+      console.warn(`[DE] Claude unreachable (${reason}) — serving fallback tree for`, eventIds);
       const { tree: fcaTree } = fcaRewriteTree(fallback);
       const guarded = enforceOptionsCount(fcaTree);
       return {

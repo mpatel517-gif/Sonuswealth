@@ -406,6 +406,15 @@ RULES:
 - fcaCompliant must be true. If you cannot make it true, omit recommendation.
 - research[] must include at least one rules-uk.js source and one [MOCK] live source.
 - yourAnswers keys = the fields in userAnswers that are still null (what's missing).
+
+USER-PROVIDED CONSTRAINTS ARE BINDING:
+- The userQuery above may contain a structured "Here is additional context about my situation: <Question>: <Answer>; ..." block — these are intake chip answers the user has already given.
+- Every option you generate MUST respect EVERY one of those answers. They are not preferences; they are constraints.
+- If the user has named a specific country/asset/scenario, do NOT introduce alternative countries/assets/scenarios the user did not mention. Build all 4 options around what the user named.
+- Example violation: user says "Which country: Kenya" — you return Portugal and UAE. This is wrong. Build options around Kenya only.
+- Example violation: user says "What would you do with your UK home: Rent it out" — you assume they will sell. This is wrong. Model the rental case.
+- If an answer makes one of the 4 option slots structurally impossible (e.g. user said "Permanent move" so a "Trial year" option no longer fits), replace that option with a different real path (e.g. "Split residency" or "Staged move with property exit"). Never paper over a user constraint.
+- In your "statement" field, name the constraints back to the user in the first sentence so they can see you read them: "Based on your intake — [country], [horizon], [duration], ..."
 `;
 
 // ── Main export ───────────────────────────────────────────────────────────────

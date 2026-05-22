@@ -17,15 +17,17 @@ import { lens as pensionSpecialistLens } from '../lenses/pension-specialist.js'
 import { lens as trustLawyerLens }       from '../lenses/trust-lawyer.js'
 import { lens as ifaHolisticLens }       from '../lenses/ifa-holistic.js'
 import { lens as insuranceAdviserLens }  from '../lenses/insurance-adviser.js'
+import { lens as investmentAdviserLens } from '../lenses/investment-adviser.js'
 
-// Live lens registry — keyed by lens id, used by ElevenAdvisorsDemo to swap
-// hand-crafted scaffold cards with real lens output where the engine exists.
+// Live lens registry — keyed by lens id, used by SituationFlow to fire only
+// the relevant advisors against the user's situation.
 const LIVE_LENSES = {
   'tax':         taxAccountantLens,
   'pension':     pensionSpecialistLens,
   'trust':       trustLawyerLens,
   'ifa':         ifaHolisticLens,
   'protection':  insuranceAdviserLens,
+  'investment':  investmentAdviserLens,
 }
 
 // ── Section 1: CoI Odometer ──────────────────────────────────────────────────
@@ -1286,17 +1288,542 @@ function TaperTrapDemo({ entity }) {  // eslint-disable-line no-unused-vars
   )
 }
 
+// ── Section 5 (NEW PRIMARY): Tell Sonu your situation — lenses auto-route ───
+//
+// Replaces the old "pick an advisor" model. User describes a situation;
+// Sonu routes to the relevant lenses automatically and synthesises their
+// outputs. The advisor selection problem disappears.
+
+// Keyword router. Each rule has a regex + list of lens ids to fire.
+// Maps the user's natural-language situation to the right specialists.
+// If no rule matches, fire the core three (tax, pension, trust).
+const SITUATION_ROUTES = [
+  { test: /retire|drawdown|sipp|pension/i,                                          lenses: ['tax', 'pension', 'trust', 'ifa'] },
+  { test: /iht|inherit|estate|will|lpa|nrb|rnrb|domicile/i,                          lenses: ['trust', 'tax', 'protection'] },
+  { test: /gift|pet|petting|generosity|children|grandchild/i,                        lenses: ['trust', 'tax', 'pension'] },
+  { test: /taper|£100k|100k|marginal rate|60%|personal allowance/i,                  lenses: ['tax', 'pension'] },
+  { test: /relocat|abroad|move overseas|emigrat|portugal|uae|dubai|nhr|ific/i,       lenses: ['tax', 'trust', 'ifa', 'investment'] },
+  { test: /divorce|separat|prenup|cohab|alimony/i,                                   lenses: ['trust', 'ifa', 'pension', 'tax'] },
+  { test: /sell.*business|business.*sale|exit|s24|badr/i,                            lenses: ['tax', 'trust', 'pension', 'investment'] },
+  { test: /portfolio|invest|allocation|fees|ter|concentration|equity|bond/i,         lenses: ['investment', 'ifa', 'tax'] },
+  { test: /protect|life cover|critical illness|income protection|insurance/i,        lenses: ['protection', 'ifa', 'trust'] },
+  { test: /isa|allowance|wrapper|cgt|year-end|tax year/i,                            lenses: ['tax', 'investment'] },
+  { test: /care|long-term|nursing|residential/i,                                     lenses: ['trust', 'ifa', 'protection'] },
+]
+
+function routeSituationToLenses(query) {
+  const matched = new Set()
+  for (const rule of SITUATION_ROUTES) {
+    if (rule.test.test(query)) {
+      rule.lenses.forEach(l => matched.add(l))
+    }
+  }
+  if (matched.size === 0) {
+    // No keyword match — default to the core three
+    return ['tax', 'pension', 'trust']
+  }
+  return [...matched]
+}
+
+// Lens metadata for the route trace — avatar + display name.
+const LENS_META = {
+  'tax':         { avatar: '🧾', name: 'Tax Accountant' },
+  'pension':     { avatar: '🏦', name: 'Pension Specialist' },
+  'trust':       { avatar: '⚖️', name: 'Trust Lawyer' },
+  'ifa':         { avatar: '📊', name: 'IFA (Holistic)' },
+  'protection':  { avatar: '🛡️', name: 'Protection' },
+  'investment':  { avatar: '📈', name: 'Investment Adviser' },
+}
+
+const SITUATION_STARTERS = [
+  { id: 'retire-60',     icon: '🏁', label: 'Retire at 60 with £1M SIPP',           query: 'I want to retire at 60 from my £1M SIPP — what is the optimal drawdown strategy?' },
+  { id: 'iht-2027',      icon: '⚖️', label: 'Reduce my IHT before April 2027',       query: 'How do I reduce my inheritance tax before the April 2027 SIPP changes?' },
+  { id: 'gift-children', icon: '🎁', label: 'Gift £500k to my children',            query: 'I want to gift £500,000 to my children — what are the IHT and tax implications?' },
+  { id: 'taper',         icon: '⚠️', label: 'Escape the £100k taper',                query: 'My income is £150,000 — how do I escape the 60% marginal rate taper?' },
+  { id: 'relocate',      icon: '✈️', label: 'Move to Portugal',                     query: 'Should I move to Portugal for tax purposes? Cover SRT, IHT tail, and CGT realisation.' },
+  { id: 'divorce',       icon: '👥', label: "I'm getting divorced",                 query: 'I am getting divorced — what do I need to know about pensions, IHT, and ongoing financial planning?' },
+  { id: 'sell-business', icon: '🏢', label: 'Sell my business',                     query: 'I want to sell my business — cover CGT, BADR, reinvestment relief, and how it affects my estate.' },
+  { id: 'protect',       icon: '🛡️', label: 'Am I protected if I die or fall ill?', query: 'Am I adequately protected against death, critical illness, and long-term inability to work?' },
+]
+
+function SituationFlow({ entity }) {
+  const [query, setQuery] = useState('')
+  const [submittedQuery, setSubmittedQuery] = useState('')
+  const [running, setRunning] = useState(false)
+  const [routedLenses, setRoutedLenses] = useState([])
+  const [completedLenses, setCompletedLenses] = useState([])
+  const [results, setResults] = useState({})
+  const [advisorFilter, setAdvisorFilter] = useState(null)   // null = combined view, lensId = single advisor
+  const timersRef = useRef([])
+
+  function clearTimers() {
+    timersRef.current.forEach(t => clearTimeout(t))
+    timersRef.current = []
+  }
+
+  function submit(text) {
+    if (!text || !text.trim()) return
+    clearTimers()
+    setSubmittedQuery(text)
+    setQuery(text)
+    setRunning(true)
+    setResults({})
+    setCompletedLenses([])
+    setAdvisorFilter(null)
+
+    const route = routeSituationToLenses(text)
+    setRoutedLenses(route)
+
+    // Fire each lens with a stagger so the trace animates one at a time.
+    route.forEach((lensId, i) => {
+      const t = setTimeout(() => {
+        const lens = LIVE_LENSES[lensId]
+        if (!lens || !entity) return
+        try {
+          const obs = lens.observe(entity) || []
+          const recs = lens.recommend(entity) || []
+          setResults(prev => ({ ...prev, [lensId]: { obs, recs } }))
+          setCompletedLenses(prev => [...prev, lensId])
+        } catch (err) {
+          console.warn(`[SituationFlow] ${lensId} threw`, err)
+        }
+      }, 450 * (i + 1))
+      timersRef.current.push(t)
+    })
+    const finalT = setTimeout(() => setRunning(false), 450 * (route.length + 1))
+    timersRef.current.push(finalT)
+  }
+
+  function reset() {
+    clearTimers()
+    setSubmittedQuery('')
+    setQuery('')
+    setRunning(false)
+    setRoutedLenses([])
+    setCompletedLenses([])
+    setResults({})
+    setAdvisorFilter(null)
+  }
+
+  useEffect(() => () => clearTimers(), [])
+
+  // Build combined strategy list — flatten all lens recs, attribute to lens,
+  // sort by £ impact descending. Apply advisor filter if set.
+  const combinedStrategies = useMemo(() => {
+    const all = []
+    for (const [lensId, { recs }] of Object.entries(results)) {
+      if (advisorFilter && advisorFilter !== lensId) continue
+      for (const rec of recs) {
+        all.push({
+          ...rec,
+          lensId,
+          lensMeta: LENS_META[lensId],
+          impactValue: rec.impact?.gbp_per_year || rec.impact?.gbp_lifetime || rec.impact?.gbp_one_off || 0,
+        })
+      }
+    }
+    return all.sort((a, b) => b.impactValue - a.impactValue)
+  }, [results, advisorFilter])
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Empty state — input + starters
+  // ────────────────────────────────────────────────────────────────────────
+  if (!submittedQuery) {
+    return (
+      <div style={{ padding: '24px 20px' }}>
+        <div style={{
+          background: 'linear-gradient(160deg, var(--c-surface) 0%, var(--c-surface2) 100%)',
+          border: '1px solid var(--c-sep)', borderRadius: 20, padding: '24px 22px',
+          marginBottom: 18,
+        }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Tell Sonu your situation</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', marginBottom: 12, lineHeight: 1.4 }}>
+            Sonu reads your situation, picks the right specialists, and brings their views into one answer.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && submit(query)}
+              placeholder="What's on your mind?"
+              style={{
+                flex: 1, padding: '12px 14px', borderRadius: 12,
+                background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+                color: 'var(--c-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => submit(query)}
+              disabled={!query.trim()}
+              style={{
+                padding: '12px 22px', borderRadius: 12, border: 'none',
+                background: query.trim() ? 'var(--c-acc)' : 'var(--c-surface2)',
+                color: query.trim() ? '#0B1F3A' : 'var(--c-text3)',
+                fontSize: 13, fontWeight: 800, cursor: query.trim() ? 'pointer' : 'default',
+                fontFamily: 'inherit', letterSpacing: 0.3,
+              }}
+            >
+              Go →
+            </button>
+          </div>
+        </div>
+
+        <div className="sw-eyebrow" style={{ marginBottom: 10 }}>Or try a starter — drag any to play</div>
+
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+          gap: 10,
+        }}>
+          {SITUATION_STARTERS.map(s => (
+            <button
+              key={s.id}
+              onClick={() => submit(s.query)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 14px', borderRadius: 14,
+                background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                transition: 'transform .15s, border-color .15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.borderColor = 'var(--c-acc)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';   e.currentTarget.style.borderColor = 'var(--c-sep)' }}
+            >
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{s.icon}</span>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', lineHeight: 1.35 }}>
+                {s.label}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div style={{
+          marginTop: 20, padding: '12px 16px', borderRadius: 12,
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+          fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.6,
+        }}>
+          <div style={{ fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4 }}>How this works</div>
+          Sonu picks the right specialists for your situation automatically — you don't choose advisors. The starters are just examples; type any question and Sonu will route to the relevant advisors.
+        </div>
+
+        <style>{`@keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      </div>
+    )
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Running / Results state
+  // ────────────────────────────────────────────────────────────────────────
+  const lensesDone = completedLenses.length
+  const totalImpact = combinedStrategies.reduce((s, x) => s + x.impactValue, 0)
+
+  return (
+    <div style={{ padding: '24px 20px' }}>
+      {/* Active situation header */}
+      <div style={{
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        borderRadius: 18, padding: '16px 18px', marginBottom: 14,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Your situation</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-text)', lineHeight: 1.45 }}>
+              "{submittedQuery}"
+            </div>
+          </div>
+          <button
+            onClick={reset}
+            style={{
+              padding: '6px 12px', borderRadius: 100,
+              background: 'transparent', border: '1px solid var(--c-sep)',
+              color: 'var(--c-text2)', fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            ↺ New
+          </button>
+        </div>
+      </div>
+
+      {/* Routing / reasoning trace */}
+      <div style={{
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: 0.4 }}>
+            SONU IS ROUTING TO {routedLenses.length} {routedLenses.length === 1 ? 'ADVISER' : 'ADVISERS'}
+          </div>
+          {!running && (
+            <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>
+              {lensesDone} / {routedLenses.length} returned · {combinedStrategies.length} strategies
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {routedLenses.map((lensId, i) => {
+            const done = completedLenses.includes(lensId)
+            const active = !done && i === lensesDone && running
+            const meta = LENS_META[lensId]
+            const lensResults = results[lensId]
+            const lensImpact = lensResults
+              ? lensResults.recs.reduce((s, r) => s + (r.impact?.gbp_per_year || r.impact?.gbp_lifetime || r.impact?.gbp_one_off || 0), 0)
+              : 0
+            return (
+              <div key={lensId} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '8px 0',
+                opacity: done || active ? 1 : 0.35,
+                transition: 'opacity .25s',
+              }}>
+                <span style={{
+                  flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 800,
+                  background: done ? 'var(--c-acc)' : 'transparent',
+                  border: done ? 'none' : '1px solid var(--c-sep)',
+                  color: done ? '#0B1F3A' : 'var(--c-text3)',
+                }}>
+                  {done ? '✓' : active ? '·' : ''}
+                </span>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{meta?.avatar}</span>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>
+                  {meta?.name}
+                  <span style={{
+                    marginLeft: 8, padding: '1px 5px', borderRadius: 100,
+                    fontSize: 8, fontWeight: 800, letterSpacing: 0.3,
+                    background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.4)',
+                    color: 'var(--c-acc)',
+                  }}>LIVE</span>
+                </div>
+                {done && lensResults && (
+                  <div style={{ fontSize: 11, color: 'var(--c-text3)', whiteSpace: 'nowrap' }}>
+                    {lensResults.recs.length} {lensResults.recs.length === 1 ? 'strategy' : 'strategies'}
+                    {lensImpact > 0 && <span style={{ color: 'var(--c-acc)', marginLeft: 6, fontWeight: 700 }}>
+                      £{lensImpact.toLocaleString()}
+                    </span>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Synthesised result */}
+      {!running && combinedStrategies.length > 0 && (
+        <>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(93,219,194,0.10) 0%, rgba(93,219,194,0.02) 100%)',
+            border: '1px solid rgba(93,219,194,0.35)',
+            borderRadius: 18, padding: '18px 20px', marginBottom: 14,
+            animation: 'magic-fade-up .35s ease-out',
+          }}>
+            <div className="sw-eyebrow" style={{ color: 'var(--c-acc)', marginBottom: 6 }}>
+              Sonu synthesised
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
+                {combinedStrategies.length}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--c-text2)' }}>
+                strategies across <strong style={{ color: 'var(--c-text)' }}>{routedLenses.length} adviser{routedLenses.length === 1 ? '' : 's'}</strong> · combined impact <strong style={{ color: 'var(--c-text)' }}>£{totalImpact.toLocaleString()}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter chips — view by advisor */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+            <button
+              onClick={() => setAdvisorFilter(null)}
+              style={{
+                padding: '6px 12px', borderRadius: 100,
+                background: advisorFilter === null ? 'var(--c-acc)' : 'var(--c-surface2)',
+                border: '1px solid ' + (advisorFilter === null ? 'var(--c-acc)' : 'var(--c-sep)'),
+                color: advisorFilter === null ? '#0B1F3A' : 'var(--c-text2)',
+                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              All combined ({Object.values(results).reduce((s, r) => s + r.recs.length, 0)})
+            </button>
+            {completedLenses.map(lensId => {
+              const meta = LENS_META[lensId]
+              const isActive = advisorFilter === lensId
+              return (
+                <button
+                  key={lensId}
+                  onClick={() => setAdvisorFilter(isActive ? null : lensId)}
+                  style={{
+                    padding: '6px 10px', borderRadius: 100,
+                    background: isActive ? 'var(--c-acc)' : 'var(--c-surface2)',
+                    border: '1px solid ' + (isActive ? 'var(--c-acc)' : 'var(--c-sep)'),
+                    color: isActive ? '#0B1F3A' : 'var(--c-text2)',
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{meta?.avatar}</span>
+                  {meta?.name} ({results[lensId].recs.length})
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Strategy list */}
+          <div style={{ display: 'grid', gap: 8 }}>
+            {combinedStrategies.map((s, i) => (
+              <div
+                key={`${s.lensId}-${s.id || i}`}
+                style={{
+                  padding: '14px 16px', borderRadius: 12,
+                  background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+                  animation: `magic-fade-up .35s ease-out ${i * 45}ms backwards`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14 }}>{s.lensMeta?.avatar}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {s.lensMeta?.name}
+                  </span>
+                  {s.impactValue > 0 && (
+                    <span style={{
+                      marginLeft: 'auto', padding: '2px 8px', borderRadius: 100,
+                      background: 'rgba(93,219,194,0.12)', border: '1px solid rgba(93,219,194,0.3)',
+                      fontSize: 11, fontWeight: 800, color: 'var(--c-acc)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      £{s.impactValue.toLocaleString()}{s.impact?.gbp_per_year ? '/yr' : s.impact?.gbp_lifetime ? ' lifetime' : ' one-off'}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>
+                  {s.headline}
+                </div>
+                {s.drill_down && (
+                  <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 6 }}>
+                    {s.drill_down.length > 240 ? s.drill_down.slice(0, 240) + '…' : s.drill_down}
+                  </div>
+                )}
+                {s.citation && (
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>
+                    Source: {s.citation}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            marginTop: 16, padding: '12px 14px', borderRadius: 10,
+            background: 'var(--c-surface2)', fontSize: 11,
+            color: 'var(--c-text3)', lineHeight: 1.5, textAlign: 'center',
+          }}>
+            Information only · {routedLenses.length} live lens engine{routedLenses.length === 1 ? '' : 's'} consulted · Not regulated advice
+          </div>
+        </>
+      )}
+
+      <style>{`@keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  )
+}
+
+// ── Section 6 (NEW META): How Sonu thinks — show the 11 advisor architecture ─
+
+const ALL_11_ADVISORS = [
+  { id: 'tax',          avatar: '🧾',  name: 'Tax Accountant',           live: true,  scope: 'wrappers, allowances, sequencing, year-end planning' },
+  { id: 'pension',      avatar: '🏦',  name: 'Pension Specialist',        live: true,  scope: 'SIPP, AA, MPAA, LSA, State Pension, drawdown' },
+  { id: 'trust',        avatar: '⚖️',  name: 'Trust Lawyer',              live: true,  scope: 'IHT, trusts, wills, LPA, domicile' },
+  { id: 'ifa',          avatar: '📊',  name: 'IFA (Holistic)',            live: true,  scope: 'allocation, risk, costs, emergency fund, review' },
+  { id: 'protection',   avatar: '🛡️',  name: 'Insurance / Protection',    live: true,  scope: 'life, CI, income protection, business cover, trust' },
+  { id: 'investment',   avatar: '📈',  name: 'Investment Adviser',        live: true,  scope: 'portfolio costs, concentration, rebalancing, ESG' },
+  { id: 'mortgage',     avatar: '🏠',  name: 'Mortgage Adviser',          live: false, scope: 'mortgages, BTL, remortgage, equity release' },
+  { id: 'crossborder',  avatar: '🌍',  name: 'Cross-Border Specialist',   live: false, scope: 'SRT, FIG regime, DTA, deemed-dom, NRI' },
+  { id: 'familylaw',    avatar: '👥',  name: 'Family Law Specialist',     live: false, scope: 'divorce, cohab, prenup, child maintenance' },
+  { id: 'laterlife',    avatar: '🏥',  name: 'Later-Life Adviser',        live: false, scope: 'care costs, LA means-test, equity release' },
+  { id: 'philanthropy', avatar: '💝',  name: 'Philanthropy Adviser',      live: false, scope: 'Gift Aid, charity 10%, DAF, CIO' },
+]
+
+function SonuArchitecture({ entity }) {  // eslint-disable-line no-unused-vars
+  return (
+    <div style={{ padding: '24px 20px' }}>
+      <div style={{
+        background: 'linear-gradient(160deg, var(--c-surface) 0%, var(--c-surface2) 100%)',
+        border: '1px solid var(--c-sep)', borderRadius: 20, padding: '24px 22px',
+        marginBottom: 18,
+      }}>
+        <div className="sw-eyebrow" style={{ marginBottom: 8 }}>How Sonu thinks</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)', marginBottom: 12, lineHeight: 1.5 }}>
+          A panel of 11 specialist advisors. Sonu picks the right ones for your situation automatically.
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+          Each adviser is an independent engine — its own rules, its own citations, its own observations. When you describe a situation, Sonu's router scores each adviser's relevance and fires only those who matter. Their outputs are then ranked, de-duplicated, and presented as one synthesised view.
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: 0.4 }}>
+          THE PANEL
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+          {ALL_11_ADVISORS.filter(a => a.live).length} of {ALL_11_ADVISORS.length} live · rest on roadmap
+        </div>
+      </div>
+
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+        gap: 10,
+      }}>
+        {ALL_11_ADVISORS.map(a => (
+          <div key={a.id} style={{
+            position: 'relative',
+            padding: '14px 14px', borderRadius: 14,
+            background: 'var(--c-surface)',
+            border: '1px solid ' + (a.live ? 'rgba(93,219,194,0.35)' : 'var(--c-sep)'),
+          }}>
+            <span style={{
+              position: 'absolute', top: 8, right: 8,
+              padding: '2px 7px', borderRadius: 100,
+              background: a.live ? 'rgba(93,219,194,0.18)' : 'var(--c-surface2)',
+              border: '1px solid ' + (a.live ? 'rgba(93,219,194,0.45)' : 'var(--c-sep)'),
+              fontSize: 8, fontWeight: 800, letterSpacing: 0.4,
+              color: a.live ? 'var(--c-acc)' : 'var(--c-text3)',
+            }}>
+              {a.live ? 'LIVE' : 'ROADMAP'}
+            </span>
+            <div style={{ fontSize: 26, marginBottom: 6 }}>{a.avatar}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4, lineHeight: 1.3 }}>
+              {a.name}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.4 }}>
+              {a.scope}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{
+        marginTop: 18, padding: '14px 16px', borderRadius: 12,
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+        fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.6,
+      }}>
+        <div style={{ fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4 }}>How the router decides</div>
+        Each adviser has an <code style={{ fontSize: 10, background: 'var(--c-surface2)', padding: '1px 5px', borderRadius: 3 }}>is_relevant(persona, query)</code> function. When you submit a situation, Sonu calls every adviser's relevance check, fires those above the threshold, and combines their outputs. You can drill into any single adviser's view from the synthesised result.
+      </div>
+    </div>
+  )
+}
+
 // ── Main screen ──────────────────────────────────────────────────────────────
 
 const SECTIONS = [
-  { id: 'coi',        label: 'Watch the cost drop',     sub: 'Cost of Inaction in real time' },
-  { id: 'lenses',     label: 'Talk to 11 advisors',     sub: 'The synthesised professional brain' },
-  { id: 'strategies', label: '£70k drawdown',           sub: '8 ways to cut the tax' },
-  { id: 'taper',      label: '£100k taper trap',         sub: 'Live engine · drag to play' },
+  { id: 'situation', label: 'Tell Sonu your situation',  sub: 'Advisors auto-route — you don\'t pick' },
+  { id: 'coi',       label: 'Watch the cost drop',        sub: 'Cost of Inaction in real time' },
+  { id: 'panel',     label: 'How Sonu thinks',            sub: 'The 11-advisor architecture' },
 ]
 
 export default function MagicShowcase({ entity, onClose }) {
-  const [section, setSection] = useState('coi')
+  const [section, setSection] = useState('situation')
 
   return (
     <div style={{
@@ -1321,7 +1848,7 @@ export default function MagicShowcase({ entity, onClose }) {
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 15 }}>The Sonuswealth difference</div>
           <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
-            Three demonstrations of what makes this not-a-spreadsheet
+            Describe a situation · Sonu routes to the right advisors
           </div>
         </div>
       </div>
@@ -1354,10 +1881,9 @@ export default function MagicShowcase({ entity, onClose }) {
       </div>
 
       {/* Section content */}
+      {section === 'situation' && <SituationFlow entity={entity} />}
       {section === 'coi' && <CoIOdometerDemo />}
-      {section === 'lenses' && <ElevenAdvisorsDemo entity={entity} />}
-      {section === 'strategies' && <DrawdownDemo entity={entity} />}
-      {section === 'taper' && <TaperTrapDemo entity={entity} />}
+      {section === 'panel' && <SonuArchitecture entity={entity} />}
 
       {/* Footer */}
       <div style={{

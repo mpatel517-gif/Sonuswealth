@@ -26,7 +26,7 @@ import { summariseTaxYearState } from './tax-year-state.js'
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL   = 'claude-sonnet-4-6'
-const TIMEOUT_MS = 15000
+const TIMEOUT_MS = 45000  // 45s — the prompt is ~5KB (lens outputs) so Sonnet needs ~10-25s
 
 const LENSES = [
   'Tax Accountant', 'Pension Specialist', 'Trust Lawyer',

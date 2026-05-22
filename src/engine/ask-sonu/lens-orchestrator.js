@@ -25,7 +25,7 @@
 
 import { LENS_REGISTRY, runLens } from '../../lenses/index.js'
 
-const MIN_RELEVANCE = 0.4
+const MIN_RELEVANCE = 0.55  // Raised from 0.4 — only fire strongly-relevant lenses to trim prompt
 
 /**
  * Fire all 11 lenses, filter by relevance, return their outputs.
@@ -58,23 +58,20 @@ export function consultLenses(persona, asOfDate = new Date()) {
       continue
     }
 
-    // Truncate observation/recommendation text so the LLM prompt doesn't bloat
-    const obs = (runResult.observations || []).slice(0, 4).map(o => ({
+    // Aggressively trim — top 2 obs, 1 rec, 1 flag per lens. Halves prompt size vs prior.
+    const obs = (runResult.observations || []).slice(0, 2).map(o => ({
       severity: o.severity,
-      category: o.category,
-      text: trim(o.text, 240),
+      text: trim(o.text, 160),
       citation: o.citation,
     }))
-    const recs = (runResult.recommendations || []).slice(0, 3).map(r => ({
-      strategy: r.strategy_id || r.id,
-      headline: trim(r.headline, 140),
-      drill_down: trim(r.drill_down, 240),
+    const recs = (runResult.recommendations || []).slice(0, 1).map(r => ({
+      headline: trim(r.headline, 100),
+      drill_down: trim(r.drill_down, 140),
       gbp_lifetime: r.impact?.gbp_lifetime || r.impact?.gbp_saved || null,
-      citation: r.citation,
     }))
-    const flags = (runResult.red_flags || []).slice(0, 2).map(f => ({
+    const flags = (runResult.red_flags || []).slice(0, 1).map(f => ({
       urgency: f.urgency,
-      action: trim(f.action, 140),
+      action: trim(f.action, 100),
       deadline: f.deadline,
     }))
 

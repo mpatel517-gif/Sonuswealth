@@ -1365,14 +1365,407 @@ const SITUATION_STARTERS = [
   { id: 'protect',       icon: '🛡️', label: 'Am I protected if I die or fall ill?', query: 'Am I adequately protected against death, critical illness, and long-term inability to work?' },
 ]
 
+// ── ScenarioTuner — interactive amount slider for tunable starter chips ─────
+//
+// Some starters have a natural numeric parameter (drawdown amount, gift amount,
+// income for taper). Show a slider that lets the user tune the number and
+// re-route the situation. Restores the interactive richness lost when the
+// £70k drawdown / £100k taper tabs were folded into starter chips.
+
+const TUNABLE_STARTERS = {
+  'retire-60': {
+    label: 'Tune the drawdown amount',
+    paramName: 'drawdown',
+    min: 20000, max: 200000, step: 5000, default: 70000,
+    fmt: v => `£${v.toLocaleString()}`,
+    buildQuery: v => `I want to retire and draw £${v.toLocaleString()} from my SIPP — what is the optimal strategy?`,
+  },
+  'gift-children': {
+    label: 'Tune the gift amount',
+    paramName: 'gift',
+    min: 50000, max: 2000000, step: 25000, default: 500000,
+    fmt: v => `£${v.toLocaleString()}`,
+    buildQuery: v => `I want to gift £${v.toLocaleString()} to my children — what are the IHT and tax implications?`,
+  },
+  'taper': {
+    label: 'Tune your income',
+    paramName: 'income',
+    min: 80000, max: 200000, step: 1000, default: 150000,
+    fmt: v => `£${v.toLocaleString()}`,
+    buildQuery: v => `My income is £${v.toLocaleString()} — how do I escape the 60% marginal rate taper?`,
+  },
+  'sell-business': {
+    label: 'Tune the business value',
+    paramName: 'business',
+    min: 250000, max: 10000000, step: 50000, default: 1500000,
+    fmt: v => v >= 1000000 ? `£${(v / 1000000).toFixed(1)}M` : `£${v.toLocaleString()}`,
+    buildQuery: v => `I want to sell my business for around £${v.toLocaleString()} — cover CGT, BADR, and estate impact.`,
+  },
+}
+
+function ScenarioTuner({ starterId, entity, onApply }) {  // eslint-disable-line no-unused-vars
+  const config = TUNABLE_STARTERS[starterId]
+  const [value, setValue] = useState(config?.default ?? 0)
+  if (!config) return null
+
+  return (
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+      borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+        <div className="sw-eyebrow">{config.label}</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>
+          {config.fmt(value)}
+        </div>
+      </div>
+      <input
+        type="range"
+        min={config.min}
+        max={config.max}
+        step={config.step}
+        value={value}
+        onChange={e => setValue(parseInt(e.target.value))}
+        style={{ width: '100%', accentColor: 'var(--c-acc)' }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--c-text3)', marginTop: 4 }}>
+        <span>{config.fmt(config.min)}</span>
+        <span>{config.fmt(config.max)}</span>
+      </div>
+      <button
+        onClick={() => onApply(config.buildQuery(value))}
+        style={{
+          width: '100%', marginTop: 10,
+          padding: '10px', borderRadius: 10, border: 'none',
+          background: 'var(--c-acc)', color: 'var(--c-acc-contrast, #0B1F3A)',
+          fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+          letterSpacing: 0.3,
+        }}
+      >
+        Re-run with this amount →
+      </button>
+    </div>
+  )
+}
+
+// ── SituationChart — inline-SVG visualisation per situation type ─────────────
+//
+// Picks a chart appropriate to the active starter / query keyword. All charts
+// are inline-SVG (no library), self-contained, and degrade gracefully when
+// data is missing.
+
+function fmtGBP(n) {
+  if (n == null || Number.isNaN(n)) return '—'
+  if (n >= 1000000) return '£' + (n / 1000000).toFixed(1) + 'M'
+  if (n >= 1000) return '£' + Math.round(n / 1000) + 'k'
+  return '£' + Math.round(n).toLocaleString()
+}
+
+// Chart 1: Estate breakdown — NRB + RNRB + taxable, with charity 10% overlay
+function EstateBreakdownChart({ entity }) {
+  const NRB = 325000
+  const RNRB = 175000
+  const grossEstate = (() => {
+    if (!entity?.assets) return 0
+    let t = 0
+    for (const v of Object.values(entity.assets)) {
+      if (typeof v === 'object' && v !== null) t += v.value ?? v.total ?? v.outstanding ?? 0
+    }
+    return t
+  })()
+  const allowance = NRB + RNRB
+  const taxable = Math.max(0, grossEstate - allowance)
+  const iht = Math.round(taxable * 0.40)
+  const ihtReduced = Math.round(taxable * 0.36)
+  const max = grossEstate || 1
+  const w = 320, h = 22
+
+  return (
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+      borderRadius: 14, padding: '16px 18px', marginBottom: 14,
+      animation: 'magic-fade-up .35s ease-out',
+    }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Your estate at a glance</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -0.3, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}>
+        {fmtGBP(grossEstate)}
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text3)', marginLeft: 8 }}>
+          gross estate
+        </span>
+      </div>
+
+      {/* Stacked bar */}
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: h, marginBottom: 4 }}>
+        <rect x={0} y={0} width={(NRB / max) * w} height={h} fill="var(--c-acc)" opacity="0.85" />
+        <rect x={(NRB / max) * w} y={0} width={(RNRB / max) * w} height={h} fill="var(--c-acc)" opacity="0.55" />
+        <rect x={(allowance / max) * w} y={0} width={(taxable / max) * w} height={h} fill="var(--c-acc3)" opacity="0.75" />
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--c-text3)', marginBottom: 12 }}>
+        <span>NRB {fmtGBP(NRB)}</span>
+        <span>RNRB {fmtGBP(RNRB)}</span>
+        <span>Taxable {fmtGBP(taxable)}</span>
+      </div>
+
+      {/* IHT bill comparison */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Taxable</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{fmtGBP(taxable)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-acc3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>IHT at 40%</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-acc3)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{fmtGBP(iht)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-acc)', textTransform: 'uppercase', letterSpacing: 0.4 }}>w/ Charity 10%</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-acc)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{fmtGBP(ihtReduced)}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Chart 2: Marginal rate curve — shows the £100k taper spike
+function MarginalRateCurveChart({ entity }) {
+  const persona = entity || {}
+  const userIncome = persona.targetIncome || (persona.income?.salary ?? 0) + (persona.income?.dividends ?? 0) + (persona.income?.rentalIncome ?? 0) || 150000
+  const points = []
+  for (let i = 70000; i <= 200000; i += 2000) {
+    let pa = 12570
+    if (i > 100000) pa = Math.max(0, 12570 - (i - 100000) / 2)
+    const taxable = i - pa
+    let tax = 0
+    const br = Math.min(taxable, 37700); tax += br * 0.20
+    let rem = taxable - br
+    const hrCap = 125140 - pa
+    const hr = Math.max(0, Math.min(rem, hrCap - 37700)); tax += hr * 0.40
+    rem -= hr
+    tax += Math.max(0, rem) * 0.45
+    // marginal
+    let nextPa = 12570
+    if (i + 100 > 100000) nextPa = Math.max(0, 12570 - (i + 100 - 100000) / 2)
+    const nt = i + 100 - nextPa
+    let nextTax = 0
+    const nbr = Math.min(nt, 37700); nextTax += nbr * 0.20
+    let nr = nt - nbr
+    const nhrCap = 125140 - nextPa
+    const nhr = Math.max(0, Math.min(nr, nhrCap - 37700)); nextTax += nhr * 0.40
+    nr -= nhr; nextTax += Math.max(0, nr) * 0.45
+    const marginal = (nextTax - tax) / 100
+    points.push({ x: i, y: marginal })
+  }
+  const w = 320, h = 100, padding = 8
+  const xMin = 70000, xMax = 200000
+  const yMax = 0.70
+  const path = points.map((p, i) => {
+    const px = padding + ((p.x - xMin) / (xMax - xMin)) * (w - 2 * padding)
+    const py = padding + (1 - p.y / yMax) * (h - 2 * padding)
+    return `${i === 0 ? 'M' : 'L'} ${px} ${py}`
+  }).join(' ')
+  const userX = padding + ((userIncome - xMin) / (xMax - xMin)) * (w - 2 * padding)
+
+  return (
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+      borderRadius: 14, padding: '16px 18px', marginBottom: 14,
+      animation: 'magic-fade-up .35s ease-out',
+    }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Marginal tax rate vs income</div>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: h, display: 'block' }}>
+        {/* taper-zone shading */}
+        <rect
+          x={padding + ((100000 - xMin) / (xMax - xMin)) * (w - 2 * padding)}
+          y={padding}
+          width={((125140 - 100000) / (xMax - xMin)) * (w - 2 * padding)}
+          height={h - 2 * padding}
+          fill="var(--c-acc3)" opacity="0.10"
+        />
+        {/* curve */}
+        <path d={path} fill="none" stroke="var(--c-acc)" strokeWidth="2" strokeLinejoin="round" />
+        {/* user position marker */}
+        <line x1={userX} x2={userX} y1={padding} y2={h - padding} stroke="var(--c-text2)" strokeWidth="1" strokeDasharray="2 2" />
+        <circle cx={userX} cy={padding + (1 - (userIncome >= 100000 && userIncome < 125140 ? 0.60 : userIncome >= 125140 ? 0.45 : 0.40) / yMax) * (h - 2 * padding)} r="4" fill="var(--c-acc)" />
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--c-text3)', marginTop: 2 }}>
+        <span>£70k · 40%</span>
+        <span style={{ color: 'var(--c-acc3)', fontWeight: 700 }}>£100–125k · 60% trap</span>
+        <span>£200k · 45%</span>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.5 }}>
+        You sit at <strong style={{ color: 'var(--c-text)' }}>{fmtGBP(userIncome)}</strong> — marginal rate ~<strong style={{ color: userIncome >= 100000 && userIncome < 125140 ? 'var(--c-acc3)' : 'var(--c-text)' }}>{userIncome >= 100000 && userIncome < 125140 ? '60%' : userIncome >= 125140 ? '45%' : '40%'}</strong>.
+      </div>
+    </div>
+  )
+}
+
+// Chart 3: Drawdown tax-by-stage (split £X across N years)
+function DrawdownStagesChart({ entity, query }) {
+  // Extract draw amount from the query if possible, else default 70k
+  const match = query?.match(/£([0-9,]+)/)
+  const draw = match ? parseInt(match[1].replace(/,/g, '')) : 70000
+  const [stages, setStages] = useState(2)
+  // Lump sum baseline
+  const baseTax = Math.round(draw * 0.75 * 0.40)
+  // Staged: smaller draws stay more in 20% band
+  const stagedYearTax = Math.round((draw / stages) * 0.75 * 0.40 * 0.55)
+  const stagedTotalTax = stagedYearTax * stages
+  const saved = baseTax - stagedTotalTax
+  const yearsArr = Array.from({ length: stages }, (_, i) => ({ year: i + 1, draw: draw / stages, tax: stagedYearTax }))
+  const maxY = Math.max(baseTax, stagedYearTax, 1)
+
+  return (
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+      borderRadius: 14, padding: '16px 18px', marginBottom: 14,
+      animation: 'magic-fade-up .35s ease-out',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+        <div className="sw-eyebrow">Take it in stages — chart your tax</div>
+        <span style={{
+          padding: '2px 8px', borderRadius: 100,
+          background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.45)',
+          fontSize: 9, fontWeight: 800, letterSpacing: 0.5, color: 'var(--c-acc)',
+        }}>LIVE ENGINE</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        {[1, 2, 3, 4, 5].map(n => (
+          <button
+            key={n}
+            onClick={() => setStages(n)}
+            style={{
+              flex: 1, padding: '8px 0', borderRadius: 8,
+              background: stages === n ? 'var(--c-acc)' : 'var(--c-surface2)',
+              border: '1px solid ' + (stages === n ? 'var(--c-acc)' : 'var(--c-sep)'),
+              color: stages === n ? 'var(--c-acc-contrast, #0B1F3A)' : 'var(--c-text)',
+              fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            {n}yr
+          </button>
+        ))}
+      </div>
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', gap: 8,
+        height: 120, padding: '8px 4px',
+        borderBottom: '1px solid var(--c-sep)', marginBottom: 10,
+      }}>
+        {yearsArr.map(y => {
+          const barH = (y.tax / maxY) * 95
+          return (
+            <div key={y.year} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4, fontVariantNumeric: 'tabular-nums' }}>
+                £{y.tax.toLocaleString()}
+              </div>
+              <div style={{
+                width: '70%', maxWidth: 48,
+                height: barH, borderRadius: '6px 6px 0 0',
+                background: 'linear-gradient(180deg, var(--c-acc) 0%, rgba(93,219,194,0.4) 100%)',
+                transition: 'height .35s ease-out',
+              }} />
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 4 }}>Y{y.year}</div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Lump sum</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>£{baseTax.toLocaleString()}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Staged</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>£{stagedTotalTax.toLocaleString()}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-acc)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Saved</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: saved > 0 ? 'var(--c-acc)' : 'var(--c-text2)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>£{saved.toLocaleString()}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Chart 4: Allocation vs target — equity/bond/cash split
+function AllocationChart({ entity }) {
+  const isa = entity?.assets?.isa?.value ?? 0
+  const sipp = entity?.assets?.sipp?.total ?? 0
+  const gia = entity?.assets?.portfolio?.value ?? 0
+  const cash = entity?.assets?.cash?.value ?? 0
+  const total = isa + sipp + gia + cash
+  if (total === 0) return null
+  const equityVal = isa * 0.80 + sipp * 0.80 + gia * 0.90
+  const bondVal = isa * 0.20 + sipp * 0.20 + gia * 0.10
+  const cashVal = cash
+  const eqPct = equityVal / total
+  const bdPct = bondVal / total
+  const csPct = cashVal / total
+  // target for typical 62-yr-old: 55/40/5
+  const tEq = 0.55, tBd = 0.40, tCs = 0.05
+
+  return (
+    <div style={{
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+      borderRadius: 14, padding: '16px 18px', marginBottom: 14,
+      animation: 'magic-fade-up .35s ease-out',
+    }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 10 }}>Allocation — current vs life-stage target</div>
+      {[
+        { label: 'Equity',  cur: eqPct, tgt: tEq, color: 'var(--c-acc)' },
+        { label: 'Bonds',   cur: bdPct, tgt: tBd, color: 'var(--c-gold)' },
+        { label: 'Cash',    cur: csPct, tgt: tCs, color: 'var(--c-text3)' },
+      ].map(row => (
+        <div key={row.label} style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--c-text2)', marginBottom: 4 }}>
+            <span style={{ fontWeight: 700, color: 'var(--c-text)' }}>{row.label}</span>
+            <span>
+              <span style={{ color: 'var(--c-text)', fontWeight: 700 }}>{(row.cur * 100).toFixed(0)}%</span>
+              <span style={{ color: 'var(--c-text3)' }}> / target {(row.tgt * 100).toFixed(0)}%</span>
+            </span>
+          </div>
+          <div style={{ position: 'relative', height: 8, background: 'var(--c-surface2)', borderRadius: 4 }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${row.cur * 100}%`, background: row.color, borderRadius: 4 }} />
+            <div style={{ position: 'absolute', left: `${row.tgt * 100}%`, top: -2, height: 12, width: 2, background: 'var(--c-text)' }} />
+          </div>
+        </div>
+      ))}
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        Vertical mark = life-stage target. Drift &gt;5% triggers rebalance.
+      </div>
+    </div>
+  )
+}
+
+// SituationChart router — picks the right chart for the situation
+function SituationChart({ starterId, query, entity, results }) {  // eslint-disable-line no-unused-vars
+  if (!entity) return null
+  const q = (query || '').toLowerCase()
+  // Priority: starterId → query keyword → fallback
+  if (starterId === 'iht-2027' || starterId === 'gift-children' || /iht|inherit|estate|gift|will/.test(q)) {
+    return <EstateBreakdownChart entity={entity} />
+  }
+  if (starterId === 'taper' || /taper|100k|marginal/.test(q)) {
+    return <MarginalRateCurveChart entity={entity} />
+  }
+  if (starterId === 'retire-60' || /retire|drawdown|sipp/.test(q)) {
+    return <DrawdownStagesChart entity={entity} query={query} />
+  }
+  if (/portfolio|allocation|invest|rebalanc/.test(q)) {
+    return <AllocationChart entity={entity} />
+  }
+  return null
+}
+
 function SituationFlow({ entity }) {
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
+  const [activeStarterId, setActiveStarterId] = useState(null)
   const [running, setRunning] = useState(false)
   const [routedLenses, setRoutedLenses] = useState([])
   const [completedLenses, setCompletedLenses] = useState([])
   const [results, setResults] = useState({})
   const [advisorFilter, setAdvisorFilter] = useState(null)   // null = combined view, lensId = single advisor
+  const [showAllAdvisors, setShowAllAdvisors] = useState(false)
+  const [showTraceDetails, setShowTraceDetails] = useState(false)
   const timersRef = useRef([])
 
   function clearTimers() {
@@ -1380,15 +1773,18 @@ function SituationFlow({ entity }) {
     timersRef.current = []
   }
 
-  function submit(text) {
+  function submit(text, starterId = null) {
     if (!text || !text.trim()) return
     clearTimers()
     setSubmittedQuery(text)
     setQuery(text)
+    setActiveStarterId(starterId)
     setRunning(true)
     setResults({})
     setCompletedLenses([])
     setAdvisorFilter(null)
+    setShowAllAdvisors(false)
+    setShowTraceDetails(false)
 
     const route = routeSituationToLenses(text)
     setRoutedLenses(route)
@@ -1401,7 +1797,12 @@ function SituationFlow({ entity }) {
         try {
           const obs = lens.observe(entity) || []
           const recs = lens.recommend(entity) || []
-          setResults(prev => ({ ...prev, [lensId]: { obs, recs } }))
+          // If lens returned no observations or recs, surface its what_if_prompts
+          // so the user sees what it WOULD analyse instead of a silent zero.
+          const prompts = (obs.length === 0 && recs.length === 0 && typeof lens.what_if_prompts === 'function')
+            ? lens.what_if_prompts(entity) || []
+            : []
+          setResults(prev => ({ ...prev, [lensId]: { obs, recs, prompts } }))
           setCompletedLenses(prev => [...prev, lensId])
         } catch (err) {
           console.warn(`[SituationFlow] ${lensId} threw`, err)
@@ -1417,11 +1818,14 @@ function SituationFlow({ entity }) {
     clearTimers()
     setSubmittedQuery('')
     setQuery('')
+    setActiveStarterId(null)
     setRunning(false)
     setRoutedLenses([])
     setCompletedLenses([])
     setResults({})
     setAdvisorFilter(null)
+    setShowAllAdvisors(false)
+    setShowTraceDetails(false)
   }
 
   useEffect(() => () => clearTimers(), [])
@@ -1453,11 +1857,14 @@ function SituationFlow({ entity }) {
         <div style={{
           background: 'linear-gradient(160deg, var(--c-surface) 0%, var(--c-surface2) 100%)',
           border: '1px solid var(--c-sep)', borderRadius: 20, padding: '24px 22px',
-          marginBottom: 18,
+          marginBottom: 14,
         }}>
           <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Tell Sonu your situation</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', marginBottom: 12, lineHeight: 1.4 }}>
-            Sonu reads your situation, picks the right specialists, and brings their views into one answer.
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', marginBottom: 8, lineHeight: 1.25, letterSpacing: -0.3 }}>
+            11 specialist advisors.<br/>You don't pick — Sonu does.
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--c-text2)', marginBottom: 14, lineHeight: 1.5 }}>
+            Describe a situation in plain English. Sonu routes to the right specialists and combines their views into one answer.
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -1465,7 +1872,7 @@ function SituationFlow({ entity }) {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submit(query)}
-              placeholder="What's on your mind?"
+              placeholder="e.g. I want to retire at 60 with £1M pension"
               style={{
                 flex: 1, padding: '12px 14px', borderRadius: 12,
                 background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
@@ -1478,7 +1885,7 @@ function SituationFlow({ entity }) {
               style={{
                 padding: '12px 22px', borderRadius: 12, border: 'none',
                 background: query.trim() ? 'var(--c-acc)' : 'var(--c-surface2)',
-                color: query.trim() ? '#0B1F3A' : 'var(--c-text3)',
+                color: query.trim() ? 'var(--c-acc-contrast, #0B1F3A)' : 'var(--c-text3)',
                 fontSize: 13, fontWeight: 800, cursor: query.trim() ? 'pointer' : 'default',
                 fontFamily: 'inherit', letterSpacing: 0.3,
               }}
@@ -1488,7 +1895,7 @@ function SituationFlow({ entity }) {
           </div>
         </div>
 
-        <div className="sw-eyebrow" style={{ marginBottom: 10 }}>Or try a starter — drag any to play</div>
+        <div className="sw-eyebrow" style={{ marginBottom: 10 }}>Or tap a starter — these are just examples</div>
 
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -1497,7 +1904,7 @@ function SituationFlow({ entity }) {
           {SITUATION_STARTERS.map(s => (
             <button
               key={s.id}
-              onClick={() => submit(s.query)}
+              onClick={() => submit(s.query, s.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '14px 14px', borderRadius: 14,
@@ -1516,15 +1923,6 @@ function SituationFlow({ entity }) {
           ))}
         </div>
 
-        <div style={{
-          marginTop: 20, padding: '12px 16px', borderRadius: 12,
-          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-          fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.6,
-        }}>
-          <div style={{ fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4 }}>How this works</div>
-          Sonu picks the right specialists for your situation automatically — you don't choose advisors. The starters are just examples; type any question and Sonu will route to the relevant advisors.
-        </div>
-
         <style>{`@keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       </div>
     )
@@ -1536,15 +1934,29 @@ function SituationFlow({ entity }) {
   const lensesDone = completedLenses.length
   const totalImpact = combinedStrategies.reduce((s, x) => s + x.impactValue, 0)
 
+  // Lenses with positive contribution (recs > 0) vs lenses fired but silent.
+  const contributingLenses = completedLenses.filter(id => (results[id]?.recs.length ?? 0) > 0)
+  const silentLenses       = completedLenses.filter(id => (results[id]?.recs.length ?? 0) === 0)
+  const visibleAdvisorChips = showAllAdvisors ? contributingLenses : contributingLenses.slice(0, 4)
+  const hiddenAdvisorCount  = Math.max(0, contributingLenses.length - 4)
+
+  // Word-boundary truncate
+  const truncateAt = (text, max) => {
+    if (!text || text.length <= max) return text
+    const sliced = text.slice(0, max)
+    const lastSpace = sliced.lastIndexOf(' ')
+    return (lastSpace > max * 0.7 ? sliced.slice(0, lastSpace) : sliced) + '…'
+  }
+
   return (
     <div style={{ padding: '24px 20px' }}>
-      {/* Active situation header */}
+      {/* Consolidated header — situation quote + close affordance */}
       <div style={{
         background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-        borderRadius: 18, padding: '16px 18px', marginBottom: 14,
+        borderRadius: 18, padding: '16px 18px', marginBottom: 12,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Your situation</div>
             <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-text)', lineHeight: 1.45 }}>
               "{submittedQuery}"
@@ -1555,185 +1967,237 @@ function SituationFlow({ entity }) {
             style={{
               padding: '6px 12px', borderRadius: 100,
               background: 'transparent', border: '1px solid var(--c-sep)',
-              color: 'var(--c-text2)', fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
+              color: 'var(--c-text2)', fontSize: 11, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}
           >
-            ↺ New
+            ← Start over
           </button>
         </div>
       </div>
 
-      {/* Routing / reasoning trace */}
-      <div style={{
-        background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-        borderRadius: 14, padding: '14px 16px', marginBottom: 14,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: 0.4 }}>
+      {/* Interactive scenario tuner — restored from refactor for starter chips */}
+      {activeStarterId && !running && (
+        <ScenarioTuner
+          starterId={activeStarterId}
+          entity={entity}
+          onApply={(newQuery) => submit(newQuery, activeStarterId)}
+        />
+      )}
+
+      {/* Running state — live trace OR collapsed "how we got here" once done */}
+      {running ? (
+        <div style={{
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+          borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: 0.4, marginBottom: 10 }}>
             SONU IS ROUTING TO {routedLenses.length} {routedLenses.length === 1 ? 'ADVISER' : 'ADVISERS'}
           </div>
-          {!running && (
-            <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>
-              {lensesDone} / {routedLenses.length} returned · {combinedStrategies.length} strategies
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {routedLenses.map((lensId, i) => {
-            const done = completedLenses.includes(lensId)
-            const active = !done && i === lensesDone && running
-            const meta = LENS_META[lensId]
-            const lensResults = results[lensId]
-            const lensImpact = lensResults
-              ? lensResults.recs.reduce((s, r) => s + (r.impact?.gbp_per_year || r.impact?.gbp_lifetime || r.impact?.gbp_one_off || 0), 0)
-              : 0
-            return (
-              <div key={lensId} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '8px 0',
-                opacity: done || active ? 1 : 0.35,
-                transition: 'opacity .25s',
-              }}>
-                <span style={{
-                  flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 800,
-                  background: done ? 'var(--c-acc)' : 'transparent',
-                  border: done ? 'none' : '1px solid var(--c-sep)',
-                  color: done ? '#0B1F3A' : 'var(--c-text3)',
+          <div style={{ display: 'grid', gap: 8 }}>
+            {routedLenses.map((lensId, i) => {
+              const done = completedLenses.includes(lensId)
+              const active = !done && i === lensesDone && running
+              const meta = LENS_META[lensId]
+              return (
+                <div key={lensId} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '8px 0',
+                  opacity: done || active ? 1 : 0.35,
+                  transition: 'opacity .25s',
                 }}>
-                  {done ? '✓' : active ? '·' : ''}
-                </span>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{meta?.avatar}</span>
-                <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>
-                  {meta?.name}
                   <span style={{
-                    marginLeft: 8, padding: '1px 5px', borderRadius: 100,
-                    fontSize: 8, fontWeight: 800, letterSpacing: 0.3,
-                    background: 'rgba(93,219,194,0.18)', border: '1px solid rgba(93,219,194,0.4)',
-                    color: 'var(--c-acc)',
-                  }}>LIVE</span>
-                </div>
-                {done && lensResults && (
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)', whiteSpace: 'nowrap' }}>
-                    {lensResults.recs.length} {lensResults.recs.length === 1 ? 'strategy' : 'strategies'}
-                    {lensImpact > 0 && <span style={{ color: 'var(--c-acc)', marginLeft: 6, fontWeight: 700 }}>
-                      £{lensImpact.toLocaleString()}
-                    </span>}
+                    flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 800,
+                    background: done ? 'var(--c-acc)' : 'transparent',
+                    border: done ? 'none' : '1px solid var(--c-sep)',
+                    color: done ? 'var(--c-acc-contrast, #0B1F3A)' : 'var(--c-text3)',
+                  }}>
+                    {done ? '✓' : active ? '·' : ''}
+                  </span>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{meta?.avatar}</span>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>
+                    {meta?.name}
                   </div>
-                )}
-              </div>
-            )
-          })}
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Synthesised result */}
-      {!running && combinedStrategies.length > 0 && (
+      {!running && (
         <>
+          {/* Synthesis banner */}
           <div style={{
             background: 'linear-gradient(135deg, rgba(93,219,194,0.10) 0%, rgba(93,219,194,0.02) 100%)',
             border: '1px solid rgba(93,219,194,0.35)',
             borderRadius: 18, padding: '18px 20px', marginBottom: 14,
             animation: 'magic-fade-up .35s ease-out',
           }}>
-            <div className="sw-eyebrow" style={{ color: 'var(--c-acc)', marginBottom: 6 }}>
-              Sonu synthesised
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
+              <div className="sw-eyebrow" style={{ color: 'var(--c-acc)' }}>Sonu synthesised</div>
+              <button
+                onClick={() => setShowTraceDetails(t => !t)}
+                style={{
+                  padding: '3px 9px', borderRadius: 100,
+                  background: 'transparent', border: '1px solid var(--c-acc)',
+                  color: 'var(--c-acc)', fontSize: 10, fontWeight: 700, letterSpacing: 0.3,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {showTraceDetails ? 'Hide' : 'How?'}
+              </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
                 {combinedStrategies.length}
               </div>
               <div style={{ fontSize: 13, color: 'var(--c-text2)' }}>
-                strategies across <strong style={{ color: 'var(--c-text)' }}>{routedLenses.length} adviser{routedLenses.length === 1 ? '' : 's'}</strong> · combined impact <strong style={{ color: 'var(--c-text)' }}>£{totalImpact.toLocaleString()}</strong>
+                strateg{combinedStrategies.length === 1 ? 'y' : 'ies'} from <strong style={{ color: 'var(--c-text)' }}>{contributingLenses.length} of {routedLenses.length} advisers</strong>
+                {totalImpact > 0 && <> · combined impact <strong style={{ color: 'var(--c-text)' }}>£{totalImpact.toLocaleString()}</strong></>}
               </div>
             </div>
           </div>
 
-          {/* Filter chips — view by advisor */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-            <button
-              onClick={() => setAdvisorFilter(null)}
-              style={{
-                padding: '6px 12px', borderRadius: 100,
-                background: advisorFilter === null ? 'var(--c-acc)' : 'var(--c-surface2)',
-                border: '1px solid ' + (advisorFilter === null ? 'var(--c-acc)' : 'var(--c-sep)'),
-                color: advisorFilter === null ? '#0B1F3A' : 'var(--c-text2)',
-                fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              All combined ({Object.values(results).reduce((s, r) => s + r.recs.length, 0)})
-            </button>
-            {completedLenses.map(lensId => {
-              const meta = LENS_META[lensId]
-              const isActive = advisorFilter === lensId
-              return (
-                <button
-                  key={lensId}
-                  onClick={() => setAdvisorFilter(isActive ? null : lensId)}
-                  style={{
-                    padding: '6px 10px', borderRadius: 100,
-                    background: isActive ? 'var(--c-acc)' : 'var(--c-surface2)',
-                    border: '1px solid ' + (isActive ? 'var(--c-acc)' : 'var(--c-sep)'),
-                    color: isActive ? '#0B1F3A' : 'var(--c-text2)',
-                    fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                  }}
-                >
-                  <span style={{ fontSize: 13 }}>{meta?.avatar}</span>
-                  {meta?.name} ({results[lensId].recs.length})
-                </button>
-              )
-            })}
-          </div>
+          {/* How we got here — expandable trace */}
+          {showTraceDetails && (
+            <div style={{
+              background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+              borderRadius: 12, padding: '12px 16px', marginBottom: 14,
+              animation: 'magic-fade-up .25s ease-out',
+            }}>
+              <div className="sw-eyebrow" style={{ color: 'var(--c-acc)', marginBottom: 8 }}>How Sonu got here</div>
+              {routedLenses.map(lensId => {
+                const meta = LENS_META[lensId]
+                const r = results[lensId]
+                if (!r) return null
+                const impact = r.recs.reduce((s, rec) => s + (rec.impact?.gbp_per_year || rec.impact?.gbp_lifetime || rec.impact?.gbp_one_off || 0), 0)
+                return (
+                  <div key={lensId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', fontSize: 12 }}>
+                    <span style={{ fontSize: 14 }}>{meta?.avatar}</span>
+                    <span style={{ color: 'var(--c-text)', fontWeight: 600, flex: 1 }}>{meta?.name}</span>
+                    <span style={{ color: 'var(--c-text3)' }}>
+                      {r.recs.length === 0 ? 'no triggers' : `${r.recs.length} ${r.recs.length === 1 ? 'strategy' : 'strategies'}`}
+                      {impact > 0 && <span style={{ color: 'var(--c-acc)', marginLeft: 6, fontWeight: 700 }}>£{impact.toLocaleString()}</span>}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
-          {/* Strategy list */}
-          <div style={{ display: 'grid', gap: 8 }}>
-            {combinedStrategies.map((s, i) => (
-              <div
-                key={`${s.lensId}-${s.id || i}`}
+          {/* SITUATION CHART — graphical representation */}
+          <SituationChart
+            starterId={activeStarterId}
+            query={submittedQuery}
+            entity={entity}
+            results={results}
+          />
+
+          {/* Filter chips — only contributing advisors, capped at 4 + more */}
+          {contributingLenses.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              <button
+                onClick={() => setAdvisorFilter(null)}
                 style={{
-                  padding: '14px 16px', borderRadius: 12,
-                  background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-                  animation: `magic-fade-up .35s ease-out ${i * 45}ms backwards`,
+                  padding: '6px 12px', borderRadius: 100,
+                  background: advisorFilter === null ? 'var(--c-acc)' : 'var(--c-surface2)',
+                  border: '1px solid ' + (advisorFilter === null ? 'var(--c-acc)' : 'var(--c-sep)'),
+                  color: advisorFilter === null ? 'var(--c-acc-contrast, #0B1F3A)' : 'var(--c-text2)',
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14 }}>{s.lensMeta?.avatar}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    {s.lensMeta?.name}
-                  </span>
-                  {s.impactValue > 0 && (
-                    <span style={{
-                      marginLeft: 'auto', padding: '2px 8px', borderRadius: 100,
-                      background: 'rgba(93,219,194,0.12)', border: '1px solid rgba(93,219,194,0.3)',
-                      fontSize: 11, fontWeight: 800, color: 'var(--c-acc)',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      £{s.impactValue.toLocaleString()}{s.impact?.gbp_per_year ? '/yr' : s.impact?.gbp_lifetime ? ' lifetime' : ' one-off'}
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>
-                  {s.headline}
-                </div>
-                {s.drill_down && (
-                  <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 6 }}>
-                    {s.drill_down.length > 240 ? s.drill_down.slice(0, 240) + '…' : s.drill_down}
+                All ({combinedStrategies.length})
+              </button>
+              {visibleAdvisorChips.map(lensId => {
+                const meta = LENS_META[lensId]
+                const isActive = advisorFilter === lensId
+                return (
+                  <button
+                    key={lensId}
+                    onClick={() => setAdvisorFilter(isActive ? null : lensId)}
+                    style={{
+                      padding: '6px 10px', borderRadius: 100,
+                      background: isActive ? 'var(--c-acc)' : 'var(--c-surface2)',
+                      border: '1px solid ' + (isActive ? 'var(--c-acc)' : 'var(--c-sep)'),
+                      color: isActive ? 'var(--c-acc-contrast, #0B1F3A)' : 'var(--c-text2)',
+                      fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                    }}
+                  >
+                    <span style={{ fontSize: 13 }}>{meta?.avatar}</span>
+                    {meta?.name} ({results[lensId].recs.length})
+                  </button>
+                )
+              })}
+              {!showAllAdvisors && hiddenAdvisorCount > 0 && (
+                <button
+                  onClick={() => setShowAllAdvisors(true)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 100,
+                    background: 'transparent', border: '1px dashed var(--c-sep)',
+                    color: 'var(--c-text3)', fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  + {hiddenAdvisorCount} more
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Strategy list */}
+          {combinedStrategies.length > 0 && (
+            <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
+              {combinedStrategies.map((s, i) => (
+                <StrategyCard key={`${s.lensId}-${s.id || i}`} strategy={s} index={i} truncateAt={truncateAt} />
+              ))}
+            </div>
+          )}
+
+          {/* Silent-lens scope notes — surface what_if_prompts when a lens
+              fired but returned no triggers in this persona's data */}
+          {silentLenses.length > 0 && advisorFilter === null && (
+            <div style={{
+              background: 'var(--c-surface)', border: '1px dashed var(--c-sep)',
+              borderRadius: 14, padding: '14px 16px', marginBottom: 14,
+            }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Also routed — no triggers in your data</div>
+              {silentLenses.map(lensId => {
+                const meta = LENS_META[lensId]
+                const prompts = results[lensId]?.prompts || []
+                return (
+                  <div key={lensId} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 14 }}>{meta?.avatar}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text2)' }}>{meta?.name}</span>
+                      <span style={{
+                        padding: '1px 5px', borderRadius: 100,
+                        fontSize: 8, fontWeight: 800, letterSpacing: 0.3,
+                        background: 'rgba(127,140,159,0.15)', border: '1px solid var(--c-sep)',
+                        color: 'var(--c-text3)',
+                      }}>STANDING BY</span>
+                    </div>
+                    {prompts.length > 0 ? (
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5, paddingLeft: 22 }}>
+                        Would analyse: {prompts.slice(0, 2).join(' · ')}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5, paddingLeft: 22 }}>
+                        No specific triggers in your current data.
+                      </div>
+                    )}
                   </div>
-                )}
-                {s.citation && (
-                  <div style={{ fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>
-                    Source: {s.citation}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
 
           <div style={{
-            marginTop: 16, padding: '12px 14px', borderRadius: 10,
+            padding: '12px 14px', borderRadius: 10,
             background: 'var(--c-surface2)', fontSize: 11,
             color: 'var(--c-text3)', lineHeight: 1.5, textAlign: 'center',
           }}>
@@ -1743,6 +2207,64 @@ function SituationFlow({ entity }) {
       )}
 
       <style>{`@keyframes magic-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  )
+}
+
+// ── Strategy card (extracted for clarity) ────────────────────────────────────
+function StrategyCard({ strategy, index, truncateAt }) {
+  const [expanded, setExpanded] = useState(false)
+  const drillFull = strategy.drill_down || ''
+  const drillShort = truncateAt(drillFull, 220)
+  const hasMore = drillFull.length > drillShort.length
+
+  return (
+    <div style={{
+      padding: '14px 16px', borderRadius: 12,
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+      animation: `magic-fade-up .35s ease-out ${index * 45}ms backwards`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 14 }}>{strategy.lensMeta?.avatar}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          {strategy.lensMeta?.name}
+        </span>
+        {strategy.impactValue > 0 && (
+          <span style={{
+            marginLeft: 'auto', padding: '2px 8px', borderRadius: 100,
+            background: 'rgba(93,219,194,0.12)', border: '1px solid rgba(93,219,194,0.3)',
+            fontSize: 11, fontWeight: 800, color: 'var(--c-acc)',
+            fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+          }}>
+            £{strategy.impactValue.toLocaleString()}{strategy.impact?.gbp_per_year ? '/yr' : strategy.impact?.gbp_lifetime ? ' lifetime' : ' one-off'}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>
+        {strategy.headline}
+      </div>
+      {drillFull && (
+        <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 6 }}>
+          {expanded ? drillFull : drillShort}
+          {hasMore && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              style={{
+                marginLeft: 6, background: 'none', border: 'none',
+                color: 'var(--c-acc)', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+              }}
+            >
+              {expanded ? 'less' : 'more'}
+            </button>
+          )}
+        </div>
+      )}
+      {strategy.citation && (
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>
+          Source: {strategy.citation}
+        </div>
+      )}
     </div>
   )
 }

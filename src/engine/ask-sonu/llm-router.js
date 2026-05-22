@@ -22,6 +22,7 @@
 
 import { PLAYS } from './knowledge-graph.js'
 import { ADVISORS_BY_CATEGORY } from './play-actions.js'
+import { summariseTaxYearState } from './tax-year-state.js'
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL   = 'claude-sonnet-4-6'
@@ -92,8 +93,9 @@ function buildPlayMenu() {
 // ─────────────────────────────────────────────────────────────────────────────
 // The prompt — tightly scoped, asks for JSON
 // ─────────────────────────────────────────────────────────────────────────────
-function buildPrompt(query, persona, knownFacts) {
+function buildPrompt(query, persona, knownFacts, taxYearState, lensSummary) {
   const personaSummary = summarisePersona(persona)
+  const taxStateSummary = taxYearState ? summariseTaxYearState(taxYearState) : '(not computed)'
   const playMenu = buildPlayMenu()
   const factsKnown = Object.keys(knownFacts || {}).length
     ? Object.entries(knownFacts).filter(([,v]) => v != null && v !== '').map(([k,v]) => `${k}: ${v}`).join(' · ')
@@ -106,17 +108,31 @@ THE USER ASKED:
 ${query}
 """
 
-USER'S PROFILE (deterministic — facts you can use freely):
+USER'S STATIC PROFILE (deterministic — facts you can use freely):
 ${personaSummary}
+
+USER'S CURRENT TAX-YEAR STATE (CRITICAL — use this to decide if allowance-based plays apply):
+  · ${taxStateSummary}
 
 CLARIFICATIONS ALREADY GIVEN (from prior follow-ups in this session):
 ${factsKnown}
 
-YOUR 11 SPECIALIST LENSES (you can consult these — list which ones inform your answer):
-${LENSES.join(' · ')}
+═══════════════════════════════════════════════════════════════════
+EXPERT SPECIALISTS HAVE ALREADY ANALYSED THIS PERSONA
+═══════════════════════════════════════════════════════════════════
+These are observations + recommendations from the 11 expert lenses
+(${LENSES.join(' · ')}).
+The observations are GROUND TRUTH — use them as facts you can cite. The
+recommendations are the experts' direct suggestions for THIS persona,
+allowance-aware. Treat them with high weight.
 
-YOUR PLAY MENU — the ONLY recommendations you are allowed to use as lead/supporting/challenge.
-Each play has a stable id; you MUST return ids from this list verbatim. You cannot invent plays.
+${lensSummary || '(no specialists scored above relevance threshold)'}
+
+═══════════════════════════════════════════════════════════════════
+YOUR PLAY MENU — the only recommendations you can use as lead/supporting/challenge.
+═══════════════════════════════════════════════════════════════════
+Each play has a stable id; you MUST return ids from this list verbatim.
+You cannot invent plays. If no play title fits the query, use Outcome C (freeform).
 ${JSON.stringify(playMenu, null, 2)}
 
 ═══════════════════════════════════════════════════════════════════
@@ -221,12 +237,31 @@ RULES (non-negotiable)
 2. Never fabricate UK tax law, IHT rules, pension rules, or citations. Real references only.
 3. Same input → same output. Be deterministic.
 4. No promises about returns or specific market outcomes.
-5. ASK (Outcome A) when:
+
+STATE-AWARENESS (this is what makes you different from a generic LLM):
+5. You can see the user's CURRENT TAX-YEAR STATE above. Use it. Examples:
+   - If isa_remaining = 0 → DO NOT recommend ISA top-up this year. Instead say "first thing next April" or pick a different play.
+   - If pension_aa.remaining < 1000 → DO NOT recommend pension top-ups. Mention carry-forward only if available.
+   - If mpaa_triggered → only £10k annual contribution allowed; warn the user.
+   - If pa.tapered → £100k taper is active; recommend bonus-to-pension if not already maxed.
+   - If days_to_tax_year_end < 60 → flag urgency for this-year actions.
+   - If days_to_sipp_iht > 0 and < 730 → SIPP-IHT deadline is live; preservation plays MORE urgent.
+6. Lens observations are expert-grade ground truth. Reference them by category when citing reasoning.
+7. If you recommend a play whose action_steps would reference an allowance the user has already used,
+   your direct_answer MUST modify the recommendation to reflect what is actually possible (e.g.
+   "wait until 6 April" or "use your spouse's unused ISA" or "via GIA + CGT allowance instead").
+
+WHEN TO ASK vs ANSWER:
+8. ASK (Outcome A) when:
    - The cash purpose, time horizon, or marital status would change the recommendation 180° and isn't stated or inferrable.
    - The user's question contains "what should I do" with multiple plausible interpretations.
-6. CASH queries (fixed deposits, savings, deposits, money market): the cash PURPOSE is usually the discriminating fact. Do NOT silently assume "growth" — either ASK or use FREEFORM with all the contingencies stated.
-7. For Outcome B, the lead play TITLE must be a direct fit for what the user asked. If the closest play title mentions something the user didn't ask about, use FREEFORM (Outcome C) instead.
-8. Output ONLY the JSON object. Nothing before, nothing after. No code fences.`
+9. CASH queries (fixed deposits, savings, deposits, money market): the cash PURPOSE is usually the discriminating fact.
+   Do NOT silently assume "growth" — either ASK or use FREEFORM with all the contingencies stated.
+10. For Outcome B, the lead play TITLE must be a direct fit for what the user asked. If the closest play title
+    mentions something the user didn't ask about, use FREEFORM (Outcome C) instead.
+
+OUTPUT:
+11. Output ONLY the JSON object. Nothing before, nothing after. No code fences.`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,7 +333,9 @@ function extractJSON(text) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
-export async function routeWithLLM(query, persona, knownFacts = {}, signal = null) {
+export async function routeWithLLM(query, persona, opts = {}, signal = null) {
+  const { knownFacts = {}, taxYearState = null, lensSummary = '' } = opts
+
   const apiKey = typeof import.meta !== 'undefined'
     ? (import.meta.env?.VITE_ANTHROPIC_KEY || import.meta.env?.VITE_ANTHROPIC_API_KEY)
     : null
@@ -307,7 +344,7 @@ export async function routeWithLLM(query, persona, knownFacts = {}, signal = nul
     return { ok: false, reason: 'no_api_key', fallback: true }
   }
 
-  const prompt = buildPrompt(query, persona, knownFacts)
+  const prompt = buildPrompt(query, persona, knownFacts, taxYearState, lensSummary)
 
   // Add our own timeout on top of the caller's signal
   const ctrl = new AbortController()
@@ -327,7 +364,7 @@ export async function routeWithLLM(query, persona, knownFacts = {}, signal = nul
       },
       body: JSON.stringify({
         model:       MODEL,
-        max_tokens:  1200,
+        max_tokens:  2000,
         temperature: 0,
         messages: [{ role: 'user', content: prompt }],
       }),

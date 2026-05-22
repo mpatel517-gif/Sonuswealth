@@ -216,6 +216,22 @@ function HeroBlock({ query, answer }) {
   const lead = answer.lead || {}
   const impact = lead.impact || {}
   const isFreeform = answer.mode === 'freeform' || answer.freeform === true
+  const state = answer.taxYearState
+
+  // Build a compact state-aware tag list (only show interesting/nonzero items)
+  const stateTags = []
+  if (state) {
+    if (state.isa) stateTags.push({ label: 'ISA', value: `£${state.isa.remaining.toLocaleString()} left`, urgent: state.isa.remaining === 0 })
+    if (state.pension_aa) stateTags.push({ label: 'Pension AA', value: `£${state.pension_aa.remaining.toLocaleString()} left`, urgent: state.pension_aa.remaining < 5000 })
+    if (state.mpaa_triggered) stateTags.push({ label: 'MPAA', value: 'triggered', urgent: true })
+    if (state.pa?.tapered) stateTags.push({ label: '£100k taper', value: 'active', urgent: true })
+    if (state.days_to_sipp_iht > 0 && state.days_to_sipp_iht < 730) {
+      stateTags.push({ label: 'SIPP-IHT', value: `${state.days_to_sipp_iht}d`, urgent: state.days_to_sipp_iht < 365 })
+    }
+    if (state.days_to_tax_year_end < 60) {
+      stateTags.push({ label: 'Year end', value: `${state.days_to_tax_year_end}d`, urgent: true })
+    }
+  }
 
   return (
     <div style={{ maxWidth: MAX_W, margin: '0 auto', padding: '16px 16px 4px' }}>
@@ -239,8 +255,43 @@ function HeroBlock({ query, answer }) {
       {answer.intro && (
         <div style={{
           fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5,
-          marginBottom: 14,
+          marginBottom: 10,
         }}>{answer.intro}</div>
+      )}
+
+      {/* Tax-year state tags — the visible signal that Sonu knows what's used */}
+      {stateTags.length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 6,
+          marginBottom: 14, paddingBottom: 12,
+          borderBottom: '1px dashed var(--c-sep)',
+        }}>
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 700, alignSelf: 'center', marginRight: 4 }}>
+            This year:
+          </div>
+          {stateTags.map((t, i) => (
+            <div key={i} style={{
+              padding: '3px 8px', borderRadius: 999,
+              background: t.urgent ? 'rgba(255,111,125,0.15)' : 'var(--c-surface2)',
+              border: `1px solid ${t.urgent ? 'var(--c-coral)' : 'var(--c-sep)'}`,
+              fontSize: 10, color: t.urgent ? 'var(--c-coral)' : 'var(--c-text2)',
+              fontWeight: 600,
+            }}>
+              {t.label}: <strong>{t.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lenses consulted — visible attribution of which experts informed this */}
+      {answer.lenses_consulted?.length > 0 && (
+        <div style={{
+          fontSize: 10, color: 'var(--c-text3)', marginBottom: 12,
+          lineHeight: 1.4,
+        }}>
+          <strong style={{ color: 'var(--c-acc)' }}>Sonu consulted:</strong>{' '}
+          {answer.lenses_consulted.slice(0, 5).map(l => l.name).join(' · ')}
+        </div>
       )}
 
       {/* Freeform: simpler card — no contradicting play title */}

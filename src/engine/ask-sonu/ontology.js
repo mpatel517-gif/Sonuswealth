@@ -61,6 +61,15 @@ export const FACTS = {
   HEALTHCARE_RELIANCE:'healthcare_reliance',
   GIFT_AMOUNT:    'gift_amount',
   GIFT_RECIPIENT: 'gift_recipient',
+
+  // ── State-aware facts (tax-year position) ─────────────────────────
+  ISA_USED_THIS_YEAR:        'isa_used_this_year',
+  PENSION_CONTRIB_THIS_YEAR: 'pension_contrib_this_year',
+  CGT_REALISED_THIS_YEAR:    'cgt_realised_this_year',
+  LAST_GIFT_AMOUNT_DATE:     'last_gift_amount_date',
+  PURPOSE_OF_CASH:           'purpose_of_cash',          // emergency | income | growth | dated_spend
+  TIME_HORIZON_OF_CASH:      'time_horizon_of_cash',     // < 1yr | 1-3yr | 3-5yr | 5yr+
+  MPAA_STATUS:               'mpaa_status',              // triggered | not_triggered | unsure
 }
 
 // Values a question planner may use to discriminate.
@@ -77,6 +86,14 @@ export const FACT_QUESTIONS = {
   gift_recipient:         'Who would receive it — children, grandchildren, a charity, someone else?',
   risk_tolerance:         'When markets fall 20%, do you panic-sell, sit tight, or buy more?',
   marital_status:         'Are you married, cohabiting, single, or divorced?',
+
+  // ── State-aware questions ────────────────────────────────────────
+  isa_used_this_year:        'How much of your £20,000 ISA allowance have you used this tax year?',
+  pension_contrib_this_year: 'Roughly how much have you contributed to pensions this tax year?',
+  cgt_realised_this_year:    'Have you realised any capital gains this tax year?',
+  purpose_of_cash:           'What is this cash earmarked for?',
+  time_horizon_of_cash:      'When will you need this money?',
+  mpaa_status:                'Have you ever taken any taxable income from a flexi-access pension? (this triggers MPAA)',
 }
 
 // Map fact answers (free text or chip) to belief-state updates.

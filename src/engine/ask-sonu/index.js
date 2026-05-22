@@ -23,6 +23,8 @@ import { normaliseFact }           from './ontology.js'
 import { routeWithLLM }            from './llm-router.js'
 import { getPlayById }             from './knowledge-graph.js'
 import { getActionSteps, getAdvisors } from './play-actions.js'
+import { buildTaxYearState }       from './tax-year-state.js'
+import { consultLenses }           from './lens-orchestrator.js'
 
 const MAX_QUESTIONS = 3
 const fmt = (n) => '£' + Math.round(n).toLocaleString('en-GB')
@@ -30,8 +32,12 @@ const fmt = (n) => '£' + Math.round(n).toLocaleString('en-GB')
 // ─────────────────────────────────────────────────────────────────────────────
 // LLM PATH — preferred. Returns a READY/NEED_INFO payload or null on failure.
 // ─────────────────────────────────────────────────────────────────────────────
-async function tryLLMPath(query, persona, knownFacts, questionsAsked) {
-  const r = await routeWithLLM(query, persona, knownFacts)
+async function tryLLMPath(query, persona, knownFacts, questionsAsked, taxYearState, lensConsult) {
+  const r = await routeWithLLM(query, persona, {
+    knownFacts,
+    taxYearState,
+    lensSummary: lensConsult?.summary_for_llm || '',
+  })
   if (!r.ok) {
     return { ok: false, reason: r.reason }
   }
@@ -271,18 +277,31 @@ export async function askSonu(query, persona, opts = {}) {
   const questionsAsked = opts.questionsAsked || 0
   const forceAnswer    = !!opts.forceAnswer
   const useLLM         = opts.useLLM !== false  // default on
+  const asOfDate       = opts.asOfDate || new Date()
+
+  // ── ONE-TIME INPUTS — computed once, threaded everywhere ─────────────
+  const taxYearState = safe(() => buildTaxYearState(persona, asOfDate))
+  const lensConsult  = safe(() => consultLenses(persona, asOfDate)) || { active: [], summary_for_llm: '' }
 
   if (useLLM) {
-    const llm = await tryLLMPath(query, persona, knownFacts, questionsAsked)
+    const llm = await tryLLMPath(query, persona, knownFacts, questionsAsked, taxYearState, lensConsult)
     if (llm.ok) {
-      return { ...llm.payload, _fallback_used: false }
+      // Attach state + lens metadata to the payload for UI surfacing
+      const payload = llm.payload
+      if (payload.answer) {
+        payload.answer.taxYearState = taxYearState
+        payload.answer.lenses_consulted = lensConsult.active.map(l => ({ id: l.id, name: l.name, score: l.score }))
+      }
+      return { ...payload, _fallback_used: false }
     }
     // Otherwise fall through to deterministic
     const det = deterministicAnswer(query, persona, knownFacts, questionsAsked, forceAnswer)
+    if (det.answer) det.answer.taxYearState = taxYearState
     return { ...det, _fallback_used: true, _llm_failure: llm.reason }
   }
 
   const det = deterministicAnswer(query, persona, knownFacts, questionsAsked, forceAnswer)
+  if (det.answer) det.answer.taxYearState = taxYearState
   return { ...det, _fallback_used: false, source: 'deterministic' }
 }
 

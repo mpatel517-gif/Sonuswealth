@@ -125,6 +125,28 @@ export const ACTION_STEPS = {
     'Pick own-occupation cover (most generous definition of "unable to work")',
     'Set the deferred period as long as your savings can sustain (longer = cheaper premium)',
   ],
+
+  // ── Cash deployment plays ──────────────────────────────────────────
+  deploy_cash_isa_first: [
+    'Check exactly how much of your £20,000 ISA allowance you\'ve used this tax year',
+    'Subscribe the unused balance into a Stocks & Shares (or Cash) ISA before 6 April — same for your spouse',
+    'Plan to subscribe £20k each next 6 April; layer with bed-and-ISA for the residual',
+  ],
+  psa_optimisation: [
+    'Estimate annual interest on your cash (cash × ~4.5%); compare against your PSA (£1k basic / £500 higher / £0 additional)',
+    'For interest above PSA, move that portion into Cash ISA or direct gilts (CGT-free capital gain)',
+    'Keep enough in instant-access for 3-6 months expenses; wrapper the rest',
+  ],
+  emergency_fund_first: [
+    'Estimate 6 months of household expenses (rent/mortgage + bills + food + travel + insurance)',
+    'Park that amount in an instant-access savings account at competitive rate (Marcus, Chase, etc.)',
+    'Treat this as untouchable; deploy ONLY the surplus into wrappers / investments / dated gilts',
+  ],
+  gilt_ladder_for_dated_spend: [
+    'Identify the spend date(s) — e.g. school fees in 2027, deposit on a house in 2028',
+    'Buy short-dated gilts maturing on/before each date (use HL/AJ Bell broker), or the iShares UK Gilts 0-5y ETF (IGLS) for simplicity',
+    'Hold to maturity — coupons taxed at income rate, but capital appreciation is CGT-free',
+  ],
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

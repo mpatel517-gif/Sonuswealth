@@ -94,6 +94,13 @@ const RULES = [
     resources: [],
   },
 
+  // ── Cash / deposits / savings ────────────────────────────────────────────
+  {
+    match: /fixed deposit|fd.{0,5}matur|term deposit|money market|cash account|savings account|cash.{0,15}(?:matur|reinvest|deploy|sitting)|maturing.{0,15}(?:deposit|cash|account)|deposits? matur|what.{0,10}do with.{0,15}(?:cash|deposit)|deploy.{0,15}cash/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 1.0, [CONCERNS.TAX]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.4 },
+    resources: [RESOURCES.CASH, RESOURCES.ISA, RESOURCES.GIA],
+  },
+
   // ── Tax (generic) ────────────────────────────────────────────────────────
   {
     match: /reduce (?:my )?tax|tax bill|tax planning|save tax|tax-efficient|isa|pension contribution|carry forward|annual allowance/i,

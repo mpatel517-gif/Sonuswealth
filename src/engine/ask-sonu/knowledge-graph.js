@@ -670,6 +670,144 @@ const PLAYS = [
     alternatives: [],
     fca_boundary: 'Information not advice. Compare cover terms via a regulated IP broker.',
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PLAYS — Cash deployment (state-aware)
+  // These accept (persona, taxYearState) and adjust impact based on what's
+  // ACTUALLY available, not a generic assumption.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    id: 'deploy_cash_isa_first',
+    title: 'Move cash into your unused ISA allowance first',
+    one_liner: 'Use this year\'s remaining ISA allowance before tax year end. Spouse\'s too if married.',
+    detail: 'ISA wrapper shields growth from CGT and income tax forever. Each spouse has a £20k annual allowance — use it or lose it on 6 April. For larger cash positions, layer this with bed-and-ISA next year + a gilt ladder for the residual.',
+    triggers: [CONCERNS.LIQUIDITY, CONCERNS.TAX, CONCERNS.IHT_LEGACY],
+    weight:   { [CONCERNS.LIQUIDITY]: 0.9, [CONCERNS.TAX]: 0.85, [CONCERNS.IHT_LEGACY]: 0.4 },
+    prerequisites: { min_age: 18 },
+    counter_indications: {},
+    needs_fact: [FACTS.PURPOSE_OF_CASH, FACTS.ISA_USED_THIS_YEAR],
+    compute_impact: (p, state) => {
+      const isaRoom = state?.isa?.remaining || 20000
+      const cash = (p?.assets?.cash || 0) + (p?.assets?.fixed_deposits || 0)
+      const deployable = Math.min(isaRoom, cash)
+      const lifetimeTaxSaved = deployable * 0.20  // ~20yr × 1% growth tax avoided
+      return {
+        gbp_saved: Math.round(lifetimeTaxSaved),
+        time_horizon: state?.days_to_tax_year_end ? `${state.days_to_tax_year_end} days to tax year end` : 'this tax year',
+        certainty: 'high',
+        why: isaRoom > 0
+          ? `You have £${isaRoom.toLocaleString()} of ISA allowance remaining this tax year. Of your £${cash.toLocaleString()} cash, the first £${deployable.toLocaleString()} should go into the ISA wrapper before 6 April — that's roughly £${Math.round(lifetimeTaxSaved).toLocaleString()} of lifetime tax avoided on growth.`
+          : `Your ISA allowance for this year is fully used. First thing 6 April (new tax year), put £20,000 (each, if married) into a fresh ISA before deploying the rest.`,
+      }
+    },
+    citation: 'ITTOIA 2005 Pt 6 Ch 3 (ISA wrapper); HMRC ISAM',
+    category: 'tax_pension',
+    alternatives: [
+      { value_shift: 'liquidity over tax shielding', alt_play: 'emergency_fund_first' },
+    ],
+    fca_boundary: FCA,
+  },
+
+  {
+    id: 'psa_optimisation',
+    title: 'Check Personal Savings Allowance exposure on cash interest',
+    one_liner: 'Above PSA (£1k basic / £500 higher / £0 additional), savings interest is taxable. Cash wrapper matters.',
+    detail: 'Personal Savings Allowance covers the first £1,000 of savings interest (basic-rate), £500 (higher), £0 (additional). At 5% interest, basic-rate hits PSA at £20k cash; higher-rate at £10k. Above that, every £1 of interest is taxed at marginal rate. Wrapper migration (Cash ISA, gilts) becomes material.',
+    triggers: [CONCERNS.LIQUIDITY, CONCERNS.TAX],
+    weight:   { [CONCERNS.LIQUIDITY]: 0.7, [CONCERNS.TAX]: 0.9 },
+    prerequisites: {},
+    counter_indications: {},
+    needs_fact: [FACTS.ISA_USED_THIS_YEAR],
+    compute_impact: (p, state) => {
+      const cash = (p?.assets?.cash || 0) + (p?.assets?.fixed_deposits || 0)
+      const rate = 0.045  // assumed savings rate
+      const interest = cash * rate
+      const psaLimit = state?.psa?.remaining || 1000
+      const taxable = Math.max(0, interest - psaLimit)
+      const income = p?.income?.annual || 0
+      const taxRate = income > 50270 ? 0.40 : 0.20
+      const tax = taxable * taxRate
+      return {
+        gbp_saved: Math.round(tax),  // Save this if we migrate to wrappers
+        time_horizon: 'this tax year, recurring',
+        certainty: 'high',
+        why: cash > 0
+          ? `On £${cash.toLocaleString()} cash at ~4.5% interest, you'd earn ~£${Math.round(interest).toLocaleString()} of taxable interest. PSA covers £${psaLimit.toLocaleString()}; the remaining £${Math.round(taxable).toLocaleString()} is taxed at ${Math.round(taxRate*100)}% → ~£${Math.round(tax).toLocaleString()} tax. Migrating to Cash ISA / gilts wipes this out.`
+          : 'No cash position to optimise.',
+      }
+    },
+    citation: 'ITA 2007 s.12B (Personal Savings Allowance); HMRC SAIM',
+    category: 'tax_pension',
+    alternatives: [
+      { value_shift: 'simplicity over optimisation', alt_play: 'deploy_cash_isa_first' },
+    ],
+    fca_boundary: FCA,
+  },
+
+  {
+    id: 'emergency_fund_first',
+    title: 'Hold 3-6 months of expenses liquid before deploying',
+    one_liner: 'Money you might need in <6 months belongs in instant-access savings, not in markets or wrappers with redemption friction.',
+    detail: 'Emergency fund = unanticipated essential expenses (job loss, boiler, car). Rule of thumb: 3 months expenses for dual-income employed; 6 months for single-income; 12 months for self-employed. Keep in an instant-access account paying competitive rate. Everything else can be deployed.',
+    triggers: [CONCERNS.LIQUIDITY, CONCERNS.INCOME_SECURITY, CONCERNS.PROTECTION],
+    weight:   { [CONCERNS.LIQUIDITY]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.7, [CONCERNS.PROTECTION]: 0.5 },
+    prerequisites: {},
+    counter_indications: {},
+    needs_fact: [FACTS.PURPOSE_OF_CASH, FACTS.WORK_STATUS],
+    compute_impact: (p) => {
+      const income = p?.income?.annual || 60000
+      const monthlyExpenses = income * 0.6 / 12  // rough — 60% of gross goes to living
+      const target = Math.round(monthlyExpenses * 6)
+      const cash = (p?.assets?.cash || 0) + (p?.assets?.fixed_deposits || 0)
+      const gap = Math.max(0, target - cash)
+      return {
+        gbp_saved: 0,
+        time_horizon: 'before deploying any cash',
+        certainty: 'high',
+        why: `Target emergency fund: ~£${target.toLocaleString()} (6 months × estimated monthly expenses). You have £${cash.toLocaleString()} cash — ${gap > 0 ? `gap of £${gap.toLocaleString()}` : 'comfortably covered'}. Reserve this first, then deploy the surplus.`,
+      }
+    },
+    citation: 'MAS (MoneyHelper) emergency fund guidance',
+    category: 'protection',
+    alternatives: [
+      { value_shift: 'optimisation over caution', alt_play: 'deploy_cash_isa_first' },
+    ],
+    fca_boundary: FCA,
+  },
+
+  {
+    id: 'gilt_ladder_for_dated_spend',
+    title: 'Match a gilt ladder to known future spend',
+    one_liner: 'For cash earmarked for a specific spend in 1-5 years, buy gilts maturing on/before that date. Tax-efficient + predictable.',
+    detail: 'Direct gilts: coupons taxed at income rate, but capital gain on price appreciation is CGT-FREE (TCGA 1992 s.115). A short-dated low-coupon gilt held to maturity = predictable nominal return, mostly tax-free, with credit risk = HMG. Use the iShares UK Gilts 0-5y ETF for simplicity or buy specific maturities for date-matching.',
+    triggers: [CONCERNS.LIQUIDITY, CONCERNS.TAX, CONCERNS.INCOME_SECURITY],
+    weight:   { [CONCERNS.LIQUIDITY]: 0.85, [CONCERNS.TAX]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.7 },
+    prerequisites: {},
+    counter_indications: {},
+    needs_fact: [FACTS.PURPOSE_OF_CASH, FACTS.TIME_HORIZON_OF_CASH],
+    compute_impact: (p) => {
+      const cash = (p?.assets?.cash || 0) + (p?.assets?.fixed_deposits || 0)
+      const income = p?.income?.annual || 0
+      const taxRate = income > 50270 ? 0.40 : 0.20
+      // CGT-free portion saved vs taxable deposit interest
+      const yearsHeld = 3
+      const annualSaving = cash * 0.035 * taxRate
+      return {
+        gbp_saved: Math.round(annualSaving * yearsHeld),
+        time_horizon: '1-5 years (matched to spend date)',
+        certainty: 'medium',
+        why: cash > 0
+          ? `On £${cash.toLocaleString()} held in dated gilts vs taxable deposits: ~£${Math.round(annualSaving).toLocaleString()}/yr saved on tax (gilt price gain is CGT-free under TCGA 1992 s.115). Over ${yearsHeld} years ≈ £${Math.round(annualSaving * yearsHeld).toLocaleString()}.`
+          : 'No applicable cash position.',
+      }
+    },
+    citation: 'TCGA 1992 s.115 (gilt CGT exemption); DMO UK gilt yields',
+    category: 'investment',
+    alternatives: [
+      { value_shift: 'liquidity over yield', alt_play: 'emergency_fund_first' },
+    ],
+    fca_boundary: FCA,
+  },
 ]
 
 export { PLAYS }

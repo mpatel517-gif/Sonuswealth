@@ -2,103 +2,222 @@
 // ASK SONU — ORCHESTRATOR
 //
 // Public API. One function: askSonu(query, persona, opts).
-// Returns either:
-//   { status: 'NEED_INFO', question, hint, candidates }   — ask the user
-//   { status: 'READY',     answer }                       — show the answer
+// Routes through the LLM first (thinking layer); falls back to the
+// deterministic engine if the LLM is unreachable / returns invalid JSON
+// / picks unknown play IDs.
 //
-// Pure JavaScript. No React, no LLM, no API key. Deterministic.
+// Returns one of:
+//   { status: 'NEED_INFO', question, options, ... }   — ask user
+//   { status: 'READY',     answer, ... }              — show synthesized answer
+//
+// LLM provides: direct_answer, intro, intent, lead/supporting/challenge IDs,
+//               advisors_consulted, rationale, ask-or-answer decision
+// KG  provides: action_steps, citations, money math (compute_impact), titles
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { classify, topConcerns } from './classifier.js'
-import { matchPlays, pickLead }  from './matcher.js'
-import { nextQuestion, nextQuestions } from './planner.js'
-import { synthesize }            from './synthesizer.js'
-import { normaliseFact }         from './ontology.js'
+import { classify }                from './classifier.js'
+import { matchPlays, pickLead }    from './matcher.js'
+import { nextQuestion }            from './planner.js'
+import { synthesize }              from './synthesizer.js'
+import { normaliseFact }           from './ontology.js'
+import { routeWithLLM }            from './llm-router.js'
+import { getPlayById }             from './knowledge-graph.js'
+import { getActionSteps, getAdvisors } from './play-actions.js'
 
-const MAX_QUESTIONS = 3  // hard cap — never ask more than this
+const MAX_QUESTIONS = 3
+const fmt = (n) => '£' + Math.round(n).toLocaleString('en-GB')
 
-/**
- * Single-call API: pass query + persona + (optionally) known facts so far.
- * If the system needs more info to converge, returns NEED_INFO with a question.
- * Once it has enough or hits the cap, returns READY with the synthesized answer.
- *
- * @param {string} query        Free-text user question
- * @param {object} persona      User entity
- * @param {object} opts
- * @param {object} opts.knownFacts      Facts collected from prior follow-up rounds
- * @param {number} opts.questionsAsked  How many questions we've already asked
- * @param {boolean} opts.forceAnswer    Skip questioning, synthesize from what we have
- */
-export function askSonu(query, persona, opts = {}) {
-  const knownFacts     = opts.knownFacts || {}
-  const questionsAsked = opts.questionsAsked || 0
-  const forceAnswer    = !!opts.forceAnswer
+// ─────────────────────────────────────────────────────────────────────────────
+// LLM PATH — preferred. Returns a READY/NEED_INFO payload or null on failure.
+// ─────────────────────────────────────────────────────────────────────────────
+async function tryLLMPath(query, persona, knownFacts, questionsAsked) {
+  const r = await routeWithLLM(query, persona, knownFacts)
+  if (!r.ok) {
+    return { ok: false, reason: r.reason }
+  }
+  const out = r.result
 
-  // 1. Classify
+  // ─ NEED_INFO branch ─────────────────────────────────────────────────────
+  if (out.status === 'ask') {
+    return {
+      ok: true,
+      payload: {
+        status: 'NEED_INFO',
+        question: out.question,
+        fact_key: out.fact_key,
+        options: out.options,
+        why_asking: out.why_asking,
+        progress: { asked: questionsAsked, cap: MAX_QUESTIONS },
+        source: 'llm',
+        ms: r.ms,
+      },
+    }
+  }
+
+  // ─ READY branch — render via deterministic synthesizer using LLM-chosen IDs ─
+  const leadPlay        = getPlayById(out.lead_play_id)
+  const supportingPlays = (out.supporting_play_ids || []).map(getPlayById).filter(Boolean)
+  const challengePlays  = (out.challenge_play_ids  || []).map(getPlayById).filter(Boolean)
+
+  if (!leadPlay) return { ok: false, reason: 'lead_play_not_found_after_validation' }
+
+  const leadImpact = safe(() => leadPlay.compute_impact?.(persona))
+
+  // Compose the answer payload — LLM-written text + KG facts
+  const answer = {
+    hasAnswer: true,
+    source: 'llm',
+    intent: out.intent || 'plan',
+    confidence: out.confidence,
+    adjacent_to_kg: !!out.adjacent_to_kg,
+
+    intro:         out.intro,
+    direct_answer: out.direct_answer,
+    rationale:     out.rationale,
+
+    lead: {
+      id:           leadPlay.id,
+      title:        leadPlay.title,
+      one_liner:    leadPlay.one_liner,
+      detail:       leadPlay.detail,
+      citation:     leadPlay.citation,
+      category:     leadPlay.category,
+      impact:       leadImpact,
+      action_steps: getActionSteps(leadPlay.id),
+      advisors:     out.advisors_consulted?.length
+                      ? out.advisors_consulted
+                      : getAdvisors(leadPlay.category),
+      fca_boundary: leadPlay.fca_boundary,
+    },
+
+    supporting: supportingPlays.map(p => ({
+      id: p.id,
+      title: p.title,
+      one_liner: p.one_liner,
+      category: p.category,
+      citation: p.citation,
+      impact: safe(() => p.compute_impact?.(persona)),
+      advisors: getAdvisors(p.category),
+    })),
+
+    challenges: challengePlays.slice(0, 4).map((p, i) => ({
+      id: p.id,
+      title: p.title,
+      one_liner: p.one_liner,
+      category: p.category,
+      value_shift: VALUE_SHIFTS[i] || 'differently',
+      impact: safe(() => p.compute_impact?.(persona)),
+      advisors: getAdvisors(p.category),
+    })),
+
+    otherConsiderations: [],
+
+    reasoning_trace: [
+      { step: 'Read your question', detail: query },
+      { step: 'Consulted',          detail: (out.advisors_consulted || []).join(' · ') || 'lenses unspecified' },
+      { step: 'Picked the lead',    detail: `${leadPlay.title} — ${out.rationale || 'best fit'}` },
+      { step: 'Confidence',         detail: `${Math.round((out.confidence || 0) * 100)}%` },
+    ],
+  }
+
+  // Pad challenges with "do nothing" if LLM didn't supply enough
+  while (answer.challenges.length < 4) {
+    answer.challenges.push({
+      id: '__do_nothing',
+      title: 'Do nothing for now',
+      one_liner: 'Stay the course. Revisit in 6 months when one more variable resolves.',
+      value_shift: 'patience over action',
+      advisors: ['Yourself'],
+      impact: { gbp_saved: 0, time_horizon: '6 months', certainty: 'high',
+                why: 'Sometimes inaction is right. The cost is the optimisation you defer.' },
+    })
+  }
+
+  return {
+    ok: true,
+    payload: { status: 'READY', answer, source: 'llm', ms: r.ms },
+  }
+}
+
+const VALUE_SHIFTS = [
+  'simplicity over optimisation',
+  'income now over legacy later',
+  'control over splitting',
+  'lifestyle over wealth maximisation',
+]
+
+function safe(fn) { try { return fn() } catch { return null } }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DETERMINISTIC PATH — fallback when LLM unreachable
+// ─────────────────────────────────────────────────────────────────────────────
+function deterministicAnswer(query, persona, knownFacts, questionsAsked, forceAnswer) {
   const classification = classify(query)
-
-  // 2. Merge implied facts (derived from the query itself) with explicit
-  //    knownFacts (from the user's follow-up answers).
-  //    Implied facts override the static persona but are themselves
-  //    overridden by explicit user answers.
   const effectiveFacts = { ...(classification.implied_facts || {}), ...knownFacts }
-
-  // 3. Match plays
   const ranked = matchPlays(classification, persona, effectiveFacts)
 
-  // 4. Off-ontology fallback — if nothing matched, return the catch-all
   if (!ranked.length && classification.off_ontology) {
     return {
       status: 'READY',
+      source: 'deterministic',
       answer: {
         hasAnswer: false,
         off_ontology: true,
-        intro: 'This question doesn\'t fit any of the patterns I\'ve been trained on yet.',
-        message: 'I can route it to a regulated adviser, or you can try rephrasing in terms of: retirement, tax, IHT, gifting, relocation, family change, business exit, healthcare, or protection.',
+        intro: 'This question doesn\'t fit any of the patterns I\'ve been trained on yet — and the LLM router is also unavailable.',
+        message: 'Try rephrasing in terms of: retirement, tax, IHT, gifting, relocation, family change, business exit, healthcare, or protection.',
         suggested_rephrases: [
           'How should I withdraw £70k a year from my pension?',
           'How can I reduce my IHT before April 2027?',
           'Should I relocate abroad?',
-          'I\'m getting divorced — what should I focus on?',
         ],
       },
       classification,
     }
   }
 
-  // 5. Decide: do we have enough to answer, or do we need to ask?
   const lead = pickLead(ranked)
   const canStillAsk = questionsAsked < MAX_QUESTIONS && !forceAnswer
-  const needInfo = !lead && canStillAsk
 
-  if (needInfo) {
+  if (!lead && canStillAsk) {
     const q = nextQuestion(ranked, persona, effectiveFacts)
     if (q) {
       return {
         status: 'NEED_INFO',
+        source: 'deterministic',
         question: q.question,
         fact_key: q.fact,
-        demandedBy: q.demandedBy,
-        hint: `Knowing this helps me pick between ${q.demandedBy.length} candidate ${q.demandedBy.length === 1 ? 'play' : 'plays'}.`,
-        candidates_so_far: ranked.slice(0, 5).map(r => ({ id: r.play.id, title: r.play.title, score: r.score })),
+        options: null,  // deterministic planner doesn't suggest chips
         progress: { asked: questionsAsked, cap: MAX_QUESTIONS },
-        classification,
       }
     }
   }
 
-  // 6. Synthesize answer
   const answer = synthesize(ranked, persona, effectiveFacts, classification)
-  return {
-    status: 'READY',
-    answer,
-    classification,
-    debug: {
-      ranked_count: ranked.length,
-      top_scores: ranked.slice(0, 5).map(r => ({ id: r.play.id, score: r.score, fit: r.fit })),
-      questions_asked: questionsAsked,
-    },
+  answer.source = 'deterministic'
+  return { status: 'READY', source: 'deterministic', answer, classification }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public API — async. LLM first, deterministic fallback.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function askSonu(query, persona, opts = {}) {
+  const knownFacts     = opts.knownFacts || {}
+  const questionsAsked = opts.questionsAsked || 0
+  const forceAnswer    = !!opts.forceAnswer
+  const useLLM         = opts.useLLM !== false  // default on
+
+  if (useLLM) {
+    const llm = await tryLLMPath(query, persona, knownFacts, questionsAsked)
+    if (llm.ok) {
+      return { ...llm.payload, _fallback_used: false }
+    }
+    // Otherwise fall through to deterministic
+    const det = deterministicAnswer(query, persona, knownFacts, questionsAsked, forceAnswer)
+    return { ...det, _fallback_used: true, _llm_failure: llm.reason }
   }
+
+  const det = deterministicAnswer(query, persona, knownFacts, questionsAsked, forceAnswer)
+  return { ...det, _fallback_used: false, source: 'deterministic' }
 }
 
 /**
@@ -111,4 +230,5 @@ export function addAnswer(knownFacts, factKey, rawValue) {
   }
 }
 
-export { classify, topConcerns, matchPlays, pickLead, nextQuestion, nextQuestions, synthesize }
+// Re-exports for tests / external use
+export { classify, matchPlays, pickLead, nextQuestion, synthesize }

@@ -189,9 +189,15 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
   const [followUpRound, setFollowUpRound] = useState(0)
   const [commitDone, setCommitDone] = useState(false)
   const scrollRef = useRef(null)
+  // StrictMode double-invokes effects in dev. Guard the auto-run so we only
+  // kick off generation once per mount — otherwise two parallel orc.run() calls
+  // race, the second aborts the first, and the UI lands on the empty-result
+  // panel even when the API call would have succeeded.
+  const initialRunRef = useRef(false)
 
   useEffect(() => {
-    if (initialQuery && orc?.isIdle) {
+    if (initialQuery && orc?.isIdle && !initialRunRef.current) {
+      initialRunRef.current = true
       setCurrentQuery(initialQuery)
       orc.run(initialQuery, { eventIds: initialEventIds })
     }

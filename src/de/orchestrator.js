@@ -246,9 +246,12 @@ export function useOrchestrator(entity) {
   const abortRef                  = useRef(null);
 
   const run = useCallback(async (userQuery, opts = {}) => {
-    // Cancel any in-flight request
+    // Cancel any in-flight request. Capture our own controller so that if a
+    // newer run supersedes us mid-flight (e.g. React StrictMode double-invoke,
+    // or a fast user re-submit), we don't clobber the newer run's state.
     abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    const myController = new AbortController();
+    abortRef.current = myController;
 
     setLoading(true);
     setError(null);
@@ -258,9 +261,17 @@ export function useOrchestrator(entity) {
 
     const result = await runPipeline(userQuery, entity, {
       ...opts,
-      signal: abortRef.current.signal,
-      onStateChange: (state) => setFsm(state),
+      signal: myController.signal,
+      onStateChange: (state) => {
+        if (abortRef.current === myController) setFsm(state);
+      },
     });
+
+    // If a newer run has taken over while we were awaiting, don't touch state.
+    // Otherwise the cancelled run's setLoading(false) clobbers the new run's
+    // setLoading(true), and its null tree/null error leaves the UI on the
+    // empty-result panel forever.
+    if (abortRef.current !== myController) return result;
 
     setLoading(false);
     if (result.error && result.error !== 'cancelled') {
@@ -272,12 +283,15 @@ export function useOrchestrator(entity) {
       setEventIds(result.eventIds);
       setFollowUp(result.followUpState);
       setFsm(DE_STATE.DONE);
-    } else if (result.error !== 'cancelled') {
+    } else if (!result.tree && result.error !== 'cancelled') {
       // No tree, no error — guard against blank screen. Surface a generic error
-      // so the empty-result panel renders and the user has a way forward.
+      // so the empty-result panel renders with a real error rather than the
+      // misleading "check your API key" copy.
       setError('no_tree_returned');
       setFsm(DE_STATE.ERROR);
     }
+    // result.error === 'cancelled' and we're still the current run → manual
+    // cancel by the user. Stay quiet; reset() will clear state.
 
     return result;
   }, [entity]);

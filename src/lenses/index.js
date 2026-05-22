@@ -6,12 +6,17 @@
 // will follow as practitioner panel signs them off.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { lens as taxAccountant }     from './tax-accountant.js';
-import { lens as pensionSpecialist } from './pension-specialist.js';
-import { lens as trustLawyer }       from './trust-lawyer.js';
-import { lens as ifaHolistic }       from './ifa-holistic.js';
-import { lens as insuranceAdviser }  from './insurance-adviser.js';
-import { lens as investmentAdviser } from './investment-adviser.js';
+import { lens as taxAccountant }         from './tax-accountant.js';
+import { lens as pensionSpecialist }     from './pension-specialist.js';
+import { lens as trustLawyer }           from './trust-lawyer.js';
+import { lens as ifaHolistic }           from './ifa-holistic.js';
+import { lens as insuranceAdviser }      from './insurance-adviser.js';
+import { lens as investmentAdviser }     from './investment-adviser.js';
+import { lens as philanthropyAdviser }   from './philanthropy-adviser.js';
+import { lens as laterLifeAdviser }      from './later-life-adviser.js';
+import { lens as crossBorderSpecialist } from './cross-border-specialist.js';
+import { lens as mortgageAdviser }       from './mortgage-adviser.js';
+import { lens as familyLawSpecialist }   from './family-law-specialist.js';
 
 // Shells — not yet implemented (return empty arrays). Placeholder for v0.1+.
 const placeholderLens = (id, name, avatar, expertise) => ({
@@ -23,14 +28,8 @@ const placeholderLens = (id, name, avatar, expertise) => ({
   red_flags: () => [],
   what_if_prompts: () => [],
 });
-// ifaHolistic — now LIVE (imported above)
-const mortgageAdviser       = placeholderLens('mortgage-adviser', 'Mortgage Adviser', '🏠', ['mortgages', 'btl', 'remortgage', 'affordability']);
-// insuranceAdviser — now LIVE (imported above)
-// investmentAdviser — now LIVE (imported above)
-const crossBorderSpecialist = placeholderLens('cross-border', 'Cross-Border Specialist', '🌍', ['srt', 'fig', 'dta', 'deemed_dom', 'nri']);
-const familyLawSpecialist   = placeholderLens('family-law', 'Family Law Specialist', '👨‍👩‍👧', ['divorce', 'cohab', 'prenup', 'child_maintenance']);
-const laterLifeAdviser      = placeholderLens('later-life', 'Later-Life Adviser', '🏥', ['care_costs', 'la_means_test', 'equity_release', 'capacity']);
-const philanthropyAdviser   = placeholderLens('philanthropy', 'Philanthropy Adviser', '💝', ['gift_aid', 'charity_10pct', 'daf', 'cio']);
+// All 11 lenses now LIVE (imported above). placeholderLens reserved for future
+// experimental shells.
 
 export const LENS_REGISTRY = [
   taxAccountant,

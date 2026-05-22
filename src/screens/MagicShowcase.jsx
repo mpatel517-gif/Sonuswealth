@@ -12,22 +12,32 @@
  */
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { lens as taxAccountantLens }    from '../lenses/tax-accountant.js'
-import { lens as pensionSpecialistLens } from '../lenses/pension-specialist.js'
-import { lens as trustLawyerLens }       from '../lenses/trust-lawyer.js'
-import { lens as ifaHolisticLens }       from '../lenses/ifa-holistic.js'
-import { lens as insuranceAdviserLens }  from '../lenses/insurance-adviser.js'
-import { lens as investmentAdviserLens } from '../lenses/investment-adviser.js'
+import { lens as taxAccountantLens }       from '../lenses/tax-accountant.js'
+import { lens as pensionSpecialistLens }   from '../lenses/pension-specialist.js'
+import { lens as trustLawyerLens }         from '../lenses/trust-lawyer.js'
+import { lens as ifaHolisticLens }         from '../lenses/ifa-holistic.js'
+import { lens as insuranceAdviserLens }    from '../lenses/insurance-adviser.js'
+import { lens as investmentAdviserLens }   from '../lenses/investment-adviser.js'
+import { lens as philanthropyLens }        from '../lenses/philanthropy-adviser.js'
+import { lens as laterLifeLens }           from '../lenses/later-life-adviser.js'
+import { lens as crossBorderLens }         from '../lenses/cross-border-specialist.js'
+import { lens as mortgageLens }            from '../lenses/mortgage-adviser.js'
+import { lens as familyLawLens }           from '../lenses/family-law-specialist.js'
 
 // Live lens registry — keyed by lens id, used by SituationFlow to fire only
-// the relevant advisors against the user's situation.
+// the relevant advisors against the user's situation. ALL 11 LIVE.
 const LIVE_LENSES = {
-  'tax':         taxAccountantLens,
-  'pension':     pensionSpecialistLens,
-  'trust':       trustLawyerLens,
-  'ifa':         ifaHolisticLens,
-  'protection':  insuranceAdviserLens,
-  'investment':  investmentAdviserLens,
+  'tax':           taxAccountantLens,
+  'pension':       pensionSpecialistLens,
+  'trust':         trustLawyerLens,
+  'ifa':           ifaHolisticLens,
+  'protection':    insuranceAdviserLens,
+  'investment':    investmentAdviserLens,
+  'philanthropy':  philanthropyLens,
+  'laterlife':     laterLifeLens,
+  'crossborder':   crossBorderLens,
+  'mortgage':      mortgageLens,
+  'familylaw':     familyLawLens,
 }
 
 // ── Section 1: CoI Odometer ──────────────────────────────────────────────────
@@ -1299,16 +1309,20 @@ function TaperTrapDemo({ entity }) {  // eslint-disable-line no-unused-vars
 // If no rule matches, fire the core three (tax, pension, trust).
 const SITUATION_ROUTES = [
   { test: /retire|drawdown|sipp|pension/i,                                          lenses: ['tax', 'pension', 'trust', 'ifa'] },
-  { test: /iht|inherit|estate|will|lpa|nrb|rnrb|domicile/i,                          lenses: ['trust', 'tax', 'protection'] },
+  { test: /iht|inherit|estate|will|lpa|nrb|rnrb|domicile/i,                          lenses: ['trust', 'tax', 'protection', 'philanthropy'] },
   { test: /gift|pet|petting|generosity|children|grandchild/i,                        lenses: ['trust', 'tax', 'pension'] },
   { test: /taper|£100k|100k|marginal rate|60%|personal allowance/i,                  lenses: ['tax', 'pension'] },
-  { test: /relocat|abroad|move overseas|emigrat|portugal|uae|dubai|nhr|ific/i,       lenses: ['tax', 'trust', 'ifa', 'investment'] },
-  { test: /divorce|separat|prenup|cohab|alimony/i,                                   lenses: ['trust', 'ifa', 'pension', 'tax'] },
+  { test: /relocat|abroad|move overseas|emigrat|portugal|uae|dubai|nhr|ific/i,       lenses: ['crossborder', 'tax', 'trust', 'ifa'] },
+  { test: /divorce|separat|prenup|cohab|alimony|marriage/i,                          lenses: ['familylaw', 'trust', 'ifa', 'pension'] },
   { test: /sell.*business|business.*sale|exit|s24|badr/i,                            lenses: ['tax', 'trust', 'pension', 'investment'] },
   { test: /portfolio|invest|allocation|fees|ter|concentration|equity|bond/i,         lenses: ['investment', 'ifa', 'tax'] },
   { test: /protect|life cover|critical illness|income protection|insurance/i,        lenses: ['protection', 'ifa', 'trust'] },
   { test: /isa|allowance|wrapper|cgt|year-end|tax year/i,                            lenses: ['tax', 'investment'] },
-  { test: /care|long-term|nursing|residential/i,                                     lenses: ['trust', 'ifa', 'protection'] },
+  { test: /care|long-term|nursing|residential|lpa|capacity/i,                        lenses: ['laterlife', 'trust', 'ifa', 'protection'] },
+  { test: /mortgage|remortgage|btl|buy.to.let|fixed.rate|svr|ltv/i,                  lenses: ['mortgage', 'tax', 'ifa'] },
+  { test: /equity release|lifetime mortgage|downsiz/i,                               lenses: ['laterlife', 'mortgage', 'trust'] },
+  { test: /charity|charitable|donat|gift aid|daf|philanthrop/i,                      lenses: ['philanthropy', 'trust', 'tax'] },
+  { test: /srt|residence|statutory.residence|fig regime|dta/i,                       lenses: ['crossborder', 'tax', 'trust'] },
 ]
 
 function routeSituationToLenses(query) {
@@ -1325,14 +1339,19 @@ function routeSituationToLenses(query) {
   return [...matched]
 }
 
-// Lens metadata for the route trace — avatar + display name.
+// Lens metadata for the route trace — avatar + display name. ALL 11 LIVE.
 const LENS_META = {
-  'tax':         { avatar: '🧾', name: 'Tax Accountant' },
-  'pension':     { avatar: '🏦', name: 'Pension Specialist' },
-  'trust':       { avatar: '⚖️', name: 'Trust Lawyer' },
-  'ifa':         { avatar: '📊', name: 'IFA (Holistic)' },
-  'protection':  { avatar: '🛡️', name: 'Protection' },
-  'investment':  { avatar: '📈', name: 'Investment Adviser' },
+  'tax':           { avatar: '🧾', name: 'Tax Accountant' },
+  'pension':       { avatar: '🏦', name: 'Pension Specialist' },
+  'trust':         { avatar: '⚖️', name: 'Trust Lawyer' },
+  'ifa':           { avatar: '📊', name: 'IFA (Holistic)' },
+  'protection':    { avatar: '🛡️', name: 'Protection' },
+  'investment':    { avatar: '📈', name: 'Investment Adviser' },
+  'philanthropy':  { avatar: '💝', name: 'Philanthropy Adviser' },
+  'laterlife':     { avatar: '🏥', name: 'Later-Life Adviser' },
+  'crossborder':   { avatar: '🌍', name: 'Cross-Border Specialist' },
+  'mortgage':      { avatar: '🏠', name: 'Mortgage Adviser' },
+  'familylaw':     { avatar: '👥', name: 'Family Law Specialist' },
 }
 
 const SITUATION_STARTERS = [
@@ -1731,17 +1750,17 @@ function SituationFlow({ entity }) {
 // ── Section 6 (NEW META): How Sonu thinks — show the 11 advisor architecture ─
 
 const ALL_11_ADVISORS = [
-  { id: 'tax',          avatar: '🧾',  name: 'Tax Accountant',           live: true,  scope: 'wrappers, allowances, sequencing, year-end planning' },
-  { id: 'pension',      avatar: '🏦',  name: 'Pension Specialist',        live: true,  scope: 'SIPP, AA, MPAA, LSA, State Pension, drawdown' },
-  { id: 'trust',        avatar: '⚖️',  name: 'Trust Lawyer',              live: true,  scope: 'IHT, trusts, wills, LPA, domicile' },
-  { id: 'ifa',          avatar: '📊',  name: 'IFA (Holistic)',            live: true,  scope: 'allocation, risk, costs, emergency fund, review' },
-  { id: 'protection',   avatar: '🛡️',  name: 'Insurance / Protection',    live: true,  scope: 'life, CI, income protection, business cover, trust' },
-  { id: 'investment',   avatar: '📈',  name: 'Investment Adviser',        live: true,  scope: 'portfolio costs, concentration, rebalancing, ESG' },
-  { id: 'mortgage',     avatar: '🏠',  name: 'Mortgage Adviser',          live: false, scope: 'mortgages, BTL, remortgage, equity release' },
-  { id: 'crossborder',  avatar: '🌍',  name: 'Cross-Border Specialist',   live: false, scope: 'SRT, FIG regime, DTA, deemed-dom, NRI' },
-  { id: 'familylaw',    avatar: '👥',  name: 'Family Law Specialist',     live: false, scope: 'divorce, cohab, prenup, child maintenance' },
-  { id: 'laterlife',    avatar: '🏥',  name: 'Later-Life Adviser',        live: false, scope: 'care costs, LA means-test, equity release' },
-  { id: 'philanthropy', avatar: '💝',  name: 'Philanthropy Adviser',      live: false, scope: 'Gift Aid, charity 10%, DAF, CIO' },
+  { id: 'tax',          avatar: '🧾',  name: 'Tax Accountant',           live: true, scope: 'wrappers, allowances, sequencing, year-end planning' },
+  { id: 'pension',      avatar: '🏦',  name: 'Pension Specialist',        live: true, scope: 'SIPP, AA, MPAA, LSA, State Pension, drawdown' },
+  { id: 'trust',        avatar: '⚖️',  name: 'Trust Lawyer',              live: true, scope: 'IHT, trusts, wills, LPA, domicile' },
+  { id: 'ifa',          avatar: '📊',  name: 'IFA (Holistic)',            live: true, scope: 'allocation, risk, costs, emergency fund, review' },
+  { id: 'protection',   avatar: '🛡️',  name: 'Insurance / Protection',    live: true, scope: 'life, CI, income protection, business cover, trust' },
+  { id: 'investment',   avatar: '📈',  name: 'Investment Adviser',        live: true, scope: 'portfolio costs, concentration, rebalancing, ESG' },
+  { id: 'philanthropy', avatar: '💝',  name: 'Philanthropy Adviser',      live: true, scope: 'Gift Aid, charity 10%, DAF, matched giving' },
+  { id: 'laterlife',    avatar: '🏥',  name: 'Later-Life Adviser',        live: true, scope: 'care costs, LA means-test, equity release, capacity' },
+  { id: 'crossborder',  avatar: '🌍',  name: 'Cross-Border Specialist',   live: true, scope: 'SRT, FIG regime, DTA, deemed-dom, NRI' },
+  { id: 'mortgage',     avatar: '🏠',  name: 'Mortgage Adviser',          live: true, scope: 'mortgage, BTL, remortgage, S24, equity release' },
+  { id: 'familylaw',    avatar: '👥',  name: 'Family Law Specialist',     live: true, scope: 'divorce, cohab, prenup, pension sharing' },
 ]
 
 function SonuArchitecture({ entity }) {  // eslint-disable-line no-unused-vars

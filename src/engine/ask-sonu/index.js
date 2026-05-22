@@ -54,7 +54,72 @@ async function tryLLMPath(query, persona, knownFacts, questionsAsked) {
     }
   }
 
-  // ─ READY branch — render via deterministic synthesizer using LLM-chosen IDs ─
+  // ─ FREEFORM branch — LLM provides everything, no KG play backing ──────
+  if (out.mode === 'freeform') {
+    const answer = {
+      hasAnswer: true,
+      source: 'llm',
+      mode: 'freeform',
+      intent: out.intent || 'plan',
+      confidence: out.confidence,
+      adjacent_to_kg: true,
+      freeform: true,
+
+      intro:         out.intro,
+      direct_answer: out.direct_answer,
+      rationale:     out.rationale,
+
+      lead: {
+        id: '__freeform',
+        title: out.direct_answer,   // direct_answer IS the lead title in freeform
+        one_liner: '',
+        category:     out.category || 'lifestyle',
+        action_steps: out.action_steps || [],
+        citation:     (out.citations || []).join(' · '),
+        citations:    out.citations || [],
+        advisors:     out.advisors_consulted || ['Holistic IFA'],
+        impact:       null,  // no money math for freeform
+        fca_boundary: 'General guidance based on UK tax/legal knowledge — not a specific play from our curated database. Always confirm with a regulated adviser.',
+      },
+
+      supporting: [],
+
+      challenges: (out.alternative_paths || []).slice(0, 4).map((c, i) => ({
+        id: `__alt_${i}`,
+        title: c.title || `Alternative ${i+1}`,
+        one_liner: c.one_liner || '',
+        category: out.category || 'lifestyle',
+        value_shift: c.value_shift || VALUE_SHIFTS[i] || 'differently',
+        impact: null,
+        advisors: out.advisors_consulted || ['Holistic IFA'],
+      })),
+
+      otherConsiderations: [],
+
+      reasoning_trace: [
+        { step: 'Read your question',  detail: query },
+        { step: 'Searched KG',         detail: 'No exact play matched — generating from UK tax/legal knowledge' },
+        { step: 'Consulted',           detail: (out.advisors_consulted || []).join(' · ') || 'general' },
+        { step: 'Confidence',          detail: `${Math.round((out.confidence || 0) * 100)}%` },
+      ],
+    }
+
+    // Pad challenges with do-nothing if short
+    while (answer.challenges.length < 3) {
+      answer.challenges.push({
+        id: '__do_nothing',
+        title: 'Do nothing for now',
+        one_liner: 'Stay the course. Revisit in 6 months when one more variable resolves.',
+        value_shift: 'patience over action',
+        impact: null,
+        advisors: ['Yourself'],
+      })
+    }
+
+    return { ok: true, payload: { status: 'READY', answer, source: 'llm', ms: r.ms } }
+  }
+
+  // ─ PLAY branch — render via KG play + deterministic action_steps ──────
   const leadPlay        = getPlayById(out.lead_play_id)
   const supportingPlays = (out.supporting_play_ids || []).map(getPlayById).filter(Boolean)
   const challengePlays  = (out.challenge_play_ids  || []).map(getPlayById).filter(Boolean)
@@ -67,6 +132,7 @@ async function tryLLMPath(query, persona, knownFacts, questionsAsked) {
   const answer = {
     hasAnswer: true,
     source: 'llm',
+    mode: 'play',
     intent: out.intent || 'plan',
     confidence: out.confidence,
     adjacent_to_kg: !!out.adjacent_to_kg,

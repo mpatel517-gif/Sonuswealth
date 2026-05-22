@@ -210,10 +210,12 @@ function FollowUpQuestion({ question, hint, options, whyAsking, progress, onAnsw
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THE HERO — question echo + direct answer + lead card, all in one block
+// Renders DIFFERENTLY for play-backed vs freeform answers.
 // ─────────────────────────────────────────────────────────────────────────────
 function HeroBlock({ query, answer }) {
   const lead = answer.lead || {}
   const impact = lead.impact || {}
+  const isFreeform = answer.mode === 'freeform' || answer.freeform === true
 
   return (
     <div style={{ maxWidth: MAX_W, margin: '0 auto', padding: '16px 16px 4px' }}>
@@ -241,64 +243,111 @@ function HeroBlock({ query, answer }) {
         }}>{answer.intro}</div>
       )}
 
-      {/* Lead recommendation card */}
-      <div style={{
-        marginTop: 4, padding: 18, borderRadius: 16,
-        background: 'linear-gradient(135deg, rgba(93,219,194,0.10) 0%, rgba(93,219,194,0.02) 100%)',
-        border: '2px solid var(--c-acc)',
-        boxShadow: '0 4px 16px rgba(93,219,194,0.10)',
-      }}>
-        {/* Headline row: icon · title · big saving */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-          <span style={{ fontSize: 26, lineHeight: 1 }}>{CATEGORY_ICON[lead.category] || '✦'}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3, marginBottom: 3 }}>{lead.title}</div>
-            <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>{lead.one_liner}</div>
-          </div>
-          {impact.gbp_saved > 0 && (
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 9, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 700, marginBottom: 2 }}>Saving</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', lineHeight: 1 }}>{fmtGBP(impact.gbp_saved)}</div>
-              {impact.time_horizon && <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>{impact.time_horizon}</div>}
-            </div>
-          )}
-        </div>
-
-        {/* 3 action steps */}
-        {lead.action_steps?.length > 0 && (
-          <div style={{ marginBottom: 14, paddingTop: 12, borderTop: '1px solid var(--c-sep)' }}>
-            <div className="sw-eyebrow" style={{ marginBottom: 10 }}>What to do</div>
-            <ol style={{ paddingLeft: 22, margin: 0 }}>
-              {lead.action_steps.map((step, i) => (
-                <li key={i} style={{
-                  fontSize: 13, color: 'var(--c-text)', lineHeight: 1.55,
-                  marginBottom: i < lead.action_steps.length - 1 ? 8 : 0,
-                }}>{step}</li>
-              ))}
-            </ol>
-          </div>
-        )}
-
-        {/* Advisor chip + citation */}
+      {/* Freeform: simpler card — no contradicting play title */}
+      {isFreeform ? (
         <div style={{
-          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8,
-          paddingTop: 10, borderTop: '1px dashed var(--c-sep)',
+          marginTop: 4, padding: 18, borderRadius: 16,
+          background: 'linear-gradient(135deg, rgba(255,214,110,0.10) 0%, rgba(255,214,110,0.02) 100%)',
+          border: '2px solid var(--c-gold)',
         }}>
-          {lead.advisors?.length > 0 && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '5px 11px', borderRadius: 999,
-              background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-              fontSize: 11, color: 'var(--c-text2)',
-            }}>
-              <span style={{ color: 'var(--c-acc)', fontWeight: 700 }}>Consulted:</span>
-              <span>{lead.advisors.join(' + ')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 22 }}>{CATEGORY_ICON[lead.category] || '✦'}</span>
+            <div className="sw-eyebrow" style={{ color: 'var(--c-gold)' }}>General guidance · not from a curated play</div>
+          </div>
+
+          {lead.action_steps?.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 10 }}>What to do</div>
+              <ol style={{ paddingLeft: 22, margin: 0 }}>
+                {lead.action_steps.map((step, i) => (
+                  <li key={i} style={{
+                    fontSize: 13, color: 'var(--c-text)', lineHeight: 1.55,
+                    marginBottom: i < lead.action_steps.length - 1 ? 8 : 0,
+                  }}>{step}</li>
+                ))}
+              </ol>
             </div>
           )}
-          <div style={{ flex: 1 }} />
-          <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>📚 {lead.citation}</div>
+
+          {/* Advisor chip + citations stack */}
+          <div style={{
+            paddingTop: 10, borderTop: '1px dashed var(--c-sep)',
+            display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8,
+          }}>
+            {lead.advisors?.length > 0 && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 11px', borderRadius: 999,
+                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                fontSize: 11, color: 'var(--c-text2)',
+              }}>
+                <span style={{ color: 'var(--c-acc)', fontWeight: 700 }}>Consulted:</span>
+                <span>{lead.advisors.join(' + ')}</span>
+              </div>
+            )}
+            <div style={{ flex: 1 }} />
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'right', maxWidth: '60%' }}>
+              📚 {lead.citations?.length ? lead.citations.join(' · ') : lead.citation}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Play-backed: full card with play title + £saving + steps + citation */
+        <div style={{
+          marginTop: 4, padding: 18, borderRadius: 16,
+          background: 'linear-gradient(135deg, rgba(93,219,194,0.10) 0%, rgba(93,219,194,0.02) 100%)',
+          border: '2px solid var(--c-acc)',
+          boxShadow: '0 4px 16px rgba(93,219,194,0.10)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+            <span style={{ fontSize: 26, lineHeight: 1 }}>{CATEGORY_ICON[lead.category] || '✦'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.3, marginBottom: 3 }}>{lead.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>{lead.one_liner}</div>
+            </div>
+            {impact.gbp_saved > 0 && (
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: 9, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 700, marginBottom: 2 }}>Saving</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', lineHeight: 1 }}>{fmtGBP(impact.gbp_saved)}</div>
+                {impact.time_horizon && <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>{impact.time_horizon}</div>}
+              </div>
+            )}
+          </div>
+
+          {lead.action_steps?.length > 0 && (
+            <div style={{ marginBottom: 14, paddingTop: 12, borderTop: '1px solid var(--c-sep)' }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 10 }}>What to do</div>
+              <ol style={{ paddingLeft: 22, margin: 0 }}>
+                {lead.action_steps.map((step, i) => (
+                  <li key={i} style={{
+                    fontSize: 13, color: 'var(--c-text)', lineHeight: 1.55,
+                    marginBottom: i < lead.action_steps.length - 1 ? 8 : 0,
+                  }}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          <div style={{
+            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+            paddingTop: 10, borderTop: '1px dashed var(--c-sep)',
+          }}>
+            {lead.advisors?.length > 0 && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 11px', borderRadius: 999,
+                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                fontSize: 11, color: 'var(--c-text2)',
+              }}>
+                <span style={{ color: 'var(--c-acc)', fontWeight: 700 }}>Consulted:</span>
+                <span>{lead.advisors.join(' + ')}</span>
+              </div>
+            )}
+            <div style={{ flex: 1 }} />
+            <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>📚 {lead.citation}</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -155,35 +155,78 @@ Schema:
 }
 
 ──────────────────────────────────────────────
-OUTCOME B — ANSWER WITH A LEAD
+OUTCOME B — ANSWER WITH A KG PLAY (preferred when one matches)
 ──────────────────────────────────────────────
-Use this when you have enough to pick a confident lead play.
+Use this when one of the plays in the menu above is a TRUE match for the
+user's actual question — not just a keyword-adjacent match. The play's
+TITLE must be coherent with what the user is asking. If the play title
+mentions one thing (e.g. "pension drawdown") and the user is asking
+about another (e.g. "fixed deposits"), DO NOT pick that play — use
+Outcome C (freeform) instead.
 
 Schema:
 {
   "status": "answer",
+  "mode": "play",
   "intent": "draw | preserve | restructure | plan",
   "confidence": 0.0-1.0,
-  "direct_answer": "ONE sentence — the lead recommendation in plain English. The user must be able to read this and know if you understood. Echo the question's key intent. Max 25 words.",
-  "intro": "ONE sentence opening with what you know about this user (age, key assets, situation). Max 30 words.",
-  "lead_play_id": "must_match_a_play_id_from_menu_above",
+  "direct_answer": "ONE sentence — the lead recommendation, in the user's vocabulary. Must align with the chosen play's title. Max 25 words.",
+  "intro": "ONE sentence opening with what you know about this user. Max 30 words.",
+  "lead_play_id": "must_match_a_play_id_from_menu_above_AND_the_title_must_fit_the_question",
   "supporting_play_ids": ["array", "of", "2-3", "play_ids"],
   "challenge_play_ids": ["array", "of", "2-4", "alternative", "play_ids"],
-  "rationale": "Two sentences max. Why THIS lead for THIS persona. Reference one specific number from the profile.",
+  "rationale": "Two sentences max. Why THIS play for THIS persona. Reference one specific number from the profile.",
+  "advisors_consulted": ["array of 1-3 lens names from the 11"]
+}
+
+──────────────────────────────────────────────
+OUTCOME C — FREEFORM ANSWER (when no play matches well)
+──────────────────────────────────────────────
+Use this when the user's question is real and answerable, but the play
+menu above doesn't have a play whose title fits. You provide your own
+action steps + citations, drawn from accurate UK tax/legal/regulatory
+knowledge. The UI will mark this clearly as "general guidance".
+
+CRITICAL: citations must reference REAL UK legislation, HMRC manuals,
+or FCA rules (e.g. "ITA 2007 s.35", "IHTA 1984 s.18", "FCA COBS 9").
+DO NOT fabricate citations.
+
+Schema:
+{
+  "status": "answer",
+  "mode": "freeform",
+  "intent": "draw | preserve | restructure | plan",
+  "confidence": 0.0-1.0,
+  "direct_answer": "ONE sentence — the actual answer. Max 25 words.",
+  "intro": "ONE sentence opening with what you know about this user. Max 30 words.",
+  "category": "tax_pension | iht | investment | protection | family | healthcare | lifestyle",
+  "action_steps": [
+    "First concrete step (≤ 25 words, includes specific numbers where relevant)",
+    "Second step",
+    "Third step (3-5 steps total)"
+  ],
+  "citations": ["Real UK legal/regulatory reference 1", "..."],
+  "rationale": "Two sentences max. Why THIS path for THIS persona. Reference one specific number from the profile.",
   "advisors_consulted": ["array of 1-3 lens names from the 11"],
-  "adjacent_to_kg": false  // set true if the user's query is OUTSIDE the play menu and you've picked the closest matches as a best-effort. The UI will warn the user.
+  "alternative_paths": [
+    { "title": "Short title", "one_liner": "What it is and when you'd pick this", "value_shift": "what you'd be prioritising" },
+    "...3 to 4 alternatives total..."
+  ]
 }
 
 ──────────────────────────────────────────────
 RULES (non-negotiable)
 ──────────────────────────────────────────────
-1. play_ids MUST come from the menu above. Invented ids = invalid response.
-2. Never fabricate UK tax law, IHT rules, or pension rules. If you don't know, mark adjacent_to_kg: true and pick the closest play.
+1. play_ids in Outcome B MUST come from the menu above AND have a title that fits the user's question.
+2. Never fabricate UK tax law, IHT rules, pension rules, or citations. Real references only.
 3. Same input → same output. Be deterministic.
 4. No promises about returns or specific market outcomes.
-5. Default to ASK if the cash purpose, time horizon, or marital status would meaningfully change the recommendation and you can't infer it.
-6. When the query is about CASH (savings, deposits, money market), the purpose of the cash is usually the discriminating fact. ASK before assuming wrapper migration plays apply (those are for investments with gains, not raw cash).
-7. Output ONLY the JSON object. Nothing before, nothing after. No code fences.`
+5. ASK (Outcome A) when:
+   - The cash purpose, time horizon, or marital status would change the recommendation 180° and isn't stated or inferrable.
+   - The user's question contains "what should I do" with multiple plausible interpretations.
+6. CASH queries (fixed deposits, savings, deposits, money market): the cash PURPOSE is usually the discriminating fact. Do NOT silently assume "growth" — either ASK or use FREEFORM with all the contingencies stated.
+7. For Outcome B, the lead play TITLE must be a direct fit for what the user asked. If the closest play title mentions something the user didn't ask about, use FREEFORM (Outcome C) instead.
+8. Output ONLY the JSON object. Nothing before, nothing after. No code fences.`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,12 +246,27 @@ function validateResponse(parsed) {
 
   if (parsed.status === 'answer') {
     if (typeof parsed.direct_answer !== 'string') return { ok: false, reason: 'answer: missing direct_answer' }
-    if (typeof parsed.lead_play_id  !== 'string') return { ok: false, reason: 'answer: missing lead_play_id' }
-    if (!VALID_PLAY_IDS.has(parsed.lead_play_id)) return { ok: false, reason: `answer: invalid lead_play_id "${parsed.lead_play_id}"` }
 
-    // Filter supporting/challenge to only valid IDs (don't reject the whole response for one bad ID)
-    parsed.supporting_play_ids = (parsed.supporting_play_ids || []).filter(id => VALID_PLAY_IDS.has(id) && id !== parsed.lead_play_id)
-    parsed.challenge_play_ids  = (parsed.challenge_play_ids  || []).filter(id => VALID_PLAY_IDS.has(id) && id !== parsed.lead_play_id)
+    // Default mode if LLM omitted it
+    if (!parsed.mode) parsed.mode = parsed.lead_play_id ? 'play' : 'freeform'
+
+    if (parsed.mode === 'play') {
+      if (typeof parsed.lead_play_id !== 'string') return { ok: false, reason: 'answer/play: missing lead_play_id' }
+      if (!VALID_PLAY_IDS.has(parsed.lead_play_id)) return { ok: false, reason: `answer/play: invalid lead_play_id "${parsed.lead_play_id}"` }
+      // Filter supporting/challenge to only valid IDs
+      parsed.supporting_play_ids = (parsed.supporting_play_ids || []).filter(id => VALID_PLAY_IDS.has(id) && id !== parsed.lead_play_id)
+      parsed.challenge_play_ids  = (parsed.challenge_play_ids  || []).filter(id => VALID_PLAY_IDS.has(id) && id !== parsed.lead_play_id)
+    } else if (parsed.mode === 'freeform') {
+      if (!Array.isArray(parsed.action_steps) || parsed.action_steps.length < 2) {
+        return { ok: false, reason: 'answer/freeform: needs ≥2 action_steps' }
+      }
+      if (!Array.isArray(parsed.citations) || parsed.citations.length === 0) {
+        return { ok: false, reason: 'answer/freeform: needs ≥1 citation' }
+      }
+      parsed.alternative_paths = Array.isArray(parsed.alternative_paths) ? parsed.alternative_paths.slice(0, 4) : []
+    } else {
+      return { ok: false, reason: `answer: unknown mode "${parsed.mode}"` }
+    }
 
     if (typeof parsed.confidence !== 'number') parsed.confidence = 0.7
     if (parsed.confidence < 0.5) return { ok: false, reason: `answer: low confidence ${parsed.confidence}` }

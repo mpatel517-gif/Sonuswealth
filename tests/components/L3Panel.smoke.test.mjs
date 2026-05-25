@@ -98,6 +98,29 @@ assert(l4NumberPanelSrc.includes('data-metric'),               'L4NumberPanel ex
 assert(/export\s*\{\s*DrillableNumber\s*\}/.test(barrelSrcUpdated), 'barrel re-exports DrillableNumber')
 assert(/export\s*\{\s*L4NumberPanel\s*\}/.test(barrelSrcUpdated),   'barrel re-exports L4NumberPanel')
 
+// 5. W0-T7 additions — DrillableChart + L4ChartPanel
+const drillableChartSrc = readFileSync(resolve(L3, 'DrillableChart.jsx'), 'utf8')
+const l4ChartPanelSrc   = readFileSync(resolve(L3, 'L4ChartPanel.jsx'), 'utf8')
+const barrelSrcT7       = readFileSync(resolve(L3, 'index.js'), 'utf8')
+
+assert(drillableChartSrc.includes('export function DrillableChart'), 'DrillableChart.jsx exports DrillableChart function')
+assert(drillableChartSrc.includes('onDrill'), 'DrillableChart wires onDrill callback')
+assert(drillableChartSrc.includes("role=\"button\"") || drillableChartSrc.includes("role='button'"), 'DrillableChart is keyboard-accessible (role=button)')
+assert(drillableChartSrc.includes('defaultWindow'), 'DrillableChart accepts defaultWindow prop')
+assert(drillableChartSrc.includes('data-metric'), 'DrillableChart sets data-metric for testing')
+
+assert(l4ChartPanelSrc.includes('export function L4ChartPanel'), 'L4ChartPanel.jsx exports L4ChartPanel function')
+assert(l4ChartPanelSrc.includes("from '../../../engine/time-series.js'"), 'L4ChartPanel imports getTimeSeries from engine')
+assert(l4ChartPanelSrc.includes('TIME_WINDOWS'), 'L4ChartPanel declares TIME_WINDOWS pill set')
+assert(l4ChartPanelSrc.includes("'1M'") && l4ChartPanelSrc.includes("'10Y'"), 'L4ChartPanel covers 1M and 10Y windows')
+assert(l4ChartPanelSrc.includes('COMPARISONS'), 'L4ChartPanel has comparison overlay control group')
+assert(l4ChartPanelSrc.includes('CHART_TYPES'), 'L4ChartPanel has chart-type control group')
+assert(l4ChartPanelSrc.includes('ANNOTATIONS'), 'L4ChartPanel has annotation toggle group')
+assert(l4ChartPanelSrc.includes('series.gaps'), 'L4ChartPanel surfaces PP-7 gap markers')
+
+assert(barrelSrcT7.includes('export { DrillableChart }'), 'barrel re-exports DrillableChart')
+assert(barrelSrcT7.includes('export { L4ChartPanel }'), 'barrel re-exports L4ChartPanel')
+
 console.log(`\n═══ ${passed} pass · ${failed} fail ═══`)
 if (failed > 0) {
   console.error('\nFailures:'); for (const f of fails) console.error('  -', f)

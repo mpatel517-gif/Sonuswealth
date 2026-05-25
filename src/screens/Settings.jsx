@@ -33,6 +33,7 @@ import {
   TAX,
 } from '../engine/fq-calculator.js'
 import OverlayShell from '../components/shared/OverlayShell.jsx'
+import SecuritySettings from '../components/Settings/SecuritySettings.jsx'
 
 // Longevity bands — conservative/median/optimistic. Sourced here so the
 // component reads consistent values; engine support comes in s02a.
@@ -382,10 +383,13 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
             label="Connected accounts" phase2={true} last={true}/>
         </Section>
 
-        {/* §S4 — Privacy & Security (Phase 2 stub) */}
+        {/* §S4 — Privacy & Security (AU3 + AU4 — live) */}
         <Section title="Privacy & security">
           <Row colour="#FF453A" glyph="▲"
-            label="Security" phase2={true} last={true}/>
+            label="Security"
+            value="2FA, sessions, sign-out"
+            onClick={() => setDetail('security')}
+            last={true}/>
         </Section>
 
         {/* §S5 — Feeds & Reports (IFA Access lives here per spec §Q1B.1) */}
@@ -582,6 +586,12 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
               </div>
             </>
           )}
+        </DetailPanel>
+      )}
+
+      {detail === 'security' && (
+        <DetailPanel title="Privacy & Security" onBack={() => setDetail(null)}>
+          <SecuritySettings />
         </DetailPanel>
       )}
 

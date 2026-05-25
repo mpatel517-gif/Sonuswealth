@@ -200,14 +200,16 @@ export default function Welcome({ onStart, onDemo }) {
           Onboarding ships Phase 2.
         </div>
 
-        {/* CTAs — FIX N1/S1: honest labels matching what's behind them. */}
+        {/* CTAs — AU6 (Phase 1.5): label now matches reality. Account creation
+            is wired (Supabase Auth AU1+AU2), so "Get started" routes to real
+            signup. Was "Join the waitlist" while auth was a stub. */}
         <button onClick={onStart} style={{
           width:'100%', padding:17,
           background:'var(--c-acc)', color:'#0B1F3A',
           borderRadius:100, fontSize:16, fontWeight:700, letterSpacing:-.3,
           boxShadow:'var(--sh-acc)', marginBottom:10, border:'none', cursor:'pointer',
         }}>
-          Join the waitlist →
+          Get started →
         </button>
         <button onClick={onDemo} style={{
           width:'100%', padding:14,

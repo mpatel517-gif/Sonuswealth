@@ -7,6 +7,7 @@ import Dashboard     from './screens/Dashboard.jsx'
 import PersonaSelect from './screens/PersonaSelect.jsx'
 import { EventsProvider, useEffectiveEntity } from './state/events.jsx'
 import { AuthProvider, useAuth } from './state/auth.jsx'
+import { StepUpProvider } from './state/step-up.jsx'
 import { bootRules } from './lib/boot-rules.js'
 
 import personaA from './rules/personas/persona-a.json'
@@ -203,9 +204,11 @@ function AppInner() {
 export default function App() {
   return (
     <AuthProvider>
-      <EventsProvider>
-        <AppInner />
-      </EventsProvider>
+      <StepUpProvider>
+        <EventsProvider>
+          <AppInner />
+        </EventsProvider>
+      </StepUpProvider>
     </AuthProvider>
   )
 }

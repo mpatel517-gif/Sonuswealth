@@ -19,6 +19,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useRef, useState } from 'react'
+import { requireStepUp } from '../lib/step-up.js'
 
 // ── Provider gating (D-DEMO-HIDDEN-1) ────────────────────────────────────────
 // Mock parser ships fictitious values. Only run it in dev OR when explicitly
@@ -91,11 +92,13 @@ const FP5 = [
   { label: 'Manual fallback',    desc: 'If parsing fails, you can always type the value in. Nothing gets stuck.' },
 ]
 
-// Honest disclosure: dedup, provenance enforcement, and step-up auth wiring
+// Honest disclosure: dedup and provenance enforcement still to come (Phase 2.5).
+// Step-up auth IS wired (AU3, 2026-05-25) — commits gate via requireStepUp().
+// Legacy: prior comment said step-up "arrives in Phase 2" — now done.
 // arrive in Phase 2 (D-DC-PROV-1). Today the FP-5 modal demonstrates the
 // per-field accept/reject contract; the rest of the pipeline (event-store
 // dedup, provenance ledger, auth) is not yet enforced server-side.
-const FP5_HONESTY = 'Dedup, provenance, and step-up auth wiring arrive in Phase 2.'
+const FP5_HONESTY = 'Step-up auth on commit is live (re-password). Dedup + provenance enforcement arrive next.'
 
 // Parser is now vendor-agnostic via services/parser.js. The mock provider lives
 // in services/parsers/mock.js. Swapping to Anthropic Vision (or any other
@@ -289,9 +292,20 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
         : f),
     }))
   }
-  function commitCapture() {
+  // AU3 — step-up gate on material change. Any commit that writes to the
+  // event store passes through this gate so a re-password challenge fires
+  // unless the user is already in an elevated session (5-min window) or
+  // in founder-demo mode. requireStepUp resolves { ok: false, cancelled: true }
+  // if the user dismisses the modal — we silently abort the commit then.
+  async function commitCapture() {
     const acceptedFields = parsed.fields.filter(f => f.accepted === 'accepted')
     if (!acceptedFields.length) { closeParsed(); return }
+
+    const stepUp = await requireStepUp({
+      reason: `Confirm to record ${acceptedFields.length} value${acceptedFields.length === 1 ? '' : 's'} from this document.`,
+    })
+    if (!stepUp.ok) return // cancelled or failed — nothing committed
+
     const mode = parsed.channel === 'scan' ? 'scan' : 'upload'
     const payload = {
       channel: parsed.channel,
@@ -527,11 +541,15 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
         />
       )}
 
-      {/* Manual entry form */}
+      {/* Manual entry form — AU3 step-up gate before commit */}
       {manualOpen && (
         <ManualEntryForm
           onCancel={() => { setManualOpen(false); setActive(null) }}
-          onSubmit={(payload) => {
+          onSubmit={async (payload) => {
+            const stepUp = await requireStepUp({
+              reason: `Confirm to record ${payload.label || 'this value'}.`,
+            })
+            if (!stepUp.ok) return
             onCommit?.(buildEnvelope({
               type: 'ASSET_VALUE_UPDATED',
               payload: { value: payload.value, unit: payload.unit, wrapper: payload.wrapper, source: payload.source, confidence: payload.confidence, label: payload.label },

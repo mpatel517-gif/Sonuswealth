@@ -211,3 +211,134 @@ export function isEmailVerified(user) {
   if (!user) return false;
   return !!user.email_confirmed_at || !!user.confirmed_at;
 }
+
+// ── AU4 · MFA (TOTP via Supabase) ───────────────────────────────────────────
+// Supabase's MFA flow:
+//   1. enroll → returns factorId + qrCode + secret. User scans QR into
+//      Authenticator app.
+//   2. challenge(factorId) → returns challengeId.
+//   3. verify(factorId, challengeId, code) → succeeds + factor moves from
+//      'unverified' to 'verified'. From then on, sign-in returns an AAL1
+//      session that the user must elevate to AAL2 with a code on each login.
+//   4. unenroll(factorId) → removes the factor.
+// WebAuthn / biometric is a separate path (browser credentials API +
+// our own credential storage); deferred to AU4-extension.
+
+/**
+ * Start MFA enrolment. User shows the QR code in their app, then calls
+ * verifyMFAEnrolment(factorId, code) with the 6-digit code shown by the app.
+ *
+ * @param {{ friendlyName?: string }} [opts]
+ * @returns {Promise<{ok:true, factorId:string, qrCode:string, secret:string, uri:string} | {ok:false, error:string}>}
+ */
+export async function enrollMFA(opts = {}) {
+  try {
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: opts.friendlyName || 'Authenticator app',
+    });
+    if (error) return _err(error);
+    return {
+      ok: true,
+      factorId: data.id,
+      qrCode: data.totp?.qr_code,
+      secret: data.totp?.secret,
+      uri: data.totp?.uri,
+    };
+  } catch (e) {
+    return _err(e);
+  }
+}
+
+/**
+ * Verify the TOTP code shown by the user's Authenticator app to complete
+ * enrolment. After this returns ok, the factor is 'verified' and the user's
+ * subsequent logins will require a code (AAL2 step).
+ *
+ * @param {string} factorId
+ * @param {string} code  6-digit TOTP code
+ */
+export async function verifyMFAEnrolment(factorId, code) {
+  if (!factorId || !code) {
+    return { ok: false, error: 'factorId and code are required.' };
+  }
+  try {
+    const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId });
+    if (cErr) return _err(cErr);
+    const { error: vErr } = await supabase.auth.mfa.verify({
+      factorId,
+      challengeId: challenge.id,
+      code,
+    });
+    if (vErr) return _err(vErr);
+    return { ok: true };
+  } catch (e) {
+    return _err(e);
+  }
+}
+
+/**
+ * Challenge + verify in one call (login flow). After a successful password
+ * sign-in for an MFA-enabled user, Supabase returns an AAL1 session; calling
+ * this with the user's TOTP code elevates to AAL2.
+ *
+ * @param {string} factorId
+ * @param {string} code  6-digit TOTP code
+ */
+export async function challengeAndVerifyMFA(factorId, code) {
+  return verifyMFAEnrolment(factorId, code); // same flow as enrolment finalisation
+}
+
+/**
+ * List the current user's MFA factors. Each factor has { id, friendly_name,
+ * factor_type, status: 'verified'|'unverified' }.
+ *
+ * @returns {Promise<{ok:true, factors:Array} | {ok:false, error:string}>}
+ */
+export async function listMFAFactors() {
+  try {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) return _err(error);
+    // supabase-js returns { all, totp, phone } — `all` covers our case
+    return { ok: true, factors: data?.all || data?.totp || [] };
+  } catch (e) {
+    return _err(e);
+  }
+}
+
+/**
+ * Remove an MFA factor.
+ *
+ * @param {string} factorId
+ */
+export async function unenrollMFA(factorId) {
+  if (!factorId) return { ok: false, error: 'factorId is required.' };
+  try {
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
+    if (error) return _err(error);
+    return { ok: true };
+  } catch (e) {
+    return _err(e);
+  }
+}
+
+/**
+ * Get the current authenticator assurance level (aal1 = password-only,
+ * aal2 = password + MFA verified for the session). Used to gate sensitive
+ * actions that require AAL2.
+ *
+ * @returns {Promise<{ok:true, currentLevel:'aal1'|'aal2', nextLevel:string} | {ok:false, error:string}>}
+ */
+export async function getAuthLevel() {
+  try {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error) return _err(error);
+    return {
+      ok: true,
+      currentLevel: data?.currentLevel || 'aal1',
+      nextLevel: data?.nextLevel || 'aal1',
+    };
+  } catch (e) {
+    return _err(e);
+  }
+}

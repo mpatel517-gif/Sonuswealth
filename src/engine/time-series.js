@@ -27,7 +27,19 @@
 // Supported metrics (W0 scope — extend as L3 panels need more):
 //   net_worth, wealth_score, risk_score
 //   pension_value, isa_value, gia_value, cash_value, property_value, iht_exposure
+//
+// Public API parameters:
+//   window:        '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | '10Y' | 'All'
+//                  Window is anchored off the data's own end date (NOT wall-clock
+//                  now), so the function is pure: same input → same output.
+//                  Unknown window strings return an empty result with a gap
+//                  entry (no silent fallback).
+//   granularity:   'month' | 'quarter' | 'year' (echoed but NOT enforced in W0 —
+//                  downsampling is deferred to Wave 1; caller receives whatever
+//                  granularity the trajectory data provides, typically monthly)
 // ─────────────────────────────────────────────────────────────────────────────
+
+const MS_PER_DAY = 86400000
 
 // Map metric → trajectory accessor. Each accessor receives entity and returns
 // an array of {date, value} OR {date, score} (legacy shape from older
@@ -100,10 +112,18 @@ export function getTimeSeries(entity, metric, window = '1Y', granularity = 'mont
     return { ...baseResult, gaps: [{ from: null, to: null, reason: `trajectory points malformed for ${metric}` }] }
   }
 
-  // 4. Apply window filter
-  const days = WINDOW_DAYS[window] ?? 365
-  const now = new Date()
-  const cutoff = days === Infinity ? new Date(0) : new Date(now.getTime() - days * 86400000)
+  // 4. Apply window filter — anchored off the data's own end date, NOT
+  // wall-clock now. This keeps the function pure (deterministic) and
+  // surfaces trailing-edge gaps when data is stale (PP-7).
+  if (!(window in WINDOW_DAYS)) {
+    return {
+      ...baseResult,
+      gaps: [{ from: null, to: null, reason: `unknown window: ${window}` }],
+    }
+  }
+  const days = WINDOW_DAYS[window]
+  const dataEnd = new Date(all[all.length - 1].date)
+  const cutoff = days === Infinity ? new Date(0) : new Date(dataEnd.getTime() - days * MS_PER_DAY)
   const windowed = days === Infinity ? all : all.filter(p => new Date(p.date) >= cutoff)
 
   // 5. Gap detection — requested window vs available data
@@ -119,6 +139,19 @@ export function getTimeSeries(entity, metric, window = '1Y', granularity = 'mont
         reason: 'data starts after requested window',
       })
     }
+  }
+  // Trailing-edge staleness — surface if the data ends meaningfully before
+  // wall-clock now (caller may want to render a "stale" indicator). We use
+  // wall-clock here ONLY for staleness detection, not for windowing — the
+  // function's windowing output is still pure.
+  const wallNow = new Date()
+  const staleness = wallNow.getTime() - dataEnd.getTime()
+  if (staleness > 45 * MS_PER_DAY) {
+    gaps.push({
+      from: dataEndDate,
+      to: wallNow.toISOString().split('T')[0],
+      reason: `data is ${Math.round(staleness / MS_PER_DAY)} days stale`,
+    })
   }
 
   // 6. Confidence based on density of available data in the window

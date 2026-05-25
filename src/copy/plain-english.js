@@ -128,6 +128,44 @@ export const ALIAS = {
   EIS:                'Enterprise investment scheme (EIS)',
   VCT:                'Venture capital trust (VCT)',
   BTL:                'Buy-to-let',
+
+  // Pension contribution + access
+  AA:                 'Pension contribution limit (annual allowance)',
+  aa:                 'Pension contribution limit',
+  annualAllowance:    'Pension contribution limit',
+  taperedAA:          'Reduced contribution limit',
+  carryForward:       'Unused allowance from earlier years',
+  MPAA:               'Reduced pension limit (after first withdrawal)',
+  mpaa:               'Reduced pension limit',
+  LSA:                'Tax-free cash limit',
+  lsa:                'Tax-free cash limit',
+  PCLS:               'Tax-free cash',
+  pcls:               'Tax-free cash',
+  FAD:                'Pension drawdown',
+  fad:                'Pension drawdown',
+  UFPLS:              'Lump sum from pension',
+  ufpls:              'Lump sum from pension',
+
+  // Investment costs
+  OCF:                'Fund charges',
+  ocf:                'Fund charges',
+  ongoingCharge:      'Fund charges',
+
+  // Property + business reliefs
+  S24:                'Mortgage interest restriction (S24)',
+  s24:                'Mortgage interest restriction',
+  BADR:               'Business sale relief (BADR)',
+  badr:               'Business sale relief',
+
+  // Time-view (X28 4-mode)
+  scenario:           'What-if',
+  Scenario:           'What-if',
+  actual:             'Today',
+  Actual:             'Today',
+  forecast:           'Forecast',
+  Forecast:           'Forecast',
+  plan:               'Plan',
+  Plan:               'Plan',
 }
 
 /**
@@ -149,4 +187,22 @@ export function plainWithStatutory(key) {
   const text = plain(key)
   // If the alias already contains a paren (statutory form), use as-is
   return text
+}
+
+/**
+ * Resolve a statutory code or internal symbol to its plain-English label.
+ * Returns the input unchanged if no alias exists (graceful fallback).
+ *
+ * Used by every UI component that renders a statutory term. Per PP-9, raw
+ * statutory codes (AA, LSA, CGT, IHT, etc.) must never reach the screen —
+ * always pipe through plainOf() or use the ALIAS map directly.
+ *
+ * @example
+ *   plainOf('AA')          → 'Pension contribution limit (annual allowance)'
+ *   plainOf('netWorth')    → 'Net Worth'
+ *   plainOf('unknownTerm') → 'unknownTerm'   (graceful fallback)
+ */
+export function plainOf(key) {
+  if (typeof key !== 'string') return key
+  return ALIAS[key] ?? key
 }

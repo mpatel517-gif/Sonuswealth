@@ -47,6 +47,17 @@ import {
   TAX,
 } from '../engine/fq-calculator.js'
 
+// PP-5 — Single ripple path for entity-derived scalars (W0-T8).
+// Per W0-T1 inventory: 10 of MyMoney's 41 fq-calc symbols have direct ripple
+// equivalents (netWorth, investable, guardrail, calcFQ, calcRisk, fqBand,
+// riskBand, monthlySurplus + ihtDynamic/costOfInaction with caveats).
+// The migration is scoped to the *main MyMoney component* — sub-components
+// (PensionDrillDown, SurplusTile, PriorityCards, DecumulationPanel) keep
+// direct imports because (a) the hook can't be called outside MyMoney and
+// (b) several of their call sites diverge from ripple's defaults
+// (e.g. ihtDynamic with includeSipp=true override, mutated entity).
+import { useRipple } from '../state/ripple.jsx'
+
 import { BRAND } from '../config/brand.js'
 import {
   X28TopBar, TIME_WINDOWS,
@@ -2484,19 +2495,29 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
   const [bucketCat, setBucketCat] = useState(null)
   function openBucket(cat) { setBucketCat(cat); setBucketOpen(true) }
 
+  // PP-5 single ripple path. Scopes limited to what main MyMoney needs;
+  // sub-components (PensionDrillDown, PriorityCards, SurplusTile,
+  // DecumulationPanel) still call fq-calc directly because the hook can't
+  // be invoked outside this function and several of their call sites use
+  // non-default arguments that ripple doesn't expose.
+  const ripple = useRipple(entity, ['balance_sheet', 'scores', 'cashflow'])
+
   // Triple anchor + delta chips. calcFQ is canonical per Home v1.4 §Q1.2 —
   // calcFQCalibrated drifted from Home's score and caused tab-to-tab divergence.
-  const nw = netWorth(entity)
-  const fq = calcFQ(entity)
-  const risk = calcRisk(entity)
-  const fqBandObj = fqBand(fq.total)
+  // W0-T8 — netWorth/calcFQ/calcRisk/fqBand/riskBand now sourced from ripple.
+  // .raw preserves the full { total, band, dims } object so downstream code
+  // that reads fq.total / risk.total / fq.dims keeps working unchanged.
+  const nw = ripple.balance_sheet.netWorth
+  const fq = ripple.scores.fq.raw
+  const risk = ripple.scores.risk.raw
+  const fqBandObj = ripple.scores.fq.band
   // N-02 fix: unify the verbal anchor across the two co-rendered scores so
   // "71 / Optimised" and "78 / Protected" use the same vocabulary. We map
   // the risk band's score-bucket onto the fqBand() label set — same colour
   // semantic, same vocabulary. Without this the user can't compare them
   // ("is 71 Optimised better or worse than 78 Protected?").
   //   <20 Exposed · <40 Building · <60 Established · <80 Optimised · ≥80 Exceptional
-  const rawRiskBand = riskBand(risk.total)
+  const rawRiskBand = ripple.scores.risk.band
   const rkBandObj = { ...rawRiskBand, name: fqBand(risk.total).name }
 
   // X28 window-driven projection. The hero shows "as at [window]" when the
@@ -2556,7 +2577,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
   // Phase 2B — deficit user flag: cash flow becomes the lead anchor
   // H-01: strict < 0 so surplus=0 (exactly balanced) is not treated as deficit
   const isDeficit = (() => {
-    try { const ms = monthlySurplus(entity); return (ms.surplus || 0) - (ms.deficit || 0) < 0 } catch { return false }
+    // W0-T8 — ripple.cashflow.monthlySurplus exposes the full {surplus,deficit,...} object.
+    try { const ms = ripple.cashflow.monthlySurplus; return ((ms?.surplus || 0) - (ms?.deficit || 0)) < 0 } catch { return false }
   })()
 
   // ── ACTIONS ─────────────────────────────────────────────────────────────
@@ -2670,16 +2692,17 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
 
       {/* Phase 2A — Net position sentence: one plain-English verdict per session */}
       {(() => {
-        const m = monthlySurplus(entity)
+        // W0-T8 — ripple.cashflow exposes both monthlySurplus and investable.
+        const m = ripple.cashflow.monthlySurplus || { surplus: 0, deficit: 0 }
         const surplus = m.surplus || -(m.deficit || 0)
         const pos = surplus >= 0
         const cashLiquid = +(entity?.assets?.cash?.total || entity?.assets?.cash?.value || 0)
         const monthsRunway = !pos && cashLiquid > 0 ? cashLiquid / Math.abs(surplus) : null
         const fiRat_ = (() => {
           try {
-            const inv_ = investable(entity)
+            const inv_ = ripple.cashflow.investable
             const tgt_ = (entity?.targetIncome || 0) * 25
-            return tgt_ > 0 ? inv_ / tgt_ : null
+            return tgt_ > 0 ? (inv_ || 0) / tgt_ : null
           } catch { return null }
         })()
 

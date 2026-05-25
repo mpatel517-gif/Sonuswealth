@@ -71,7 +71,7 @@ Engine before lenses before tabs before UI before compliance. **No layer N begin
 | 0 | Security — rotate 4 leaked keys + scrub git history | 1 session (~2h) | week 0 — **DEFERRED by founder direction 2026-05-23** |
 | 1 | Data foundation — engine reads from Supabase + live HMRC/ONS/BoE cron | 3 weeks | week 3 — **✅ CLOSED 2026-05-23, see §2.1 below** |
 | **1.5** | **Auth foundation (Security/Account) — Supabase Auth + OAuth + step-up + permission matrix · BLOCKS Phase 6** | **3 weeks** | **week 6** |
-| 2 | Engine truth — single ripple path + 528-run DeepSeek regression clean | 3 weeks | week 9 — **2a ✅ CLOSED 2026-05-25 (93.6% PASS); 2b ✅ CLOSED 2026-05-25 (engine indirection via _bundle.js + boot hook + harness wired; 21/21 regression PASS post-refactor; uk-tax.js duplicate consolidated); 2c ripple still pending** |
+| 2 | Engine truth — single ripple path + 528-run DeepSeek regression clean | 3 weeks | week 9 — **✅ CLOSED 2026-05-25.** 2a (93.6% PASS) + 2b (engine indirection via _bundle.js + boot hook + harness; 21/21 regression PASS; uk-tax.js duplicate consolidated) + 2c (rippleEffect primitive + useRipple hook + 103/103 contract test + harness integration — every regression run now exercises ripple across 7 personas × N years and cross-verifies against bespoke snapshot output to the unit). |
 | 3 | 11-Lens depth (10 lens shells → full bodies) | 4 weeks | week 13 |
 | 4 | Lens-Council integration into DE / Scenarios / Reports / Drill | 2 weeks | week 15 |
 | 5 | Core tabs — gap-audit-driven build (per §3 below) | 12–17 weeks | week 27–32 |

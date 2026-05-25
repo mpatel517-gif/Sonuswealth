@@ -15,6 +15,7 @@ import {
 } from '../../src/lib/data-source.js';
 
 import { setBundle, resetBundle } from '../../src/engine/_bundle.js';
+import { rippleEffect } from '../../src/engine/ripple.js';
 
 import { evaluate as evaluateEligibility } from '../../src/engine/eligibility.js';
 
@@ -407,6 +408,33 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
     apq_count: Array.isArray(apqResult) ? apqResult.length : null,
     macro_used: macroVars,
     bundle_used: bundleId,
+    // Phase 2c — exercise the single ripple path on every regression run.
+    // Stored as a summary (not the full block) so DeepSeek prompts don't
+    // bloat. If rippleEffect crashes on any persona × year, the regression
+    // catches it before the change lands in a screen.
+    _ripple: (() => {
+      try {
+        const r = rippleEffect(adjustedPersona, null, ['all']);
+        return {
+          ok: r._meta?.ok === true,
+          scopes: r._meta?.scopes || [],
+          netWorth:        r.balance_sheet?.netWorth ?? null,
+          fqScore:         r.scores?.fq?.score ?? null,
+          riskScore:       r.scores?.risk?.score ?? null,
+          ihtExposure:     r.iht?.iht?.iht ?? r.iht?.iht ?? null,
+          monthlySurplus:  r.cashflow?.monthlySurplus ?? null,
+          fundedRatio:     r.cashflow?.fundedRatio ?? null,
+          incomeTax:       r.tax?.incomeTax ?? null,
+          effectiveTaxRate: r.tax?.effectiveTaxRate ?? null,
+          lifeGap:         r.protection?.lifeGap ?? null,
+          bundleVersion:   r._meta?.bundleVersion,
+          elapsedMs:       r._meta?.elapsedMs,
+        };
+      } catch (e) {
+        errors.push(`ripple: ${e.message}`);
+        return { ok: false, error: e.message };
+      }
+    })(),
     errors: errors.length ? errors : undefined,
     computed_at: new Date().toISOString(),
   };

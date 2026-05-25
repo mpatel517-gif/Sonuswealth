@@ -10,16 +10,24 @@
 // Per design doc §3 (19 panels 1-to-1 per spec domain) every L3 module imports
 // this primitive and configures it. Single primitive, max reuse.
 //
-// Props:
+// Props (all optional except entity; sections handle missing data gracefully):
 //   - entity         : the persona entity object (passed through to sections)
 //   - ripple         : useRipple output (passed through to sections that need
 //                      cross-tab data, especially EstatePositionSection)
 //   - hero           : { metric, label, sublabel?, chartSeries? }
+//                      chartSeries shape (locked W0-T5): { metric, defaultWindow }
+//                      — Wave 4 wires this into <DrillableChart>; until then
+//                      HeroSection renders a placeholder. Domain modules should
+//                      pass the shape, not raw arrays.
 //   - taxTreatment   : { incomeTax: {headline, detail?},
 //                        capitalGains: {headline, detail?},
 //                        inheritance: {headline, detail?} }
+//                      — defaults to {} so domains can omit. Each row renders
+//                      '—' when missing.
 //   - middle         : [ { key, render: ({entity, ripple}) => <jsx> } ]
 //   - estate         : { position?, exposure?, daysToActivation?, action? }
+//                      — domain computes props at call-site from ripple.iht /
+//                      ihtChipsForMyMoney(...). Section stays a dumb display.
 //   - confidence     : { level: 'high'|'medium'|'low', totalFields?, verifiedFields?, lastValuation? }
 //   - domainKey      : string identifier for the domain (data attribute for testing)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,11 +39,11 @@ import { DataConfidenceSection } from './L3Sections/DataConfidenceSection.jsx'
 
 export function L3Panel({
   entity, ripple,
-  hero,
-  taxTreatment,
-  middle = [],
-  estate,
-  confidence,
+  hero          = {},
+  taxTreatment  = {},
+  middle        = [],
+  estate        = {},
+  confidence    = {},
   domainKey,
 }) {
   return (

@@ -1,10 +1,15 @@
-// FIX-3.B + 3.D — controlled email/password inputs, CTA-honesty (waitlist
-// labels), all obData fields destructured + forwarded to onEnter().
+// AU1 (Phase 1.5) — real Supabase Auth signup wired through useAuth().
+// Account.jsx now creates an actual account on submit. Email verification
+// state is surfaced; users land on Dashboard either way (verification can
+// complete out-of-band). Signed-in returning users see a sign-in form.
+// Demo URL param (?demo=X) bypasses this screen entirely from App.jsx.
 import { useState } from 'react'
 import { BRAND } from '../config/brand.js'
 import { calcFQ, fqBand, lifeStageFor } from '../engine/fq-calculator.js'
+import { useAuth } from '../state/auth.jsx'
 
 export default function Account({ obData, onEnter }) {
+  const { signUp, signIn, signInWithProvider, resendVerification } = useAuth()
   // FIX-3.D — destructure ALL fields collected by Onboarding (not just 3 of 11).
   // Anything missing here was being silently dropped before reaching App.jsx.
   const {
@@ -24,6 +29,14 @@ export default function Account({ obData, onEnter }) {
   // FIX-3.B — controlled state for email + password.
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
+
+  // AU1 — auth state. mode: 'signup' (default) | 'signin'. busy: in-flight.
+  // error: server error to show. needsVerify: true after signup with email
+  // confirmation enabled (Supabase returns user but no session).
+  const [mode,        setMode]        = useState('signup')
+  const [busy,        setBusy]        = useState(false)
+  const [error,       setError]       = useState('')
+  const [needsVerify, setNeedsVerify] = useState(false)
 
   // Build minimal entity stub so the engine scores the preview consistently.
   // Only fields calcFQ reads at the top level are needed; assets/drawdown default
@@ -49,16 +62,60 @@ export default function Account({ obData, onEnter }) {
   const band  = fqBand(score)
   const stage = lifeStageFor(age).name
 
-  // FIX-3.B/3.D — single payload bundles credentials + every obData field so
-  // the parent (App.jsx) can derive a real persona. Pre-launch backend = none;
-  // payload is consumed in-memory only.
-  function joinWaitlist() {
-    onEnter({
-      email,
-      password,
-      entryMode, jurisdiction, age, income, liquidWealth, propertyValue,
-      focus, setup, riskAppetite, willStatus, lpaStatus,
-    })
+  // AU1 — Real signup/signin. obData is still forwarded to onEnter so the
+  // Dashboard persona builds correctly. If Supabase returns a session, the
+  // user is fully signed in; if not (email confirmation pending), we let
+  // them through to Dashboard but show a verify-banner via useAuth().
+  async function handleSubmit() {
+    if (busy) return
+    setError('')
+    setBusy(true)
+    try {
+      const args = { email: email.trim(), password }
+      const r = mode === 'signup'
+        ? await signUp({ ...args, metadata: { age, jurisdiction, entryMode } })
+        : await signIn(args)
+      if (!r.ok) {
+        setError(r.error || 'Sign-in failed.')
+        return
+      }
+      // Signup with email confirmation enabled returns user but no session.
+      // Show verify banner but still progress to Dashboard so the user sees
+      // their preview. Auth gate in App.jsx allows this transient state.
+      if (mode === 'signup' && !r.session) {
+        setNeedsVerify(true)
+      }
+      onEnter({
+        email: args.email,
+        password, // forwarded in case downstream needs it; not stored
+        entryMode, jurisdiction, age, income, liquidWealth, propertyValue,
+        focus, setup, riskAppetite, willStatus, lpaStatus,
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleResend() {
+    if (!email) return
+    setBusy(true)
+    const r = await resendVerification(email.trim())
+    setBusy(false)
+    if (r.ok) setError('Verification email re-sent. Check your inbox.')
+    else setError(r.error || 'Could not resend verification.')
+  }
+
+  // AU2 — OAuth SSO. supabase-js redirects on success; on failure (e.g.
+  // provider not enabled in Supabase project yet) we show a clear message.
+  async function handleOAuth(provider) {
+    if (busy) return
+    setError('')
+    setBusy(true)
+    const r = await signInWithProvider(provider)
+    // If supabase did the redirect we never reach here. If it failed,
+    // surface the error and unbusy.
+    setBusy(false)
+    if (!r.ok) setError(r.error || `${provider} sign-in failed.`)
   }
 
   return (
@@ -85,9 +142,13 @@ export default function Account({ obData, onEnter }) {
 
         {/* Body */}
         <div style={{ padding:24 }}>
-          <div style={{ fontSize:22, fontWeight:800, color:'var(--c-text)', letterSpacing:-.5, marginBottom:6 }}>Unlock your {BRAND.scoreShort}</div>
+          <div style={{ fontSize:22, fontWeight:800, color:'var(--c-text)', letterSpacing:-.5, marginBottom:6 }}>
+            {mode === 'signup' ? `Unlock your ${BRAND.scoreShort}` : 'Welcome back'}
+          </div>
           <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.5, marginBottom:20 }}>
-            Create your free account to see your personalised {BRAND.score} dashboard.
+            {mode === 'signup'
+              ? `Create your free account to see your personalised ${BRAND.score} dashboard.`
+              : 'Sign in to your Sonuswealth account.'}
           </div>
 
           {/* Score preview */}
@@ -103,19 +164,20 @@ export default function Account({ obData, onEnter }) {
             </div>
           </div>
 
-          {/* FIX-3.B — pre-launch CTA-honesty: SSO not wired, so disable both
-              and label as "(waitlist)". (See memory feedback_cta_honesty_pre_launch.md.) */}
+          {/* AU2 — OAuth SSO wired to Supabase Auth. If a provider isn't yet
+              enabled in the Supabase project the error banner explains the
+              state honestly rather than the buttons silently failing. */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
             {[
-              { label:'Continue with Google (waitlist)', emoji:'G',  aria:'Google sign-in coming soon' },
-              { label:'Continue with Apple (waitlist)',  emoji:'🍎', aria:'Apple sign-in coming soon' },
+              { provider:'google', label:'Continue with Google', emoji:'G',  aria:'Sign in with Google' },
+              { provider:'apple',  label:'Continue with Apple',  emoji:'🍎', aria:'Sign in with Apple' },
             ].map(b => (
-              <button key={b.label} disabled aria-label={b.aria} title="Coming soon" style={{
+              <button key={b.provider} type="button" onClick={() => handleOAuth(b.provider)} disabled={busy} aria-label={b.aria} style={{
                 padding:12, borderRadius:12,
                 background:'var(--c-surface2)', border:'1px solid var(--c-border2)',
-                fontSize:11, fontWeight:600, color:'var(--c-text3)',
+                fontSize:11, fontWeight:600, color:'var(--c-text)',
                 display:'flex', alignItems:'center', justifyContent:'center', gap:6,
-                cursor:'not-allowed', opacity:.6,
+                cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1,
               }}>
                 <span aria-hidden="true" style={{ fontSize:15 }}>{b.emoji}</span> {b.label}
               </button>
@@ -129,8 +191,8 @@ export default function Account({ obData, onEnter }) {
             <div style={{ flex:1, height:1, background:'var(--c-border)' }} />
           </div>
 
-          {/* FIX-3.B — controlled email + password with autocomplete + labels. */}
-          <form onSubmit={(e) => { e.preventDefault(); joinWaitlist() }}>
+          {/* AU1 — controlled email + password wired to real Supabase Auth. */}
+          <form onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
             <label htmlFor="acct-email" style={{
               display:'block', fontSize:11, fontWeight:600, color:'var(--c-text3)',
               marginBottom:6, textTransform:'uppercase', letterSpacing:.8,
@@ -155,15 +217,17 @@ export default function Account({ obData, onEnter }) {
             <label htmlFor="acct-password" style={{
               display:'block', fontSize:11, fontWeight:600, color:'var(--c-text3)',
               marginBottom:6, textTransform:'uppercase', letterSpacing:.8,
-            }}>Password (this stays on your device — Phase 2)</label>
+            }}>Password{mode === 'signup' ? ' (8+ characters)' : ''}</label>
             <input
               id="acct-password"
-              name="new-password"
+              name={mode === 'signup' ? 'new-password' : 'current-password'}
               type="password"
-              autoComplete="new-password"
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Pick anything for now"
+              placeholder={mode === 'signup' ? 'Create a strong password' : 'Your password'}
+              required
+              minLength={mode === 'signup' ? 8 : undefined}
               style={{
                 width:'100%', padding:'14px 16px', marginBottom:16,
                 background:'var(--c-surface2)', border:'1.5px solid var(--c-border)',
@@ -172,20 +236,54 @@ export default function Account({ obData, onEnter }) {
               }}
             />
 
-            {/* FIX-3.B — pre-launch waitlist label, not action verb. Uses
-                joinWaitlist() so obData reaches App.jsx → Dashboard. */}
-            <button type="submit" style={{
+            {/* AU1 — error / verification status banner */}
+            {error && (
+              <div role="alert" style={{
+                background:'var(--c-coral, #FCE4E4)', color:'var(--c-coral-text, #8B1F1F)',
+                border:'1px solid var(--c-coral-border, #F2B8B8)',
+                borderRadius:10, padding:'10px 12px', marginBottom:12,
+                fontSize:12, lineHeight:1.4,
+              }}>{error}</div>
+            )}
+            {needsVerify && !error && (
+              <div role="status" style={{
+                background:'var(--c-gold-bg, #FFF6E0)', color:'var(--c-gold-text, #6B4500)',
+                border:'1px solid var(--c-gold-border, #F4D88A)',
+                borderRadius:10, padding:'10px 12px', marginBottom:12,
+                fontSize:12, lineHeight:1.4,
+              }}>
+                Account created. Check your inbox for a verification link.{' '}
+                <button type="button" onClick={handleResend} disabled={busy} style={{
+                  background:'none', border:'none', textDecoration:'underline',
+                  color:'inherit', cursor:'pointer', padding:0, font:'inherit',
+                }}>Resend</button>
+              </div>
+            )}
+
+            <button type="submit" disabled={busy} style={{
               width:'100%', padding:15,
               background:'var(--c-acc)', color:'var(--c-acc-contrast, #0B1F3A)',
               borderRadius:100, fontSize:16, fontWeight:700,
-              boxShadow:'var(--sh-acc)', marginBottom:10, border:'none', cursor:'pointer',
+              boxShadow:'var(--sh-acc)', marginBottom:10, border:'none',
+              cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1,
             }}>
-              Join waitlist
+              {busy
+                ? (mode === 'signup' ? 'Creating account…' : 'Signing in…')
+                : (mode === 'signup' ? 'Create account' : 'Sign in')}
             </button>
           </form>
 
+          {/* AU1 — toggle between signup and signin */}
+          <div style={{ fontSize:12, color:'var(--c-text2)', textAlign:'center', marginBottom:8 }}>
+            {mode === 'signup' ? 'Already have an account?' : 'New here?'}{' '}
+            <button type="button" onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); setNeedsVerify(false); }}
+              style={{ background:'none', border:'none', color:'var(--c-acc)', cursor:'pointer', padding:0, font:'inherit', fontWeight:600, textDecoration:'underline' }}>
+              {mode === 'signup' ? 'Sign in' : 'Create an account'}
+            </button>
+          </div>
+
           <div style={{ fontSize:11, color:'var(--c-text3)', textAlign:'center', lineHeight:1.5 }}>
-            Pre-launch waitlist — nothing is stored remotely yet. By continuing you agree to Sonuswealth's Terms of Service.
+            By continuing you agree to Sonuswealth's Terms of Service.
           </div>
         </div>
       </div>

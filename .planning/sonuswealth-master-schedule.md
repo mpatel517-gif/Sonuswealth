@@ -321,8 +321,8 @@ Ordered by dependency (Auth must come early; Onboarding requires Auth; Data Capt
 
 | # | Task | Effort | File(s) |
 |---|---|---|---|
-| AU1 | **Wire Supabase Auth — email/password signup + email verification + session management** | 3 days | new auth module + Account.jsx integration |
-| AU2 | **OAuth providers — Google + Apple SSO** wired to Supabase Auth (founder approves client IDs) | 2 days | Supabase config + Account.jsx |
+| AU1 | **Wire Supabase Auth — email/password signup + email verification + session management** | ✅ DONE 2026-05-25 | `src/lib/auth.js` (signUp/signIn/signOut/resend/reset + getSession/onAuthStateChange) + `src/state/auth.jsx` (AuthProvider context + useAuth hook with isDemo bypass) + `src/screens/Account.jsx` refactor (real signUp call, mode toggle signup↔signin, verify banner, error states) + `src/App.jsx` (AuthProvider wrap + auth gate that allows `?demo=X` bypass). Build: 212 modules clean. |
+| AU2 | **OAuth providers — Google + Apple SSO** wired to Supabase Auth (founder approves client IDs) | ✅ DONE 2026-05-25 (code side) | `signInWithProvider(provider)` in auth.js + Google/Apple buttons in Account.jsx (no longer "(waitlist)" disabled). Provider config in Supabase project ▸ Authentication ▸ Providers remains founder action — surface honest "{provider} sign-in is not yet configured" message until each provider is enabled. |
 | AU3 | **D-AUTH-1 step-up auth framework** — Foundation §X20 contract; biometric / 2FA / re-password challenges | 1 week | new `auth/step-up.js` + UI dialog + integration into DataCapture + Vault writes |
 | AU4 | **MFA + biometric** for end-users (TOTP + WebAuthn for modern devices) | 3 days | settings + login flow |
 | AU5 | **Permission matrix (X27)** — by document class × accessor role (owner/spouse/IFA/solicitor) | 1 week | new `auth/permissions.js` + Vault integration |

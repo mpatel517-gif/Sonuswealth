@@ -6,6 +6,7 @@ import Account       from './screens/Account.jsx'
 import Dashboard     from './screens/Dashboard.jsx'
 import PersonaSelect from './screens/PersonaSelect.jsx'
 import { EventsProvider, useEffectiveEntity } from './state/events.jsx'
+import { AuthProvider, useAuth } from './state/auth.jsx'
 import { bootRules } from './lib/boot-rules.js'
 
 import personaA from './rules/personas/persona-a.json'
@@ -94,11 +95,29 @@ function buildUserPersona(obData) {
 // Inner component — read effective entity via hook (must be inside provider)
 function AppInner() {
   const urlParams = readUrlParams()
-  const [screen,           setScreen]            = useState(urlParams.demo && ENTITIES[urlParams.demo] ? 'app' : 'welcome')
+  // AU1 — auth gate. Demo URL param always wins (founder demos, snap script).
+  // Otherwise: authenticated returning user lands on app; unauth lands on welcome.
+  const auth = useAuth()
+  const isDemoMode = !!(urlParams.demo && ENTITIES[urlParams.demo])
+  const initialScreen = isDemoMode ? 'app'
+    : (auth.isAuthenticated ? 'app' : 'welcome')
+  const [screen,           setScreen]            = useState(initialScreen)
   const [theme,            setTheme]             = useState('dark')
-  const [persona,          setPersona]           = useState(urlParams.demo && ENTITIES[urlParams.demo] ? urlParams.demo : 'a')
+  const [persona,          setPersona]           = useState(isDemoMode ? urlParams.demo : 'a')
   const [obData,           setObData]            = useState({ age: 38, focus: [], setup: [] })
   const [showPersonaSelect, setShowPersonaSelect] = useState(false)
+
+  // Sync auth state changes — if a returning user's session restores async,
+  // jump to app. If they sign out from inside Dashboard, return to welcome.
+  useEffect(() => {
+    if (isDemoMode) return
+    if (auth.loading) return
+    if (auth.isAuthenticated && screen === 'welcome') {
+      setScreen('app')
+    } else if (!auth.isAuthenticated && screen === 'app') {
+      setScreen('welcome')
+    }
+  }, [auth.isAuthenticated, auth.loading, isDemoMode, screen])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -183,8 +202,10 @@ function AppInner() {
 
 export default function App() {
   return (
-    <EventsProvider>
-      <AppInner />
-    </EventsProvider>
+    <AuthProvider>
+      <EventsProvider>
+        <AppInner />
+      </EventsProvider>
+    </AuthProvider>
   )
 }

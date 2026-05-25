@@ -1072,131 +1072,76 @@ git commit -m "refactor(MyMoney): migrate top-level from direct fq-calc to useRi
 
 ---
 
-### Task W0-T9: Migrate PensionDrillDown to useRipple
+### Task W0-T9: Verify drilldowns render unchanged after parent migration
+
+> **PLAN REVISION 2026-05-25 (W0-T1 audit finding):** The original plan split this into 6 separate tasks (T9 PensionDrillDown migration … T14 InvestmentsDrillDown migration). W0-T1 audit revealed that **5 of 6 drilldown files have ZERO fq-calc imports.** Only `src/screens/MyMoney.jsx` (parent) imports fq-calc. Drilldowns receive entity-derived data via props. So once W0-T8 migrates the parent, drilldowns automatically benefit. The 6-task split was over-engineered for hypothetical migrations that don't exist.
+>
+> Tasks W0-T10 through W0-T14 are merged into this T9 verification task. Plan honesty preserved over plan adherence.
 
 **Files:**
-- Modify: `src/screens/MyMoney.jsx` (PensionDrillDown function at line ~1738)
+- Run: `npm run dev`
+- Visit: `http://localhost:5174/?demo=mrt&tab=money`
+- Compare against: `docs/superpowers/plans/wave0-baseline-snap.md` (from W0-T2)
 
-- [ ] **Step 1: Locate PensionDrillDown function**
+- [ ] **Step 1: Confirm drilldowns have no fq-calc imports**
 
-Run: `Grep tool with pattern "function PensionDrillDown" in src/screens/MyMoney.jsx`
-Expected: one match at approximately line 1738.
+Run: Grep tool with pattern `from.*fq-calculator` in `src/components/MyMoney/`
+Expected: zero matches across PropertyDrillDown / BusinessDrillDown / ProtectionDrillDown / LiabilitiesDrillDown / InvestmentsDrillDown.
 
-- [ ] **Step 2: Audit fq-calc usage inside PensionDrillDown**
+If any drilldown unexpectedly has imports (e.g. a future commit added them), escalate before continuing.
 
-Read lines 1738 onwards in MyMoney.jsx. Identify every reference to imports from fq-calculator.js used inside the function (or its children). Common candidates: `calcAnnualAllowance`, `calcLSAUsage`, `calcCarryForward`, `calcMPAA`, `projectedPensionValue`, `dbProjectedPension`, `sippihtExposure`, `isRuleActive`, `chargeImpact`, `contributionsYTD`.
+- [ ] **Step 2: Visual verification — every drilldown renders identically post-W0-T8**
 
-- [ ] **Step 3: For each, decide ripple-scope or keep-direct**
+For each of the 5 drilldown panels, on `?demo=mrt&tab=money`:
 
-`calcAnnualAllowance`, `calcLSAUsage`, `calcCarryForward`, `calcMPAA` → these come from `allowanceTracker` already. If they're already in ripple's `tax` scope via the driver-engine, route through ripple. Otherwise, accept direct imports for tax-engine helpers in Wave 0 — promote to ripple in Wave 5.
+1. Expand the L1 category tile
+2. Click "View detail →" to open the drilldown
+3. Verify the values displayed match the baseline snap from W0-T2
 
-- [ ] **Step 4: Apply the migration**
+Expected against Mr T:
+- **PensionDrillDown** → 4 DC wrappers (AJ Bell £92.4k, SSAS £48.7k, Aviva legacy £12.9k, Nest £13.5k) + 1 DB scheme (Railway, CETV £38k); AA used £18,750; LSA £0 used; SIPP IHT chip "enters estate Apr 2027"
+- **PropertyDrillDown** → Residence £385k + BTL Manchester £198k; rental income £15k/yr; S24 chip "fully-restricted"
+- **BusinessDrillDown** → Synthetic Tech equity £145k (BPR qualifying), EMI £18k (8k vested + 12k unvested), DLA £18.5k credit
+- **ProtectionDrillDown** → 5 policies (Life £350k in trust, CI £150k, IP £3.25k/mo, RLP £400k, Key Person £250k); total premiums ≈ £194/mo
+- **LiabilitiesDrillDown** → Residence mortgage £215k @ 3.9%, BTL mortgage £124k @ 5.4%, student loan £15.8k, Amex £1.85k
+- **InvestmentsDrillDown** (bundled — splits in Wave 1) → Vanguard ISA £38.4k + Barclays Cash ISA £8.2k + Interactive Investor GIA £24.8k (cost base £19.4k) + Octopus EIS £15k + SyndicateRoom SEIS £8k + Octopus VCT £12.5k + Pru Onshore Bond £22k + Quilter Offshore Bond £18.5k
 
-Edit PensionDrillDown to consume `ripple` prop passed from parent (MyMoney). Add `ripple` to the destructured props. Replace ripple-scoped calls.
+If any drilldown renders blank, throws, or shows different values than baseline: escalate to BLOCKED before W0-T15 regression. F4 must be behaviour-neutral.
 
-- [ ] **Step 5: Verify Pension drill renders identically**
+- [ ] **Step 3: Console + DevTools sweep**
 
-Visit `?demo=mrt&tab=money`, expand Pensions, click drill. Verify all 4 wrappers (AJ Bell, SSAS, Aviva legacy, Nest) + 1 DB scheme render with the same values as baseline snap from W0-T2.
+Open DevTools console. Click through each drilldown. Verify zero errors / warnings related to ripple, useRipple, or undefined entity properties.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Document verification in inventory**
+
+Append to `docs/superpowers/plans/wave0-fq-import-inventory.md`:
+
+```markdown
+## W0-T9 — Drilldown verification (post-W0-T8 parent migration)
+- PensionDrillDown: ✅ renders identically
+- PropertyDrillDown: ✅
+- BusinessDrillDown: ✅
+- ProtectionDrillDown: ✅
+- LiabilitiesDrillDown: ✅
+- InvestmentsDrillDown: ✅
+- Console: 0 errors
+- Conclusion: F4 migration is behaviour-neutral at the drilldown layer; no per-drilldown migration needed.
+```
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add src/screens/MyMoney.jsx
-git commit -m "refactor(PensionDrillDown): migrate to useRipple (Wave 0 F4)"
+git add docs/superpowers/plans/wave0-fq-import-inventory.md
+git commit -m "test(Wave 0): verify all 6 drilldowns render unchanged post-F4 parent migration"
 ```
 
 ---
 
-### Task W0-T10: Migrate PropertyDrillDown to useRipple
+### Task W0-T10 — T14: SUPERSEDED
 
-**Files:**
-- Modify: `src/components/MyMoney/PropertyDrillDown.jsx`
-
-- [ ] **Step 1: Audit fq-calc imports in the file**
-
-Read `src/components/MyMoney/PropertyDrillDown.jsx`. Identify every `from '../../engine/fq-calculator.js'` import.
-
-- [ ] **Step 2: Apply migration per W0-T9 template**
-
-Replace ripple-scoped calls with `useRipple`. Keep pure helpers (`lifeStageFor`, `formatCurrency`) as direct imports.
-
-- [ ] **Step 3: Verify Property drill renders identically against Mr T**
-
-Visit `?demo=mrt&tab=money`, expand Property, click drill. Verify Residence + BTL Manchester both render with rental P&L, S24 position.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/components/MyMoney/PropertyDrillDown.jsx
-git commit -m "refactor(PropertyDrillDown): migrate to useRipple (Wave 0 F4)"
-```
-
----
-
-### Task W0-T11: Migrate BusinessDrillDown to useRipple
-
-**Files:**
-- Modify: `src/components/MyMoney/BusinessDrillDown.jsx`
-
-- [ ] **Step 1: Apply same migration pattern as W0-T10**
-- [ ] **Step 2: Verify Business drill renders identically against Mr T (Synthetic Tech equity £145k + EMI £18k + DLA £18.5k)**
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/MyMoney/BusinessDrillDown.jsx
-git commit -m "refactor(BusinessDrillDown): migrate to useRipple (Wave 0 F4)"
-```
-
----
-
-### Task W0-T12: Migrate ProtectionDrillDown to useRipple
-
-**Files:**
-- Modify: `src/components/MyMoney/ProtectionDrillDown.jsx`
-
-- [ ] **Step 1: Apply same migration pattern**
-- [ ] **Step 2: Verify Protection drill renders identically (5 Mr T policies)**
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/MyMoney/ProtectionDrillDown.jsx
-git commit -m "refactor(ProtectionDrillDown): migrate to useRipple (Wave 0 F4)"
-```
-
----
-
-### Task W0-T13: Migrate LiabilitiesDrillDown to useRipple
-
-**Files:**
-- Modify: `src/components/MyMoney/LiabilitiesDrillDown.jsx`
-
-- [ ] **Step 1: Apply same migration pattern**
-- [ ] **Step 2: Verify Liabilities drill renders identically (4 Mr T liabilities)**
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/MyMoney/LiabilitiesDrillDown.jsx
-git commit -m "refactor(LiabilitiesDrillDown): migrate to useRipple (Wave 0 F4)"
-```
-
----
-
-### Task W0-T14: Migrate InvestmentsDrillDown to useRipple
-
-**Files:**
-- Modify: `src/components/MyMoney/InvestmentsDrillDown.jsx`
-
-- [ ] **Step 1: Apply same migration pattern**
-- [ ] **Step 2: Verify Investments drill renders identically (ISA + GIA + EIS/SEIS/VCT + Bonds — pre-split bundle)**
-
-This panel gets split into 4 in Wave 1 (ISAL3, GIAL3, TaxAdvantagedL3, BondsL3). For now it stays bundled.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/MyMoney/InvestmentsDrillDown.jsx
-git commit -m "refactor(InvestmentsDrillDown): migrate to useRipple (Wave 0 F4)"
-```
+> Per W0-T1 finding, tasks W0-T10 through W0-T14 are **superseded** by the collapsed W0-T9 verification task above. The 5 drilldown files have no fq-calc imports to migrate. Approved by founder 2026-05-25.
+>
+> Numbering preserved (no renumber) to keep diff history readable. Skip ahead to W0-T15.
 
 ---
 

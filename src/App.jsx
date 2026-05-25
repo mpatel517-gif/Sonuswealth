@@ -173,6 +173,16 @@ function AppInner() {
           onSelect={(id) => {
             setPersona(id)
             setShowPersonaSelect(false)
+            // FIX 2026-05-25: write ?demo=X to the URL so isDemoMode flips
+            // true on the next render. Without this, the auth useEffect at
+            // line 113 bounces unauthenticated demo users from screen='app'
+            // back to 'welcome' — infinite loop. Side benefit: the demo state
+            // is now bookmarkable and snap-script compatible.
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.set('demo', id)
+              window.history.replaceState({}, '', url.toString())
+            }
             setScreen('app')
           }}
           onBack={() => setShowPersonaSelect(false)}

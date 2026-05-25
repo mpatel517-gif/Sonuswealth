@@ -16,6 +16,129 @@ import {
 
 import { evaluate as evaluateEligibility } from '../../src/engine/eligibility.js';
 
+// ─── Balance-sheet summariser ────────────────────────────────────────────────
+// Mirrors fq-calculator.js netWorth() walking logic: handles both flat schema
+// (assets.cash.total, assets.residence.value, ...) AND nested array schema
+// (assets.property[], assets.pensions[], assets.investments[], assets.bank[]).
+// Returns a per-category breakdown that sums to the engine's NW within rounding.
+function summariseBalanceSheet(entity, { nw, gr, inv }) {
+  const a = entity?.assets || {};
+  const l = entity?.liabilities || {};
+
+  const sumArr = (arr, key = 'value') =>
+    Array.isArray(arr)
+      ? arr.reduce((s, x) => s + (Number(x?.[key]) || Number(x?.amount) || Number(x?.total) || 0), 0)
+      : 0;
+
+  // Per-category flat OR nested resolution. Mirror engine helpers
+  // (_propertyTotal etc) which SUM flat + nested for each category, not
+  // all-or-nothing. Previously an array on any one category (e.g. a.property[])
+  // wiped out flat SIPP/ISA/cash values for personas with mixed schemas (e.g.
+  // Bruce Wayne — flat SIPP £850k + BTL array). See triage BUG-3.
+  const flatCash      = Number(a.cash?.total)      || 0;
+  const flatIsa       = Number(a.isa?.value)       || 0;
+  const flatSipp      = Number(a.sipp?.total)      || 0;
+  const flatResidence = Number(a.residence?.value) || 0;
+  const flatPortfolio = Number(a.portfolio?.value) || 0;
+
+  const nestedCash        = sumArr(a.bank, 'balance') + sumArr(a.bank, 'value');
+  const nestedSipp        = sumArr(a.pensions, 'value') + sumArr(a.pensions, 'balance') + sumArr(a.pensions, 'cetv');
+  const nestedProperty    = sumArr(a.property, 'value');
+  const nestedInvestments = sumArr(a.investments, 'value');
+  const nestedIsa = sumArr(
+    (a.investments || []).filter(x => /isa/i.test(x?.wrapper || x?.type || '')),
+    'value'
+  );
+
+  // Each category: flat + nested (canonical helper pattern). Engine's
+  // _propertyTotal walks both; ihtDynamic now does too after the BUG-1 fix.
+  const cash      = flatCash      + nestedCash;
+  const sipp      = flatSipp      + nestedSipp;
+  const property  = flatResidence + nestedProperty;
+  const portfolio = flatPortfolio + nestedInvestments;
+  const isa       = flatIsa       + nestedIsa;
+
+  // Other asset classes not in core NW but worth surfacing for the validator
+  const business    = Number(a.business?.value) || Number(entity?.company?.companyValue) || 0;
+  const alternatives = sumArr(a.alternatives, 'value') + sumArr(a.collectibles, 'value');
+  const gia = (Number(a.gia?.value) || 0)
+            + sumArr((a.investments || []).filter(x => {
+                const t = String(x?.wrapper || x?.type || '').toLowerCase();
+                return t === 'gia' || t.includes('general-investment');
+              }), 'value');
+  const protection  = Number(a.protection?.cash_value) || 0;
+
+  // Liabilities
+  const mortgageOutstanding =
+      Number(l.mortgage?.outstanding) || sumArr(l.mortgages, 'outstanding') || 0;
+  const loans       = Number(l.loans?.total)    || sumArr(l.loans, 'outstanding') || 0;
+  const credit_cards = Number(l.credit_cards?.balance) || 0;
+  const other_debt  = Number(l.other?.total)    || 0;
+
+  return {
+    cash, isa, sipp, property, portfolio,
+    business, alternatives, gia, protection,
+    mortgage: mortgageOutstanding,
+    loans, credit_cards, other_debt,
+    net_worth_alias: Math.round(nw),
+    guardrail: Math.round(gr),
+    investable: Math.round(inv),
+  };
+}
+
+// ── Asset-allocation totalisers (rough, schema-tolerant) ─────────────────────
+// For DeepSeek visibility only. Approximations: split each invested wrapper into
+// equity vs bond using the persona's equityPct/bondPct fields when present,
+// otherwise assume 60/40 for SIPP/ISA/GIA. Property is its own bucket.
+function _cashTotalQuick(e) {
+  const a = e?.assets || {};
+  const flat = Number(a.cash?.total) || Number(a.cash?.own) || 0;
+  const nested = Array.isArray(a.bank)
+    ? a.bank.reduce((s, b) => s + (Number(b.balance_gbp ?? b.balance) || 0), 0) : 0;
+  return flat + nested;
+}
+function _propertyTotalQuick(e) {
+  const a = e?.assets || {};
+  const flat = (Number(a.residence?.value) || 0) * (Number(a.residence?.ownershipShare) || 1);
+  const nested = Array.isArray(a.property)
+    ? a.property.reduce((s, p) =>
+        s + (Number(p.value_gbp ?? p.value) || 0) * (Number(p.beneficial_interest_this_individual ?? 1) || 1), 0)
+    : 0;
+  return flat + nested;
+}
+function _splitInvested(e) {
+  const a = e?.assets || {};
+  // Per-wrapper totals (flat + nested matching the engine helpers).
+  const sippFlat   = Number(a.sipp?.total) || 0;
+  const sippNested = Array.isArray(a.pensions)
+    ? a.pensions.reduce((s, p) => s + (Number(p.value ?? p.balance ?? p.cetv) || 0), 0) : 0;
+  const sipp = sippFlat + sippNested;
+
+  const isaFlat = Number(a.isa?.value) || 0;
+  const isaNested = Array.isArray(a.investments)
+    ? a.investments.filter(i => /isa/i.test(i?.wrapper || i?.type || ''))
+                   .reduce((s, i) => s + (Number(i.value ?? i.balance) || 0), 0) : 0;
+  const isa = isaFlat + isaNested;
+
+  const giaFlat = a.portfolio?.bpr ? 0 : (Number(a.portfolio?.value) || 0);
+  const giaNested = Array.isArray(a.investments)
+    ? a.investments.filter(i => {
+        const t = String(i?.wrapper || i?.type || '').toLowerCase();
+        return t === 'gia' || t.includes('general-investment');
+      }).reduce((s, i) => s + (Number(i.value ?? i.balance) || 0), 0) : 0;
+  const gia = giaFlat + giaNested;
+
+  const totalInvested = sipp + isa + gia;
+  // Equity/bond split: use persona's stated equityPct on sipp, else assume 60/40.
+  const eqPct = Number(a.sipp?.equityPct ?? a.isa?.equityPct ?? a.portfolio?.equityPct) || 0.6;
+  return {
+    equity: Math.round(totalInvested * eqPct),
+    bond:   Math.round(totalInvested * (1 - eqPct)),
+  };
+}
+function _equityTotalQuick(e) { return _splitInvested(e).equity; }
+function _bondTotalQuick(e)   { return _splitInvested(e).bond; }
+
 // Year delta from 2026/27 baseline (the year personas are profiled for)
 const BASELINE_YEAR = 2026;
 function yearOffset(taxYear) {
@@ -98,12 +221,23 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
                 || 0;
   const targetIncome = adjustedPersona.targetIncome ?? 0;
   const employmentInc = adjustedPersona.income?.salary || adjustedPersona.income?.employment || 0;
-  // Effective drawdown: actual drawdown OR (targetIncome minus other income for retiring personas)
-  const effectiveDrawdown = drawdown > 0
-    ? drawdown
-    : (targetIncome > 0 && (adjustedPersona.lifeStage >= 5 || adjustedPersona.lifeStageName?.toLowerCase().includes('decumulation') || adjustedPersona.lifeStageName?.toLowerCase().includes('legacy'))
-        ? Math.max(0, targetIncome - employmentInc)
-        : 0);
+
+  // Effective drawdown resolution (founder direction 2026-05-25 — option 1 with source tag):
+  //   1. Explicit drawdown number → use it
+  //   2. Else, if targetIncome > employmentInc, the gap is drawn from invested assets.
+  //      Applies to all life stages (was previously gated to decumulation/legacy only),
+  //      because transition-stage personas can also be drawing from SIPP/ISA to top up.
+  //   3. If neither, zero drawdown.
+  // See triage BUG-2 + master plan §2.2.
+  let effectiveDrawdown = 0;
+  let drawdownSource = 'none';
+  if (drawdown > 0) {
+    effectiveDrawdown = drawdown;
+    drawdownSource = 'explicit';
+  } else if (targetIncome > employmentInc) {
+    effectiveDrawdown = Math.max(0, targetIncome - employmentInc);
+    drawdownSource = employmentInc > 0 ? 'topup' : 'inferred_from_target';
+  }
   const grossIncome = effectiveDrawdown + employmentInc;
 
   // State pension by age (UK: 66 currently, 67 from 2028)
@@ -113,13 +247,14 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
     ? (adjustedPersona.income?.state_pension ?? adjustedPersona.statePensionAmount ?? 12548)
     : 0;
 
+  // Income tax must be computed on the COMBINED gross — previously this passed
+  // only drawdown OR only employment, so personas with BOTH (e.g. Tony Stark:
+  // £50k salary + £45k drawdown topup) had tax dramatically under-reported.
+  // See triage BUG-4 (post-2026-05-25 re-run).
   try {
-    if (effectiveDrawdown > 0) {
-      // Pre-SPA personas have no state pension — pass 0 explicitly
-      incTax = incomeTax(effectiveDrawdown, statePension, null);
-    } else if (employmentInc > 0) {
-      // Employment income — no state pension overlay (working age)
-      incTax = incomeTax(employmentInc, 0, null);
+    const taxableEarnings = effectiveDrawdown + employmentInc;
+    if (taxableEarnings > 0) {
+      incTax = incomeTax(taxableEarnings, statePension, null);
     }
   } catch (e) { errors.push(`incomeTax: ${e.message}`); }
 
@@ -154,21 +289,12 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
           beneficiary_rate: iht.beneficiaryRate, sipp_contribution: iht.sippContribution }
       : null,
     cost_of_inaction: Math.round(coi || 0),
-    balance_sheet: {
-      cash: adjustedPersona.assets?.cash?.total ?? 0,
-      isa: adjustedPersona.assets?.isa?.value ?? 0,
-      sipp: adjustedPersona.assets?.sipp?.total ?? 0,
-      property: adjustedPersona.assets?.residence?.value ?? 0,
-      portfolio: adjustedPersona.assets?.portfolio?.value ?? 0,
-      mortgage: adjustedPersona.liabilities?.mortgage?.outstanding ?? 0,
-      net_worth_alias: Math.round(nw),
-      guardrail: Math.round(gr),
-      investable: Math.round(inv),
-    },
+    balance_sheet: summariseBalanceSheet(adjustedPersona, { nw, gr, inv }),
     pl: {
       gross_income: Math.round(grossIncome + statePension),
       drawdown: Math.round(drawdown),
       effective_drawdown: Math.round(effectiveDrawdown),
+      drawdown_source: drawdownSource,
       employment_income: Math.round(employmentInc),
       state_pension: Math.round(statePension),
       target_income: Math.round(targetIncome),
@@ -187,11 +313,49 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
       annual_surplus: surplus,
       surplus,
       funded_ratio: funded,
+      annual_expenditure: (adjustedPersona.monthlyExpenditure != null)
+        ? Math.round(adjustedPersona.monthlyExpenditure * 12)
+        : null,
+      sources: {
+        drawdown: Math.round(effectiveDrawdown),
+        employment: Math.round(employmentInc),
+        state_pension: Math.round(statePension),
+      },
     },
     estate: {
       iht_exposure: Math.round(iht?.iht ?? 0),
       cost_of_inaction: Math.round(coi || 0),
     },
+    protection: (() => {
+      const p = adjustedPersona.assets?.protection || {};
+      const life = p.lifeInsurance || {};
+      const ci   = p.criticalIllness || {};
+      const ip   = p.incomeProtection || {};
+      return {
+        life_cover: Number(life.amount) || 0,
+        life_in_trust: !!life.inTrust,
+        critical_illness: Number(ci.amount) || 0,
+        income_protection_monthly: Number(ip.monthlyBenefit) || 0,
+        has_any: !!(life.exists || ci.exists || ip.exists),
+      };
+    })(),
+    asset_allocation: (() => {
+      const eq = (Number(adjustedPersona.assets?.sipp?.equityPct) || 0) +
+                 (Number(adjustedPersona.assets?.isa?.equityPct) || 0);
+      const cash    = _cashTotalQuick(adjustedPersona);
+      const eqVal   = _equityTotalQuick(adjustedPersona);
+      const bondVal = _bondTotalQuick(adjustedPersona);
+      const propVal = _propertyTotalQuick(adjustedPersona);
+      const total   = cash + eqVal + bondVal + propVal;
+      if (total === 0) return null;
+      return {
+        cash_pct:     +(cash / total * 100).toFixed(1),
+        equity_pct:   +(eqVal / total * 100).toFixed(1),
+        bond_pct:     +(bondVal / total * 100).toFixed(1),
+        property_pct: +(propVal / total * 100).toFixed(1),
+        total_classified: Math.round(total),
+      };
+    })(),
     risk: { total: riskResult?.total, dims: riskResult?.dims, band: riskResult?.band?.name },
     fq:   { total: fqResult?.total, dims: fqResult?.dims, band: fqResult?.band?.name },
     // Couple context for spousal exemption modeling

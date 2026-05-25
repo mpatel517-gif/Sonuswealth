@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "title": "Sonuswealth Global Regression Test Baseline Matrix",
+    "version": "2.0.0",
+    "scopes": ["Income Tax", "Personal Allowance Taper", "SIPP Drawdown", "Balance Sheet Sweeps"]
+  },
+  "personas": [
+    {
+      "id": "BRUCE_WAYNE",
+      "name": "Bruce Wayne",
+      "archetype": "single-transition",
+      "historical_timeline": {
+        "2021": { "age": 57, "inputs": { "employment": { "salary": 0, "bonus": 0 }, "property": { "primary_residence_value": 650000, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 850000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 120000, "gia_balance": 180000, "unquoted_shares": 500000 }, "income": { "dividend_income": 5000, "interest_income": 2000 } } },
+        "2022": { "age": 58, "inputs": { "employment": { "salary": 0, "bonus": 0 }, "property": { "primary_residence_value": 680000, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 857650, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 125000, "gia_balance": 181620, "unquoted_shares": 500000 }, "income": { "dividend_income": 5000, "interest_income": 2000 } } },
+        "2023": { "age": 59, "inputs": { "employment": { "salary": 0, "bonus": 0 }, "property": { "primary_residence_value": 700000, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 890240, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 130000, "gia_balance": 188520, "unquoted_shares": 500000 }, "income": { "dividend_income": 5500, "interest_income": 2200 } } },
+        "2024": { "age": 60, "inputs": { "employment": { "salary": 0, "bonus": 0 }, "property": { "primary_residence_value": 720000, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 936530, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 140000, "gia_balance": 198320, "unquoted_shares": 500000 }, "income": { "dividend_income": 5500, "interest_income": 2200 } } },
+        "2025": { "age": 61, "inputs": { "employment": { "salary": 0, "bonus": 0 }, "property": { "primary_residence_value": 740000, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 950570, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 145000, "gia_balance": 201200, "unquoted_shares": 500000 }, "income": { "dividend_income": 5000, "interest_income": 2000 } } },
+        "2026": { "age": 62, "inputs": { "employment": { "salary": 0, "bonus": 0 }, "property": { "primary_residence_value": 750000, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 850000, "drawdown_planned_annual": 40000 }, "investments": { "isa_balance": 150000, "gia_balance": 200000, "unquoted_shares": 500000 }, "income": { "dividend_income": 5000, "interest_income": 2000 } } }
+      }
+    },
+    {
+      "id": "TONY_STARK",
+      "name": "Tony Stark",
+      "archetype": "ltd-director-consolidation",
+      "historical_timeline": {
+        "2021": { "age": 43, "inputs": { "employment": { "salary": 12570, "bonus": 0 }, "property": { "primary_residence_value": 1000000, "mortgage_balance": 250000 }, "pensions": { "sipp_balance": 500000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 150000, "gia_balance": 200000, "unquoted_shares": 1500000 }, "income": { "dividend_income": 120000, "interest_income": 5000 } } },
+        "2022": { "age": 44, "inputs": { "employment": { "salary": 12570, "bonus": 0 }, "property": { "primary_residence_value": 1050000, "mortgage_balance": 240000 }, "pensions": { "sipp_balance": 520000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 160000, "gia_balance": 210000, "unquoted_shares": 1600000 }, "income": { "dividend_income": 130000, "interest_income": 6000 } } },
+        "2023": { "age": 45, "inputs": { "employment": { "salary": 12570, "bonus": 0 }, "property": { "primary_residence_value": 1100000, "mortgage_balance": 230000 }, "pensions": { "sipp_balance": 560000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 170000, "gia_balance": 230000, "unquoted_shares": 1700000 }, "income": { "dividend_income": 140000, "interest_income": 7000 } } },
+        "2024": { "age": 46, "inputs": { "employment": { "salary": 12570, "bonus": 0 }, "property": { "primary_residence_value": 1150000, "mortgage_balance": 220000 }, "pensions": { "sipp_balance": 610000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 180000, "gia_balance": 250000, "unquoted_shares": 1800000 }, "income": { "dividend_income": 140000, "interest_income": 8000 } } },
+        "2025": { "age": 47, "inputs": { "employment": { "salary": 12570, "bonus": 0 }, "property": { "primary_residence_value": 1180000, "mortgage_balance": 210000 }, "pensions": { "sipp_balance": 650000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 190000, "gia_balance": 280000, "unquoted_shares": 1900000 }, "income": { "dividend_income": 150000, "interest_income": 9000 } } },
+        "2026": { "age": 48, "inputs": { "employment": { "salary": 12570, "bonus": 0 }, "property": { "primary_residence_value": 1200000, "mortgage_balance": 200000 }, "pensions": { "sipp_balance": 700000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 200000, "gia_balance": 300000, "unquoted_shares": 2000000 }, "income": { "dividend_income": 150000, "interest_income": 10000 } } }
+      }
+    },
+    {
+      "id": "FRED_WILMA",
+      "name": "Fred & Wilma",
+      "archetype": "couple-transition",
+      "historical_timeline": {
+        "2025": { "age": 64, "inputs": { "employment": { "salary": 80000, "bonus": 0 }, "property": { "primary_residence_value": 650000, "mortgage_balance": 50000 }, "pensions": { "sipp_balance": 400000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 100000, "gia_balance": 50000, "unquoted_shares": 0 }, "income": { "dividend_income": 3000, "interest_income": 1500 } } },
+        "2026": { "age": 65, "inputs": { "employment": { "salary": 40000, "bonus": 0 }, "property": { "primary_residence_value": 660000, "mortgage_balance": 40000 }, "pensions": { "sipp_balance": 450000, "drawdown_planned_annual": 15000 }, "investments": { "isa_balance": 110000, "gia_balance": 60000, "unquoted_shares": 0 }, "income": { "dividend_income": 3000, "interest_income": 1500 } } }
+      }
+    },
+    {
+      "id": "HERMIONE_GRANGER",
+      "name": "Hermione Granger",
+      "archetype": "single-foundation",
+      "historical_timeline": {
+        "2025": { "age": 27, "inputs": { "employment": { "salary": 42000, "bonus": 2000 }, "property": { "primary_residence_value": 0, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 12000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 6000, "gia_balance": 1000, "unquoted_shares": 0 }, "income": { "dividend_income": 100, "interest_income": 400 } } },
+        "2026": { "age": 28, "inputs": { "employment": { "salary": 45000, "bonus": 3000 }, "property": { "primary_residence_value": 0, "mortgage_balance": 0 }, "pensions": { "sipp_balance": 15000, "drawdown_planned_annual": 0 }, "investments": { "isa_balance": 8000, "gia_balance": 2000, "unquoted_shares": 0 }, "income": { "dividend_income": 200, "interest_income": 500 } } }
+      }
+    }
+  ]
+}

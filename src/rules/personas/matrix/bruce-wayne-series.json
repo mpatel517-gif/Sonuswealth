@@ -1,0 +1,67 @@
+{
+  "id": "BRUCE_WAYNE",
+  "name": "Bruce Wayne",
+  "archetype": "single-transition",
+  "historical_timeline": {
+    "2021": {
+      "age": 57,
+      "inputs": {
+        "employment": { "salary": 0, "bonus": 0 },
+        "property": { "primary_residence_value": 650000, "mortgage_balance": 0 },
+        "pensions": { "sipp_balance": 850000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 120000, "gia_balance": 180000, "unquoted_shares": 500000 },
+        "income": { "dividend_income": 5000, "interest_income": 2000 }
+      }
+    },
+    "2022": {
+      "age": 58,
+      "inputs": {
+        "employment": { "salary": 0, "bonus": 0 },
+        "property": { "primary_residence_value": 680000, "mortgage_balance": 0 },
+        "pensions": { "sipp_balance": 857650, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 125000, "gia_balance": 181620, "unquoted_shares": 500000 },
+        "income": { "dividend_income": 5000, "interest_income": 2000 }
+      }
+    },
+    "2023": {
+      "age": 59,
+      "inputs": {
+        "employment": { "salary": 0, "bonus": 0 },
+        "property": { "primary_residence_value": 700000, "mortgage_balance": 0 },
+        "pensions": { "sipp_balance": 890240, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 130000, "gia_balance": 188520, "unquoted_shares": 500000 },
+        "income": { "dividend_income": 5500, "interest_income": 2200 }
+      }
+    },
+    "2024": {
+      "age": 60,
+      "inputs": {
+        "employment": { "salary": 0, "bonus": 0 },
+        "property": { "primary_residence_value": 720000, "mortgage_balance": 0 },
+        "pensions": { "sipp_balance": 936530, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 140000, "gia_balance": 198320, "unquoted_shares": 500000 },
+        "income": { "dividend_income": 5500, "interest_income": 2200 }
+      }
+    },
+    "2025": {
+      "age": 61,
+      "inputs": {
+        "employment": { "salary": 0, "bonus": 0 },
+        "property": { "primary_residence_value": 740000, "mortgage_balance": 0 },
+        "pensions": { "sipp_balance": 950570, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 145000, "gia_balance": 201200, "unquoted_shares": 500000 },
+        "income": { "dividend_income": 5000, "interest_income": 2000 }
+      }
+    },
+    "2026": {
+      "age": 62,
+      "inputs": {
+        "employment": { "salary": 0, "bonus": 0 },
+        "property": { "primary_residence_value": 750000, "mortgage_balance": 0 },
+        "pensions": { "sipp_balance": 850000, "drawdown_planned_annual": 40000 },
+        "investments": { "isa_balance": 150000, "gia_balance": 200000, "unquoted_shares": 500000 },
+        "income": { "dividend_income": 5000, "interest_income": 2000 }
+      }
+    }
+  }
+}

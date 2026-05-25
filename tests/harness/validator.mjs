@@ -68,6 +68,13 @@ UK macro context for ${taxYear}:
 Household context:
 - Status: ${engineOutput.is_couple ? 'COUPLE (married/civil partnership)' : 'SINGLE'}
 - Spousal nil-rate transfer available: ${engineOutput.spousal_nrb_available ? 'YES — combined NRB £' + (engineOutput.effective_nrb || 650000).toLocaleString() + ' + RNRB £' + (engineOutput.effective_rnrb || 350000).toLocaleString() : 'NO — single NRB £325,000 + RNRB £175,000'}
+
+IHT rules reminder (the engine applies these; do not flag as wrong if engine RNRB = £0 on a large estate):
+- RNRB tapers £1 for every £2 of gross estate above £2,000,000 (s8D IHTA 1984)
+- For singles: RNRB hits £0 at gross estate £2.35M
+- For couples (with transferred RNRB): RNRB hits £0 at gross estate £2.7M
+- A gross estate of £8M+ has RNRB tapered fully to £0 — that's correct, not a bug
+- SIPPs are OUTSIDE the IHT estate until 6 April 2027. For tax years ending before that date the engine excludes SIPP from gross estate — that is correct.
 - State pension active: ${pl.state_pension > 0 ? 'YES, £' + pl.state_pension.toLocaleString() + '/yr' : 'NO (pre-state-pension-age)'}
 
 Engine output:

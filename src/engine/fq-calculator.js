@@ -591,15 +591,42 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
   // modelling belongs in a forward projection (see sippProjectionSeries).
   const ddRaw       = drawdownOverride !== null ? drawdownOverride : (e.drawdown || 0);
   const drawdown    = _ddAtYear(ddRaw, 0);
-  const resShare    = (a.residence?.value || 0) * (a.residence?.ownershipShare || 1);
-  const sippVal     = includeSipp ? Math.max(0, (a.sipp?.total || 0) - drawdown) : 0;
-  const isaVal      = a.isa?.value    || 0;
-  const giaVal      = a.portfolio?.bpr ? 0 : (a.portfolio?.value || 0);
-  const cashVal     = a.cash?.own     || 0;
+
+  // 2026-05-25: use canonical helpers so flat + nested-array schemas both flow into the estate.
+  // Previously these used flat-only reads (a.residence?.value, a.sipp?.total, a.isa?.value,
+  // a.portfolio?.value, a.cash?.own) — invisible to personas using array assets (e.g. multi-property
+  // founders) so gross estate was wildly under-counted, RNRB taper never fired, and IHT was under-stated
+  // by hundreds of thousands. See .planning/phase-2a-triage-2026-05-25.md BUG-1.
+  const propertyVal = _propertyTotal(e);
+  const totalPension = _pensionTotal(e);
+  const sippVal     = includeSipp ? Math.max(0, totalPension - drawdown) : 0;
+  const isaVal      = _isaTotal(e);
+  // BPR-qualifying portfolio is excluded from estate. Crude flat-form flag preserved;
+  // a finer per-investment BPR check is a follow-up (would need investments[].bprQualifying).
+  const giaVal      = a.portfolio?.bpr ? 0 : _giaTotal(e);
+  const cashVal     = _cashTotal(e);
   const protEstate  = (a.protection?.lifeInsurance?.exists && !a.protection.lifeInsurance.inTrust)
                         ? (a.protection.lifeInsurance.amount || 0) : 0;
 
-  const gross = resShare + sippVal + isaVal + giaVal + cashVal + protEstate;
+  // RNRB qualifying value — prefer array entry tagged main-residence; else flat residence.
+  // RNRB granted is capped by the qualifying residence value (you can't claim more RNRB
+  // than the home is worth).
+  let residenceForRnrb = 0;
+  if (Array.isArray(a.property)) {
+    const mainRes = a.property.find(p => {
+      const tag = String(p.type || p.use || '').toLowerCase().replace(/_/g, '-');
+      return tag === 'main-residence' || tag === 'residence';
+    });
+    if (mainRes) {
+      residenceForRnrb = (+(mainRes.value_gbp ?? mainRes.value) || 0) *
+                         (+(mainRes.beneficial_interest_this_individual ?? 1) || 1);
+    }
+  }
+  if (residenceForRnrb === 0 && a.residence?.value != null) {
+    residenceForRnrb = (+a.residence.value || 0) * (+a.residence.ownershipShare || 1);
+  }
+
+  const gross = propertyVal + sippVal + isaVal + giaVal + cashVal + protEstate;
 
   let nrb  = TAX.nrb;  if (e.isCouple) nrb  *= 2;
   let rnrb;
@@ -607,12 +634,16 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
     // RNRB is per-individual with transferable allowance. Each individual's
     // £175k RNRB tapers against their own share of the estate at £2M, not
     // against the combined living assets. 50/50 split assumed absent evidence.
-    const shareEach = gross / 2;
-    const rnrb1 = shareEach > TAX.rnrbTaper ? Math.max(0, TAX.rnrb - (shareEach - TAX.rnrbTaper) / 2) : TAX.rnrb;
-    const rnrb2 = shareEach > TAX.rnrbTaper ? Math.max(0, TAX.rnrb - (shareEach - TAX.rnrbTaper) / 2) : TAX.rnrb;
+    // Cap each individual's RNRB by their share of the qualifying residence.
+    const shareEach     = gross / 2;
+    const resShareEach  = residenceForRnrb / 2;
+    const rnrbCapEach   = Math.min(TAX.rnrb, resShareEach);
+    const rnrb1 = shareEach > TAX.rnrbTaper ? Math.max(0, rnrbCapEach - (shareEach - TAX.rnrbTaper) / 2) : rnrbCapEach;
+    const rnrb2 = shareEach > TAX.rnrbTaper ? Math.max(0, rnrbCapEach - (shareEach - TAX.rnrbTaper) / 2) : rnrbCapEach;
     rnrb = rnrb1 + rnrb2;
   } else {
-    rnrb = TAX.rnrb;
+    const rnrbCap = Math.min(TAX.rnrb, residenceForRnrb);
+    rnrb = rnrbCap;
     if (gross > TAX.rnrbTaper) rnrb = Math.max(0, rnrb - (gross - TAX.rnrbTaper) / 2);
   }
 
@@ -623,6 +654,7 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
     beneficiaryRate:   gross > 0 ? (gross - iht) / gross : 1,
     sippContribution:  includeSipp ? Math.round(sippVal * TAX.ihtRate) : 0,
     rnrbLost:          e.isCouple ? Math.max(0, TAX.rnrb * 2 - rnrb) : Math.max(0, TAX.rnrb - rnrb),
+    residenceForRnrb,  // exposed for verification + UI debug
   };
 }
 

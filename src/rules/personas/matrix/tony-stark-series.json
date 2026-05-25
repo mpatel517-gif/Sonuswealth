@@ -1,0 +1,67 @@
+{
+  "id": "TONY_STARK",
+  "name": "Tony Stark",
+  "archetype": "ltd-director-consolidation",
+  "historical_timeline": {
+    "2021": {
+      "age": 43,
+      "inputs": {
+        "employment": { "salary": 12570, "bonus": 0 },
+        "property": { "primary_residence_value": 1000000, "mortgage_balance": 250000 },
+        "pensions": { "sipp_balance": 500000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 150000, "gia_balance": 200000, "unquoted_shares": 1500000 },
+        "income": { "dividend_income": 120000, "interest_income": 5000 }
+      }
+    },
+    "2022": {
+      "age": 44,
+      "inputs": {
+        "employment": { "salary": 12570, "bonus": 0 },
+        "property": { "primary_residence_value": 1050000, "mortgage_balance": 240000 },
+        "pensions": { "sipp_balance": 520000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 160000, "gia_balance": 210000, "unquoted_shares": 1600000 },
+        "income": { "dividend_income": 130000, "interest_income": 6000 }
+      }
+    },
+    "2023": {
+      "age": 45,
+      "inputs": {
+        "employment": { "salary": 12570, "bonus": 0 },
+        "property": { "primary_residence_value": 1100000, "mortgage_balance": 230000 },
+        "pensions": { "sipp_balance": 560000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 170000, "gia_balance": 230000, "unquoted_shares": 1700000 },
+        "income": { "dividend_income": 140000, "interest_income": 7000 }
+      }
+    },
+    "2024": {
+      "age": 46,
+      "inputs": {
+        "employment": { "salary": 12570, "bonus": 0 },
+        "property": { "primary_residence_value": 1150000, "mortgage_balance": 220000 },
+        "pensions": { "sipp_balance": 610000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 180000, "gia_balance": 250000, "unquoted_shares": 1800000 },
+        "income": { "dividend_income": 140000, "interest_income": 8000 }
+      }
+    },
+    "2025": {
+      "age": 47,
+      "inputs": {
+        "employment": { "salary": 12570, "bonus": 0 },
+        "property": { "primary_residence_value": 1180000, "mortgage_balance": 210000 },
+        "pensions": { "sipp_balance": 650000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 190000, "gia_balance": 280000, "unquoted_shares": 1900000 },
+        "income": { "dividend_income": 150000, "interest_income": 9000 }
+      }
+    },
+    "2026": {
+      "age": 48,
+      "inputs": {
+        "employment": { "salary": 12570, "bonus": 0 },
+        "property": { "primary_residence_value": 1200000, "mortgage_balance": 200000 },
+        "pensions": { "sipp_balance": 700000, "drawdown_planned_annual": 0 },
+        "investments": { "isa_balance": 200000, "gia_balance": 300000, "unquoted_shares": 2000000 },
+        "income": { "dividend_income": 150000, "interest_income": 10000 }
+      }
+    }
+  }
+}

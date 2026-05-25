@@ -14,7 +14,21 @@ import {
   loadBundle, loadMacroVariablesForYear, loadPersona,
 } from '../../src/lib/data-source.js';
 
+import { setBundle, resetBundle } from '../../src/engine/_bundle.js';
+
 import { evaluate as evaluateEligibility } from '../../src/engine/eligibility.js';
+
+// Map a tax year ("2025/26") to the canonical bundle ID we'd expect in
+// Supabase. If a year-matched bundle is not seeded yet, loadBundle() returns
+// the canonical UK-2026.1.1 — so back-tests still run, just with current-year
+// rates against historical personas (the existing behaviour). Once historical
+// bundles (UK-2024.1, UK-2025.1, etc.) are seeded, this map automatically
+// resolves to them.
+function bundleIdFor(taxYear) {
+  const start = parseInt(taxYear.split('/')[0], 10);
+  if (start === 2026) return 'UK-2026.1.1';
+  return `UK-${start}.1`;
+}
 
 // ─── Balance-sheet summariser ────────────────────────────────────────────────
 // Mirrors fq-calculator.js netWorth() walking logic: handles both flat schema
@@ -189,8 +203,16 @@ function ageBackwards(persona, taxYear, macroVars) {
 export async function generateSnapshot(personaId, taxYear, opts = {}) {
   const persona = await loadPersona(personaId);
   const macroVars = await loadMacroVariablesForYear(taxYear);
-  const ruled = await loadBundle('UK-2026.1.1');
+  const bundleId = bundleIdFor(taxYear);
+  const ruled = await loadBundle(bundleId);
 
+  // Inject the year-matched bundle into the engine. Subscribed engine modules
+  // (fq-calculator, tax-estate-engine, uk-tax-2026-1-1) refresh their module-
+  // level constants synchronously. resetBundle() at the end restores the
+  // canonical bundle so other tests / sessions aren't poisoned.
+  setBundle(ruled);
+
+  try {
   // Time-travel the persona
   const adjustedPersona = ageBackwards(persona, taxYear, macroVars);
 
@@ -384,7 +406,13 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
     profile,
     apq_count: Array.isArray(apqResult) ? apqResult.length : null,
     macro_used: macroVars,
+    bundle_used: bundleId,
     errors: errors.length ? errors : undefined,
     computed_at: new Date().toISOString(),
   };
+  } finally {
+    // Restore canonical bundle so subsequent harness runs / other consumers
+    // aren't poisoned by a historical bundle swap.
+    resetBundle();
+  }
 }

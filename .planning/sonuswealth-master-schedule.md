@@ -71,7 +71,7 @@ Engine before lenses before tabs before UI before compliance. **No layer N begin
 | 0 | Security — rotate 4 leaked keys + scrub git history | 1 session (~2h) | week 0 — **DEFERRED by founder direction 2026-05-23** |
 | 1 | Data foundation — engine reads from Supabase + live HMRC/ONS/BoE cron | 3 weeks | week 3 — **✅ CLOSED 2026-05-23, see §2.1 below** |
 | **1.5** | **Auth foundation (Security/Account) — Supabase Auth + OAuth + step-up + permission matrix · BLOCKS Phase 6** | **3 weeks** | **week 6** |
-| 2 | Engine truth — single ripple path + 528-run DeepSeek regression clean | 3 weeks | week 9 — **2a ✅ CLOSED 2026-05-25 (93.6% PASS across 390 runs); 2b refactor + 2c ripple still pending** |
+| 2 | Engine truth — single ripple path + 528-run DeepSeek regression clean | 3 weeks | week 9 — **2a ✅ CLOSED 2026-05-25 (93.6% PASS); 2b ✅ CLOSED 2026-05-25 (engine indirection via _bundle.js + boot hook + harness wired; 21/21 regression PASS post-refactor; uk-tax.js duplicate consolidated); 2c ripple still pending** |
 | 3 | 11-Lens depth (10 lens shells → full bodies) | 4 weeks | week 13 |
 | 4 | Lens-Council integration into DE / Scenarios / Reports / Drill | 2 weeks | week 15 |
 | 5 | Core tabs — gap-audit-driven build (per §3 below) | 12–17 weeks | week 27–32 |
@@ -112,7 +112,7 @@ The §2 table shows "3 weeks" for Phase 1, but a code audit found most of the in
 | Edge Function `cron-rules-activation` deployed + smoke-tested | ✅ DONE 2026-05-23 | HTTP 200, scanned scheduled bundles cleanly |
 | Seed run against live Supabase | ✅ DONE 2026-05-23 | 2 rule bundles + 78 macro history + 13 current macro + 112 personas |
 | `cron-hmrc-pull` for HMRC rule scraping | ❌ NOT BUILT | HMRC has no clean API for rate changes — Budget-day human-triggered; deferred to Phase 1.1 |
-| **Engine reads via data-source.js** | ❌ NOT WIRED | 9 engine files still import JSON directly: `tax-estate-engine.js`, `fq-calculator.js`, `_helpers.js`, `modules/uk-tax-2026-1-1.js`, etc. Sync→async cascade refactor. **DEFERRED TO PHASE 2 (Engine truth)**. |
+| **Engine reads via data-source.js** | ✅ DONE 2026-05-25 (PHASE 2b) | Indirection layer `src/engine/_bundle.js` with mutable bundle/macro refs + `onBundleChange` subscriber. Engine modules (`fq-calculator`, `_helpers`, `tax-estate-engine`, `modules/uk-tax-2026-1-1`) refresh module-level constants in place on `setBundle()`. Boot hook `src/lib/boot-rules.js` called from `App.jsx` mount fetches live bundle + macro from Supabase. `uk-tax.js` orphan duplicate consolidated → re-export pass-through. Test harness `snapshot.mjs` calls `setBundle(yearMatchedBundle)` per run (Engine stays SYNC — original "sync→async cascade" framing was wrong; React render can't await). Smoke: 21/21 PASS (7 personas × 3 years) post-refactor. |
 
 **Net Phase 1 status: ✅ CLOSED 2026-05-23.** Infrastructure live; data layer populated; live ONS + BoE data confirmed flowing. Engine refactor (PP-6 enforcement) deferred to Phase 2 as planned.
 

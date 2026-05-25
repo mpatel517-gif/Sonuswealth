@@ -5,7 +5,7 @@
 // Every output carries rulesVersion + scoringVersion stamps.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import TAX_JSON from '../rules/UK-2026.1.1.json' with { type: 'json' };
+import { TAX, onBundleChange } from './_bundle.js';
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
 import {
   pensionTotal     as _pensionTotal,
@@ -27,53 +27,16 @@ import {
   detectSchema     as _detectSchema,
 } from './_helpers.js';
 
-// ── TAX OBJECT — flatten with fallbacks so app never crashes ─────────────────
-export const TAX = {
-  pa:            TAX_JSON.pa            ?? TAX_JSON.income?.personalAllowance        ?? 12570,
-  brl:           TAX_JSON.brl           ?? TAX_JSON.income?.basicRateLimit           ?? 37700,
-  brt:           TAX_JSON.brt           ?? TAX_JSON.income?.basicRateThreshold       ?? 50270,
-  br:            TAX_JSON.br            ?? TAX_JSON.income?.basicRate                ?? 0.20,
-  hr:            TAX_JSON.hr            ?? TAX_JSON.income?.higherRate               ?? 0.40,
-  ar:            TAX_JSON.ar            ?? TAX_JSON.income?.additionalRate           ?? 0.45,
-  art:           TAX_JSON.art           ?? TAX_JSON.income?.additionalRateThreshold  ?? 125140,
-  nrb:           TAX_JSON.nrb           ?? TAX_JSON.iht?.nilRateBand                ?? 325000,
-  rnrb:          TAX_JSON.rnrb          ?? TAX_JSON.iht?.residenceNilRateBand       ?? 175000,
-  rnrbTaper:     TAX_JSON.rnrbTaper     ?? TAX_JSON.iht?.rnrbTaperThreshold         ?? 2000000,
-  ihtRate:       TAX_JSON.ihtRate       ?? TAX_JSON.iht?.rate                       ?? 0.40,
-  cgaAllowance:  TAX_JSON.cgaAllowance  ?? TAX_JSON.cgt?.annualExemption            ?? 3000,
-  isaAllowance:  TAX_JSON.isaAllowance  ?? TAX_JSON.pension?.isaAllowance           ?? 20000,
-  pensionAA:     TAX_JSON.pensionAA     ?? TAX_JSON.pension?.annualAllowance        ?? 60000,
-  swr:           TAX_JSON.swr           ?? TAX_JSON.pension?.safeWithdrawalRate     ?? 0.04,
-  deadline:      new Date(TAX_JSON.deadline ?? TAX_JSON.iht?.sippsEnterEstateDate   ?? '2027-04-06'),
-  giftExemption: TAX_JSON.giftAnnualExemption ?? TAX_JSON.iht?.giftAnnualExemption  ?? 3000,
-  // Personal Savings Allowance
-  psaBasic:      TAX_JSON.income?.savingsAllowanceBasicRate    ?? 1000,
-  psaHigher:     TAX_JSON.income?.savingsAllowanceHigherRate   ?? 500,
-  psaAdditional: TAX_JSON.income?.savingsAllowanceAdditionalRate ?? 0,
-  // HICBC taper width: 1% per £200 → full clawback at threshold + £20,000
-  hicbcTaperWidth: TAX_JSON.income?.hicbcTaperWidth ?? 20000,
-  // Post-LTA allowances (in force from 6 April 2024)
-  lsa:           TAX_JSON.lsa           ?? 268275,    // Lump Sum Allowance
-  lsdba:         TAX_JSON.lsdba         ?? 1073100,   // Lump Sum & Death Benefit Allowance
-  spa:           TAX_JSON.pension?.statePensionAge ?? 66,
-  ver:           TAX_JSON.version       ?? TAX_JSON._meta?.version ?? 'UK-2026.1',
-  taxYear:       TAX_JSON._meta?.taxYear ?? '2026/27',
-  statePensionFull:      TAX_JSON.pension?.statePensionFullAmount
-                     ?? TAX_JSON.nationalInsurance?.stateNewPensionFullAmount
-                     ?? 11502,
-  statePensionQualYears: TAX_JSON.pension?.statePensionQualifyingYears
-                     ?? TAX_JSON.nationalInsurance?.statePensionQualifyingYears
-                     ?? 35,
-  // Scottish bands (UK-2026/27)
-  scottishBands: [
-    { name: 'Starter',      from: TAX_JSON.income?.scottishStarterBandFrom      ?? 12570,  to: TAX_JSON.income?.scottishStarterBandTo        ?? 14876,  rate: TAX_JSON.income?.scottishStarterRate      ?? 0.19 },
-    { name: 'Basic',        from: TAX_JSON.income?.scottishBasicBandFrom        ?? 14876,  to: TAX_JSON.income?.scottishBasicBandTo          ?? 26561,  rate: TAX_JSON.income?.scottishBasicRate        ?? 0.20 },
-    { name: 'Intermediate', from: TAX_JSON.income?.scottishIntermediateBandFrom ?? 26561,  to: TAX_JSON.income?.scottishIntermediateBandTo   ?? 43662,  rate: TAX_JSON.income?.scottishIntermediateRate ?? 0.21 },
-    { name: 'Higher',       from: TAX_JSON.income?.scottishHigherBandFrom       ?? 43662,  to: TAX_JSON.income?.scottishHigherBandTo         ?? 75000,  rate: TAX_JSON.income?.scottishHigherRate       ?? 0.42 },
-    { name: 'Advanced',     from: TAX_JSON.income?.scottishAdvancedBandFrom     ?? 75000,  to: TAX_JSON.income?.scottishAdvancedBandTo       ?? 125140, rate: TAX_JSON.income?.scottishAdvancedRate     ?? 0.45 },
-    { name: 'Top',          from: TAX_JSON.income?.scottishTopBandFrom          ?? 125140, to: null,                                                rate: TAX_JSON.income?.scottishTopRate          ?? 0.48 },
-  ],
-};
+// ── TAX OBJECT — derived from active bundle via _bundle.js ──────────────────
+// TAX is re-populated in place by _bundle.js whenever setBundle() fires, so
+// historical back-tests in the test harness see year-matched rates.
+export { TAX };
+
+// TAX_JSON is the raw active bundle — kept as a module-level `let` so the
+// 80-odd `TAX_JSON.X` references inside this file continue to read the current
+// bundle without per-call plumbing. Refreshed on every setBundle().
+let TAX_JSON;
+onBundleChange((b) => { TAX_JSON = b; });
 
 export const SCORING_VERSION = 'Sonuswealth-1.0';
 export const RISK_VERSION    = 'Sonuswealth-Risk-1.0';

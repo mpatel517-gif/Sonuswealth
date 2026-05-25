@@ -6,6 +6,7 @@ import Account       from './screens/Account.jsx'
 import Dashboard     from './screens/Dashboard.jsx'
 import PersonaSelect from './screens/PersonaSelect.jsx'
 import { EventsProvider, useEffectiveEntity } from './state/events.jsx'
+import { bootRules } from './lib/boot-rules.js'
 
 import personaA from './rules/personas/persona-a.json'
 import personaB from './rules/personas/persona-b.json'
@@ -103,6 +104,21 @@ function AppInner() {
     document.documentElement.setAttribute('data-theme', theme)
     document.body.style.background = theme === 'dark' ? '#000' : '#F2F2F7'
   }, [theme])
+
+  // Phase 2b boot hook — fetch the live UK rules bundle + macro variables
+  // from Supabase and inject into the engine via _bundle.js. The bundled JSON
+  // is the synchronous default so first paint is correct; this useEffect
+  // upgrades to whatever's currently active in Supabase (e.g. if cron-rules-
+  // activation has activated UK-2026.1.2 since the deploy). Failure is silent
+  // — the engine keeps using the bundled JSON.
+  useEffect(() => {
+    bootRules().then((r) => {
+      if (r.bundleLoaded || r.macroLoaded) {
+        // eslint-disable-next-line no-console
+        console.info('[caelixa] engine booted', r)
+      }
+    }).catch(() => { /* silent — bundled JSON is fine */ })
+  }, [])
 
   function toggleTheme() { setTheme(t => t === 'dark' ? 'light' : 'dark') }
 

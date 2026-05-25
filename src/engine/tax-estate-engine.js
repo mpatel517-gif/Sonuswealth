@@ -3,44 +3,55 @@
 // Spec: 2-Product-tax-estate-v1_0.md §8 + v1_1.md patches
 // Pure functions only. No side effects. No global state.
 // All monetary values GBP. All rates as decimals.
-// bundle param accepts 'UK-2026.1' string — functions read from TAX_JSON directly.
+// bundle is read via getBundle()/onBundleChange() from ./_bundle.js so the test
+// harness can swap to UK-2022.1, UK-2025.1, etc. without per-call plumbing.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import TAX_JSON from '../rules/UK-2026.1.1.json' with { type: 'json' };
+import { onBundleChange } from './_bundle.js';
 import {
   calcAge,
   ihtSippDelta,
   taperBand,
 } from './fq-calculator.js';
 
-// ── BUNDLE HELPERS ────────────────────────────────────────────────────────────
+// ── BUNDLE-DERIVED CONSTANTS ─────────────────────────────────────────────────
+// All declared as `let` so onBundleChange() can refresh them in place. Function
+// bodies below continue to reference these symbols unchanged; the test harness
+// gets correct per-year rates by calling setBundle(historicalBundle) first.
 
-const INC  = TAX_JSON.income;
-const CGT  = TAX_JSON.capitalGains;
-const IHT  = TAX_JSON.inheritanceTax;
-const PEN  = TAX_JSON.pension;
-const ISA  = TAX_JSON.isa;
-const NIC  = TAX_JSON.nationalInsurance;
-const TR   = TAX_JSON.trusts;
+let INC, CGT, IHT, PEN, ISA, NIC, TR;
+let PA, BRL, BRT, ART, BR, HR, AR;
+let NRB, RNRB, IHT_RATE, IHT_CHARITY, CHARITY_TEST, APR_BPR_ALLOWANCE, PENSION_IHT_DATE;
+let NIC_PT, NIC_UEL, NIC_RATE, NIC_RATE_UPPER;
 
-const PA   = INC.personalAllowance;          // 12570
-const BRL  = INC.basicRateBand;              // 37700
-const BRT  = INC.basicRateThreshold;         // 50270
-const ART  = INC.additionalRateThreshold;    // 125140
-const BR   = INC.basicRate;                  // 0.20
-const HR   = INC.higherRate;                 // 0.40
-const AR   = INC.additionalRate;             // 0.45
-const NRB  = IHT.nilRateBand;               // 325000
-const RNRB = IHT.residenceNilRateBand;      // 175000
-const IHT_RATE     = IHT.ihtRate;           // 0.40
-const IHT_CHARITY  = IHT.ihtReducedRate;    // 0.36
-const CHARITY_TEST = IHT.ihtReducedRateCharityThreshold; // 0.10
-const APR_BPR_ALLOWANCE = IHT.aprBprCombinedAllowance;  // 2500000
-const PENSION_IHT_DATE  = new Date(IHT.pensionIHTInclusionDate); // 2027-04-06
-const NIC_PT   = NIC.primaryThreshold;      // 12570
-const NIC_UEL  = NIC.upperEarningsLimit;    // 50270
-const NIC_RATE = NIC.class1EmployeeRate;    // 0.08
-const NIC_RATE_UPPER = NIC.class1EmployeeRateAboveUEL; // 0.02
+onBundleChange((b) => {
+  INC  = b.income;
+  CGT  = b.capitalGains;
+  IHT  = b.inheritanceTax;
+  PEN  = b.pension;
+  ISA  = b.isa;
+  NIC  = b.nationalInsurance;
+  TR   = b.trusts;
+
+  PA   = INC.personalAllowance;          // 12570
+  BRL  = INC.basicRateBand;              // 37700
+  BRT  = INC.basicRateThreshold;         // 50270
+  ART  = INC.additionalRateThreshold;    // 125140
+  BR   = INC.basicRate;                  // 0.20
+  HR   = INC.higherRate;                 // 0.40
+  AR   = INC.additionalRate;             // 0.45
+  NRB  = IHT.nilRateBand;                // 325000
+  RNRB = IHT.residenceNilRateBand;       // 175000
+  IHT_RATE          = IHT.ihtRate;       // 0.40
+  IHT_CHARITY       = IHT.ihtReducedRate; // 0.36
+  CHARITY_TEST      = IHT.ihtReducedRateCharityThreshold; // 0.10
+  APR_BPR_ALLOWANCE = IHT.aprBprCombinedAllowance;        // 2500000
+  PENSION_IHT_DATE  = new Date(IHT.pensionIHTInclusionDate); // 2027-04-06
+  NIC_PT          = NIC.primaryThreshold;             // 12570
+  NIC_UEL         = NIC.upperEarningsLimit;           // 50270
+  NIC_RATE        = NIC.class1EmployeeRate;           // 0.08
+  NIC_RATE_UPPER  = NIC.class1EmployeeRateAboveUEL;   // 0.02
+});
 
 // ── INTERNAL HELPERS ──────────────────────────────────────────────────────────
 

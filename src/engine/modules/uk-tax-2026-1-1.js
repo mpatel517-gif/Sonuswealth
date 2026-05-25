@@ -33,7 +33,12 @@
  *   D-WRAPPER-FIRST-1 — getWrapper, taxOnAsset dispatcher
  */
 
-import bundle from '../rules/UK-2026.1.1.json';
+// bundle is the active rules bundle from _bundle.js — read via the module-let
+// pattern so historical back-tests (setBundle(UK-2025.1.json)) work without
+// per-function plumbing.
+import { onBundleChange } from '../_bundle.js';
+let bundle;
+onBundleChange((b) => { bundle = b; });
 
 // =============================================================================
 // HELPERS — band slicing, rate composition, breakdown construction

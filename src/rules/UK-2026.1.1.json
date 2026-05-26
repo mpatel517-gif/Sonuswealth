@@ -4,33 +4,33 @@
     "taxYear": "2026/27",
     "effectiveFrom": "2026-04-06",
     "effectiveTo": "2027-04-05",
-    "verifiedBy": "s16 session \u2014 coverage doc v1.3 + HMRC/DWP published rates (web-verified May 2026)",
+    "verifiedBy": "s16 session — coverage doc v1.3 + HMRC/DWP published rates (web-verified May 2026)",
     "verificationDate": "May 2026",
     "jurisdiction": "United Kingdom",
     "supersedes": "UK-2026.1 (tax-2026.json)",
-    "notes": "All monetary values in GBP. All rates as decimals. Never hardcode these values in UI components \u2014 always import from this file via the TAX object in fq-calculator.js.",
+    "notes": "All monetary values in GBP. All rates as decimals. Never hardcode these values in UI components — always import from this file via the TAX object in fq-calculator.js.",
     "_correctionLog": {
       "from_UK-2026.1_to_UK-2026.1.1": [
-        "income.personalAllowanceFrozenTo: 2028 \u2192 2030 (Autumn Budget 2025 extension; UK-IT-06)",
-        "income.highIncomeChildBenefitTaperEnd: added 80000 (UK-IT-53; taper \u00a360k\u2013\u00a380k)",
+        "income.personalAllowanceFrozenTo: 2028 → 2030 (Autumn Budget 2025 extension; UK-IT-06)",
+        "income.highIncomeChildBenefitTaperEnd: added 80000 (UK-IT-53; taper £60k–£80k)",
         "income.scottishStarterRate: added 0.19 (2026/27 band structure; Scottish Budget Jan 2026)",
         "income.scottishRateBands2627: added full 6-band threshold structure for 2026/27",
-        "pension.statePensionFullAmount: 11502 \u2192 12548 (DWP 2026/27 rates; \u00a3241.30/wk \u00d7 52; was 2024/25 rate)",
-        "taxEfficientInvestments.vct.incomeTaxRelief: 0.30 \u2192 0.20 (Finance Act 2026; from 6 April 2026)",
-        "property.sdlt.firstTimeBuyerRelief.zeroRateTo: 425000 \u2192 300000 (reverted 1 April 2025)",
-        "property.sdlt.firstTimeBuyerRelief.reducedRateTo: 625000 \u2192 500000 (reverted 1 April 2025)",
-        "property.sdlt.additionalPropertySurcharge: 0.03 \u2192 0.05 (Autumn Budget Oct 2024; from 31 Oct 2024)",
-        "nationalInsurance.class1EmployerRate: 0.138 \u2192 0.15 (April 2025 Budget)",
-        "nationalInsurance.class1EmployerSecondaryThreshold: 9100 \u2192 5000 (April 2025; \u00a396/wk \u00d7 52 = \u00a34,992)",
-        "nationalInsurance.employmentAllowance: 5000 \u2192 10500 (April 2025; UK-NI-14)",
-        "nationalInsurance.stateNewPensionFullAmount: 11502 \u2192 12548 (DWP 2026/27)",
-        "allowancesAndReliefs.stateNewPensionFull: 11502 \u2192 12548 (DWP 2026/27)",
-        "NEW: overseas.figRegime \u2014 FIG full rules (UK-RES-24 to UK-RES-27; v1.3)",
-        "NEW: overseas.trfFacility \u2014 TRF flat rates (UK-RES-28 to UK-RES-30; v1.3)",
+        "pension.statePensionFullAmount: 11502 → 12548 (DWP 2026/27 rates; £241.30/wk × 52; was 2024/25 rate)",
+        "taxEfficientInvestments.vct.incomeTaxRelief: 0.30 → 0.20 (Finance Act 2026; from 6 April 2026)",
+        "property.sdlt.firstTimeBuyerRelief.zeroRateTo: 425000 → 300000 (reverted 1 April 2025)",
+        "property.sdlt.firstTimeBuyerRelief.reducedRateTo: 625000 → 500000 (reverted 1 April 2025)",
+        "property.sdlt.additionalPropertySurcharge: 0.03 → 0.05 (Autumn Budget Oct 2024; from 31 Oct 2024)",
+        "nationalInsurance.class1EmployerRate: 0.138 → 0.15 (April 2025 Budget)",
+        "nationalInsurance.class1EmployerSecondaryThreshold: 9100 → 5000 (April 2025; £96/wk × 52 = £4,992)",
+        "nationalInsurance.employmentAllowance: 5000 → 10500 (April 2025; UK-NI-14)",
+        "nationalInsurance.stateNewPensionFullAmount: 11502 → 12548 (DWP 2026/27)",
+        "allowancesAndReliefs.stateNewPensionFull: 11502 → 12548 (DWP 2026/27)",
+        "NEW: overseas.figRegime — FIG full rules (UK-RES-24 to UK-RES-27; v1.3)",
+        "NEW: overseas.trfFacility — TRF flat rates (UK-RES-28 to UK-RES-30; v1.3)",
         "NEW: welshIT monitoring block (UK-WELSH-01 to UK-WELSH-04; v1.3)",
-        "NEW: allowancesAndReliefs.mtdItsa \u2014 MTD ITSA phasing thresholds (UK-SE-26 to UK-SE-28; v1.2)",
+        "NEW: allowancesAndReliefs.mtdItsa — MTD ITSA phasing thresholds (UK-SE-26 to UK-SE-28; v1.2)",
         "NEW: inheritanceTax.bprCPIIndexationFrozenUntil (UK-BPR-04; v1.3)",
-        "NEW: allowancesAndReliefs.cashISACapUnder65From2027 \u2014 future change April 2027 (Autumn Budget 2025)"
+        "NEW: allowancesAndReliefs.cashISACapUnder65From2027 — future change April 2027 (Autumn Budget 2025)"
       ],
       "s17a3_2026-05-07_srt_splityear_addition": {
         "date": "2026-05-07",
@@ -44,10 +44,10 @@
   "income": {
     "personalAllowance": 12570,
     "personalAllowanceFrozenTo": 2030,
-    "personalAllowanceFrozenToNote": "Frozen at \u00a312,570 through 2030/31 (Autumn Budget 2025 extended the original 2028 freeze). Fiscal drag applies throughout this period.",
+    "personalAllowanceFrozenToNote": "Frozen at £12,570 through 2030/31 (Autumn Budget 2025 extended the original 2028 freeze). Fiscal drag applies throughout this period.",
     "personalAllowanceTaperStart": 100000,
     "personalAllowanceTaperEnd": 125140,
-    "personalAllowanceTaperNote": "PA reduces by \u00a31 for every \u00a32 of Adjusted Net Income (ANI) above \u00a3100,000. Effective 60% marginal rate in this band. PA = nil at ANI \u00a3125,140+.",
+    "personalAllowanceTaperNote": "PA reduces by £1 for every £2 of Adjusted Net Income (ANI) above £100,000. Effective 60% marginal rate in this band. PA = nil at ANI £125,140+.",
     "basicRateBand": 37700,
     "basicRateThreshold": 50270,
     "basicRate": 0.2,
@@ -56,7 +56,7 @@
     "additionalRate": 0.45,
     "additionalRateThreshold": 125140,
     "thresholdsFrozenTo": 2030,
-    "thresholdsFrozenToNote": "Basic rate threshold \u00a350,270 and additional rate threshold \u00a3125,140 frozen to 2030/31 per Autumn Budget 2025.",
+    "thresholdsFrozenToNote": "Basic rate threshold £50,270 and additional rate threshold £125,140 frozen to 2030/31 per Autumn Budget 2025.",
     "scottishStarterRate": 0.19,
     "scottishBasicRate": 0.2,
     "scottishIntermediateRate": 0.21,
@@ -68,13 +68,13 @@
         "rate": 0.19,
         "from": 12571,
         "to": 16537,
-        "note": "2026/27; limit up 40.3% from 2025/26 (was \u00a315,397)"
+        "note": "2026/27; limit up 40.3% from 2025/26 (was £15,397)"
       },
       "basic": {
         "rate": 0.2,
         "from": 16538,
         "to": 29527,
-        "note": "2026/27; limit up 13.6% from 2025/26 (was \u00a327,491)"
+        "note": "2026/27; limit up 13.6% from 2025/26 (was £27,491)"
       },
       "intermediate": {
         "rate": 0.21,
@@ -97,24 +97,24 @@
       "top": {
         "rate": 0.48,
         "from": 125141,
-        "note": "2026/27; frozen to end of Parliament. PA taper applies \u00a3100k\u2013\u00a3125,140."
+        "note": "2026/27; frozen to end of Parliament. PA taper applies £100k–£125,140."
       }
     },
-    "scottishNote": "Scottish rates apply to Scottish taxpayers on non-savings, non-dividend income only. Personal Allowance \u00a312,570 is UK-wide. 2026/27: Starter and Basic rate thresholds increased above inflation; Higher/Advanced/Top frozen. Source: Scottish Budget Jan 2026; Scottish Government Technical Factsheet 2026/27.",
+    "scottishNote": "Scottish rates apply to Scottish taxpayers on non-savings, non-dividend income only. Personal Allowance £12,570 is UK-wide. 2026/27: Starter and Basic rate thresholds increased above inflation; Higher/Advanced/Top frozen. Source: Scottish Budget Jan 2026; Scottish Government Technical Factsheet 2026/27.",
     "scottishTaxpayerDefinition": "Main place of residence in Scotland for more days in tax year than any other part of UK. Identified by S-prefix tax code (e.g. S1257L). UK-SCOT-01.",
     "savingsAllowanceBasicRate": 1000,
     "savingsAllowanceHigherRate": 500,
     "savingsAllowanceAdditionalRate": 0,
-    "startingRateForSavings": 0.0,
+    "startingRateForSavings": 0,
     "startingRateForSavingsBand": 5000,
-    "startingRateForSavingsNote": "0% on savings income if non-savings income below \u00a317,570 (PA + \u00a35k band). UK-IT-12.",
+    "startingRateForSavingsNote": "0% on savings income if non-savings income below £17,570 (PA + £5k band). UK-IT-12.",
     "dividendAllowance": 500,
     "dividendBasicRate": 0.1075,
     "dividendHigherRate": 0.3575,
     "dividendAdditionalRate": 0.3935,
     "dividendNote": "Dividend rates increased from 2026/27: basic 10.75% (was 8.75%), higher 35.75% (was 33.75%). Additional 39.35% unchanged. Applies to dividends outside ISA/pension.",
     "marriageAllowanceTransfer": 1260,
-    "marriageAllowanceNote": "Lower earner transfers up to \u00a31,260 of PA to spouse/CP. Recipient must be basic rate taxpayer (20%). Scottish Intermediate rate (21%) taxpayers cannot receive \u2014 see UK-SCOT-07.",
+    "marriageAllowanceNote": "Lower earner transfers up to £1,260 of PA to spouse/CP. Recipient must be basic rate taxpayer (20%). Scottish Intermediate rate (21%) taxpayers cannot receive — see UK-SCOT-07.",
     "blindPersonAllowance": 3070,
     "tradingAllowance": 1000,
     "propertyAllowance": 1000,
@@ -122,8 +122,8 @@
     "terminationPaymentExemption": 30000,
     "highIncomeChildBenefitThreshold": 60000,
     "highIncomeChildBenefitTaperEnd": 80000,
-    "highIncomeChildBenefitNote": "HICBC: tapered claw-back of child benefit on ANI between \u00a360,000 and \u00a380,000. 100% claw-back at \u00a380,000+. UK-IT-53. Requires ANI calculation (UK-IT-19/\u00a72.2a).",
-    "adjustedNetIncomeNote": "ANI is the key upstream figure driving PA taper, HICBC, PSA band, Marriage Allowance eligibility. Stepwise formula: net income \u2212 qualifying loan interest \u2212 trading loss \u2212 gross Gift Aid \u2212 gross pension contributions. See UK-IT-19 / \u00a72.2a of UK Coverage v1.3."
+    "highIncomeChildBenefitNote": "HICBC: tapered claw-back of child benefit on ANI between £60,000 and £80,000. 100% claw-back at £80,000+. UK-IT-53. Requires ANI calculation (UK-IT-19/§2.2a).",
+    "adjustedNetIncomeNote": "ANI is the key upstream figure driving PA taper, HICBC, PSA band, Marriage Allowance eligibility. Stepwise formula: net income − qualifying loan interest − trading loss − gross Gift Aid − gross pension contributions. See UK-IT-19 / §2.2a of UK Coverage v1.3."
   },
   "capitalGains": {
     "annualExemptAmount": 3000,
@@ -133,20 +133,20 @@
     "higherRateProperty": 0.24,
     "badrRate": 0.18,
     "badrLifetimeLimit": 1000000,
-    "badrNote": "Business Asset Disposal Relief \u2014 qualifying business disposals. Rate 18% from 6 April 2026 (was 14% in 2025/26; was 10% pre-2025).",
+    "badrNote": "Business Asset Disposal Relief — qualifying business disposals. Rate 18% from 6 April 2026 (was 14% in 2025/26; was 10% pre-2025).",
     "investorsReliefRate": 0.18,
     "investorsReliefLifetimeLimit": 1000000,
     "investorsReliefNote": "Investors' Relief on qualifying unlisted shares held at least 3 years. Rate 18% from April 2026 (aligned with BADR).",
     "propertyReportingDays": 60,
     "propertyReportingNote": "UK residential property gains must be reported and tax paid within 60 days of completion. UK-CGT-06.",
-    "bedAndISANote": "Sell investments and rebuy inside ISA \u2014 crystallises gain within annual exempt amount. UK-CGT-27.",
-    "bedAndSpouseNote": "Sell investments and spouse rebuys \u2014 resets base cost using their AEA. No-gain-no-loss between spouses in same tax year. UK-CGT-09.",
+    "bedAndISANote": "Sell investments and rebuy inside ISA — crystallises gain within annual exempt amount. UK-CGT-27.",
+    "bedAndSpouseNote": "Sell investments and spouse rebuys — resets base cost using their AEA. No-gain-no-loss between spouses in same tax year. UK-CGT-09.",
     "thirtyDayRuleNote": "Cannot repurchase same shares within 30 days (bed-and-breakfasting rule). Use different fund or Bed and ISA/Spouse. UK-CGT-32.",
     "giltsExempt": true,
     "qualifyingCorporateBondsExempt": true,
     "spreadBettingExempt": true,
     "spreadBettingNote": "Spread betting is tax-free in UK (gambling, not investment). UK-CGT-41.",
-    "cryptoNote": "HMRC treats cryptoassets as capital assets \u2014 each disposal is a CGT event. Staking rewards = miscellaneous income at receipt. CARF reporting in force from Jan 2026. See UK-CRYPTO-01 to UK-CRYPTO-10 / Coverage v1.3 \u00a722."
+    "cryptoNote": "HMRC treats cryptoassets as capital assets — each disposal is a CGT event. Staking rewards = miscellaneous income at receipt. CARF reporting in force from Jan 2026. See UK-CRYPTO-01 to UK-CRYPTO-10 / Coverage v1.3 §22."
   },
   "inheritanceTax": {
     "nilRateBand": 325000,
@@ -154,7 +154,7 @@
     "residenceNilRateBand": 175000,
     "residenceNilRateBandFrozenTo": 2030,
     "residenceNilRateBandTaperStart": 2000000,
-    "residenceNilRateBandNote": "RNRB \u00a3175k where residence passes to direct descendants. Tapers by \u00a31 per \u00a32 of estate above \u00a32m. Frozen to 2030 alongside NRB.",
+    "residenceNilRateBandNote": "RNRB £175k where residence passes to direct descendants. Tapers by £1 per £2 of estate above £2m. Frozen to 2030 alongside NRB.",
     "transferableNilRateBand": true,
     "transferableRNRB": true,
     "combinedNilRateBandCouple": 650000,
@@ -163,26 +163,26 @@
     "ihtRate": 0.4,
     "ihtReducedRate": 0.36,
     "ihtReducedRateCharityThreshold": 0.1,
-    "ihtReducedRateNote": "36% rate applies if \u226510% of net estate (after exemptions/reliefs/NRB) left to qualifying charity. UK-IHT-06 / UK-IHT-57.",
+    "ihtReducedRateNote": "36% rate applies if ≥10% of net estate (after exemptions/reliefs/NRB) left to qualifying charity. UK-IHT-06 / UK-IHT-57.",
     "pensionIHTInclusionDate": "2027-04-06",
     "pensionIHTInclusionNote": "DC pensions (SIPP, workplace DC, personal pension) become subject to IHT from 6 April 2027. HMRC administers via pension scheme trustees. Combined IT + IHT effective rate post-75 can exceed 67%.",
-    "definedBenefitDeathBenefitNote": "DB pension lump sum death benefits \u2014 usually discretionary trust, mostly outside estate. Complex \u2014 adviser needed.",
+    "definedBenefitDeathBenefitNote": "DB pension lump sum death benefits — usually discretionary trust, mostly outside estate. Complex — adviser needed.",
     "lifeInsuranceInTrustNote": "Life insurance written in trust is outside the estate. Not in trust = inside estate, subject to IHT.",
-    "businessPropertyRelief100": 1.0,
+    "businessPropertyRelief100": 1,
     "businessPropertyRelief50": 0.5,
-    "bprQualifyingNote": "100% relief within \u00a32.5m combined APR/BPR allowance. 50% above allowance. Qualifying business assets, trading company shares.",
+    "bprQualifyingNote": "100% relief within £2.5m combined APR/BPR allowance. 50% above allowance. Qualifying business assets, trading company shares.",
     "aprBprCombinedAllowance": 2500000,
     "aprBprCombinedAllowanceCouple": 5000000,
     "aprBprCombinedAllowanceEffectiveDate": "2026-04-06",
-    "aprBprCombinedAllowanceNote": "Combined APR/BPR allowance \u00a32.5m per individual (unused portion transferable to spouse, same mechanism as TNRB). 100% relief within allowance; 50% (effective 20% IHT) above. Finance Act 2026 s65 sch12.",
+    "aprBprCombinedAllowanceNote": "Combined APR/BPR allowance £2.5m per individual (unused portion transferable to spouse, same mechanism as TNRB). 100% relief within allowance; 50% (effective 20% IHT) above. Finance Act 2026 s65 sch12.",
     "bprAllowanceIndividualRefreshYears": 7,
     "bprAllowanceTrustRefreshYears": 10,
     "bprCPIIndexationFrozenUntil": "2031-04-06",
-    "bprCPIIndexationNote": "\u00a32.5m allowance frozen until 6 April 2031, then CPI-indexed annually. UK-BPR-04.",
-    "bprTrustAntiFragmentationNote": "Trusts settled after 30 October 2024 by same settlor share a single \u00a32.5m allowance (anti-fragmentation). Pre-30-Oct-2024 trusts each have own full \u00a32.5m allowance. UK-BPR-05.",
+    "bprCPIIndexationNote": "£2.5m allowance frozen until 6 April 2031, then CPI-indexed annually. UK-BPR-04.",
+    "bprTrustAntiFragmentationNote": "Trusts settled after 30 October 2024 by same settlor share a single £2.5m allowance (anti-fragmentation). Pre-30-Oct-2024 trusts each have own full £2.5m allowance. UK-BPR-05.",
     "aimBPRRate": 0.5,
-    "aimBPRNote": "AIM and unrecognised exchange shares: 50% BPR in ALL cases from 6 April 2026 regardless of allowance. (Was 100% pre-reform.) Effective IHT rate = value \u00d7 50% \u00d7 40% = 20%. 2-year qualifying hold unchanged. UK-BPR-03.",
-    "agriculturalPropertyRelief100": 1.0,
+    "aimBPRNote": "AIM and unrecognised exchange shares: 50% BPR in ALL cases from 6 April 2026 regardless of allowance. (Was 100% pre-reform.) Effective IHT rate = value × 50% × 40% = 20%. 2-year qualifying hold unchanged. UK-BPR-03.",
+    "agriculturalPropertyRelief100": 1,
     "agriculturalPropertyRelief50": 0.5,
     "spouseExemption": true,
     "charityExemption": true,
@@ -190,16 +190,16 @@
     "annualGiftExemptionCarryForward": true,
     "annualGiftExemptionCarryForwardYears": 1,
     "smallGiftExemption": 250,
-    "smallGiftExemptionNote": "\u00a3250 per recipient per year \u2014 cannot combine with annual exemption to same recipient.",
+    "smallGiftExemptionNote": "£250 per recipient per year — cannot combine with annual exemption to same recipient.",
     "weddingGiftParent": 5000,
     "weddingGiftGrandparent": 2500,
     "weddingGiftOther": 1000,
     "weddingGiftNote": "Must be made before the ceremony.",
-    "normalExpenditureExemptionNote": "Gifts from surplus income \u2014 regular pattern, does not reduce standard of living. Needs documentation. UK-IHT-17.",
+    "normalExpenditureExemptionNote": "Gifts from surplus income — regular pattern, does not reduce standard of living. Needs documentation. UK-IHT-17.",
     "petSevenYearRule": 7,
-    "petNote": "Potentially Exempt Transfers \u2014 gifts to individuals. Outside estate if donor survives 7 years. Taper 3-7 years.",
+    "petNote": "Potentially Exempt Transfers — gifts to individuals. Outside estate if donor survives 7 years. Taper 3-7 years.",
     "cltEntryChargeRate": 0.2,
-    "cltNote": "Chargeable Lifetime Transfers \u2014 gifts into discretionary trusts. 20% entry charge on amounts above NRB.",
+    "cltNote": "Chargeable Lifetime Transfers — gifts into discretionary trusts. 20% entry charge on amounts above NRB.",
     "taperRelief": {
       "years3to4": 0.8,
       "years4to5": 0.6,
@@ -208,20 +208,20 @@
       "note": "Taper reduces IHT rate on CLTs and failed PETs. Applied to tax due, not to asset value."
     },
     "deedOfVariationYears": 2,
-    "deedOfVariationNote": "Beneficiary can redirect inherited assets within 2 years of death \u2014 treated as if deceased made the gift. Requires all affected beneficiaries to sign. UK-IHT-61/62/63.",
+    "deedOfVariationNote": "Beneficiary can redirect inherited assets within 2 years of death — treated as if deceased made the gift. Requires all affected beneficiaries to sign. UK-IHT-61/62/63.",
     "quickSuccessionReliefNote": "Reduces IHT if property was inherited and beneficiary dies within 5 years.",
     "nonDomIHTResidenceYears": 10,
     "nonDomIHTResidenceNote": "From April 2025: 10-year UK residence test replaces 17-year deemed domicile rule for IHT worldwide exposure.",
-    "excludedPropertyTrustNote": "Non-dom assets in qualifying offshore trust before April 2025 rules change \u2014 specialist advice needed for post-April 2025 treatment.",
+    "excludedPropertyTrustNote": "Non-dom assets in qualifying offshore trust before April 2025 rules change — specialist advice needed for post-April 2025 treatment.",
     "intestacyStatutoryLegacy": 322000,
-    "intestacyNote": "Married with children: spouse takes chattels + \u00a3322k + half residue. No-will = intestacy. Cohabitants get nothing automatically \u2014 making a will is essential."
+    "intestacyNote": "Married with children: spouse takes chattels + £322k + half residue. No-will = intestacy. Cohabitants get nothing automatically — making a will is essential."
   },
   "pension": {
     "annualAllowance": 60000,
     "taperedAnnualAllowanceThresholdIncome": 200000,
     "taperedAnnualAllowanceAdjustedIncome": 260000,
     "taperedAnnualAllowanceMinimum": 10000,
-    "taperedAnnualAllowanceNote": "Tapered AA: gateway test is Threshold Income > \u00a3200k; taper applies if Adjusted Income > \u00a3260k. Reduces by \u00a31 per \u00a32 over \u00a3260k. Minimum \u00a310k. Different from ANI \u2014 see UK-IT-20/UK-IT-21.",
+    "taperedAnnualAllowanceNote": "Tapered AA: gateway test is Threshold Income > £200k; taper applies if Adjusted Income > £260k. Reduces by £1 per £2 over £260k. Minimum £10k. Different from ANI — see UK-IT-20/UK-IT-21.",
     "moneyPurchaseAnnualAllowance": 10000,
     "mpaaNote": "MPAA triggered by first flexible drawdown income or UFPLS from DC. Kills carry forward for money purchase. UK-PEN-02.",
     "carryForwardYears": 3,
@@ -237,7 +237,7 @@
     "statePensionQualifyingYears": 35,
     "statePensionAge": 66,
     "statePensionAgeRisingTo67By": 2028,
-    "statePensionNote": "Full new State Pension 2026/27: \u00a3241.30/week = \u00a312,547.60/year (4.8% increase, triple lock \u2014 earnings growth winner). Requires 35 qualifying NI years. Source: DWP 2026/27 benefit and pension rates.",
+    "statePensionNote": "Full new State Pension 2026/27: £241.30/week = £12,547.60/year (4.8% increase, triple lock — earnings growth winner). Requires 35 qualifying NI years. Source: DWP 2026/27 benefit and pension rates.",
     "statePensionDeferralNote": "Deferring State Pension increases it by 1% per 9 weeks (approx 5.8% per year). UK-PEN-56.",
     "basicRateTaxReliefAtSource": true,
     "higherRateTaxReliefNote": "Higher rate taxpayers claim additional relief via SA. Scottish taxpayers claim at Scottish marginal rates (42%/45%/48% via SA). See UK-SCOT-05.",
@@ -247,7 +247,7 @@
     "salarySacrifice": {
       "employeeNISaving": true,
       "employerNISaving": true,
-      "note": "Both employer and employee save NI on sacrificed salary. NIC relief capped at \u00a32,000/year from April 2029. Most tax-efficient pension contribution route. UK-PEN-07/08."
+      "note": "Both employer and employee save NI on sacrificed salary. NIC relief capped at £2,000/year from April 2029. Most tax-efficient pension contribution route. UK-PEN-07/08."
     },
     "annuityNote": "Secured income for life. Taxed as pension income. Irreversible. Open Market Option available.",
     "flexibleDrawdownNote": "Income taken flexibly from DC pension. Taxed as income at marginal rate. MPAA triggered on first flexible income payment. UK-PEN-21.",
@@ -258,13 +258,13 @@
     },
     "deathAfter75": {
       "taxTreatment": "income-tax",
-      "note": "Death benefits after age 75 taxed as income at recipient's marginal rate. Combined with IHT from April 2027 \u2014 effective rate can exceed 67%. UK-PEN-43."
+      "note": "Death benefits after age 75 taxed as income at recipient's marginal rate. Combined with IHT from April 2027 — effective rate can exceed 67%. UK-PEN-43."
     },
     "ihtInclusionApril2027": "2027-04-06",
-    "nominationNote": "Nominations are discretionary \u2014 pension trustees decide but usually follow Expression of Wishes. Review regularly. UK-PEN-47.",
+    "nominationNote": "Nominations are discretionary — pension trustees decide but usually follow Expression of Wishes. Review regularly. UK-PEN-47.",
     "juniorPensionContributionNet": 2880,
     "juniorPensionContributionGross": 3600,
-    "juniorPensionNote": "Anyone can contribute up to \u00a32,880/year net per child; 20% basic-rate relief added = \u00a33,600 gross. Accessible from age 57 (from 2028). UK-PEN-68.",
+    "juniorPensionNote": "Anyone can contribute up to £2,880/year net per child; 20% basic-rate relief added = £3,600 gross. Accessible from age 57 (from 2028). UK-PEN-68.",
     "nmpaCurrentTo2028": 55,
     "nmpaFrom2028": 57,
     "nmpaNote": "Normal Minimum Pension Age: 55 until April 2028, then 57. Protected retirement ages for some older DC schemes."
@@ -278,12 +278,12 @@
     "lifetimeISAMaxAgeToContribute": 49,
     "lifetimeISAPenalty": 0.25,
     "lifetimeISAPenaltyNote": "25% withdrawal penalty applies before age 60 except first home purchase or terminal illness. UK-ISA-05.",
-    "lifetimeISAFirstHomeBuyerNote": "Can use for first home purchase up to \u00a3450,000.",
+    "lifetimeISAFirstHomeBuyerNote": "Can use for first home purchase up to £450,000.",
     "cashISACapUnder65From2027": 12000,
-    "cashISACapUnder65From2027Note": "From April 2027 (Autumn Budget 2025): cash ISA limited to \u00a312,000/year for under-65s (over-65s retain \u00a320,000). Remaining \u00a38,000 must go to investment ISA. NOT YET IN EFFECT for 2026/27. UK-ISA-02.",
+    "cashISACapUnder65From2027Note": "From April 2027 (Autumn Budget 2025): cash ISA limited to £12,000/year for under-65s (over-65s retain £20,000). Remaining £8,000 must go to investment ISA. NOT YET IN EFFECT for 2026/27. UK-ISA-02.",
     "helpToBuyNote": "Closed to new applicants. Existing accounts can continue and claim bonus until November 2029.",
     "innovativeFinanceISANote": "P2P lending returns tax-free within ISA wrapper.",
-    "apsNote": "Additional Permitted Subscription \u2014 surviving spouse inherits deceased's ISA allowance as one-off additional subscription. UK-ISA-08.",
+    "apsNote": "Additional Permitted Subscription — surviving spouse inherits deceased's ISA allowance as one-off additional subscription. UK-ISA-08.",
     "flexibilityNote": "Flexible ISAs allow withdrawals and redeposits within same tax year without using additional allowance. UK-ISA-12.",
     "bedAndISANote": "Sell investment outside ISA, rebuy inside ISA. Crystallises gain within annual exempt CGT amount. UK-ISA-10.",
     "isaIncomeExempt": true,
@@ -293,12 +293,12 @@
   "taxEfficientInvestments": {
     "vct": {
       "incomeTaxRelief": 0.2,
-      "incomeTaxReliefNote": "Reduced from 30% to 20% from 6 April 2026 (Finance Act 2026). Annual investment limit \u00a3200,000 unchanged.",
+      "incomeTaxReliefNote": "Reduced from 30% to 20% from 6 April 2026 (Finance Act 2026). Annual investment limit £200,000 unchanged.",
       "annualInvestmentLimit": 200000,
       "holdingPeriod": 5,
       "dividendExempt": true,
       "gainsExempt": true,
-      "note": "Venture Capital Trust. High risk \u2014 early-stage company investment. IT relief 20% from April 2026; loss of relief if sold within 5 years."
+      "note": "Venture Capital Trust. High risk — early-stage company investment. IT relief 20% from April 2026; loss of relief if sold within 5 years."
     },
     "eis": {
       "incomeTaxRelief": 0.3,
@@ -310,7 +310,7 @@
       "lossRelief": true,
       "grossAssetsLimitPreIssue": 30000000,
       "grossAssetsLimitPostIssue": 35000000,
-      "grossAssetsLimitsNote": "Gross asset limits increased from April 2026: pre-issue \u00a330m (was \u00a315m), post-issue \u00a335m (was \u00a316m). Widens eligibility.",
+      "grossAssetsLimitsNote": "Gross asset limits increased from April 2026: pre-issue £30m (was £15m), post-issue £35m (was £16m). Widens eligibility.",
       "note": "Enterprise Investment Scheme. High risk. IHT exemption after 2 years via BPR. UK-EIS-01."
     },
     "seis": {
@@ -327,38 +327,38 @@
       "residentialRates": [
         {
           "upTo": 125000,
-          "rate": 0.0,
-          "note": "0% on first \u00a3125,000 (reverted from \u00a3250,000 on 1 April 2025)"
+          "rate": 0,
+          "note": "0% on first £125,000 (reverted from £250,000 on 1 April 2025)"
         },
         {
           "from": 125001,
           "upTo": 250000,
           "rate": 0.02,
-          "note": "2% on \u00a3125,001\u2013\u00a3250,000"
+          "note": "2% on £125,001–£250,000"
         },
         {
           "from": 250001,
           "upTo": 925000,
           "rate": 0.05,
-          "note": "5% on \u00a3250,001\u2013\u00a3925,000"
+          "note": "5% on £250,001–£925,000"
         },
         {
           "from": 925001,
           "upTo": 1500000,
           "rate": 0.1,
-          "note": "10% on \u00a3925,001\u2013\u00a31.5m"
+          "note": "10% on £925,001–£1.5m"
         },
         {
           "from": 1500001,
           "rate": 0.12,
-          "note": "12% above \u00a31.5m"
+          "note": "12% above £1.5m"
         }
       ],
       "firstTimeBuyerRelief": {
         "zeroRateTo": 300000,
         "reducedRateTo": 500000,
         "reducedRate": 0.05,
-        "note": "First-time buyers: 0% up to \u00a3300,000, 5% on \u00a3300,001\u2013\u00a3500,000. No relief above \u00a3500,000. Reverted to pre-2022 thresholds on 1 April 2025 (was \u00a3425,000/\u00a3625,000 under temporary 2022\u20132025 rules)."
+        "note": "First-time buyers: 0% up to £300,000, 5% on £300,001–£500,000. No relief above £500,000. Reverted to pre-2022 thresholds on 1 April 2025 (was £425,000/£625,000 under temporary 2022–2025 rules)."
       },
       "additionalPropertySurcharge": 0.05,
       "additionalPropertySurchargeNote": "5% surcharge on additional residential properties from 31 October 2024 (Autumn Budget Oct 2024; was 3% pre-31-Oct-2024). Applied on top of all standard bands.",
@@ -367,7 +367,7 @@
       "nonUKResidentSurchargeNote": "2% surcharge for buyers not UK-resident for 183+ days in 12 months before purchase.",
       "annualTaxEnvelopedDwellings": {
         "threshold": 500000,
-        "note": "ATED applies to residential properties worth over \u00a3500,000 held by companies. Annual charge applies."
+        "note": "ATED applies to residential properties worth over £500,000 held by companies. Annual charge applies."
       }
     },
     "rentalIncome": {
@@ -381,7 +381,7 @@
         "Council tax (if landlord pays)",
         "Accountancy fees"
       ],
-      "wearAndTearAllowanceNote": "Replaced by replacement of domestic items relief \u2014 actual cost of replacing items only.",
+      "wearAndTearAllowanceNote": "Replaced by replacement of domestic items relief — actual cost of replacing items only.",
       "rentARoomRelief": 7500,
       "propertyAllowance": 1000,
       "furnishedHolidayLettingsNote": "FHL special tax status removed April 2025 (ABOLISHED). Now taxed as ordinary residential rental income. No capital allowances, no BADR eligibility."
@@ -389,7 +389,7 @@
     "cgtOnProperty": {
       "principalPrivateResidenceRelief": true,
       "pprFinalPeriodExemptionMonths": 9,
-      "lettingRelief": "Restricted from April 2020 \u2014 only where owner shares occupancy.",
+      "lettingRelief": "Restricted from April 2020 — only where owner shares occupancy.",
       "reportingDeadlineDays": 60,
       "spousalTransferNote": "Inter-spouse transfers in same tax year: no-gain-no-loss. Transferee inherits original cost base. UK-CGT-09."
     },
@@ -403,11 +403,11 @@
     "upperEarningsLimit": 50270,
     "class1EmployeeRate": 0.08,
     "class1EmployeeRateAboveUEL": 0.02,
-    "class1EmployeeNote": "Employee NIC: 8% on earnings \u00a312,570\u2013\u00a350,270; 2% above \u00a350,270. Rates unchanged from 2025/26.",
+    "class1EmployeeNote": "Employee NIC: 8% on earnings £12,570–£50,270; 2% above £50,270. Rates unchanged from 2025/26.",
     "class1EmployerRate": 0.15,
     "class1EmployerSecondaryThreshold": 5000,
     "class1EmployerSecondaryThresholdWeekly": 96,
-    "class1EmployerNote": "Employer NIC: 15% on earnings above \u00a35,000/year (\u00a396/week secondary threshold). Rate increased from 13.8% and threshold cut from \u00a39,100 from April 2025.",
+    "class1EmployerNote": "Employer NIC: 15% on earnings above £5,000/year (£96/week secondary threshold). Rate increased from 13.8% and threshold cut from £9,100 from April 2025.",
     "class2Rate": 0,
     "class2Note": "Class 2 NIC effectively abolished for profits above Small Profits Threshold from April 2024.",
     "class2SmallProfitsThreshold": 12570,
@@ -418,9 +418,9 @@
     "class4LowerProfitsLimit": 12570,
     "class4UpperProfitsLimit": 50270,
     "employmentAllowance": 10500,
-    "employmentAllowanceNote": "Eligible employers can reduce employer NI bill by up to \u00a310,500/year (increased from \u00a35,000 from April 2025). Cannot claim if sole director with no other employees.",
+    "employmentAllowanceNote": "Eligible employers can reduce employer NI bill by up to £10,500/year (increased from £5,000 from April 2025). Cannot claim if sole director with no other employees.",
     "salarySacrificeNISaving": true,
-    "directorNIMethod": "Annual earnings period \u2014 different from monthly employee calculation. UK-NI-15.",
+    "directorNIMethod": "Annual earnings period — different from monthly employee calculation. UK-NI-15.",
     "statePensionQualifyingYears": 35,
     "stateNewPensionFullAmount": 12548,
     "autoEnrolmentTotal": 0.08,
@@ -445,16 +445,16 @@
       "standardRateBand": 1000
     },
     "bareTrust": {
-      "note": "Assets taxed as if beneficiary owns them \u2014 income and gains attributed to beneficiary. Parental settlement rule: income > \u00a3100/yr from parental gift taxed on parent (until child 18). UK-TRUST-01."
+      "note": "Assets taxed as if beneficiary owns them — income and gains attributed to beneficiary. Parental settlement rule: income > £100/yr from parental gift taxed on parent (until child 18). UK-TRUST-01."
     },
     "interestInPossession": {
-      "note": "Income to life tenant taxed as their income. Pre-2006 IIP trusts: life tenant treated as owner of capital for IHT (qualified IIP \u2014 UK-TRUST-43)."
+      "note": "Income to life tenant taxed as their income. Pre-2006 IIP trusts: life tenant treated as owner of capital for IHT (qualified IIP — UK-TRUST-43)."
     },
     "trustRegistrationService": {
       "required": true,
       "note": "Most express trusts must register with HMRC TRS. Penalties for non-compliance. UK-TRUST-21."
     },
-    "lpaSafeguardNote": "LPA attorney cannot implement IHT gifting programme (annual exemptions, PETs) without Court of Protection authorisation. A major planning failure point \u2014 see UK-LPA-08 / UK-LPA-12."
+    "lpaSafeguardNote": "LPA attorney cannot implement IHT gifting programme (annual exemptions, PETs) without Court of Protection authorisation. A major planning failure point — see UK-LPA-08 / UK-LPA-12."
   },
   "overseas": {
     "statutoryResidenceTest": {
@@ -467,12 +467,12 @@
         "test1_previouslyResidentLowDays": {
           "applicableIf": "UK resident in any of the 3 prior tax years",
           "ukDaysCeiling": 15,
-          "description": "If UK resident in any of prior 3 tax years AND fewer than 16 UK days in current year \u2192 automatically non-resident."
+          "description": "If UK resident in any of prior 3 tax years AND fewer than 16 UK days in current year → automatically non-resident."
         },
         "test2_notPreviouslyResidentLowDays": {
           "applicableIf": "NOT UK resident in any of the 3 prior tax years",
           "ukDaysCeiling": 45,
-          "description": "If NOT UK resident in any of prior 3 tax years AND fewer than 46 UK days in current year \u2192 automatically non-resident."
+          "description": "If NOT UK resident in any of prior 3 tax years AND fewer than 46 UK days in current year → automatically non-resident."
         },
         "test3_fullTimeWorkOverseas": {
           "ukDaysCeiling": 90,
@@ -486,7 +486,7 @@
         "_note": "Apply SECOND if no automatic overseas test passes. If any test passes, individual is automatically UK-resident.",
         "test1_183Days": {
           "ukDaysFloor": 183,
-          "description": "183+ days in UK in the tax year \u2192 automatically UK resident."
+          "description": "183+ days in UK in the tax year → automatically UK resident."
         },
         "test2_onlyUKHome": {
           "homeAvailableConsecutiveDays": 91,
@@ -569,7 +569,7 @@
       "yearFiveCliff": true,
       "annualElectionRequired": true,
       "description": "New arrivals (UK resident but not resident in all of preceding 10 consecutive tax years) may elect to exempt foreign income and gains from UK IT/CGT for each of first 4 tax years. No PA/AEA available in elected years for foreign income/gains. Foreign losses cannot offset UK income in elected years. UK source income/gains always chargeable. From year 5: full worldwide basis, no tapering.",
-      "engineNote": "Engine must track 'years of UK residence' counter. Alert at approach to year 5 cliff. See UK-RES-24 to UK-RES-27 / Coverage v1.3 \u00a710.1."
+      "engineNote": "Engine must track 'years of UK residence' counter. Alert at approach to year 5 cliff. See UK-RES-24 to UK-RES-27 / Coverage v1.3 §10.1."
     },
     "trfFacility": {
       "name": "Temporary Repatriation Facility (TRF)",
@@ -583,7 +583,7 @@
       "trfRate2526": 0.12,
       "trfRate2627": 0.12,
       "trfRate2728": 0.15,
-      "note": "Designated pre-April-2025 FIG taxed at flat TRF rate. No PA, no AEA, no UK reliefs offsettable. Rates below marginal IT (45%) and CGT (24%). Mixed fund priority: post-6-April-2008 income designated first. FIG and TRF can run simultaneously if individual is both FIG-eligible (years 1\u20134) and has prior unremitted pool. Bundle fields: trfRate2526, trfRate2627, trfRate2728. See UK-RES-28 to UK-RES-30 / Coverage v1.3 \u00a710.2."
+      "note": "Designated pre-April-2025 FIG taxed at flat TRF rate. No PA, no AEA, no UK reliefs offsettable. Rates below marginal IT (45%) and CGT (24%). Mixed fund priority: post-6-April-2008 income designated first. FIG and TRF can run simultaneously if individual is both FIG-eligible (years 1–4) and has prior unremitted pool. Bundle fields: trfRate2526, trfRate2627, trfRate2728. See UK-RES-28 to UK-RES-30 / Coverage v1.3 §10.2."
     },
     "nonDom": {
       "newRegimeEffectiveDate": "2025-04-06",
@@ -596,17 +596,17 @@
     },
     "remittanceBasis": {
       "abolished": "2025-04-06",
-      "note": "Remittance basis abolished from April 2025 for new claims. Replaced by FIG regime. TRF available for existing unremitted pools \u2014 see trfFacility."
+      "note": "Remittance basis abolished from April 2025 for new claims. Replaced by FIG regime. TRF available for existing unremitted pools — see trfFacility."
     },
     "doubleTaxationRelief": {
-      "creditMethod": "Offset overseas tax paid against UK liability \u2014 most common.",
+      "creditMethod": "Offset overseas tax paid against UK liability — most common.",
       "exemptionMethod": "Some treaty income exempt from UK tax entirely.",
-      "note": "UK has DTAs with 130+ countries. Treatment varies by treaty article. User declares jurisdiction \u2014 Caelixa shows UK tax treatment only."
+      "note": "UK has DTAs with 130+ countries. Treatment varies by treaty article. User declares jurisdiction — Caelixa shows UK tax treatment only."
     },
     "splitYearTreatment": {
       "_source": "HMRC RDR3 + Schedule 45 Finance Act 2013 Part 3",
       "_status": "DOCUMENTED",
-      "note": "8 cases. Cases 1-3 leavers; Cases 4-8 arrivers. Apply in order \u2014 first match wins. Tie-breaks: leavers prefer earliest overseas-part start; arrivers prefer latest UK-part start.",
+      "note": "8 cases. Cases 1-3 leavers; Cases 4-8 arrivers. Apply in order — first match wins. Tie-breaks: leavers prefer earliest overseas-part start; arrivers prefer latest UK-part start.",
       "leaverCases": {
         "case1_startingFullTimeWorkOverseas": {
           "id": 1,
@@ -711,7 +711,7 @@
       }
     },
     "cryptoOverseas": {
-      "note": "CARF (Cryptoasset Reporting Framework) in force from 1 January 2026 \u2014 crypto exchanges report all UK user transaction data to HMRC. Overseas crypto taxable in UK for UK residents. UK-CRYPTO-*."
+      "note": "CARF (Cryptoasset Reporting Framework) in force from 1 January 2026 — crypto exchanges report all UK user transaction data to HMRC. Overseas crypto taxable in UK for UK residents. UK-CRYPTO-*."
     }
   },
   "welshIT": {
@@ -721,10 +721,10 @@
     "currentWRIT": 0.1,
     "combinedRates": "Equal to rUK (20%/40%/45% combined) while WRIT = 10%",
     "scope": "Non-savings, non-dividend income of Welsh taxpayers only. Identified by C-prefix tax code (Cymru).",
-    "divergenceTrigger": "If Welsh Parliament sets WRIT \u2260 10% for any band, Welsh taxpayers' IT diverges. Engine must check jurisdiction flag (Wales) and apply Welsh-specific rates.",
-    "bundleField": "welshRates \u2014 currently mirrors rUK. Review after each Welsh Rate Resolution (typically November/December before tax year).",
+    "divergenceTrigger": "If Welsh Parliament sets WRIT ≠ 10% for any band, Welsh taxpayers' IT diverges. Engine must check jurisdiction flag (Wales) and apply Welsh-specific rates.",
+    "bundleField": "welshRates — currently mirrors rUK. Review after each Welsh Rate Resolution (typically November/December before tax year).",
     "monitoring": true,
-    "note": "Wales Act 2014/2017. Currently no effective divergence from rUK rates (May 2026). UK-WELSH-01 to UK-WELSH-04 / Coverage v1.3 \u00a72a."
+    "note": "Wales Act 2014/2017. Currently no effective divergence from rUK rates (May 2026). UK-WELSH-01 to UK-WELSH-04 / Coverage v1.3 §2a."
   },
   "businessOwnerPersonal": {
     "salaryVsDividend": {
@@ -745,24 +745,24 @@
     "badrNote": "Business Asset Disposal Relief on qualifying share or business sale. Rate 18% from 6 April 2026 (was 14% in 2025/26).",
     "investorsReliefRate": 0.18,
     "investorsReliefLimit": 1000000,
-    "bprQualifying": "100% IHT relief within \u00a32.5m combined APR/BPR allowance after 2 years. 50% above allowance. Finance Act 2026.",
+    "bprQualifying": "100% IHT relief within £2.5m combined APR/BPR allowance after 2 years. 50% above allowance. Finance Act 2026.",
     "aimBPRRate": 0.5,
     "aimBPRNote": "AIM shares 50% relief from April 2026 regardless of allowance position (was 100%).",
     "employeeOwnershipTrust": {
       "cgtFreeOnSale": true,
-      "note": "Sale of controlling interest to EOT is exempt from CGT. Employees get annual bonus up to \u00a33,600 tax-free."
+      "note": "Sale of controlling interest to EOT is exempt from CGT. Employees get annual bonus up to £3,600 tax-free."
     },
     "ir35": {
-      "note": "Off-payroll working rules \u2014 if caught by IR35, income treated as employment income. NI and income tax apply. UK-SE-05."
+      "note": "Off-payroll working rules — if caught by IR35, income treated as employment income. NI and income tax apply. UK-SE-05."
     },
     "directorsLoan": {
       "s455TaxRate": 0.3375,
-      "s455Note": "Outstanding director's loan at year end \u2014 company pays S455 tax at 33.75%. Repayable if loan repaid within 9 months."
+      "s455Note": "Outstanding director's loan at year end — company pays S455 tax at 33.75%. Repayable if loan repaid within 9 months."
     },
     "carriedInterest": {
       "effectiveFrom": "2026-04-06",
       "treatment": "trading-profit",
-      "note": "From 6 April 2026, carried interest treated as trading profit \u2014 subject to IT and NIC rather than CGT. Qualifying minimum average holding period gives reduced effective top rate ~34% (vs 47% without)."
+      "note": "From 6 April 2026, carried interest treated as trading profit — subject to IT and NIC rather than CGT. Qualifying minimum average holding period gives reduced effective top rate ~34% (vs 47% without)."
     }
   },
   "corporationTax": {
@@ -772,7 +772,7 @@
     "smallProfitsLimit": 50000,
     "mainRate": 0.25,
     "mainRateLimit": 250000,
-    "marginalReliefNote": "Marginal relief between \u00a350,000 and \u00a3250,000 profits \u2014 effective rate tapers between 19% and 25%."
+    "marginalReliefNote": "Marginal relief between £50,000 and £250,000 profits — effective rate tapers between 19% and 25%."
   },
   "allowancesAndReliefs": {
     "tradingAllowance": 1000,
@@ -788,19 +788,19 @@
     "mtdItsa": {
       "phase1EffectiveDate": "2026-04-06",
       "phase1ThresholdGrossIncome": 50000,
-      "phase1Note": "MTD ITSA Phase 1 (April 2026): self-employed + landlords with combined gross income > \u00a350k mandated. Quarterly digital submissions + EOPS + final declaration.",
+      "phase1Note": "MTD ITSA Phase 1 (April 2026): self-employed + landlords with combined gross income > £50k mandated. Quarterly digital submissions + EOPS + final declaration.",
       "phase2EffectiveDate": "2027-04-06",
       "phase2ThresholdGrossIncome": 30000,
       "phase3EffectiveDate": "2028-04-06",
       "phase3ThresholdGrossIncome": 20000,
-      "penaltyNote": "Points-based penalty: \u00a3200 after 4 points (each missed quarterly submission = 1 point). UK-SE-26 to UK-SE-33."
+      "penaltyNote": "Points-based penalty: £200 after 4 points (each missed quarterly submission = 1 point). UK-SE-26 to UK-SE-33."
     },
     "cashISACapUnder65From2027": 12000,
-    "cashISACapNote": "From April 2027: cash ISA limited to \u00a312,000/year for under-65s (over-65s retain \u00a320,000). NOT in effect for 2026/27. Autumn Budget 2025.",
+    "cashISACapNote": "From April 2027: cash ISA limited to £12,000/year for under-65s (over-65s retain £20,000). NOT in effect for 2026/27. Autumn Budget 2025.",
     "giftAidGrossUpRate": 0.25,
-    "giftAidNote": "Donor gives net; charity reclaims 25p per \u00a31. Higher/additional rate taxpayers claim further relief via SA. Gift Aid reduces ANI (useful for HICBC/PA taper management). UK-CHAR-01.",
+    "giftAidNote": "Donor gives net; charity reclaims 25p per £1. Higher/additional rate taxpayers claim further relief via SA. Gift Aid reduces ANI (useful for HICBC/PA taper management). UK-CHAR-01.",
     "makingTaxDigital": {
-      "note": "MTD for income tax \u2014 mandatory quarterly reporting for self-employed and landlords. Phased by income threshold. See mtdItsa above."
+      "note": "MTD for income tax — mandatory quarterly reporting for self-employed and landlords. Phased by income threshold. See mtdItsa above."
     },
     "selfAssessment": {
       "filingDeadlineOnline": "31 January",
@@ -808,11 +808,11 @@
       "paymentOnAccountNote": "Self-employed and landlords make payments on account in January and July."
     },
     "aniFormula": {
-      "note": "ANI (Adjusted Net Income) = net income \u2212 qualifying loan interest \u2212 trading loss sideways relief \u2212 gross Gift Aid \u2212 gross pension contributions. Drives PA taper, HICBC, PSA band, Marriage Allowance. See \u00a72.2a Coverage v1.3. Engine must compute ANI before any high-income test."
+      "note": "ANI (Adjusted Net Income) = net income − qualifying loan interest − trading loss sideways relief − gross Gift Aid − gross pension contributions. Drives PA taper, HICBC, PSA band, Marriage Allowance. See §2.2a Coverage v1.3. Engine must compute ANI before any high-income test."
     }
   },
   "safeWithdrawalRate": 0.04,
-  "bengenNote": "4% safe withdrawal rate (Bengen rule). Investable assets \u00d7 4% = safe annual spending ceiling.",
+  "bengenNote": "4% safe withdrawal rate (Bengen rule). Investable assets × 4% = safe annual spending ceiling.",
   "milestones": {
     "_note": "Timeline milestone catalogue v1.0 (UK-2026.1.1). Starter set.",
     "catalogue": [
@@ -821,7 +821,7 @@
         "category": "wealth",
         "metric": "netWorth",
         "target": 100000,
-        "label": "First \u00a3100k net worth"
+        "label": "First £100k net worth"
       },
       {
         "id": "net_worth_250k",
@@ -849,14 +849,14 @@
         "category": "wealth",
         "metric": "netWorth",
         "target": 2000000,
-        "label": "\u00a32m net worth"
+        "label": "£2m net worth"
       },
       {
         "id": "investable_100k",
         "category": "wealth",
         "metric": "investable",
         "target": 100000,
-        "label": "First \u00a3100k investable"
+        "label": "First £100k investable"
       },
       {
         "id": "investable_500k",
@@ -870,21 +870,21 @@
         "category": "wealth",
         "metric": "investable",
         "target": 1000000,
-        "label": "\u00a31m investable"
+        "label": "£1m investable"
       },
       {
         "id": "sipp_100k",
         "category": "pension",
         "metric": "sipp",
         "target": 100000,
-        "label": "Pension pot reaches \u00a3100k"
+        "label": "Pension pot reaches £100k"
       },
       {
         "id": "sipp_500k",
         "category": "pension",
         "metric": "sipp",
         "target": 500000,
-        "label": "Pension pot reaches \u00a3500k"
+        "label": "Pension pot reaches £500k"
       },
       {
         "id": "score_50",
@@ -974,7 +974,7 @@
         "id": "funded_ratio_1",
         "category": "fi",
         "metric": "fundedRatio",
-        "target": 1.0,
+        "target": 1,
         "label": "Financial independence (funded ratio = 1.0)"
       },
       {
@@ -995,5 +995,10 @@
     ]
   },
   "_lastUpdated": "May 2026",
-  "_nextReviewDue": "October 2026 (Autumn Budget) and April 2027 (new tax year, SIPP IHT inclusion)"
+  "_nextReviewDue": "October 2026 (Autumn Budget) and April 2027 (new tax year, SIPP IHT inclusion)",
+  "personal_allowance": 12570,
+  "additional_rate_threshold": 125140,
+  "dividend_ordinary_rate": 0.1075,
+  "dividend_upper_rate": 0.3575,
+  "vct_income_relief": 0.2
 }

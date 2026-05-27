@@ -21,7 +21,12 @@ export const BRAND = {
   nameExpanded:   'Your wealth, in one place — see, score, and grow your financial world.',
 
   // ── Regulatory disclaimer ─ shown verbatim on every tax-touching screen ──
-  disclaimer:     'Not regulated financial advice. Verify decisions with a qualified UK financial adviser.',
+  // 2026-05-27: reworded to lead with the affirmative ("Information and guidance
+  // only. Not personal advice.") per FCA-policy canonical phrasing. The prior
+  // wording ("Not regulated financial advice…") opened with a negative claim,
+  // which compliance reviewers reject because it tells the reader what the
+  // service is NOT before establishing what it IS.
+  disclaimer:     'Information and guidance only. Not personal advice. Verify decisions with a qualified FCA-authorised adviser before acting.',
   rulesLabel:     (v = 'UK-2026.1', d = 'April 2026') => `Rules: ${v} · Last verified: ${d}`,
   rulesVersion:   'UK-2026.1',
   rulesBundle:    'UK-2026.1',

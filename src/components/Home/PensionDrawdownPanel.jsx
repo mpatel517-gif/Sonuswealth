@@ -176,7 +176,7 @@ export default function PensionDrawdownPanel({ entity, onClose, onNav }) {
         ))}
 
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '8px 0 12px' }}>
-          Information only · Figures from your data · Not regulated financial advice · FCA boundary applies
+          Information and guidance only · Figures from your data · Not personal advice · FCA boundary applies
         </div>
       </div>
     </div>

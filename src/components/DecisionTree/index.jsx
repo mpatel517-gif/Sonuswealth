@@ -427,7 +427,7 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
       <p style={{
         fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5,
       }}>
-        Not regulated financial advice — verify with a qualified FCA-authorised adviser before acting.
+        Information and guidance only. Not personal advice — verify with a qualified FCA-authorised adviser before acting.
       </p>
     </div>
   )

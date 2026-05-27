@@ -1953,7 +1953,7 @@ export default function HomeScreen({
         textAlign: 'center', fontSize: 11, color: 'var(--c-text3)',
         padding: '14px 24px 8px', lineHeight: 1.6,
       }}>
-        Information &amp; guidance only · Not regulated financial advice · FCA boundary applies
+        Information and guidance only · Not personal advice · FCA boundary applies
       </div>
 
       {/* Nav spacer — 78px bottom nav + 52px AskPill + 8px gap + 12px breathing room */}

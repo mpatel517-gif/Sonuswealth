@@ -262,7 +262,7 @@ export default function PersonaSelect({ personaList, onSelect, onBack }) {
           textAlign:  'center',
           lineHeight: 1.6,
         }}>
-          Demo data only · Not regulated financial advice ·{' '}
+          Demo data only · Information and guidance — not personal advice ·{' '}
           {BRAND.rulesVersion}
         </div>
       </div>

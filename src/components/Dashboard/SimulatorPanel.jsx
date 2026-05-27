@@ -445,7 +445,7 @@ export default function SimulatorPanel({
       </button>
 
       <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
-        Simulated values only. Not regulated financial advice. Verify decisions with a qualified adviser.
+        Simulated values only. Information and guidance — not personal advice. Verify decisions with a qualified FCA-authorised adviser before acting.
       </div>
     </div>
   )

@@ -53,7 +53,7 @@ const USE_DEMO_FALLBACK = !API_KEY
 // Canonical FCA boundary string — used in static footer, per-response auto-append,
 // and system-prompt instruction. ONE source of truth. (Fixes F-ASK-DUP-01.)
 const FCA_BOUNDARY =
-  'Not regulated financial advice — verify with a qualified FCA-authorised adviser before acting.'
+  'Information and guidance only. Not personal advice — verify with a qualified FCA-authorised adviser before acting.'
 
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // §13.1 — 30 min idle clear
 const TYPE_CHAR_MS       = 28              // greeting type-out cadence

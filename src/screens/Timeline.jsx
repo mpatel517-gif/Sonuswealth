@@ -2590,9 +2590,9 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         textAlign:'center', fontSize: 11, color: 'var(--c-text3)',
         padding: 'var(--space-md) var(--space-2xl) var(--space-sm)', lineHeight: 1.6,
       }}>
-        Not regulated financial advice. Sonuswealth models scenarios and surfaces statutory
-        dates relevant to your position; final decisions and timing should be validated
-        with a qualified adviser.
+        Information and guidance only. Not personal advice. Sonuswealth models scenarios and
+        surfaces statutory dates relevant to your position; final decisions and timing should
+        be validated with a qualified FCA-authorised adviser before acting.
         <br />{TAX.ver} · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       </div>
       <div style={{ height: 78 }} />

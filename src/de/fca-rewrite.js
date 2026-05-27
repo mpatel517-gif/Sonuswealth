@@ -21,7 +21,7 @@ export const PROHIBITED_PATTERNS = [
 ];
 
 export const FCA_BOUNDARY =
-  'Not regulated financial advice — verify with a qualified FCA-authorised adviser before acting.';
+  'Information and guidance only. Not personal advice — verify with a qualified FCA-authorised adviser before acting.';
 
 /**
  * Rewrite text to remove prohibited advisory language.

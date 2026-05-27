@@ -48,6 +48,32 @@ import { useCascadeTrigger, useCounterAnimation, useInView } from '../hooks/useA
 import InheritanceStory from '../components/TaxEstate/InheritanceStory.jsx'
 import { ihtProjection } from '../engine/tax-estate-engine.js'
 
+// ── v0.3 Phase 5 R4 imports ─────────────────────────────────────────────────
+// Spec: 0-Active/route-specs/route-4-tax-estate.md §3 — signature is the
+// IHT pre/post-April-2027 delta card at position 2 (above all allowance bars).
+import IHTDeltaCard from '../components/charts/IHTDeltaCard.jsx'
+import {
+  TaperedAATile,
+  CohabIHTCliffTile,
+  TransferableNRBTile,
+  LandlordS24Tile,
+  DrawdownMethodsTeaser,
+  RentARoomTile,
+  EISVCTClockTile,
+  NormalExpenditureTile,
+  AnnualGiftExemptionTile,
+  SmallGiftsTile,
+  WeddingGiftsTile,
+  RNRBTaperTile,
+  BPRCapTile,
+} from '../components/MyMoney/PersonaGapTiles.jsx'
+import {
+  effectiveAA,
+  carryForwardByYear,
+  holdingClock,
+} from '../engine/persona-helpers.js'
+import { ihtDeltaPrePost2027 } from '../engine/canonical-metrics.js'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1017,7 +1043,16 @@ function IHTDualNumber({ entity }) {
 //   gift      → gift_amount        (one-off gift / PET)
 //   bpr       → apr_bpr_allowance_claimed (BPR/APR relief claimed)
 function IHTWaterfall({ entity }) {
-  const [deltas, setDeltas] = useState({ sippDraw: 0, gift: 0, bpr: 0 })
+  // P0-4 (2026-05-27): seed gift slider from entity's actual declared PETs.
+  // Before this fix, the slider always opened at £0 and a user with £500k in
+  // trust gifts saw no surface for them — the engine knew, the UI hid it.
+  const declaredGift = (() => {
+    const tg = entity?.assets?.trustGifts || entity?.trustGifts
+    if (!tg) return 0
+    const v = tg.total ?? tg.amount ?? tg.value ?? 0
+    return Number.isFinite(+v) ? +v : 0
+  })()
+  const [deltas, setDeltas] = useState({ sippDraw: 0, gift: declaredGift, bpr: 0 })
 
   // Map component slider keys → engine delta keys
   const engineDeltas = {
@@ -1125,9 +1160,11 @@ function IHTWaterfall({ entity }) {
       <SliderRow label="SIPP drawdown (annual)" value={deltas.sippDraw} max={120000} step={5000}
         onChange={v => setDeltas(d => ({ ...d, sippDraw: v }))}
         note="Modelled over 20 years — reduces estate by drawing down pension before death" />
-      <SliderRow label="Gifts / PETs" value={deltas.gift} max={500000} step={5000}
+      <SliderRow label="Gifts / PETs" value={deltas.gift} max={Math.max(500000, declaredGift)} step={5000}
         onChange={v => setDeltas(d => ({ ...d, gift: v }))}
-        note="One-off gift. IHT taper applies if death within 7 years" />
+        note={declaredGift > 0
+          ? `Seeded from your declared £${(declaredGift/1000).toFixed(0)}k trust gift. IHT taper applies if death within 7 years.`
+          : "One-off gift. IHT taper applies if death within 7 years."} />
       <SliderRow label="Business relief positioning (BPR)" value={deltas.bpr} max={500000} step={5000}
         onChange={v => setDeltas(d => ({ ...d, bpr: v }))}
         note="Business + agricultural relief transitional rules apply — pre vs post 30-Oct-2024" />
@@ -1769,7 +1806,7 @@ function EstatePlanBadge({ entity }) {
       display: 'flex', alignItems: 'center', gap: 'var(--space-sm)',
     }}>
       <span className="sw-eyebrow">Estate plan</span>
-      {plan?.target != null && (
+      {plan?.target != null && Number.isFinite(plan.target) && (
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
           target {fmt(plan.target)}
         </span>
@@ -2512,9 +2549,13 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
         dataDate={BRAND.dataDate}
       />
 
-      {/* ── Triple anchor — every primary screen ────────────────────────── */}
+      {/* ── Triple anchor — every primary screen ──────────────────────────
+          Founder 2026-05-25 round 6: hideNetWorth across all primary screens — NW lives in global header chip */}
       <div style={{ margin: '4px 0 12px' }}>
         <TripleAnchor
+          hideNetWorth={true}
+          hideWealth={true}
+          hideRisk={true}
           netWorthVal={nw}
           fqTotal={fq.total}
           fqBand={fqBd}
@@ -2599,6 +2640,14 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
       {/* ── ESTATE SUB-TAB ────────────────────────────────────────────────── */}
       {subTab === 'estate' && (
         <div key="estate" className="sw-tab-slide">
+          {/* v0.3 R4 §3 SIGNATURE — IHT pre/post-April-2027 delta card.
+              Lands at position 2 (above the legacy InheritanceStory + plan
+              cards) per route-4-tax-estate.md §3. The card uses the canonical
+              `ihtDeltaPrePost2027(entity)` helper from canonical-metrics, so
+              `Today` and `From April 2027` numbers are consistent with every
+              other R4 surface. Countdown ticks once per UTC day (no pulse) per
+              compliance B6. */}
+          <IHTDeltaCard entity={entity} />
           {/* §13.9 magic — Inheritance Story leads the Estate sub-tab.
               Replaces IHT waterfall as primary. Waterfall available on scroll. */}
           <InheritanceStory entity={entity} onDrillMetric={onDrillMetric} />

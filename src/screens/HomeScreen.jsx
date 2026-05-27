@@ -45,6 +45,12 @@ import {
   monthlySurplus,
   daysLeft as engineDaysLeft,
 } from '../engine/fq-calculator.js'
+// P0-2 (2026-05-27): use the engine's canonical liabilitiesTotal walker so
+// Home's NW drill agrees with Tax+Estate, MyMoney and ripple.balance_sheet.
+// Previously the inline reader at L1601 only knew `l.mortgage`/`l.loans`
+// keys and missed Bruce's `l.otherLoans[]` array — rendering Liabilities £0
+// when the same persona declared £180k of BTL debt elsewhere on the app.
+import { liabilitiesTotal as engineLiabilitiesTotal } from '../engine/_helpers.js'
 import Drillable from '../components/shared/Drillable.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
 import { DIMENSIONS } from '../config/dimensions.js'
@@ -1598,11 +1604,11 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
   const cash      = safe(() => _num(a.cash) + _num(a.savings) + _num(a.cashSavings) + _num(a.bank), 0)
   const altAssets = safe(() => (Array.isArray(a.alternatives) ? a.alternatives : []).reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0), 0)
 
-  const liabilities = safe(() => {
-    const l = entity?.liabilities || a.liabilities || {}
-    if (Array.isArray(l)) return l.reduce((s, x) => s + (+x.outstanding || +x.balance || 0), 0)
-    return (+l.mortgage || 0) + (+l.loans || 0) + (+l.creditCards || 0) + (+l.otherDebt || 0)
-  }, 0)
+  // P0-2: delegate to the engine's canonical liabilitiesTotal walker so
+  // every screen agrees on the same number. The inline reader that lived
+  // here only knew `l.mortgage` / `l.loans` keys and silently dropped
+  // Bruce's £180k BTL mortgage (stored under `l.otherLoans[]`).
+  const liabilities = safe(() => engineLiabilitiesTotal(entity), 0)
 
   const totalAssets = pensions + isa + property + portfolio + business + cash + altAssets
 

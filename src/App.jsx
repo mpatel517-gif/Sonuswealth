@@ -17,17 +17,68 @@ import personaD from './rules/personas/persona-d.json'
 import personaE from './rules/personas/persona-e.json'
 import personaF from './rules/personas/persona-f.json'
 import personaG from './rules/personas/persona-g.json'
-import mrTCore from './rules/personas/mrT-core.json'
+
+// Mr T fixture family — only mrT-core was rewritten to live-UI schema (v2.0,
+// "Bruce app schema with spec-array overlays"). The other 12 mrT-* fixtures
+// keep the engine-test shape (nested individual.{id,name,dob}) and are wired
+// into the engine regression matrix via Supabase (Phase A4) and exercised by
+// the harness. Until a normaliser lifts them to UI shape (Phase D), they ARE
+// registered in ENTITIES so `?demo=mrt-landlord` resolves to the right object
+// — but the renderer detects nested shape and shows an explicit
+// "engine fixture only" notice instead of silently rendering Bruce (P0-14).
+import mrTCore         from './rules/personas/mrT-core.json'
+import mrTLandlord     from './rules/personas/mrT-landlord.json'
+import mrTCouple       from './rules/personas/mrT-couple.json'
+import mrTDivorced     from './rules/personas/mrT-divorced.json'
+import mrTCohabSep     from './rules/personas/mrT-cohab-sep.json'
+import mrTLtdDirector  from './rules/personas/mrT-ltd-director.json'
+import mrTSoleTrader   from './rules/personas/mrT-sole-trader.json'
+import mrTDecumComplex from './rules/personas/mrT-decum-complex.json'
+import mrTAgedOut      from './rules/personas/mrT-aged-out.json'
+import mrTBeneficiary  from './rules/personas/mrT-beneficiary.json'
+import mrTFamily       from './rules/personas/mrT-family.json'
+import mrTUkIn         from './rules/personas/mrT-uk-in.json'
+import mrTUkTh         from './rules/personas/mrT-uk-th.json'
 
 // Flat entity map — Anna Finch snapshots registered individually
 const ENTITIES = {
-  a: personaA, b: personaB, c: personaC, d: personaD, e: personaE, g: personaG,
-  mrt: personaA,   // Bruce Wilson is persona-a
+  a: personaA, b: personaB, c: personaC, d: personaD, e: personaE, f: personaF, g: personaG,
+  // Mr T routing fix (P0-14): every mrT variant resolves to its own object so
+  // the URL ?demo=mrt-X is no longer a lie. mrT-core is the only one with
+  // live-UI shape; the other 12 are nested-shape and the renderer surfaces
+  // them as an explicit gap instead of silently rendering Bruce.
+  mrt:                 mrTCore,
+  'mrt-core':          mrTCore,
+  'mrt-landlord':      mrTLandlord,
+  'mrt-couple':        mrTCouple,
+  'mrt-divorced':      mrTDivorced,
+  'mrt-cohab-sep':     mrTCohabSep,
+  'mrt-ltd-director':  mrTLtdDirector,
+  'mrt-sole-trader':   mrTSoleTrader,
+  'mrt-decum-complex': mrTDecumComplex,
+  'mrt-aged-out':      mrTAgedOut,
+  'mrt-beneficiary':   mrTBeneficiary,
+  'mrt-family':        mrTFamily,
+  'mrt-uk-in':         mrTUkIn,
+  'mrt-uk-th':         mrTUkTh,
   ...Object.fromEntries((personaF.snapshots || []).map(s => [s.id, s])),
 }
 
+// P0-14: detect engine-test-shape personas that don't have UI-renderable
+// root fields. mrT-core was rewritten to lift these to root; the other 12
+// mrT fixtures store name/dob nested under `individual.*`. Rather than
+// silently rendering Bruce (the pre-2026-05-27 behaviour), the renderer
+// surfaces this as an explicit "engine fixture, not UI-renderable yet" state.
+function isUiRenderable(entity) {
+  if (!entity || typeof entity !== 'object') return false
+  // Live-UI shape personas (a-g, mrT-core) have name at the root.
+  // Engine-test shape has it under individual.{name,dob} and no root.name.
+  if (typeof entity.name === 'string' && entity.name.length > 0) return true
+  return false
+}
+
 const PERSONA_LIST = [
-  { id:'mrt',  badge:'T', label:'Mr T (full fixture)', sub:'All-domain reference',   type:'individual' },
+  { id:'mrt-core', badge:'T', label:'Mr T Core', sub:'35 · Director · all-domain', type:'individual' },
   { id:'a',    badge:'A', label:'Bruce Wayne',        sub:'62 · Decumulation',      type:'individual' },
   { id:'b',    badge:'B', label:'Fred & Wilma',       sub:'64/61 · Transition',     type:'couple'     },
   { id:'c',    badge:'C', label:'Tony Stark',         sub:'48 · Business owner',    type:'business'   },
@@ -45,7 +96,7 @@ const PERSONA_LIST = [
 function readUrlParams() {
   if (typeof window === 'undefined') return {}
   const p = new URLSearchParams(window.location.search)
-  return { demo: p.get('demo'), tab: p.get('tab') }
+  return { demo: p.get('demo'), tab: p.get('tab'), theme: p.get('theme') }
 }
 
 // FIX-3.A — wire real user data from Onboarding through Account into
@@ -93,6 +144,66 @@ function buildUserPersona(obData) {
   return clone
 }
 
+// P0-14 (2026-05-27): explicit gap notice for personas that resolve to a
+// registered fixture but aren't in UI-renderable shape. Previously the app
+// silently fell back to Bruce, hiding the gap — every screenshot ever taken
+// of "Mr T Landlord" was actually Bruce. This component surfaces the gap.
+function PersonaNotRenderable({ persona, isKnown, rawEntity, onSwitch }) {
+  const nestedName = rawEntity?.individual?.name || rawEntity?.fixture_id || null
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24, background: 'var(--c-bg)', color: 'var(--c-text)',
+    }}>
+      <div style={{
+        maxWidth: 560, padding: 32, borderRadius: 20,
+        background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+        boxShadow: 'var(--sh1)', lineHeight: 1.55,
+      }}>
+        <div style={{
+          fontSize: 11, fontWeight: 800, letterSpacing: '0.12em',
+          textTransform: 'uppercase', color: 'var(--c-coral, #FF6F7D)', marginBottom: 12,
+        }}>
+          Persona not UI-renderable
+        </div>
+        <h1 style={{
+          fontSize: 22, fontWeight: 800, margin: '0 0 12px', letterSpacing: -0.4,
+        }}>
+          {isKnown
+            ? `${nestedName || persona} is an engine-test fixture, not a UI persona yet.`
+            : `Unknown persona: "${persona}"`}
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--c-text2)', margin: '0 0 16px' }}>
+          {isKnown ? (
+            <>
+              This fixture exists in the engine regression matrix but its data is
+              stored in nested-test shape (e.g. <code style={{ fontSize: 12 }}>
+              individual.name</code>) that the UI screens don&rsquo;t read yet.
+              We&rsquo;ve made this visible rather than silently rendering Bruce
+              Wayne&rsquo;s data in its place.
+            </>
+          ) : (
+            <>The <code style={{ fontSize: 12 }}>?demo=</code> URL parameter doesn&rsquo;t
+              match any registered persona. Check the spelling, or pick from the list.</>
+          )}
+        </p>
+        <button
+          onClick={onSwitch}
+          style={{
+            padding: '10px 18px', borderRadius: 10, border: 0, cursor: 'pointer',
+            background: 'var(--c-acc)', color: 'var(--c-bg)', fontWeight: 700, fontSize: 14,
+          }}>
+          Pick a UI-renderable persona →
+        </button>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 18 }}>
+          UI-renderable today: <code>a</code> (Bruce), <code>b</code>, <code>c</code>,
+          <code> d</code>, <code>e</code>, <code>f-*</code>, <code>g</code>, <code>mrt-core</code>.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Inner component — read effective entity via hook (must be inside provider)
 function AppInner() {
   const urlParams = readUrlParams()
@@ -103,7 +214,26 @@ function AppInner() {
   const initialScreen = isDemoMode ? 'app'
     : (auth.isAuthenticated ? 'app' : 'welcome')
   const [screen,           setScreen]            = useState(initialScreen)
-  const [theme,            setTheme]             = useState('dark')
+  // P9 (2026-05-26) — respect OS preference on first load. Hard-locked dark
+  // ignored CLAUDE.md §9 "every snap inspected at every viewport in every
+  // theme" because there was no theme to inspect. Order:
+  //   1. URL param ?theme=light|dark — explicit override
+  //   2. localStorage 'sw_theme' — last user choice
+  //   3. window.matchMedia('(prefers-color-scheme: light)') — OS preference
+  //   4. 'dark' fallback (existing default)
+  const [theme, setTheme] = useState(() => {
+    try {
+      const urlTheme = (urlParams.theme || '').toLowerCase()
+      if (urlTheme === 'light' || urlTheme === 'dark') return urlTheme
+      const saved = typeof window !== 'undefined' ? window.localStorage?.getItem('sw_theme') : null
+      if (saved === 'light' || saved === 'dark') return saved
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches
+        if (prefersLight) return 'light'
+      }
+    } catch (_e) { /* fall through */ }
+    return 'dark'
+  })
   const [persona,          setPersona]           = useState(isDemoMode ? urlParams.demo : 'a')
   const [obData,           setObData]            = useState({ age: 38, focus: [], setup: [] })
   const [showPersonaSelect, setShowPersonaSelect] = useState(false)
@@ -123,7 +253,31 @@ function AppInner() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     document.body.style.background = theme === 'dark' ? '#000' : '#F2F2F7'
+    // Persist the user's choice so subsequent visits honour it ahead of OS pref.
+    try { window.localStorage?.setItem('sw_theme', theme) } catch (_e) { /* noop */ }
   }, [theme])
+
+  // P9 — react to live OS theme changes only when the user has NOT made an
+  // explicit choice this session. Keyed off the absence of a localStorage
+  // entry written above, so the first OS flip after a clean install follows
+  // the system, but any explicit toggle locks behaviour to the user's pick.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const handler = (e) => {
+      try {
+        const saved = window.localStorage?.getItem('sw_theme')
+        if (saved === 'light' || saved === 'dark') return // user has chosen
+      } catch (_e) { /* fall through */ }
+      setTheme(e.matches ? 'light' : 'dark')
+    }
+    if (mq.addEventListener) mq.addEventListener('change', handler)
+    else if (mq.addListener) mq.addListener(handler)
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', handler)
+      else if (mq.removeListener) mq.removeListener(handler)
+    }
+  }, [])
 
   // Phase 2b boot hook — fetch the live UK rules bundle + macro variables
   // from Supabase and inject into the engine via _bundle.js. The bundled JSON
@@ -153,7 +307,14 @@ function AppInner() {
     setScreen('app')
   }
 
-  const baseEntity = ENTITIES[persona] || personaA
+  // P0-14: explicit handling of three cases —
+  //   1. persona registered + UI-renderable → render Dashboard normally
+  //   2. persona registered but engine-test shape → render gap notice
+  //   3. persona not registered → render gap notice (URL was wrong)
+  const registeredEntity = ENTITIES[persona]
+  const personaIsKnown   = !!registeredEntity
+  const personaIsUi      = isUiRenderable(registeredEntity)
+  const baseEntity       = personaIsUi ? registeredEntity : personaA
   // Fold committed events onto base persona — this is what every screen reads
   const entity     = useEffectiveEntity(baseEntity, persona)
 
@@ -197,7 +358,15 @@ function AppInner() {
       )}
       {screen === 'onboard'  && <Onboarding onComplete={(d) => { setObData(d); setScreen('account') }} onBack={() => setScreen('welcome')} />}
       {screen === 'account'  && <Account    obData={obData} onEnter={handleAccountEnter} />}
-      {screen === 'app'      && (
+      {screen === 'app' && !personaIsUi && (
+        <PersonaNotRenderable
+          persona={persona}
+          isKnown={personaIsKnown}
+          rawEntity={registeredEntity}
+          onSwitch={() => setShowPersonaSelect(true)}
+        />
+      )}
+      {screen === 'app' && personaIsUi && (
         <Dashboard
           entity={entity}
           persona={persona}

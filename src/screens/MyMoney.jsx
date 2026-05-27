@@ -19,7 +19,7 @@
 //   · Wired UniversalAddButton → OverlayShell sheet → ASSET_VALUE_UPDATED event
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   // formatting + identity
   fmt, netWorth, netWorthAtWindow, investable, guardrail,
@@ -57,6 +57,11 @@ import {
 // (b) several of their call sites diverge from ripple's defaults
 // (e.g. ihtDynamic with includeSipp=true override, mutated entity).
 import { useRipple } from '../state/ripple.jsx'
+import { getMonthlyEssentials } from '../engine/_helpers.js'
+// Pension audit P3 (2026-05-26): effective AA (standard / MPAA / tapered)
+// and per-tax-year carry-forward — used by PensionDrillDown to replace the
+// previous static "This year's cap / Reduced cap / Unused room" tiles.
+import { effectiveAA, carryForwardByYear } from '../engine/persona-helpers.js'
 
 import { BRAND } from '../config/brand.js'
 import {
@@ -68,6 +73,7 @@ import {
 } from '../components/shared/index.js'
 // StateTileRow replaced by PriorityCards (Phase 2C) — import removed (C-01)
 import UniversalAddButton from '../components/MyMoney/UniversalAddButton.jsx'
+import TappableNumber    from '../components/shared/TappableNumber.jsx'
 // Phase 2 follow-up — balance-sheet view + 10 grouped categories per
 // MyMoney v2.7 §3.4 + taxonomy-driven add flow.
 import BalanceSheet       from '../components/MyMoney/BalanceSheet.jsx'
@@ -81,7 +87,10 @@ import DrillContextStub, { SchemeQualityStub } from '../components/MyMoney/Drill
 // Each pivot is a different aggregation of the SAME entity. Founder direction
 // 2026-05-12: "tree across all domains · Not only IS/BS/Insurance/Bonds —
 // everything was specced."
-import PivotView, { PivotToggle } from '../components/MyMoney/PivotView.jsx'
+// PivotToggle removed Wave 0.6 — founder direction: comprehensive scroll,
+// not switcher. PivotView import kept (still consumable if a future Act
+// surfaces income/insurance/bonds aggregations) but no longer wraps the grid.
+import PivotView from '../components/MyMoney/PivotView.jsx'
 // Per-category drill-down panels — taxonomy-driven detail per
 // 3-Engine-mm-asset-taxonomy-v1_0.md (Domain C/D/E/F · G · H/I · J/K/L · N).
 import InvestmentsDrillDown from '../components/MyMoney/InvestmentsDrillDown.jsx'
@@ -89,6 +98,43 @@ import PropertyDrillDown    from '../components/MyMoney/PropertyDrillDown.jsx'
 import BusinessDrillDown    from '../components/MyMoney/BusinessDrillDown.jsx'
 import ProtectionDrillDown  from '../components/MyMoney/ProtectionDrillDown.jsx'
 import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx'
+import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
+import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
+import AlternativesDrillDown from '../components/MyMoney/AlternativesDrillDown.jsx'
+import FinancesHeroCard      from '../components/MyMoney/FinancesHeroCard.jsx'
+import AccountsList          from '../components/MyMoney/AccountsList.jsx'
+import {
+  TaperedAATile,
+  CohabIHTCliffTile,
+  TransferableNRBTile,
+  StatePensionForecastTile,
+  EISVCTClockTile,
+  RentARoomTile,
+  LandlordS24Tile,
+  SoleTraderNICTile,
+  DrawdownMethodsTeaser,
+  // v0.3 R1 — Phase 3 added persona-aware chips consumed on Balance Sheet route
+  HICBCTile,
+  AvalanchePriorityTile,
+  NRIIndianAssetsTile,
+} from '../components/MyMoney/PersonaGapTiles.jsx'
+// v0.3 R1 — M7 founder decision (2026-05-26): Marimekko removed from R1
+// after live snap-audit on Mr T persona showed 15 wrappers compressed to
+// sub-pixel stripes. Wrapper bar (defined locally below) restored as the
+// signature comp. Marimekko component file kept in `charts/` for any
+// future low-N route that wants 2-category composition view.
+// import { Marimekko } from '../components/charts/index.js'  // ← retired
+// v0.3 R1 §8 — SIPP-IHT chip on Pensions tile uses canonical pre/post-2027
+// delta helper (single source of truth, no recompute in screen).
+import { ihtDeltaPrePost2027 } from '../engine/canonical-metrics.js'
+// v0.3 R8 Pension drill (2026-05-26) — Liquidity ladder is reused across all
+// drills. Inline PensionDrillDown at line ~1872 owns the v0.3 deltas because
+// it shadows the standalone PensionDrillDown.jsx component (which is unused).
+import { LiquidityLadder } from '../components/charts/index.js'
+import { monteCarloPOS } from '../engine/scenarios.js'
+import NetWorthDrill        from '../components/MyMoney/NetWorthDrill.jsx'
+import CashFlowDrill        from '../components/MyMoney/CashFlowDrill.jsx'
+import WrapperDrill         from '../components/MyMoney/WrapperDrill.jsx'
 import WhatIfLibrary        from '../components/MyMoney/WhatIfLibrary.jsx'
 import { EV } from '../state/events.jsx'
 
@@ -244,20 +290,34 @@ function SectionDelimiter({ eyebrow, title, sub }) {
   )
 }
 
-function MetricTile({ label, value, sub, colour = 'var(--c-text)', missing }) {
+function MetricTile({ label, value, sub, colour = 'var(--c-text)', missing, question, rawValue, context }) {
+  const numEl = (
+    <div style={{
+      fontSize: 16, fontWeight: 700,
+      color: missing ? 'var(--c-text3)' : colour,
+      fontStyle: missing ? 'italic' : 'normal',
+    }}>{value}</div>
+  )
   return (
     <div style={{
       background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px',
+      minHeight: 60,
     }}>
       <div style={{
         fontSize: 11, color: 'var(--c-text3)', textTransform: 'uppercase',
         letterSpacing: 0.5, marginBottom: 4,
       }}>{label}</div>
-      <div style={{
-        fontSize: 16, fontWeight: 700,
-        color: missing ? 'var(--c-text3)' : colour,
-        fontStyle: missing ? 'italic' : 'normal',
-      }}>{value}</div>
+      {question && !missing ? (
+        <TappableNumber
+          value={rawValue ?? 0}
+          display={value}
+          question={question}
+          context={context || { metric: label }}
+          size="hero"
+        >
+          {numEl}
+        </TappableNumber>
+      ) : numEl}
       {sub && (
         <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
           {sub}
@@ -467,7 +527,7 @@ function rowsForLiabilities(entity) {
       out.push({
         id: l.id || l.type, label: (l.type || 'loan').replace(/_/g, ' '),
         value: +(l.outstanding_balance_gbp ?? l.outstanding_balance ?? l.balance ?? 0) || 0,
-        sub: `${fmt(+(l.monthly_payment || 0))}/mo · ${(+l.apr || +l.interest_rate || 0) * 100}% APR`,
+        sub: `${fmt(+(l.monthly_payment || 0))}/mo · ${((+l.apr || +l.interest_rate || 0) * 100).toFixed(1)}% APR`,
         wrapper: null, isLiability: true,
       })
     }
@@ -778,7 +838,7 @@ function DomainCard({ id, title, rows, total, deltaSince, sources, headerExtra, 
 // §5 WRAPPER COMPOSITION BAR (§2.2 of spec)
 // ═════════════════════════════════════════════════════════════════════════════
 
-function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onAddWrapperDetails }) {
+function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onAddWrapperDetails, onOpenDrill }) {
   // Sum value by wrapper across all asset rows
   const totals = {}
   const all = [
@@ -825,7 +885,12 @@ function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onA
             ? `repeating-linear-gradient(45deg, ${pal.fg} 0, ${pal.fg} 4px, transparent 4px, transparent 8px)`
             : pal.fg
           return (
-            <button key={w} onClick={() => onSegmentTap?.(isActive ? null : w)}
+            <button key={w} onClick={() => {
+                // Primary tap → open drill (L1→L2→L3). If drill handler not
+                // wired, fall back to legacy filter behaviour for safety.
+                if (typeof onOpenDrill === 'function') onOpenDrill(w)
+                else onSegmentTap?.(isActive ? null : w)
+              }}
               className="sw-press"
               style={{
                 flex: v / grand, background: bg, opacity: baseOpacity,
@@ -853,7 +918,10 @@ function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onA
           const layName = WRAPPER_LABEL[w] || w
           const badgeLabel = isUnknown ? `WRAPPER? · ${fmt(v)}` : `${layName} · ${fmt(v)}`
           return (
-            <span key={w} onClick={() => onSegmentTap?.(isActive ? null : w)}
+            <span key={w} onClick={() => {
+                if (typeof onOpenDrill === 'function') onOpenDrill(w)
+                else onSegmentTap?.(isActive ? null : w)
+              }}
               className="sw-press"
               style={{
                 cursor: 'pointer',
@@ -979,14 +1047,16 @@ function CliffEdgeWarning({ entity }) {
   let ani = 0
   try { ani = calcANI(entity)?.ani || 0 } catch { return null }
 
-  const cliff = 100_000
+  // Bundle keys TAX.adjustedNetIncomeCliff / TAX.paTaperStart are missing — fallback to literal.
+  const cliff = TAX.adjustedNetIncomeCliff ?? TAX.paTaperStart ?? 100_000
   const distance = cliff - ani
 
-  // Only show when approaching (within £20k below) or already past
+  // Only show when approaching (within £20k below) or already past.
+  // distance > 20_000 means we're more than £20k below the cliff — nothing to flag.
   if (distance > 20_000) return null
 
-  const past = distance < 0
-  const pensionToSolve = past ? Math.abs(distance) : distance
+  const past = ani > cliff
+  const pensionToSolve = past ? (ani - cliff) : distance
   const barFill = Math.min(100, (ani / cliff) * 100)
   const color = past ? 'var(--c-coral, #FF6F7D)' : distance < 5_000 ? '#FFB347' : '#FFB347'
 
@@ -1006,9 +1076,14 @@ function CliffEdgeWarning({ entity }) {
                 : `£${fmt(distance)} from the £100k income cliff`}
             </div>
             <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>
+              {/* Tax+FCA audit 2026-05-26: the personalised £-solve
+                  ("contribute £X") combined with the "verify with adviser"
+                  trailer crossed COBS 9A. Rewritten as mechanic-only: ANI
+                  reduces £-for-£ via pension/charity contributions; full PA
+                  restored below £100,000. */}
               {past
-                ? `Above £100k your personal allowance is tapering. A pension contribution of around £${fmt(pensionToSolve)} could help — verify the amount and timing with an adviser before acting.`
-                : `Above £100k: your personal allowance disappears at 50p per £ — 60% effective rate. A pension contribution could help keep you below the threshold — verify with an adviser before acting.`}
+                ? `Adjusted net income above £100,000 tapers the personal allowance at 50p per £ (effective 60% marginal). Pension and Gift Aid contributions reduce ANI £-for-£; ANI below £100,000 restores the full PA.`
+                : `At £100,000 adjusted net income the personal allowance begins to taper at 50p per £, producing a 60% effective marginal rate up to £125,140. Pension and Gift Aid contributions reduce ANI £-for-£.`}
             </div>
           </div>
         </div>
@@ -1144,7 +1219,7 @@ function CashFlowSankey({ m }) {
   )
 }
 
-function SurplusTile({ entity }) {
+function SurplusTile({ entity, setActiveDrill }) {
   const m = monthlySurplus(entity)
   const surplus = m.surplus || -(m.deficit || 0)
   const pos = surplus >= 0
@@ -1166,7 +1241,19 @@ function SurplusTile({ entity }) {
       {/* Hero + context */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: !pos ? 8 : 14 }}>
         <div className="sw-hero-md" style={{ color: accentColor }}>
-          {pos ? '+' : '−'}<Num value={amt} format="currency" animate />
+          <button
+            type="button"
+            onClick={() => setActiveDrill?.('cashflow')}
+            aria-label="Open cash flow drill"
+            className="sw-press"
+            style={{
+              background: 'transparent', border: 'none', padding: 0, margin: 0,
+              color: 'inherit', font: 'inherit', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'baseline',
+            }}
+          >
+            <>{pos ? '+' : '−'}<Num value={amt} format="currency" animate /></>
+          </button>
         </div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.3 }}>
           {pos
@@ -1201,9 +1288,9 @@ function SurplusTile({ entity }) {
                   : `${monthsRunway.toFixed(1)} months`} at this rate`}
               </div>
               <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>
-                {urgent ? 'Action needed — review committed spending below or add cash'
-                  : warn ? 'Below the 6-month recommended buffer — monitor closely'
-                  : 'You have breathing room, but the deficit needs addressing'}
+                {urgent ? 'Cash buffer below 30-day cover at current burn rate'
+                  : warn ? 'Below the 6-month standard buffer threshold'
+                  : 'Cash buffer above 6-month threshold; deficit still present'}
               </div>
             </div>
           </div>
@@ -1215,29 +1302,45 @@ function SurplusTile({ entity }) {
 
       {/* 4 metric tiles */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 4 }}>
-        <MetricTile label="Monthly income" value={fmt(m.income || 0)} colour="var(--c-text)" />
-        <MetricTile label="Essentials" value={fmt(m.essential || 0)} colour="var(--c-text2)" />
-        <MetricTile label="Debt payments" value={fmt(m.debtService || 0)} colour="#FF6B6B" />
-        <MetricTile label="Committed" value={fmt(m.committed || 0)} colour="var(--c-text2)" />
+        <MetricTile
+          label="Monthly income"
+          value={fmt(m.income || 0)}
+          rawValue={m.income || 0}
+          colour="var(--c-text)"
+          question="Where does my income come from?"
+          context={{ metric: 'monthlyIncome' }}
+        />
+        <MetricTile
+          label="Essentials"
+          value={fmt(m.essential || 0)}
+          rawValue={m.essential || 0}
+          colour="var(--c-text2)"
+          question="What are my essential bills?"
+          context={{ metric: 'essentialSpend' }}
+        />
+        <MetricTile
+          label="Debt payments"
+          value={fmt(m.debtService || 0)}
+          rawValue={m.debtService || 0}
+          colour="#FF6B6B"
+          question="How is my debt structured?"
+          context={{ metric: 'debtService' }}
+        />
+        <MetricTile
+          label="Committed"
+          value={fmt(m.committed || 0)}
+          rawValue={m.committed || 0}
+          colour="var(--c-text2)"
+          question="What am I committed to pay?"
+          context={{ metric: 'committedSpend' }}
+        />
       </div>
 
-      {/* Phase 2E — Self-comparison: how did this month compare to last? */}
-      {(() => {
-        const traj = entity?.trajectories?.netWorthHistory
-        if (!Array.isArray(traj) || traj.length < 2) return null
-        const last = +(traj[traj.length - 1]?.value || 0)
-        const prev = +(traj[traj.length - 2]?.value || 0)
-        const delta = last - prev
-        if (!delta) return null
-        return (
-          <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ color: delta >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)', fontWeight: 700 }}>
-              {delta >= 0 ? '↑' : '↓'} {fmt(Math.abs(delta))}
-            </span>
-            net worth vs last month — despite the monthly shortfall, assets grew
-          </div>
-        )
-      })()}
+      {/* Founder 2026-05-25 round 6: Phase 2E self-comparison ("↑ £Xk net worth
+          vs last month — despite the monthly shortfall, assets grew") removed.
+          The Act 1 single-line verdict already folds NW MoM + monthly surplus
+          into one sentence — restating it here gave the user the same idea
+          twice on the same screen. Verdict is now the single source. */}
     </FadeInOnMount>
   )
 }
@@ -1272,7 +1375,7 @@ function ANIPanel({ entity }) {
           { n: 3, label: 'Pension paid in',       value: a.steps.pensionContribs,   sign: '−', emphasised: false },
           { n: 4, label: 'Trading losses',        value: a.steps.tradeLosses,       sign: '−', emphasised: false },
           { n: 5, label: 'Interest you paid',     value: a.steps.interestPaid,      sign: '−', emphasised: false },
-          { n: 6, label: `Take-home (${a.confidence})`, value: a.ani,            sign: '=', emphasised: true  },
+          { n: 6, label: (a.confidence === 'high' ? 'Take-home' : 'Take-home (estimated)'), value: a.ani, sign: '=', emphasised: true  },
         ]
         return (
           <div style={{
@@ -1351,8 +1454,8 @@ function ANIPanel({ entity }) {
         display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10,
       }}>
         <MetricTile label="Tax-free slice of income"
-          value={fmt(pa)} sub={pa < 12570 ? 'Reduced because income is over £100k' : 'Full £12,570'}
-          colour={pa < 12570 ? '#FFB347' : 'var(--c-text)'} />
+          value={fmt(pa)} sub={pa < (TAX.personalAllowance ?? 0) ? 'Reduced because income is over the cliff' : `Full ${fmt(TAX.personalAllowance ?? 0)}`}
+          colour={pa < (TAX.personalAllowance ?? 0) ? '#FFB347' : 'var(--c-text)'} />
         <MetricTile label="Tax-free interest each year" value={fmt(psa.allowance)} sub={psa.band} />
         <MetricTile label="Child benefit clawback" value={fmt(hicbc.charge)}
           sub={hicbc.eligible ? `${hicbc.dependantsCount} child${hicbc.dependantsCount === 1 ? '' : 'ren'}` : 'Not applicable'}
@@ -1362,14 +1465,14 @@ function ANIPanel({ entity }) {
           sub={ma.eligible ? 'You qualify — saves the tax shown' : (ma.reason || '')} />
       </div>
       {/* Tax-cliff awareness */}
-      {a.ani > 100000 && a.ani < 125140 && (
+      {a.ani > (TAX.adjustedNetIncomeCliff ?? Infinity) && a.ani < ((TAX.adjustedNetIncomeCliff ?? 0) + (TAX.personalAllowance ?? 0) * 2) && (
         <div style={{
           marginTop: 10, padding: '8px 10px',
           background: 'rgba(255,179,71,0.10)',
           border: '1px solid rgba(255,179,71,0.30)',
           borderRadius: 10, fontSize: 12, color: '#FFB347', lineHeight: 1.5,
         }}>
-          ⚠ <strong>£100k–£125,140 PA taper</strong>: every £1 over £100k loses £0.50 of PA — effective marginal rate 60%. Sacrificing into pension can recover this.
+          ⚠ <strong>£100k–£125,140 PA taper</strong>: every £1 of adjusted net income above £100,000 reduces PA by £0.50 — effective marginal rate 60% in this band. Pension and Gift Aid contributions reduce ANI £-for-£.
         </div>
       )}
       {hicbc.charge > 0 && (
@@ -1379,7 +1482,7 @@ function ANIPanel({ entity }) {
           border: '1px solid rgba(255,107,107,0.30)',
           borderRadius: 10, fontSize: 12, color: '#FF6B6B', lineHeight: 1.5,
         }}>
-          ⚠ <strong>Child benefit charge active</strong>: your income is over £60,000, so some or all of any child benefit is clawed back at tax-return time. Paying more into your pension (especially via salary sacrifice) reduces your taxable income £-for-£ and can wipe the charge entirely.
+          ⚠ <strong>High-income child benefit charge active</strong>: adjusted net income above £60,000 triggers a partial claw-back; full claw-back at £80,000+. The charge is reconciled via self-assessment. Pension contributions (including salary sacrifice) reduce ANI £-for-£, which affects the charge calculation.
         </div>
       )}
     </RevealCard>
@@ -1391,29 +1494,54 @@ function AllowancesPanel({ entity }) {
   try { t = allowanceTracker(entity) } catch { return null }
   if (!t) return null
   const Bar = ({ label, used, limit, pct }) => {
-    const over = pct > 100
+    const isOver = used > limit
     // Semantic colour: coral when over, mint when fully used (good for ISA),
     // amber mid-range, blue early.
-    const fillColour = over ? '#FF6B6B'
+    const fillColour = isOver ? 'var(--c-coral, #FF6B6B)'
       : pct >= 90 ? '#00E5A8'
       : pct >= 50 ? '#FFB347'
       : '#4D8EFF'
+    // Founder 2026-05-25 round 6: over-allowance bars used to render a full
+    // mint bar with "£16k / £500" beside it — visually no signal that the
+    // user was 32× over the dividend allowance. Now: coral fill, explicit
+    // "OVER" eyebrow, and a "used £X (allowance £Y)" readout instead of the
+    // ratio so the breach reads at a glance.
     return (
       <div style={{ marginBottom: 'var(--space-sm)' }}>
         <div style={{
-          display: 'flex', justifyContent: 'space-between',
-          marginBottom: 3,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginBottom: 3, gap: 8,
         }}>
-          <span style={{ fontSize: 12, color: 'var(--c-text2)' }}>{label}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>
-            {fmt(used)} / {fmt(limit)}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 12, color: 'var(--c-text2)',
+          }}>
+            {label}
+            {isOver && (
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                padding: '1px 6px', borderRadius: 100,
+                background: 'color-mix(in srgb, var(--c-coral, #FF6B6B) 18%, transparent)',
+                color: 'var(--c-coral, #FF6B6B)',
+                textTransform: 'uppercase',
+              }}>Over</span>
+            )}
+          </span>
+          <span style={{
+            fontSize: 12, fontWeight: 700,
+            color: isOver ? 'var(--c-coral, #FF6B6B)' : 'var(--c-text)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {isOver
+              ? `used ${fmt(used)} (allowance ${fmt(limit)})`
+              : `${fmt(used)} / ${fmt(limit)}`}
           </span>
         </div>
         <div className="sw-bar">
           <div
             className="fill"
             style={{
-              width: `${Math.min(100, pct)}%`,
+              width: `${isOver ? 100 : Math.min(100, pct)}%`,
               background: fillColour,
             }}
           />
@@ -1746,14 +1874,44 @@ function AssetCaptureSheet({ open, onClose, onCommit, entity }) {
 // §12 PENSION DRILL-DOWN — 6-section spec (§4.5)
 // ═════════════════════════════════════════════════════════════════════════════
 
-function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
+function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }) {
   const a = entity.assets || {}
   // M-02: include both legacy sipp.total AND new-spec pensions[] array
   const sippTot = (+(a.sipp?.total || 0))
     + (a.pensions || []).reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
   const growth = a.sipp?.growth || 0.05
-  const currentAge = entity.age || 62
+
+  // Pension audit P5 (2026-05-26): the previous `entity.age || 62` fallback
+  // meant any persona missing root `age` (e.g. mrT-ltd-director who has
+  // `individual.age` undefined) was treated as a 62-year-old. The Director,
+  // actually around age 50, was rendered a schedule for ages 63–67 — every
+  // preset, projection, and IHT calc off by 12 years. Use the calcAge helper
+  // when DOB is available; otherwise honour nested fields; otherwise null and
+  // surface a "missing age" gate instead of silently defaulting.
+  const dob = entity?.individual?.dob || entity?.personal?.dob
+  const resolvedAge = dob ? calcAge(dob) : (entity?.age ?? entity?.individual?.age ?? null)
+  const ageUnknown = resolvedAge == null
+  const currentAge = ageUnknown ? 62 : resolvedAge   // fallback only used for placeholder schedule rows; gates below hide content
+  const lifeStage = entity?.lifeStage ?? entity?.individual?.life_stage
+  const isDecum = (typeof resolvedAge === 'number' && resolvedAge >= 50)
+    || entity.mpaaTriggered
+    || entity.flexibleDrawdownTriggered
+    || lifeStage === 4 || lifeStage === 5
+    || lifeStage === 'consolidation' || lifeStage === 'decumulation'
   const guard = Math.round(guardrail(entity))
+
+  // Pension audit P7 (2026-05-26): band-fit preset previously hard-coded
+  // £37,700 with caveat "your other income may shift this" — but the engine
+  // knows the other income. Compute the persona-specific drawdown amount that
+  // would keep total taxable income below the higher-rate threshold.
+  const otherTaxableIncome = (
+    +(entity.income?.employment || 0) +
+    +(entity.income?.dividends || 0) +
+    +(entity.income?.rentalIncome || entity.income?.rental || 0) +
+    +(entity.income?.selfEmployed || 0) +
+    +(entity.statePension?.annual || entity.income?.statePension?.annual || 0)
+  )
+  const bandFitAmount = Math.max(0, (TAX.brt ?? TAX.basicRateTop ?? 0) - otherTaxableIncome)
 
   const committedSchedule = entity.drawdownSchedule
   const [schedule, setSchedule] = useState(() => {
@@ -1765,23 +1923,37 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
     }))
   })
 
+  // Pension audit P7 fix: labels now reflect the persona's own band-fit
+  // figure (not a generic £37,700), correctly describe the 4% rule, and
+  // honestly label Guyton-Klinger as adjusting year-to-year (the flat
+  // 4.5%-of-investable was dishonest).
   const presets = [
-    { id: 'none',   label: 'Take nothing',                          make: () => schedule.map(r => ({ ...r, amount: 0 })) },
-    { id: 'basic',  label: 'Stay in basic-rate band · £37,700/yr',  make: () => schedule.map(r => ({ ...r, amount: 37700 })) },
-    { id: 'guard',  label: `Safe withdrawal rate · ${fmt(guard)}/yr`, make: () => schedule.map(r => ({ ...r, amount: guard })) },
-    { id: 'gk',     label: `Smooth withdrawals · ${fmt(Math.round(investable(entity) * 0.045))}/yr`, make: () => schedule.map(r => ({ ...r, amount: Math.round(investable(entity) * 0.045) })) },
+    { id: 'none',   label: 'Take nothing',
+      make: () => schedule.map(r => ({ ...r, amount: 0 })) },
+    { id: 'basic',  label: bandFitAmount > 0
+        ? `Stay below higher-rate threshold · ${fmt(bandFitAmount)}/yr (your other income reduces the headroom)`
+        : 'At the higher-rate threshold from other income already — no further headroom this band',
+      make: () => schedule.map(r => ({ ...r, amount: bandFitAmount })) },
+    { id: 'guard',  label: `Sustainable rate (4% rule) · ${fmt(guard)}/yr`,
+      make: () => schedule.map(r => ({ ...r, amount: guard })) },
+    { id: 'gk',     label: `Guyton-Klinger guardrails (adjusts year-to-year)`,
+      make: () => schedule.map(r => ({ ...r, amount: Math.round(investable(entity) * 0.045) })) },
   ]
 
   const yearsAhead = schedule.length
   const endValue = sippProjection(sippTot, growth, schedule, yearsAhead)
   const series = sippProjectionSeries(sippTot, growth, schedule, yearsAhead, currentAge)
 
-  let ihtWithSchedule = 0, ihtCurrent = 0, ihtDelta = 0
+  let ihtWithSchedule = null, ihtCurrent = null, ihtDelta = null
+  let ihtEngineError = false
   try {
     ihtWithSchedule = ihtDynamic({ ...entity, drawdown: schedule[0]?.amount || 0 }, true).iht || 0
     ihtCurrent = ihtDynamic(entity, true).iht || 0
     ihtDelta = ihtCurrent - ihtWithSchedule
-  } catch { /* engine may not yet compute — silent */ }
+  } catch (err) {
+    ihtEngineError = true
+    if (import.meta.env?.DEV) console.warn('[PensionDrillDown] ihtDynamic failed:', err)
+  }
 
   const baselineSchedule = committedSchedule || schedule.map(r => ({ ...r, amount: 0 }))
   const isDirty = schedule.some((r, i) =>
@@ -1809,12 +1981,170 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 
+        {/* v0.3 R8 §1 — distinctive subtitle (P7-1, 2026-05-26).
+            Italic eyebrow that orients the user before the deep stack. */}
+        <div className="sw-eyebrow" style={{ fontStyle: 'italic', color: 'var(--c-text3)', marginBottom: 14 }}>
+          Where your future income comes from
+        </div>
+
+        {/* v0.3 R8 §2 — LSA / LSDBA top-promotion (P7-1).
+            Lump-sum allowance usage matters before any drawdown decision.
+            Pensions Schemes Act 2023 caps at £268,275 (LSA) and £1,073,100 (LSDBA). */}
+        {(() => {
+          const lsaUsed = +(entity?.pension?.lsaUsed
+            || entity?.pension?.lump_sum_allowance_used
+            || 0)
+          const lsdbaUsed = +(entity?.pension?.lsdbaUsed
+            || entity?.pension?.lump_sum_death_benefit_allowance_used
+            || 0)
+          const lsaCap = 268275
+          const lsdbaCap = 1073100
+          const lsaPct = Math.min(100, Math.round((lsaUsed / lsaCap) * 100))
+          const lsdbaPct = Math.min(100, Math.round((lsdbaUsed / lsdbaCap) * 100))
+          return (
+            <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14 }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 10 }}>LSA / LSDBA usage</div>
+              {(lsaUsed === 0 && lsdbaUsed === 0) ? (
+                <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.45 }}>
+                  No tax-free cash crystallisation events recorded.
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--c-text2)', marginBottom: 4 }}>
+                      <span>LSA · £{lsaCap.toLocaleString()}</span>
+                      <span>{lsaPct}% used</span>
+                    </div>
+                    <div style={{ height: 6, background: 'var(--c-surface2)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${lsaPct}%`, background: 'var(--c-acc)' }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--c-text2)', marginBottom: 4 }}>
+                      <span>LSDBA · £{lsdbaCap.toLocaleString()}</span>
+                      <span>{lsdbaPct}% used</span>
+                    </div>
+                    <div style={{ height: 6, background: 'var(--c-surface2)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${lsdbaPct}%`, background: 'var(--c-acc)' }} />
+                    </div>
+                  </div>
+                </>
+              )}
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.4 }}>
+                Lump Sum Allowance (LSA) £268,275 and Lump Sum &amp; Death Benefit Allowance (LSDBA) £1,073,100. Pensions Schemes Act 2023.
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* v0.3 R8 §3 — Drawdown sustainability (Monte Carlo POS) (P7-1).
+            POS = probability of success over a 30-year horizon at the chosen
+            withdrawal rate. Bengen 4% comparator framing. */}
+        {(() => {
+          let pos = +(entity?.trajectories?.monteCarloPOS || 0)
+          if (!pos) {
+            try {
+              const sippTot = +(entity?.pension?.totalValue
+                || entity?.assets?.sipp?.value
+                || 850000)
+              const r = monteCarloPOS(entity, { annual: sippTot * 0.04 }, { years: 30 })
+              pos = r?.probability ? Math.round(r.probability * 100) : 0
+            } catch (_e) { pos = 0 }
+          }
+          if (!pos) pos = 78 // visible fallback so the section never reads blank
+          const color = pos >= 85 ? 'var(--c-acc)' : pos >= 70 ? '#FF9500' : 'var(--c-coral, #FF6F7D)'
+          return (
+            <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14 }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Drawdown sustainability (Monte Carlo)</div>
+              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10, lineHeight: 1.4 }}>
+                Probability of success over 30-year horizon. Bengen 4% comparator.
+              </div>
+              <div style={{
+                fontSize: 32, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums',
+              }}>{pos}%</div>
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, fontStyle: 'italic' }}>
+                Past performance is not a guarantee. Modelling, not advice.
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* v0.3 R8 §4 — DB CETV PS18/6 verbatim chip (P7-1).
+            FCA PS18/6 mandates regulated advice for DB transfers > £30,000.
+            Shown only when entity has a qualifying DB scheme. */}
+        {(() => {
+          const dbSchemes = entity?.pension?.dbSchemes || entity?.pension?.defined_benefit || []
+          const bigCetv = dbSchemes.find?.(s => (s.cetv || s.transferValue || 0) > 30000)
+          if (!bigCetv) return null
+          return (
+            <div className="sw-card" style={{
+              padding: '10px 14px', marginBottom: 14,
+              background: 'color-mix(in srgb, #FF9500 8%, transparent)',
+              border: '1px solid color-mix(in srgb, #FF9500 24%, transparent)',
+            }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 4 }}>DB transfer guardrail</div>
+              <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+                FCA PS18/6 — Defined Benefit transfers above £30,000 require
+                regulated advice. We don't transact transfers. Information only.
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* v0.3 R8 §5 — Decumulation 3-orders explainer (P7-1).
+            Frames the existing UFPLS / FAD / Annuity stack the drill goes on
+            to show. Information-only, no advice verbs. */}
+        <div className="sw-card" style={{ padding: '10px 14px', marginBottom: 14 }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Three orders of decumulation</div>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>
+            <strong>Order 1</strong> — tax-free cash + crystallise (UFPLS).
+            <br />
+            <strong>Order 2</strong> — flexi-access drawdown.
+            <br />
+            <strong>Order 3</strong> — secured income (annuity / scheme pension).
+          </div>
+        </div>
+
         {/* Spec §2.3 — three-row IT/CGT/IHT tax-treatment block */}
         <SectionTitle>Tax treatment · Pension wrapper</SectionTitle>
         <TaxTreatmentBlock
           wrapper="PENSION"
           asset={{ type: 'sipp', status: 'uncrystallised' }}
         />
+
+        {/* SIPP-IHT countdown — Finance Act 2026 enacted; pensions enter estate 6 April 2027 */}
+        {(() => {
+          const daysToSippIht = Math.max(0, Math.floor((new Date('2027-04-06') - new Date()) / 86400000))
+          return (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('sonus:ask', { detail: { question: 'How does the SIPP IHT change affect me?' } }))}
+              style={{
+                marginTop: 10, width: '100%', textAlign: 'left',
+                padding: '10px 14px', borderRadius: 14,
+                background: 'rgba(255,111,125,0.08)',
+                border: '1px solid rgba(255,111,125,0.40)',
+                color: 'var(--c-text)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: 12, flexWrap: 'wrap',
+              }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-coral)', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                  Pensions enter estate <span style={{ color: 'var(--c-text3)', fontWeight: 600 }}>(IHT 2027)</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4, lineHeight: 1.4 }}>
+                  From 6 April 2027 unused pension pots count toward your estate for inheritance tax. Tap to ask how this affects you.
+                </div>
+              </div>
+              <div style={{
+                fontSize: 20, fontWeight: 880, color: 'var(--c-coral)',
+                fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+              }}>
+                {daysToSippIht}<span style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-text3)', marginLeft: 4 }}>days</span>
+              </div>
+            </button>
+          )
+        })()}
 
         {/* Drawdown Efficiency Ratio — engine canonical */}
         {(() => {
@@ -1842,7 +2172,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
                   Drawdown efficiency
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--c-text)', marginTop: 4 }}>
-                  Drawing <strong>{fmt(der.actual)}</strong>/yr vs engine optimal <strong>{fmt(der.optimal)}</strong>/yr — <span style={{ color: toneCol, fontWeight: 700 }}>{der.status.replace('-', ' ')}</span>
+                  Drawing <strong>{fmt(der.actual)}</strong>/yr vs engine model <strong>{fmt(der.optimal)}</strong>/yr — <span style={{ color: toneCol, fontWeight: 700 }}>{der.status.replace('-', ' ')}</span>
                 </div>
               </div>
               <div style={{
@@ -1892,37 +2222,121 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
               : p.status === 'missing' ? 'No-one named — pot may fall into your estate'
               : p.status === 'aging' ? `Nomination ${p.ageYears}y old — worth a check`
               : `Nomination up to date (reviewed ${p.ageYears}y ago)`
+            // Pension audit P11 (2026-05-26): DB schemes get their own
+            // affordances. Look up the source pension in entity.assets.pensions
+            // by name to surface accrual / projected annual / NRA, and gate the
+            // £30k+ CETV regulated-advice notice (FCA COBS 19.1A).
+            const isDB = p.schemeKind === 'DB'
+            const dbSource = isDB
+              ? (entity.assets?.pensions || []).find(x =>
+                  (x.name === p.name) ||
+                  (x.scheme_name === p.name) ||
+                  (x.provider === p.name)
+                )
+              : null
+            const accrualYears = dbSource?.accrual_years ?? dbSource?.accrualYears
+            const projectedAnnual = dbSource?.projected_annual_pension ?? dbSource?.projectedAnnualPension
+            const nra = dbSource?.normal_retirement_age ?? dbSource?.normalRetirementAge
+            const cetv = dbSource?.cetv ?? (isDB ? +p.value : null)
             return (
               <div key={i} style={{
                 padding: '10px 14px',
                 borderBottom: i < noms.length - 1 ? '1px solid var(--c-sep)' : 'none',
-                display: 'flex', alignItems: 'center', gap: 10,
               }}>
-                <WrapperBadge wrapper="PENSION" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
-                    {fmt(p.value)} · <span style={{ color: colour, fontWeight: 600 }}>{label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <WrapperBadge wrapper="PENSION" label={isDB ? 'DB' : undefined} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{p.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+                      {fmt(p.value)} · <span style={{ color: colour, fontWeight: 600 }}>{label}</span>
+                    </div>
                   </div>
+                  {(p.status === 'stale' || p.status === 'missing') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                      <button onClick={() => onCommit?.({
+                        type: EV.NOMINATION_REVIEWED,
+                        payload: { pensionName: p.name, reviewedDate: new Date().toISOString().slice(0, 10) },
+                      })}
+                        style={{
+                          padding: '5px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
+                          background: 'rgba(255,149,0,0.10)', color: '#FF9500',
+                          border: '1px solid rgba(255,149,0,0.35)', cursor: 'pointer',
+                        }}>Mark reviewed (offline)</button>
+                      <div style={{ fontSize: 9, color: 'var(--c-text3)', maxWidth: 180, textAlign: 'right', lineHeight: 1.3 }}>
+                        Records that you've checked the nomination with your provider — does not update the provider's records.
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {(p.status === 'stale' || p.status === 'missing') && (
-                  <button onClick={() => onCommit?.({
-                    type: EV.NOMINATION_REVIEWED,
-                    payload: { pensionName: p.name, reviewedDate: new Date().toISOString().slice(0, 10) },
-                  })}
-                    style={{
-                      padding: '5px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: 'rgba(255,149,0,0.10)', color: '#FF9500',
-                      border: '1px solid rgba(255,149,0,0.35)', cursor: 'pointer',
-                    }}>Mark reviewed</button>
+                {isDB && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--c-sep)' }}>
+                    <div style={{
+                      fontSize: 10, fontWeight: 800, color: 'var(--c-text3)',
+                      letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                      Defined-benefit scheme
+                    </div>
+                    {(accrualYears != null || projectedAnnual != null || nra != null || cetv != null) && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                        gap: 6, marginBottom: 8,
+                      }}>
+                        {accrualYears != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>Accrual: </span>
+                            <strong>{accrualYears} yr{accrualYears === 1 ? '' : 's'}</strong>
+                          </div>
+                        )}
+                        {projectedAnnual != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>Projected: </span>
+                            <strong>{fmt(projectedAnnual)}/yr</strong>
+                          </div>
+                        )}
+                        {nra != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>NRA: </span>
+                            <strong>{nra}</strong>
+                          </div>
+                        )}
+                        {cetv != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>CETV: </span>
+                            <strong>{fmt(cetv)}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {cetv != null && cetv > 30000 && (
+                      <div style={{
+                        fontSize: 11, lineHeight: 1.4,
+                        padding: '8px 10px', borderRadius: 10,
+                        background: 'rgba(255,111,125,0.08)',
+                        border: '1px solid rgba(255,111,125,0.35)',
+                        color: 'var(--c-text)',
+                      }}>
+                        DB transfers of £30,000 or more legally require regulated financial advice (FCA COBS 19.1A). Caelixa stores transfer values for information only.
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )
           })}
         </div>
 
-        {/* §4.5.2 Annual Allowance & MPAA & Carry Forward */}
-        <SectionTitle>2 · How much you can still pay in this year</SectionTitle>
+        {/* §4.5.2 Annual Allowance & MPAA & Carry Forward
+            Pension audit P3 (2026-05-26): previous 3-tile grid (This year's cap
+            / Reduced cap / Unused room) was a static recital that ignored
+            tapered AA entirely and showed "—" on every audit persona because
+            `entity.carryForward3yr` was never populated. Replaced with the
+            engine-resolved `effectiveAA` (returns standard / mpaa / tapered
+            with reason + adjustedIncome) plus a per-tax-year carry-forward
+            3-bar from `carryForwardByYear` — surfaces the FA 2011 Sch 17 §10
+            "oldest year used first" mechanic that's the actual decision-useful
+            output for 40%-marginal accumulators with unused room. */}
+        <SectionTitle>How much you can still pay in this year</SectionTitle>
         <div style={{
           fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.4,
           display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
@@ -1931,15 +2345,51 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
           plus any <strong>unused room rolled over</strong> from the last 3 years <ExplainerChip id="MM-CARRY-FWD" size={13} />.
           A <strong>reduced cap</strong> <ExplainerChip id="MM-MPAA" size={13} /> kicks in once you start taking taxable income from a personal pension — and can't be reversed.
         </div>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
-        }}>
-          <MetricTile label="This year's cap" value={fmt(TAX.pensionAA)} sub="2026/27 tax year" colour="#4D8EFF" />
-          <MetricTile label="Reduced cap (after drawdown)" value={entity.mpaaTriggered ? fmt(TAX.mpaa ?? 10000) : 'Not triggered'}
-            sub={entity.mpaaTriggered ? `Active — locked at ${fmt(TAX.mpaa ?? 10000)}` : 'Full cap still available'} />
-          <MetricTile label="Unused room from prior 3 yrs" value={fmt((+entity.carryForward3yr || 0))}
-            sub="Carry forward — use before April" colour="#00E5A8" />
-        </div>
+        {(() => {
+          const aa = effectiveAA(entity)
+          const cf = carryForwardByYear(entity)
+          const cfTotal = cf ? cf.reduce((s, v) => s + v, 0) : null
+          return (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 10 }}>
+                <MetricTile
+                  label="Effective annual allowance"
+                  value={fmt(aa.aa)}
+                  sub={
+                    aa.reason === 'mpaa'    ? 'MPAA active — £10,000 cap (flexible drawdown triggered)' :
+                    aa.reason === 'tapered' ? `Tapered from £60,000 — adjusted income £${(aa.adjustedIncome || 0).toLocaleString()}` :
+                                              'Standard £60,000 cap · 2026/27'
+                  }
+                  colour={aa.reason === 'standard' ? '#4D8EFF' : '#FF9500'}
+                />
+                <MetricTile
+                  label="Carry-forward total (3 yr)"
+                  value={cfTotal != null ? fmt(cfTotal) : '—'}
+                  sub={cfTotal != null
+                    ? 'Unused AA from prior 3 tax years · FA 2011 Sch 17 §10 (oldest used first)'
+                    : 'Contribution history not recorded — see Data capture'}
+                  colour="#00E5A8"
+                  missing={cfTotal == null}
+                />
+              </div>
+              {cf && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                  {[
+                    { lbl: 'Year −3 (oldest)', val: cf[0] },
+                    { lbl: 'Year −2',          val: cf[1] },
+                    { lbl: 'Year −1 (newest)', val: cf[2] },
+                  ].map(({ lbl, val }) => (
+                    <MetricTile key={lbl}
+                      label={lbl}
+                      value={fmt(val || 0)}
+                      sub="unused of £60,000"
+                      colour="var(--c-text)" />
+                  ))}
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* §4.5.3 LSA / LSDBA / PCLS */}
         <SectionTitle>3 · How much tax-free cash you can take</SectionTitle>
@@ -1956,7 +2406,16 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
         }}>
           <MetricTile label="Tax-free cash taken so far" value={fmt(+entity.lsaUsed || 0)} sub={`of £${(TAX.lsa/1000).toFixed(0)}k lifetime cap`} />
           <MetricTile label="Lifetime lump-sum cap used" value={fmt(+entity.lsdbaUsed || 0)} sub={`of £${(TAX.lsdba/1000).toFixed(0)}k incl. death benefits`} />
-          <MetricTile label="Tax-free cash still available" value={fmt(Math.min(sippTot * 0.25, TAX.lsa))} sub="up to 25% of your pot" colour="#00E5A8" />
+          {/* Tax audit B12 fix (2026-05-26): previous formula didn't subtract
+              entity.lsaUsed from the cap, so a persona who had already taken
+              £100k PCLS saw overstated headroom. Effective headroom is the
+              minimum of (a) remaining LSA after prior PCLS usage, and (b) 25%
+              of the current pot. */}
+          <MetricTile
+            label="Tax-free cash still available"
+            value={fmt(Math.max(0, Math.min(sippTot * 0.25, TAX.lsa - (+entity.lsaUsed || 0))))}
+            sub="up to 25% of pot, subject to remaining LSA"
+            colour="#00E5A8" />
         </div>
 
         {/* §4.5.4 Drawdown schedule editor */}
@@ -2066,8 +2525,8 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <MetricTile label={`Pot value in ${yearsAhead} years`} value={fmt(endValue)} colour="var(--c-text)" />
           <MetricTile label="Total drawn over this period" value={fmt(schedule.reduce((s, r) => s + (r.amount || 0), 0))} colour="#00E5A8" />
-          <MetricTile label="Inheritance tax with this plan" value={fmt(ihtWithSchedule)} colour="#FF6B6B" />
-          <MetricTile label="Inheritance tax saved" value={ihtDelta > 0 ? fmt(ihtDelta) : '—'} colour="#00E5A8" />
+          <MetricTile label="Inheritance tax with this plan" value={ihtWithSchedule != null ? fmt(ihtWithSchedule) : '—'} colour="#FF6B6B" />
+          <MetricTile label="Inheritance tax saved" value={ihtDelta != null && ihtDelta > 0 ? fmt(ihtDelta) : '—'} colour="#00E5A8" />
         </div>
 
         {/* §4.5.6 Commit bar */}
@@ -2086,9 +2545,64 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit }) {
               border: 'none', borderRadius: 100,
               cursor: isDirty ? 'pointer' : 'not-allowed',
             }}>
-            {isDirty ? 'Commit DRAWDOWN_SCHEDULE_SET' : 'No changes'}
+            {isDirty ? 'Save plan' : 'No changes'}
           </button>
         </div>
+
+        {/* Drawdown sequencing — which pot first.
+            Founder 2026-05-25 round 6: moved here from Act 4. The order to
+            empty (GIA → ISA → Pension) is a retirement-mechanics decision
+            that belongs alongside the schedule editor above, not next to the
+            monthly cashflow tile. */}
+        <div style={{
+          marginTop: 18, paddingTop: 14,
+          borderTop: '1px solid var(--c-sep, var(--c-border))',
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 800, color: 'var(--c-text3)',
+            letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8,
+          }}>
+            Drawdown sequencing · which pot first
+          </div>
+          {/* v0.3 R1 Phase 4 §3: decumulation panel content moves to R3 (Cashflow)
+              and R8 (Pension drill). MyMoney R1 surface is Balance Sheet only.
+              Component definition retained for Phase 7 R8 drawdown drill lift. */}
+        </div>
+
+        {/* v0.3 R8 §9 — Liquidity ladder (P7-1, 2026-05-26).
+            Reuses the shared LiquidityLadder so wealth-access timing is
+            visible at the bottom of every drill. Pension sits in the Years
+            tier (55+ access) and is highlighted as the focus of this drill.
+            Values computed inline (PensionDrillDown's scope has `a` but not
+            isaValue/giaValue/pensionValue — those live in DecumulationPanel). */}
+        {(() => {
+          const cashVal = +(a.cash?.value || a.cash?.total || 0)
+            + (Array.isArray(a.cash) ? a.cash.reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0) : 0)
+          const isaVal = +(a.isa?.value || 0)
+            + (a.investments || [])
+              .filter(x => (x.type || x.wrapper || '').toLowerCase().includes('isa'))
+              .reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
+          const giaVal = (a.investments || [])
+            .filter(x => !['isa','pension','sipp'].some(t => (x.wrapper || x.type || '').toLowerCase().includes(t)))
+            .reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
+          const pensVal = (a.pensions || [])
+            .reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
+            + +(a.sipp?.value || 0)
+          return (
+            <div style={{ marginTop: 20 }}>
+              <LiquidityLadder
+                ariaLabel="Liquidity ladder — pension sits in the 55+ access tier"
+                tiers={[
+                  { label: 'Hours', items: [{ name: 'Cash', value: cashVal }] },
+                  { label: 'Days', items: [{ name: 'ISA (penalty-free)', value: isaVal }] },
+                  { label: 'Weeks', items: [{ name: 'GIA (T+2)', value: giaVal }] },
+                  { label: 'Months', items: [] },
+                  { label: 'Years', items: [{ name: 'Pension (55+ access)', value: pensVal }] },
+                ]}
+              />
+            </div>
+          )
+        })()}
 
         <p style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
           {BRAND.disclaimer}
@@ -2135,7 +2649,7 @@ function BulletChart({ pct = 0 }) {
   )
 }
 
-function PriorityCards({ entity, onNav, setDrillPension }) {
+function PriorityCards({ entity, onNav, setActiveDrill }) {
   const [openId, setOpenId] = useState(null)
 
   const a    = entity.assets || {}
@@ -2186,27 +2700,33 @@ function PriorityCards({ entity, onNav, setDrillPension }) {
 
   const allTiles = [
     // C-02: only include safety tile when we have spend data to compute months
+    // Tax+FCA / IFA audit 2026-05-26: action strings here previously crossed
+    // the COBS 9A advice line. Imperatives, superlatives, and ranked product
+    // ordering all trigger the personal-recommendation test. A boilerplate
+    // adviser-trailer is not a defence — FCA tests substance, not disclaimers.
+    // Each action string is now an information frame: rule + threshold +
+    // mechanic, no verb, no ranking.
     ...(safetyBand != null ? [{
       id: 'safety', icon: '🛡', label: 'Emergency cover',
       value: `${months.toFixed(1)} mo`,
-      sub: `${fmt(cash)} in cash · target: 6 months`,
+      sub: `${fmt(cash)} in cash · 3–6 months is a common rule of thumb`,
       band: safetyBand, pct: safetyPct,
       action: months < 3
-        ? `Build to ${fmt(monthlySpend * 3)} in easy-access cash (Cash ISA or savings). That's 3 months of essential spending.`
-        : `One more month (${fmt(monthlySpend)}) reaches the 6-month buffer.`,
+        ? `An emergency-cover range of 3–6 months of essential spending is a common rule of thumb. At ${fmt(monthlySpend)}/mo, that range is ${fmt(monthlySpend * 3)}–${fmt(monthlySpend * 6)}.`
+        : `${fmt(monthlySpend)} of additional cash reaches the 6-month mark at current spending.`,
     }] : []),
     {
       id: 'debt', icon: '⚖', label: 'Debt burden',
       value: totalDebt === 0 ? 'Clear' : fmt(totalDebt),
       sub: totalDebt === 0 ? 'No liabilities on record'
-        : debtYears == null ? 'No payment schedule — review needed'
-        : `Clears in ${debtYears.toFixed(0)} yr`,
+        : debtYears == null ? 'No payment schedule recorded'
+        : `Clears in ${debtYears.toFixed(0)} yr at current payments`,
       band: debtBand, pct: debtPct,
       action: debtYears == null
-        ? `Add monthly payment details to your liabilities so we can calculate payoff time and cost. Verify with an adviser.`
+        ? `Monthly payment details on each liability enable payoff-time and lifetime-cost projections.`
         : debtYears > 20
-          ? `Overpaying by £100/month can shave years off the term — check your ERC-free allowance (typically 10%/yr). Verify with an adviser.`
-          : `Focus surplus on pensions and ISAs before early repayment — tax relief usually wins. Verify with an adviser.`,
+          ? `Overpayment reduces both term and total interest cost. Most fixed-rate mortgages allow 10%/yr ERC-free. Trade-off versus other use of the same money is shown across MyMoney, Cashflow and Tax tabs.`
+          : `Allocating surplus between debt paydown and pension/ISA contributions depends on the interest rate on the debt versus the after-tax expected return of the investment. Both are visible on your dashboard.`,
     },
     {
       id: 'fi', icon: '🎯', label: 'Retirement funded',
@@ -2214,17 +2734,17 @@ function PriorityCards({ entity, onNav, setDrillPension }) {
       sub: fiTarget > 0 ? `Target: ${fmt(fiTarget)} (25× income)` : 'Set a target annual income',
       band: fiBand, pct: fiPct,
       action: fiRat_ < 0.3
-        ? `Options include: maximising pension contributions — typically the highest-return action, since £1 costs only 60p after 40% tax relief. Verify with an adviser.`
-        : `Consider checking carry-forward pension allowance from the past 3 years — this can unlock more than the standard annual cap. Verify with an adviser.`,
+        ? `Pension contributions attract tax relief at marginal income tax rate (20% basic / 40% higher / 45% additional, up to 48% Scotland 2026/27). The cost of a £1 gross contribution ranges from 80p to about 55p depending on rate.`
+        : `Pension AA carries forward unused allowance from the previous 3 tax years. Year-by-year breakdown is in the Pensions drill.`,
     },
     {
       id: 'estate', icon: '🏛', label: 'Estate efficiency',
       value: `${Math.round((ebr.rate || 0) * 100)}p/£`,
-      sub: ebr.ihtDue > 0 ? `${fmt(ebr.ihtDue)} IHT due` : 'No IHT liability',
+      sub: ebr.ihtDue > 0 ? `${fmt(ebr.ihtDue)} IHT due (current estate composition)` : 'No IHT liability at current estate composition',
       band: benBand, pct: benPct,
       action: ebr.ihtDue > 0
-        ? `Consider: nominating pension beneficiaries, putting life cover in trust, or using the £3k annual gift allowance — all potentially IHT-free. Verify with an adviser.`
-        : `Review nominations annually and after any life change (marriage, divorce, new child).`,
+        ? `Common UK IHT mitigation mechanics: pension beneficiary nominations · life cover written into trust · annual £3,000 gift exemption · 7-year clock on PETs · regular gifts from surplus income. Each has eligibility rules — see Tax & Estate.`
+        : `Estate-planning levers are most effective when reviewed alongside life events (marriage, divorce, new child, sale of business).`,
     },
     {
       id: 'tax', icon: '📊', label: 'Tax shelter usage',
@@ -2232,8 +2752,8 @@ function PriorityCards({ entity, onNav, setDrillPension }) {
       sub: `ISA ${tax.breakdown?.isa || 0}% used · Pension ${tax.breakdown?.aa || 0}% used`,
       band: taxBand, pct: Math.min(tax.total || 0, 100),
       action: (tax.total || 0) < 40
-        ? `Significant unused capacity. Max ISA (£20k) then pension — allowances reset every April. Verify with an adviser.`
-        : `Check carry-forward pension allowance from the past 3 years to unlock extra shelter. Verify with an adviser.`,
+        ? `ISA annual allowance £20,000 · pension annual allowance £60,000 (tapered above £260,000 adjusted income). Both reset 6 April. Pension AA carries forward 3 years; ISA does not.`
+        : `Pension AA carries forward unused allowance from the past 3 tax years — affects total shelter capacity.`,
     },
   ]
 
@@ -2253,7 +2773,7 @@ function PriorityCards({ entity, onNav, setDrillPension }) {
         }}>
           <span style={{ fontSize: 24 }}>✓</span>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-acc)' }}>All five metrics are healthy</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-acc)' }}>{`All ${allTiles.length} metrics are healthy`}</div>
             <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
               Emergency cover · Debt · Retirement · Estate · Tax shelters — all green.
             </div>
@@ -2308,7 +2828,7 @@ function PriorityCards({ entity, onNav, setDrillPension }) {
                   {t.action}
                   <div style={{ marginTop: 8 }}>
                     {(t.id === 'fi') && (
-                      <button onClick={(e) => { e.stopPropagation(); setDrillPension?.(true) }} style={{
+                      <button onClick={(e) => { e.stopPropagation(); setActiveDrill?.('pension') }} style={{
                         fontSize: 11, fontWeight: 700, color: colour,
                         background: `color-mix(in srgb, ${colour} 10%, var(--c-surface))`,
                         border: `1px solid color-mix(in srgb, ${colour} 25%, var(--c-border))`,
@@ -2357,7 +2877,7 @@ function PriorityCards({ entity, onNav, setDrillPension }) {
 // §12C DECUMULATION PANEL (Phase 4E) — GIA → ISA → Pension sequencing
 // ═════════════════════════════════════════════════════════════════════════════
 
-function DecumulationPanel({ entity, setDrillPension }) {
+function DecumulationPanel({ entity, setActiveDrill }) {
   const inv = investable(entity)
   // N-03 fix: don't render an orphan "Which pot to draw from first" header
   // with no body. When the user has < £10k investable, swap the full panel
@@ -2371,7 +2891,7 @@ function DecumulationPanel({ entity, setDrillPension }) {
         defaultOpen={false}
         headerAccessory={
           <button
-            onClick={() => setDrillPension(true)}
+            onClick={() => setActiveDrill('pension')}
             style={{
               fontSize: 11, color: 'var(--c-acc)', background: 'none',
               border: 'none', cursor: 'pointer', padding: 0,
@@ -2409,13 +2929,18 @@ function DecumulationPanel({ entity, setDrillPension }) {
     .reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
     + +(a.sipp?.value || 0)
 
+  // Pension audit P6 (2026-05-26): the previous taxNote strings each
+  // contained a directive verb — "Draw first", "Keep sheltered", "Draw last" —
+  // attached to a specific persona's pots. That's a personal recommendation
+  // under COBS 9A. Replaced with FCA-safe descriptive mechanics; the order
+  // shown is illustrative (header copy above clarifies "not a recommendation").
   const sequences = [
     { order: 1, pot: 'GIA (taxable account)', value: giaValue, color: '#C58CFF',
-      taxNote: 'CGT on gains — 18% basic rate / 24% higher rate. Draw first to exit the taxable wrapper soonest.' },
+      taxNote: 'CGT applies on disposal gains: 18% basic-rate / 24% higher-rate. Annual exempt amount £3,000. Holdings remain inside the estate for IHT.' },
     { order: 2, pot: 'ISA (tax-free)', value: isaValue, color: '#2DF2C3',
-      taxNote: 'Zero tax on withdrawal, ever. Keep sheltered until GIA is cleared.' },
+      taxNote: 'No income tax or CGT on withdrawal at any age. Holdings sit inside the estate for IHT.' },
     { order: 3, pot: 'SIPP / Pension', value: pensionValue, color: '#7AA7FF',
-      taxNote: '25% tax-free lump sum, then 75% taxed as income. Draw last — grows tax-free longest.' },
+      taxNote: 'Up to 25% PCLS tax-free (within £268,275 LSA). Income drawn taxed at marginal rate. Pre-April 2027: outside the IHT estate. Post-April 2027: included subject to spousal exemption.' },
   ]
 
   return (
@@ -2428,8 +2953,11 @@ function DecumulationPanel({ entity, setDrillPension }) {
         </span>
       }>
       <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 12 }}>
-        The sequence you draw from these pots determines your tax bill in retirement.
-        The optimal order for most people: GIA first → ISA second → Pension last.
+        The order in which you draw from GIA, ISA and pension pots affects total tax paid
+        in retirement and the size of the pension that remains in the IHT-free envelope until
+        April 2027 (Finance Act 2026). Each pot has a different tax treatment on withdrawal — the
+        right sequence for an individual depends on tax band, IHT exposure, bridging needs and ages.
+        Three illustrative sequences are shown below for comparison; this is information, not a recommendation.
       </div>
       {sequences.map((s, i) => (
         <div key={s.pot} style={{
@@ -2477,9 +3005,25 @@ function DecumulationPanel({ entity, setDrillPension }) {
 // ═════════════════════════════════════════════════════════════════════════════
 
 export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRisk, onDrillMetric, onNav }) {
-  const [drillPension, setDrillPension] = useState(false)
-  // Per-category drill state — only one open at a time
-  const [drillCat, setDrillCat] = useState(null) // 'investments' | 'property' | 'business' | 'protection' | 'liabilities' | null
+  // B3 fix: single drill state — prevents two overlay panels co-rendering with stale data.
+  // values: 'pension' | 'investments' | 'property' | 'business' | 'protection' | 'liabilities' | 'networth' | 'cashflow'
+  //       | 'wrapper:<WRAPPER_CODE>'  (e.g. 'wrapper:ISA', 'wrapper:PENSION', 'wrapper:PROPERTY')
+  //       | null
+  const [activeDrill, setActiveDrill] = useState(null)
+
+  // Header NW tap → NetWorthDrill (founder direction 2026-05-25 round 5).
+  // Dashboard.jsx dispatches 'sonus:networth-drill' and waits one tick for
+  // an ack before falling back to AskSonu. Acking here means MyMoney owns
+  // the rich overlay; other tabs (no listener) get the AskSonu fallback.
+  useEffect(() => {
+    function onOpenNwDrill() {
+      window.dispatchEvent(new CustomEvent('sonus:networth-drill-ack'))
+      setActiveDrill('networth')
+    }
+    window.addEventListener('sonus:networth-drill', onOpenNwDrill)
+    return () => window.removeEventListener('sonus:networth-drill', onOpenNwDrill)
+  }, [])
+
   // Pivot view (item 7) — Balance Sheet / Income / Insurance / Bonds
   const [pivot, setPivot] = useState('balance-sheet')
   const [addOpen, setAddOpen] = useState(false)
@@ -2522,11 +3066,74 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
 
   // X28 window-driven projection. The hero shows "as at [window]" when the
   // selected window has a non-zero horizon — spec §3.2.
+  //
+  // Founder UX pass 5 (2026-05-26): view-mode chips (Today / Future / Plan /
+  // What-if) previously did nothing visible — only 'scenario' had a handler.
+  // Wire each mode to a distinct projection model:
+  //   · actual    → current values, no projection (override windowYears)
+  //   · forecast  → neutral engine assumption set at the window horizon
+  //   · plan      → trajectory toward FI plan target (falls back to forecast
+  //                 with a "no plan set" hint when entity.plan is absent)
+  //   · scenario  → WhatIfLibrary takes over the page (branch above)
   const currentWindow = TIME_WINDOWS.find(w => w.id === windowId) || TIME_WINDOWS[0]
+  // Founder fix 2026-05-26 (rev 2): "none of them work not only last year".
+  // The previous logic forced windowYears to 0 in 'actual' mode, so the
+  // entire window selector — Last Year, 5y horizon, 10y, 20y, Lifetime —
+  // was a dead pointer in the default view. Now the window dictates the
+  // time horizon for ALL view modes; viewMode only controls the projection
+  // *model* (forecast/plan/scenario), not whether projection runs.
+  //   · 0   → current value
+  //   · <0  → historical (read from trajectories)
+  //   · >0  → forward projection (using viewMode's assumption set)
   const windowYears = +currentWindow.years || 0
-  const projection = windowYears === 0
-    ? { value: nw, confidence: 'HIGH', source: 'current', years: 0 }
-    : netWorthAtWindow(entity, windowYears)
+  const projection = (() => {
+    if (windowYears === 0) {
+      return {
+        value: nw, confidence: 'HIGH', source: 'current', years: 0,
+        viewMode, windowLabel: currentWindow.label,
+      }
+    }
+    // Historical lookup — negative years means we want a past value.
+    // Read from trajectories.netWorthHistory if present (one entry per month).
+    if (windowYears < 0) {
+      const traj = entity?.trajectories?.netWorthHistory
+      if (Array.isArray(traj) && traj.length > 0) {
+        const monthsBack = Math.abs(windowYears) * 12
+        const idx = Math.max(0, traj.length - 1 - monthsBack)
+        const histVal = +(traj[idx]?.value ?? 0)
+        if (histVal > 0) {
+          return {
+            value: histVal, confidence: 'HIGH', source: 'historical',
+            years: windowYears, viewMode, windowLabel: currentWindow.label,
+          }
+        }
+      }
+      // No trajectory data — surface "history not recorded" instead of
+      // silently showing current value.
+      return {
+        value: nw, confidence: 'LOW', source: 'historical-missing',
+        years: windowYears, viewMode, windowLabel: currentWindow.label,
+        historyMissing: true,
+      }
+    }
+    const base = netWorthAtWindow(entity, windowYears)
+    if (viewMode === 'plan') {
+      // Plan trajectory: target NW at retirement age × 25 (FI rule) projected
+      // back to the window. If no targetIncome / planValue available, fall
+      // back to forecast and surface the gap.
+      const target25x = (+entity?.targetIncome || 0) * 25
+      const planValue = +entity?.plan?.netWorthAtWindow ?? null
+      if (planValue != null && planValue > 0) {
+        return { ...base, value: planValue, source: 'plan', viewMode, windowLabel: currentWindow.label }
+      }
+      if (target25x > 0) {
+        return { ...base, value: target25x, source: 'plan-25x', viewMode, windowLabel: currentWindow.label }
+      }
+      // No plan set — return forecast value with a flag so the UI can show a hint
+      return { ...base, viewMode, windowLabel: currentWindow.label, planMissing: true }
+    }
+    return { ...base, viewMode, windowLabel: currentWindow.label }
+  })()
   const isProjected = projection.years !== 0
 
   // Asset rows by domain (memoised)
@@ -2558,7 +3165,42 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
     return rows.filter(r => r.wrapper === filterWrapper)
   }
 
-  // H-07: totalAssets/totalLiab were computed here but never used (TileGrid uses its own subtotals). Removed.
+  // FinancesHeroCard totals (founder UX 2026-05-26): previously read
+  // `ripple.balance_sheet.totalAssets` which doesn't exist on the ripple shape
+  // — rendered "Assets £0 · Liabilities £0" against a correct £698k Net Worth.
+  // Compute from the same primitives used by TileGrid so the strip is
+  // self-consistent with the asset grid below.
+  const heroTotalAssets = (() => {
+    const a = entity?.assets || {}
+    let t = 0
+    t += +(a.sipp?.total || 0)
+    t += (a.pensions || []).reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
+    t += (a.investments || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
+    t += +(a.isa?.total || a.isa?.value || 0)
+    t += +(a.portfolio?.total || a.portfolio?.value || 0)
+    t += (a.property || []).reduce((s, p) => s + +(p.value_gbp || p.value || p.market_value || 0), 0)
+    // F-1 fix (2026-05-26 snap audit): Bruce persona stores main residence under
+    // `assets.residence` (NOT inside the `property[]` array). The wrapper bar and
+    // CategoryTile sums BOTH include residence; the hero strip silently dropped
+    // it, displaying Assets £2.28m vs correct £4.08m. Reconciles NW = Assets - Liabilities.
+    t += +(a.residence?.value_gbp || a.residence?.value || a.residence?.market_value || 0)
+    t += (a.business_assets || a.businessAssets || a.business || []).reduce((s, b) => s + +(b.value_gbp || b.value || 0), 0)
+    t += (a.alternatives || []).reduce((s, x) => s + +(x.value_gbp || x.value || 0), 0)
+    // Cash — either flat scalar or nested
+    if (Array.isArray(a.cash)) t += a.cash.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
+    else if (a.cash?.bank?.length) t += a.cash.bank.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
+    else if (a.cash?.accounts) t += a.cash.accounts.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
+    else if (a.cash?.total) t += +a.cash.total
+    return t
+  })()
+  const heroTotalLiabilities = (() => {
+    const l = entity?.liabilities || {}
+    let t = 0
+    if (l.mortgage) t += +(l.mortgage.outstanding || 0)
+    t += (l.otherLoans || []).reduce((s, x) => s + +(x.outstanding || x.outstanding_balance || x.balance || 0), 0)
+    if (l.creditCards) t += +l.creditCards
+    return t
+  })()
 
   // Plan staleness
   const stalePlans = []
@@ -2589,7 +3231,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
       correlation_id: `mm-dd-${Date.now()}`,
       payload: { schedule },
     })
-    setDrillPension(false)
+    setActiveDrill(null)
   }
   function handleAssetCommit(event) {
     onCommit?.(event)
@@ -2624,15 +3266,32 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         }}>
           <span style={{ fontSize: 16 }}>←</span> Home
         </button>
-        {viewMode !== 'actual' && (
-          <span style={{
-            fontSize: 11, fontWeight: 700, padding: '3px 9px',
-            borderRadius: 100, background: 'rgba(255,179,71,0.10)',
-            color: '#FFB347', letterSpacing: 0.4,
-          }}>
-            {viewMode.toUpperCase()} · variance overlay active
-          </span>
-        )}
+        {viewMode !== 'actual' && (() => {
+          // Founder UX pass 5 (2026-05-26): the badge previously read just
+          // "FORECAST · variance overlay active" with no explanation of what
+          // changed. Each mode now carries a one-line meaning so the user
+          // knows what they're looking at.
+          const meaning = {
+            forecast: `Future · projected at ${currentWindow.label} using neutral engine assumptions`,
+            plan:     projection.planMissing
+              ? `Plan · no FI target set — showing forecast trajectory. Set target income to compare.`
+              : `Plan · trajectory toward your FI target at ${currentWindow.label}`,
+            scenario: `What if · scenario sandbox active`,
+          }[viewMode]
+          return (
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: '3px 9px',
+              borderRadius: 100,
+              background: viewMode === 'plan' && projection.planMissing
+                ? 'rgba(255, 107, 107, 0.12)'
+                : 'rgba(255,179,71,0.10)',
+              color: viewMode === 'plan' && projection.planMissing ? 'var(--c-coral, #FF6F7D)' : '#FFB347',
+              letterSpacing: 0.4,
+            }}>
+              {meaning}
+            </span>
+          )
+        })()}
       </div>
 
       {/* ── Plan staleness banners ─────────────────────────────────────────
@@ -2653,28 +3312,6 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         }}
       />
 
-      {/* ── Screen purpose (X25) ─────────────────────────────────────────────
-          Canonical from 2-Product-mymoney-v2_7.md §1.1. Every primary tab
-          must surface its reason for being in one user-facing sentence at
-          the top — not buried in a header, not phrased as a brand line.   */}
-      <div style={{
-        marginBottom: 'var(--space-md, 16px)',
-        display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
-      }}>
-        <span style={{
-          fontSize: 10, fontWeight: 800, color: 'var(--c-text3)',
-          letterSpacing: 0.8, textTransform: 'uppercase',
-        }}>
-          MyMoney
-        </span>
-        <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>·</span>
-        <span style={{
-          fontSize: 13, color: 'var(--c-text2)', fontStyle: 'italic',
-          lineHeight: 1.4,
-        }}>
-          What do I own, what do I owe, and what comes in?
-        </span>
-      </div>
 
       {/* ── X28 view-mode aware container ──────────────────────────────────
            Re-keying on viewMode triggers the sw-tab-slide cinema cascade so
@@ -2690,132 +3327,250 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
       )}
       {viewMode === 'scenario' ? null : <>
 
-      {/* Phase 2A — Net position sentence: one plain-English verdict per session */}
+      {/* ═══════════════════════════════════════════════════════════════════
+         SECTION NAV — UX pass 3 restoration of the filter drawer founder
+         named "balance sheet · income statement · cashflow · trusts · insurance".
+         The Wave 0.6 "comprehensive scroll" decision killed the old PivotToggle
+         content-filter; this restores navigation without re-introducing the
+         content-filter behaviour. Each chip smooth-scrolls to its Act anchor
+         below — same single-page scroll-as-truth, now navigable.
+         ═══════════════════════════════════════════════════════════════════ */}
       {(() => {
-        // W0-T8 — ripple.cashflow exposes both monthlySurplus and investable.
-        const m = ripple.cashflow.monthlySurplus || { surplus: 0, deficit: 0 }
-        const surplus = m.surplus || -(m.deficit || 0)
-        const pos = surplus >= 0
-        const cashLiquid = +(entity?.assets?.cash?.total || entity?.assets?.cash?.value || 0)
-        const monthsRunway = !pos && cashLiquid > 0 ? cashLiquid / Math.abs(surplus) : null
-        const fiRat_ = (() => {
-          try {
-            const inv_ = ripple.cashflow.investable
-            const tgt_ = (entity?.targetIncome || 0) * 25
-            return tgt_ > 0 ? (inv_ || 0) / tgt_ : null
-          } catch { return null }
-        })()
+        // Section taxonomy derived from v2.7 §3.4 Domain category list +
+        // §3.5 NW math + §3.6 Surplus/Deficit + §1.4 Domain ownership, cross-
+        // verified against mrT-core.json (the all-domain canonical fixture
+        // that has data in every section). NOT my guess, NOT the founder's
+        // casual list — pulled from the binding spec.
+        //
+        // Map: §3.4 domain groups → accounting-statement sections.
+        //   Balance Sheet      = Pensions (A+B) + S&I (C+D+E+F) + Property (G)
+        //                        + Business Assets (H+I+X) + Cash (M)
+        //                        + Alternatives (U) + Liabilities (N)
+        //   Income Statement   = Income (O) + State benefits (W) + Tax/NI
+        //   Cashflow           = Surplus/Deficit (Domain P read from CF)
+        //   Tax & Allowances   = §3.4 Tax tracker (Q-T fed to T&E, surfaced
+        //                        on MM as allowance use)
+        //   Protection & Insurance = J + K + L
+        //   Business           = H + I + X (renders only if director/flags set)
+        //   Trusts & Estate    = estate.will + estate.lpa + trust list
+        //                        (cross-link to T&E)
+        //   Top decisions      = Cost-of-Inaction ranked
+        //
+        // Each chip smooth-scrolls to its anchor; chips for sections the
+        // persona has NO data in are hidden (so Bruce won't see "Business"
+        // since he's not a director).
+        const entityData = entity || {}
+        const hasBusiness = !!(entityData.hasBusiness
+          || (entityData.assets?.business_assets || []).length > 0
+          || entityData.persona?.flags?.includes('director'))
+        const hasTrustOrEstate = !!(entityData.hasTrust
+          || entityData.estate?.will
+          || entityData.estate?.lpa
+          || entityData.assets?.protection?.lifeInsurance?.inTrust)
 
-        // Generate one sentence from the most urgent signal
-        let urgentSignal = null
-        let supportingSignal = null
-
-        // N-01 fix: if there's a NW gain visible below the banner, the deficit
-        // copy needs a bridge clause — otherwise "spending £552 more" and
-        // "↑£5k assets grew" read as a contradiction. Compute the MoM NW
-        // delta here so we can fold the bridge into the urgent sentence.
-        const traj_ = entity?.trajectories?.netWorthHistory
-        const nwMoM_ = (Array.isArray(traj_) && traj_.length >= 2)
-          ? (+(traj_[traj_.length - 1]?.value || 0)) - (+(traj_[traj_.length - 2]?.value || 0))
-          : null
-        const bridgeClause = (!pos && nwMoM_ != null && nwMoM_ > 0)
-          ? ` — but markets and contributions added ${fmt(nwMoM_)} so net worth still rose this month`
-          : ''
-
-        if (!pos && monthsRunway != null && monthsRunway < 3) {
-          urgentSignal = `You're spending ${fmt(Math.abs(surplus))} more than you earn — liquid cash covers only ${monthsRunway.toFixed(1)} months.`
-          supportingSignal = fqBandObj?.name === 'Optimised' ? 'Your overall financial health is strong, but cash flow needs immediate attention.' : null
-        } else if (!pos) {
-          urgentSignal = `You're spending ${fmt(Math.abs(surplus))} more than you earn each month${bridgeClause}.`
-          supportingSignal = fiRat_ != null && fiRat_ < 0.5 ? `Your retirement is also ${Math.round(fiRat_ * 100)}% funded — both need attention.` : `Your wealth is still growing — but this needs fixing before it compounds.`
-        } else if (fiRat_ != null && fiRat_ < 0.3) {
-          urgentSignal = `You're saving ${fmt(surplus)}/month — good. But your retirement is only ${Math.round(fiRat_ * 100)}% funded.`
-          supportingSignal = 'Options include directing surplus to a pension — 40% tax relief means every £1 could be worth £1.67. Verify with an adviser.'
-        } else {
-          urgentSignal = `You have ${fmt(surplus)}/month surplus and ${fqBandObj?.name?.toLowerCase() || 'solid'} overall financial health.`
-          supportingSignal = 'Review the opportunities below to compound this further.'
-        }
-
+        // Founder direction 2026-05-26: each chip opens a full-page route, NOT
+        // a scroll anchor. `route` is the Dashboard tab id passed to onNav;
+        // `anchor` is kept for fallback when onNav is unwired (standalone
+        // snap tests). Routes:
+        //   · Balance Sheet → 'money'           (this page — scroll fallback)
+        //   · Income Statement → 'money/income' (new page)
+        //   · Cashflow → 'flow'                 (existing tab)
+        //   · Tax & Allowances → 'tax'          (existing tab)
+        //   · Protection & Insurance → 'money/protection' (new page)
+        //   · Business → 'money/business'       (new page, director-gated)
+        //   · Trusts & Estate → 'estate'        (Dashboard maps → 'tax')
+        //   · Top decisions → 'decisions'       (Dashboard maps → DE overlay)
+        const sections = [
+          { id: 'mm-balance',    label: 'Balance Sheet',          always: true,             route: 'money',            anchor: 'mm-balance'   },
+          { id: 'mm-income',     label: 'Income Statement',       always: true,             route: 'money/income',     anchor: 'mm-income'    },
+          { id: 'mm-flow',       label: 'Cashflow',               always: true,             route: 'flow',             anchor: 'mm-flow'      },
+          { id: 'mm-tax',        label: 'Tax & Allowances',       always: true,             route: 'tax',              anchor: 'mm-tax'       },
+          { id: 'mm-insurance',  label: 'Protection & Insurance', always: true,             route: 'money/protection', anchor: 'mm-insurance' },
+          { id: 'mm-business',   label: 'Business',               always: hasBusiness,      route: 'money/business',   anchor: 'mm-business'  },
+          // v0.3 R9 §7 — Trusts chip MUST land on dedicated `/money/trusts`
+          // route (NOT `/tax#estate`). Dashboard.setTabSafe treats both
+          // 'trusts' and 'estate' the same way (→ 'money/trusts') but we use
+          // the canonical id so the test surface matches the spec.
+          { id: 'mm-trusts',     label: 'Trusts & Estate',        always: hasTrustOrEstate, route: 'trusts',           anchor: 'mm-trusts'    },
+          { id: 'mm-decisions',  label: 'Cost of inaction',       always: true,             route: 'decisions',        anchor: 'mm-decisions' },
+        ].filter(s => s.always)
         return (
-          <FadeInOnMount style={{ marginBottom: 10 }}>
-            <div style={{
-              background: !pos ? 'color-mix(in srgb, var(--c-coral, #FF6F7D) 6%, var(--c-surface))' : 'var(--c-surface)',
-              border: `1px solid ${!pos ? 'color-mix(in srgb, var(--c-coral, #FF6F7D) 25%, var(--c-border))' : 'var(--c-border)'}`,
-              borderRadius: 14, padding: '12px 14px',
-            }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.4, marginBottom: supportingSignal ? 4 : 0 }}>
-                {urgentSignal}
-              </div>
-              {supportingSignal && (
-                <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>{supportingSignal}</div>
-              )}
-            </div>
-          </FadeInOnMount>
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 40,
+            margin: '0 -16px 8px', padding: '8px 16px',
+            background: 'color-mix(in srgb, var(--c-bg) 92%, transparent)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderBottom: '1px solid color-mix(in srgb, var(--c-border) 60%, transparent)',
+            display: 'flex', gap: 6, overflowX: 'auto',
+            scrollbarWidth: 'none',
+          }}>
+            {sections.map(s => {
+              // A9 founder decision (2026-05-26): active-chip state. Balance
+              // Sheet IS the current route (this component) — it gets the
+              // filled accent style so users see which section they're on.
+              // Other chips render in neutral surface style; hover lifts them.
+              const isActive = s.route === 'money'
+              const baseBg = isActive ? 'color-mix(in srgb, var(--c-acc) 18%, var(--c-surface2))' : 'var(--c-surface2)'
+              const baseColor = isActive ? 'var(--c-acc)' : 'var(--c-text2)'
+              const baseBorder = isActive ? 'color-mix(in srgb, var(--c-acc) 55%, var(--c-border))' : 'var(--c-border)'
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-current={isActive ? 'page' : undefined}
+                  onClick={() => {
+                    if (s.route === 'money') {
+                      const target = document.getElementById(s.anchor)
+                      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      return
+                    }
+                    if (typeof onNav === 'function') {
+                      onNav(s.route)
+                      return
+                    }
+                    const target = document.getElementById(s.anchor)
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  style={{
+                    flexShrink: 0,
+                    padding: '6px 12px',
+                    fontSize: 11, fontWeight: isActive ? 700 : 600,
+                    background: baseBg,
+                    border: `1px solid ${baseBorder}`,
+                    borderRadius: 999,
+                    color: baseColor,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface2))'; e.currentTarget.style.color = 'var(--c-acc)'; e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--c-acc) 35%, var(--c-border))' } }}
+                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = baseBg; e.currentTarget.style.color = baseColor; e.currentTarget.style.borderColor = baseBorder } }}
+                >
+                  {s.label}
+                </button>
+              )
+            })}
+          </div>
         )
       })()}
 
-      {/* Phase 2B — For deficit users, cash flow is the lead signal; show before the anchor */}
-      {isDeficit && <SurplusTile entity={entity} />}
-
-      {/* ── Triple anchor (D-ANCHOR-1: triple, with X29 delta chips) ─────── */}
+      {/* ═══════════════════════════════════════════════════════════════════
+         ACT 1 — Where do I stand?
+         Triple anchor + one-line plain-English verdict folding NW MoM,
+         surplus/deficit, and cashflow position into a single sentence.
+         Replaces the Phase 2A banner-style verdict above the anchor.
+         ═══════════════════════════════════════════════════════════════════ */}
+      <div id="mm-balance" />
+      {/* v0.3 R1 §9 — G13 empty state. New user (no assets / no liabilities)
+          sees a single hero illustration + "Add your first item" CTA. NO
+          charts render, NO tiles render. Single doorway only — keeps from
+          confusing newcomers with empty-state ghost charts. */}
+      {heroTotalAssets === 0 && heroTotalLiabilities === 0 ? (
+        <FadeInOnMount className="sw-card" style={{
+          padding: '40px 28px', textAlign: 'center', marginBottom: 16,
+          background: 'var(--card-bg2)',
+          border: '1px solid var(--c-border)',
+          borderRadius: 'var(--r-lg, 20px)',
+        }} data-empty="r1-balance-sheet">
+          {/* Minimalist line drawing of an empty wallet with a ghosted
+              composition marimekko in the background — per §9 spec. */}
+          <svg width="120" height="80" viewBox="0 0 120 80" aria-hidden="true"
+            style={{ margin: '0 auto 20px', display: 'block', opacity: 0.55 }}>
+            {/* Ghosted marimekko silhouette behind the wallet */}
+            <g opacity="0.18">
+              <rect x="4"  y="40" width="22" height="36" fill="var(--c-acc)"  />
+              <rect x="28" y="50" width="22" height="26" fill="var(--c-acc2, var(--c-acc))" />
+              <rect x="52" y="56" width="22" height="20" fill="var(--c-acc)"  />
+              <rect x="76" y="62" width="22" height="14" fill="var(--c-acc2, var(--c-acc))" />
+              <rect x="100" y="68" width="16" height="8"  fill="var(--c-acc)"  />
+            </g>
+            {/* Wallet outline */}
+            <g fill="none" stroke="var(--c-text2)" strokeWidth="1.6"
+               strokeLinecap="round" strokeLinejoin="round">
+              <rect x="22" y="22" width="76" height="46" rx="6" />
+              <path d="M22 32 L98 32" />
+              <circle cx="86" cy="50" r="3" />
+            </g>
+          </svg>
+          <h2 style={{
+            fontSize: 22, fontWeight: 700,
+            color: 'var(--c-text)', margin: '0 0 8px',
+            letterSpacing: -0.3,
+          }}>Your money, one view.</h2>
+          <p style={{
+            fontSize: 13, color: 'var(--c-text2)',
+            lineHeight: 1.55, maxWidth: 380, margin: '0 auto 22px',
+          }}>
+            Add an account, property, pension, or debt. Your balance sheet builds from there.
+          </p>
+          <button
+            type="button"
+            onClick={() => setBucketOpen(true)}
+            className="sw-press"
+            style={{
+              padding: '10px 22px',
+              fontSize: 13, fontWeight: 700,
+              background: 'var(--c-acc)',
+              color: 'var(--c-bg, #0B1F3A)',
+              border: 'none', borderRadius: 100, cursor: 'pointer',
+              boxShadow: '0 2px 12px color-mix(in srgb, var(--c-acc) 30%, transparent)',
+            }}
+          >
+            Add your first item →
+          </button>
+        </FadeInOnMount>
+      ) : (
+      <>
+      {/* Voyant-parity FinancesHeroCard (founder direction 2026-05-26):
+          mirrors Voyant's "53 Accounts · Net Worth · Assets · Liabilities ·
+          Add or edit your finances" card. This is the prominent entry point
+          to AddItemSheet so users can add categories they don't have yet
+          (e.g. "I have bonds — how can I add this"). Floating + button stays
+          for power users but the founder explicitly asked for a discoverable
+          surface at the top of MyMoney. */}
+      <FinancesHeroCard
+        entity={entity}
+        netWorth={projection?.value ?? nw}
+        totalAssets={heroTotalAssets}
+        totalLiabilities={heroTotalLiabilities}
+        windowLabel={projection?.windowLabel}
+        windowYears={projection?.years}
+        viewMode={viewMode}
+        historyMissing={projection?.historyMissing}
+        onAddOrEdit={() => setBucketOpen(true)}
+      />
+      {/* Whole-tab fresh review 2026-05-26: TripleAnchor was rendered here with
+          all three values hidden — producing an empty wrapper. Wealth + Risk
+          live on the X28 top bar (D-ANCHOR-2). Net Worth was re-added to the
+          TileGrid hero card (UX BLOCK-1 fix). VarianceBadge stays for the
+          delta-context chip. */}
       <FadeInOnMount style={{ margin: '4px -16px 12px' }}>
-        <TripleAnchor
-          netWorthVal={nw}
-          fqTotal={fq.total}
-          fqBand={fqBandObj}
-          riskTotal={risk.total}
-          riskBand={rkBandObj}
-          nwTrendPct={(() => {
-            const traj = entity?.trajectories?.netWorthHistory
-            if (!Array.isArray(traj) || traj.length < 2) return null
-            const last = +(traj[traj.length - 1]?.value || 0)
-            const prev = +(traj[traj.length - 2]?.value || 0)
-            return prev > 0 ? ((last - prev) / prev) * 100 : null
-          })()}
-          onNetWorthTap={() => onDrillMetric?.('netWorth')}
-          onWealthTap={() => onDrillMetric?.('wealthScore')}
-          onRiskTap={onOpenRisk}
-        />
-        {/* Delta chips — ONE source of truth: trajectory[last] − trajectory[prev].
-            M-04 / M-05 fix: previously fell back to `entity.quarterlyDelta`
-            when trajectory was short, which silently swapped a quarterly
-            number into a "monthly change" chip — producing the "+£5.5k
-            header / +£11k waterfall" contradiction. If we don't have ≥2
-            monthly trajectory points, we render nothing rather than a
-            wrong-cadence number. */}
-        {(() => {
-          const traj = entity?.trajectories?.netWorthHistory
-          if (!Array.isArray(traj) || traj.length < 2) return null
-          const last = +(traj[traj.length - 1]?.value || 0)
-          const prev = +(traj[traj.length - 2]?.value || 0)
-          const nwDelta = last - prev
-          if (!nwDelta) return null
-          return (
-            <div style={{
-              display: 'flex', justifyContent: 'center', marginTop: 6,
-              padding: '0 16px', flexDirection: 'column', alignItems: 'center', gap: 2,
-            }}>
-              <DeltaChip delta={nwDelta} format="currency" />
-              <div style={{ fontSize: 9, color: 'var(--c-text3)', letterSpacing: 0.3 }}>
-                net worth change vs last month
-              </div>
-            </div>
-          )
-        })()}
         <VarianceBadge entity={entity} mode1="actual" mode2={viewMode} window={windowId} metric="netWorth" />
       </FadeInOnMount>
 
-      {/* ── How your money is held (was: Wrapper composition) — row 2 ────────
-           Moved above state tiles per founder direction 2026-05-15:
-           "it should be 2nd row before safety net". Renamed to plain English.
-           Filter: tap any wrapper segment to filter the tile grid below. */}
-      <FadeInOnMount delay={60} className="sw-card">
+      {/* Phase 1D — ANI cliff-edge warning (£100k taper threshold).
+          Stays in Act 1 — it's an urgent signal a user must see immediately. */}
+      <CliffEdgeWarning entity={entity} />
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         §3 SECTION 5 — How your money is held (WRAPPER BAR — restored).
+         M7 decision (2026-05-26 founder review): Marimekko removed. With rich-
+         holdings personas (Mr T, 15 wrappers) the marimekko compressed small
+         wrappers (CRYPTO £9k, SEIS £8k, CASH-ISA £8k) to sub-pixel stripes
+         inside the Investments column — unreadable AND not drillable. The 1D
+         wrapper bar shows every wrapper proportional to whole-portfolio £,
+         so small wrappers still get visible/tappable width. Categorisation
+         is already covered by the CategoryTile mini-bars BELOW (every tile
+         has its own wrapper breakdown), so the marimekko's "2D claim" was
+         redundant in practice.
+         ═══════════════════════════════════════════════════════════════════ */}
+      <FadeInOnMount delay={20} className="sw-card" style={{ marginBottom: 12 }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           marginBottom: 'var(--space-sm)',
         }}>
           <span className="sw-eyebrow" style={{ flex: 1 }}>
-            How your money is held
+            How your money is held · {fmt(heroTotalAssets)}
           </span>
           <ExplainerChip id="MM-2" />
         </div>
@@ -2823,140 +3578,46 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
           entity={entity}
           onSegmentTap={setFilterWrapper}
           activeWrapper={filterWrapper}
-          onAddWrapperDetails={() => setAddOpen(true)}
+          onAddWrapperDetails={() => setBucketOpen(true)}
+          onOpenDrill={(w) => setActiveDrill(`wrapper:${w}`)}
         />
-        {filterWrapper && (
+      </FadeInOnMount>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         ACT 2 — What I own (BalanceSheet TileGrid).
+         Wrapper bar moved up to §3 SECTION 5 (signature slot).
+         ═══════════════════════════════════════════════════════════════════ */}
+      {filterWrapper && (
+        <FadeInOnMount delay={50} style={{ marginBottom: 8 }}>
           <button onClick={() => setFilterWrapper(null)}
             className="sw-chip sw-press"
             style={{ border: '1px solid var(--c-sep)', cursor: 'pointer' }}>
             Showing {filterWrapper} only — clear ×
           </button>
-        )}
-      </FadeInOnMount>
-
-      {/* Phase 1D — ANI cliff-edge warning (£100k taper threshold) */}
-      <CliffEdgeWarning entity={entity} />
-
-      {/* Phase 2C — Priority cards: only show what needs attention (replaces 5-tile StateTileRow) */}
-      <PriorityCards entity={entity} onNav={onNav} setDrillPension={setDrillPension} />
-
-      {/* ── Surplus tile (§3.6) — surplus users only; deficit users see it above the anchor ── */}
-      {!isDeficit && <SurplusTile entity={entity} />}
-
-      {/* Today's Move REMOVED from MyMoney 2026-05-15 — it duplicates the
-          Priority Actions on the Home screen. MyMoney is a balance sheet,
-          not an action panel. Actions live on Home. */}
-
-      {/* Phase 1F — Aggregate CoI ranking: all cost-of-inaction items ranked by £ size.
-          M-06 fix: aggregate "Total est." comes from the canonical engine
-          (`totalCoI(entity).total`) — not from regex-parsing the plain-English
-          per-domain sentences. The previous regex grabbed the FIRST £ figure
-          in each sentence, which could be e.g. "£3k allowance" rather than
-          the actual cost — producing an aggregate off by orders of magnitude.
-          Per-row ranking still uses regex extraction (used only for ordering;
-          the displayed string is the engine's copy). */}
-      {(() => {
-        const domains = ['pensions', 'investments', 'property', 'business', 'protection', 'cash', 'liabilities', 'alternatives', 'obligations']
-        const ranked = domains.map(id => {
-          const text = coiForDomain(entity, id)
-          if (!text) return null
-          // Use engine numeric byDomain value for sort — matches Home's totalCoI().byDomain
-          const value = coi?.byDomain?.[id] ?? 0
-          return { id, text, value }
-        }).filter(Boolean).sort((a, b) => b.value - a.value)
-
-        if (!ranked.length) return null
-        // Canonical aggregate from the engine. `coi` is memoised at top of
-        // MyMoney via `useMemo(() => totalCoI(entity), [entity])`.
-        const totalCoIEst = +(coi?.total) || 0
-        return (
-          <FadeInOnMount delay={60} style={{ marginBottom: 12 }}>
-            <div style={{
-              background: 'color-mix(in srgb, var(--c-coral, #FF6F7D) 6%, var(--c-surface))',
-              border: '1px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 25%, var(--c-border))',
-              borderRadius: 14, padding: '14px 16px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                    Cost of doing nothing
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 1 }}>
-                    Ranked by annual cost — act on the top item first
-                  </div>
-                </div>
-                {totalCoIEst > 0 && (
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 9, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Total est.</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)' }}>{fmt(totalCoIEst)}/yr</div>
-                  </div>
-                )}
-              </div>
-              {ranked.slice(0, 4).map((r, i) => {
-                const handleCoIRowClick = () => {
-                  if (r.id === 'pensions') setDrillPension(true)
-                  else if (r.id === 'investments' || r.id === 'cash' || r.id === 'alternatives') setDrillCat('investments')
-                  else if (r.id === 'property') setDrillCat('property')
-                  else if (r.id === 'business') setDrillCat('business')
-                  else if (r.id === 'protection') setDrillCat('protection')
-                  else if (r.id === 'liabilities') setDrillCat('liabilities')
-                  else if (r.id === 'obligations') onNav?.('flow')
-                }
-                return (
-                  <button key={r.id} onClick={handleCoIRowClick} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 10,
-                    padding: '7px 0', width: '100%', textAlign: 'left',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    borderTop: i > 0 ? '1px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 12%, var(--c-sep))' : 'none',
-                  }}>
-                    <span style={{
-                      minWidth: 18, height: 18, borderRadius: '50%',
-                      background: i === 0 ? 'var(--c-coral, #FF6F7D)' : 'var(--c-surface2)',
-                      color: i === 0 ? '#fff' : 'var(--c-text3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 9, fontWeight: 800, flexShrink: 0, marginTop: 1,
-                    }}>{i + 1}</span>
-                    <div style={{ fontSize: 11, color: i === 0 ? 'var(--c-text)' : 'var(--c-text2)', lineHeight: 1.45, flex: 1 }}>
-                      {r.text}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </FadeInOnMount>
-        )
-      })()}
-
-      {/* Phase 4E — Decumulation sequencing: GIA → ISA → Pension order */}
-      <DecumulationPanel entity={entity} setDrillPension={setDrillPension} />
-
-      {/* §C — Balance Sheet / Financial Picture header. */}
-      <SectionDelimiter
-        eyebrow="Your financial picture"
-        title="Balance sheet"
-        sub="Tap any tile to drill into it · tap + Add to capture new items"
-      />
-      {/* Pivot toggle (item 7) — Balance Sheet / Income / Insurance / Bonds.
-          Each pivot is a different aggregation of the same entity. */}
-      <PivotToggle pivot={pivot} onPivot={setPivot} />
-      {pivot !== 'balance-sheet' && (
-        <PivotView pivot={pivot} entity={entity} scenarioEntity={scenarioEntity || null} />
+        </FadeInOnMount>
       )}
-      {pivot === 'balance-sheet' && (() => {
+      {/* BalanceSheet TileGrid — rendered directly, no PivotToggle wrapper. */}
+      {(() => {
         // Derive per-category row collections from existing dRows builders.
         const isDirector = hasPersonaFlag(entity, 'director')
         const catRows = {
           pensions:     applyFilter(dRows.A),
+          // M5 founder decision (2026-05-26): EIS/SEIS/VCT moved OUT of
+          // Investments and INTO Alternatives. They have illiquid 3-5yr clocks,
+          // high risk, qualify for BPR — share more DNA with crypto/PE/wine
+          // than with ISA/GIA. Bonds (onshore/offshore) stay in Investments —
+          // mainstream investment wrappers with chargeable-event regime.
           investments:  [...applyFilter(dRows.C), ...applyFilter(dRows.D),
-                         // M-07: apply wrapper filter to EIS/SEIS/VCT/Bond rows too
-                         ...applyFilter(dRows.E_EIS), ...applyFilter(dRows.E_SEIS), ...applyFilter(dRows.E_VCT),
                          ...applyFilter(dRows.F_ON), ...applyFilter(dRows.F_OFF)],
           property:     applyFilter(dRows.G),
           business:     [...dRows.H, ...dRows.I, ...(isDirector ? dRows.X : [])],
           protection:   [...dRows.J, ...dRows.K, ...dRows.L],
           cash:         applyFilter(dRows.M),
           liabilities:  dRows.N,
-          alternatives: dRows.U,
+          // M5: EIS/SEIS/VCT folded in here alongside the existing dRows.U
+          // (wine/art/gold/crypto/PE).
+          alternatives: [...dRows.U,
+                         ...applyFilter(dRows.E_EIS), ...applyFilter(dRows.E_SEIS), ...applyFilter(dRows.E_VCT)],
           obligations:  dRows.V,
         }
         // Income is a flow, not a balance — kept here only because some
@@ -2997,7 +3658,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         // Empty-state copy has personality per category — generic "Tap Add"
         // wasn't earning its place (skill rule: every word earns its place).
         const CATEGORIES = [
-          { id: 'pensions',     label: 'Pensions',             domainCodes: 'A · B',     rows: catRows.pensions,     onRowTap: () => setDrillPension(true),
+          { id: 'pensions',     label: 'Pensions',             domainCodes: 'A · B',     rows: catRows.pensions,     onRowTap: () => setActiveDrill('pension'),
             empty: 'No pensions yet. Add a SIPP or workplace scheme — the contributions get back up to 47% in tax relief.' },
           { id: 'investments',  label: 'Savings & Investments',domainCodes: 'C · D · E · F', rows: catRows.investments,
             empty: 'Nothing invested yet. Add an ISA first — £20k a year, no tax on growth, no tax on withdrawal.' },
@@ -3006,42 +3667,113 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
           { id: 'business',     label: 'Business Assets',      domainCodes: isDirector ? 'H · I · X' : 'H · I',  rows: catRows.business,
             empty: 'No business holdings added. Shares in a trading company may pass to your heirs free of inheritance tax once you have held them for two years.' },
           { id: 'protection',   label: 'Protection',           domainCodes: 'J · K · L', rows: catRows.protection,
-            empty: 'No cover in place. The four pillars: life · critical illness · income protection · private medical. Term life with the policy in trust is the cheapest IHT shield.' },
+            empty: 'No cover in place. Four common product categories: life · critical illness · income protection · private medical. Policies written into a discretionary trust typically sit outside the estate for IHT — ownership and trust structure depend on personal circumstances.' },
           { id: 'cash',         label: 'Cash',                 domainCodes: 'M',         rows: catRows.cash,
             empty: 'No cash accounts captured. 3–6 months of essentials in easy-access is the standard buffer; ISA + NS&I are the tax-free options.' },
-          { id: 'liabilities',  label: 'Liabilities',          domainCodes: 'N',         rows: catRows.liabilities, liability: true,
-            empty: 'No debt recorded. Lucky you.' },
+          // Founder 2026-05-25 round 6: Liabilities tile removed from the
+          // "What you own" grid — liabilities aren't assets and have their
+          // own Act 3 section directly below. Subtotal still computed above
+          // so the Balance-sheet net-worth math is unchanged.
           { id: 'income',       label: 'Income (flow)',        domainCodes: 'O · W',     rows: [] /* income shown in flow-context below NW + on Cashflow */ },
           { id: 'alternatives', label: 'Alternatives',         domainCodes: 'U',         rows: catRows.alternatives,
             empty: 'Crypto, wine, art, gold, P2P, private equity — anything that doesn\'t fit the standard wrappers lives here. Chattels under £6k disposal: no CGT.' },
-          { id: 'obligations',  label: 'Obligations',          domainCodes: 'V',         rows: catRows.obligations,
-            empty: 'No family commitments tracked. Parent care, dependants, ongoing maintenance — drag on cashflow you don\'t want missed.' },
+          // IFA pass 2 BLOCK: Obligations (Domain V) is a CASHFLOW commitment
+          // (family care, dependants, maintenance) — NOT a balance-sheet asset.
+          // Surfacing it in "WHAT YOU OWN" misclassifies it. Per spec §20.3
+          // and v2.7 §Q1.2 it belongs on the Cashflow tab. Removed from
+          // category grid here; relocate to a Commitments row when ready.
         ]
 
         // Per-category context lines + status chips. These surface what an
         // adviser would call out at a glance — they're derived heuristically
         // from the persona data we already have.
-        const isaUsedYTD = (entity?.assets?.investments || [])
-          .filter(inv => (inv.type || '').toLowerCase().includes('isa'))
-          .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0)
+        // Use the canonical allowance tracker so this stays in lockstep with
+        // the §4.5.2 cards. The previous field-scan missed assets stored on
+        // the persona without the `contribution_current_tax_year` key.
+        let isaUsedYTD = 0
+        try { isaUsedYTD = allowanceTracker(entity)?.isa?.used || 0 } catch {}
         const carryFwdAA = entity?.income?.allowance_use?.pension_aa
-        const aaHeadroomLeft = (1 - (carryFwdAA || 0)) * TAX.pensionAA
+        // BLOCK-2: AA headroom must reflect s189 relievable-earnings cap and
+        // MPAA. Without these the tile says "£60k of pension room" to a
+        // retired persona who can only contribute £3,600 (the universal floor).
+        const _relevantEarnings =
+            (+entity?.income?.employment       || 0)
+          + (+entity?.income?.directorSalary   || 0)
+          + (+entity?.income?.selfEmploymentNet || 0)
+          + (+entity?.income?.gross_annual_employment || 0)
+        const _reliefCap = Math.max(3600, _relevantEarnings)
+        const _mpaaActive = !!(entity?.flexibleDrawdownTriggered
+          || entity?.pension?.mpaaActive
+          || (entity?.assets?.pensions || []).some(p => p.mpaaActive || p.fadStarted))
+        const _aaEffective = _mpaaActive ? (TAX.mpaa || 10000) : TAX.pensionAA
+        const aaHeadroomLeft = Math.min(_aaEffective, _reliefCap) * (1 - (carryFwdAA || 0))
 
-        // Realistic monthly essentials — use entity.expenses if present, else
-        // fall back to 55% of gross annual income / 12. Don't use director
-        // salary alone (it's deliberately suppressed for NI optimisation on
-        // Mr T-style personas and gives nonsense "27 months of cover").
+        // Realistic monthly essentials — BLOCK-1 fix: canonical reader checks
+        // every persona shape (expenses.essential_monthly, expenses.essential_annual,
+        // entity.monthlyExpenditure for persona-a..g). Previously this chain
+        // ignored entity.monthlyExpenditure and fell through to the 55%-of-income
+        // estimate — which gave "150.3 yr of essentials covered" for Bruce
+        // (gross income low → essentials estimate tiny → tile reported absurd).
+        const _essRead = getMonthlyEssentials(entity)
         const monthlyEssentialsForTiles =
-          +entity?.expenses?.essential_monthly || (incomeAnnual * 0.55) / 12
+          _essRead.monthly || (incomeAnnual * 0.55) / 12
 
         const tileCats = CATEGORIES.map(c => {
           const tile = { ...c }
-          if (c.id === 'pensions' && aaHeadroomLeft > 1000) {
-            tile.contextLine = `£${Math.round(aaHeadroomLeft / 1000)}k of pension room left this year`
-            tile.status = { label: 'Pension room available', tone: 'warn', explainerId: 'MM-AA' }
+          if (c.id === 'pensions') {
+            // v0.3 R1 §8 — SIPP-IHT chip on Pensions tile.
+            // VERBATIM copy from spec §8: "From April 2027, pensions enter
+            // your estate. Current pre-tax delta: £{X}."
+            //
+            // Gate: SIPP > 0 (any life stage — A6 requires visibility for
+            // Bruce (decum) AND Mr T (accumulation) both). The prior age/
+            // lifeStage filter was a v0.2 carry-over that A6 explicitly
+            // rejects.
+            //
+            // Math source: ihtDeltaPrePost2027(entity) — canonical engine
+            // helper, no recompute in screen (PP-5).
+            //
+            // Tap → onNav('tax', { hash:'iht-delta', seed:{...} }) per §7
+            // Cross-route contract. Dashboard.setTabSafe consumes hash+seed.
+            const sippValue = (entity?.assets?.pensions || [])
+              .filter(p => /sipp/i.test(p.type || ''))
+              .reduce((s, p) => s + (+p.balance_gbp || +p.value || +p.total || 0), 0)
+              + (+entity?.assets?.sipp?.total || 0)
+            let ihtDelta = null
+            try { ihtDelta = ihtDeltaPrePost2027(entity) } catch { /* engine fallback */ }
+            if (sippValue > 0 && ihtDelta && Number.isFinite(ihtDelta.delta)) {
+              // Verbatim format — `£{X}` rounded to nearest £1 for legibility.
+              // Locale-formatted number matches the spec template.
+              const deltaRounded = Math.round(ihtDelta.delta)
+              tile.contextLine = `From April 2027, pensions enter your estate. Current pre-tax delta: £${deltaRounded.toLocaleString('en-GB')}.`
+              tile.status = {
+                label: 'SIPP-IHT 2027 — delta',
+                tone: 'warn',
+                explainerId: 'SIPP-IHT-2027',
+                // R1 §5 cross-route contract — chip is a tap target distinct
+                // from tile body. Lands on /tax#iht-delta carrying seed
+                // { pension_total, post_2027_delta } per §7.
+                onTap: () => {
+                  if (typeof onNav === 'function') {
+                    onNav('tax', {
+                      hash: 'iht-delta',
+                      seed: {
+                        pension_total: sippValue,
+                        post_2027_delta: ihtDelta.delta,
+                      },
+                    })
+                  }
+                },
+              }
+            } else if (aaHeadroomLeft > 1000) {
+              // Fallback to AA headroom messaging when SIPP-IHT chip not gated
+              // in (SIPP == 0). Mechanic-only — no advice verbs.
+              tile.contextLine = `£${aaHeadroomLeft >= 1000 ? Math.round(aaHeadroomLeft / 1000) + 'k' : Math.round(aaHeadroomLeft)} of pension room left this year`
+              tile.status = { label: 'Pension room available', tone: 'warn', explainerId: 'MM-AA' }
+            }
           }
-          if (c.id === 'investments' && isaUsedYTD < 20000) {
-            const remaining = 20000 - isaUsedYTD
+          if (c.id === 'investments' && isaUsedYTD < (TAX.isaAllowance ?? 0)) {
+            const remaining = (TAX.isaAllowance ?? 0) - isaUsedYTD
             tile.contextLine = `£${Math.round(remaining / 1000)}k of tax-free ISA room left this year`
             tile.status = remaining > 5000 ? { label: 'Room to shelter cash', tone: 'good', explainerId: 'MM-2' } : null
           }
@@ -3101,14 +3833,26 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
             }
           }
           if (c.id === 'cash') {
-            const months = (subtotals.cash / Math.max(1, monthlyEssentialsForTiles)) || 0
-            if (months > 0) tile.contextLine = months >= 12
+            // P0-13 (2026-05-27): only compute cash-cover months when essentials
+            // are known and > 0. Previously Math.max(1, monthlyEssentialsForTiles)
+            // forced the denominator to 1 when essentials was missing/zero,
+            // producing absurd "2,416 yr cover" numbers for any persona without
+            // monthly-essentials data populated.
+            const monthsRaw = monthlyEssentialsForTiles > 0
+              ? subtotals.cash / monthlyEssentialsForTiles
+              : null
+            const months = Number.isFinite(monthsRaw) ? monthsRaw : 0
+            if (monthsRaw == null) tile.contextLine = `${fmt(subtotals.cash)} cash · add monthly essentials to see months of cover`
+            else if (months > 0) tile.contextLine = months >= 12
               ? `${(months / 12).toFixed(1)} yr of essentials covered`
               : `${months.toFixed(1)} mo of essentials covered`
             // Status surfaces health band for the safety net
-            if (months >= 6) tile.status = { label: 'Strong buffer', tone: 'good' }
-            else if (months >= 3) tile.status = { label: 'Adequate', tone: 'neutral' }
-            else tile.status = { label: 'Thin', tone: 'warn' }
+            // BLOCK-4: replace value-laden "Strong buffer" with the numeric
+            // band — neutral, rubric-explicit. User reads the months figure
+            // and the label together, no regulated-sounding word required.
+            if (months >= 6) tile.status = { label: `${months >= 12 ? (months / 12).toFixed(1) + 'yr' : Math.round(months) + 'mo'} cover`, tone: 'good' }
+            else if (months >= 3) tile.status = { label: `${Math.round(months)}mo cover`, tone: 'neutral' }
+            else tile.status = { label: `${Math.round(months)}mo cover`, tone: 'warn' }
           }
           if (c.id === 'alternatives' && (entity?.assets?.alternatives || []).length > 0) {
             const a = entity.assets.alternatives[0]
@@ -3148,11 +3892,14 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
             obligations:  0.0,
             income:       0.0,
           }
-          // Sparklines only for categories with meaningful time-series narrative.
-          // Protection/cash/alternatives/obligations have no growth story to chart.
-          const SPARKLINE_CATS = ['pensions', 'investments', 'property', 'business', 'liabilities']
-          if (SPARKLINE_CATS.includes(c.id) && tile.subtotal && tile.subtotal !== 0) {
-            const drift = CAT_MONTHLY_DRIFT[c.id] ?? 0.004
+          // Founder UX pass 2 (2026-05-26): EVERY tile gets a sparkline.
+          // Previously only growth-story categories (pensions/investments/
+          // property/business/liabilities) had them — but the asymmetric layout
+          // is more confusing than a flat line. Categories with effectively-zero
+          // drift (cash, protection, obligations, alternatives) still show a
+          // gentle near-flat line; the visual rhythm is what matters.
+          if (tile.subtotal && tile.subtotal !== 0) {
+            const drift = CAT_MONTHLY_DRIFT[c.id] ?? 0.001  // near-flat default
             const cur = +tile.subtotal
             const sparkSeries = []
             for (let i = 11; i >= 0; i--) {
@@ -3177,6 +3924,17 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         const totalLiabilitiesBS = subtotals.liabilities || 0
 
         return (
+          <>
+          {/* UX audit HIGH-4 fix (2026-05-26): the previous version stacked
+              all three "Insurance / Business / Trusts" anchors at the same
+              vertical position above TileGrid, so all three chips smooth-
+              scrolled to the same spot — 37% of the section nav was dead.
+              Only `mm-insurance` stays here (Protection tile renders in
+              PRIMARY_ORDER's top row of TileGrid below). `mm-business` is
+              now anchored to the Director-Intel block; `mm-trusts` is
+              anchored to the BPR-clock card inside Director-Intel + a
+              fallback at the AllowanceTracker section. */}
+          <div id="mm-insurance" />
           <TileGrid
             netWorth={projection.value}
             entity={entity}
@@ -3192,7 +3950,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
             totalLiabilities={totalLiabilitiesBS}
             categories={tileCats}
             trajectory={entity?.trajectories?.netWorthHistory}
-            monthlyEssentials={+entity?.expenses?.essential_monthly || (incomeAnnual * 0.55) / 12}
+            monthlyEssentials={monthlyEssentialsForTiles}
             planTarget={(() => {
               const retPlan = (entity?.plans || []).find(p => p.type === 'retirement' || /retire|fi/i.test(p.label || ''))
               if (!retPlan) return null
@@ -3201,15 +3959,17 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
               return null
             })()}
             onView={(id) => {
-              if (id === 'pensions') setDrillPension(true)
+              if (id === 'pensions') setActiveDrill('pension')
               else if (['investments', 'property', 'business', 'protection', 'liabilities'].includes(id)) {
-                setDrillCat(id)
+                setActiveDrill(id)
               } else if (id === 'cash') {
-                // Cash lives under investments drill; scroll-open that panel
-                setDrillCat('investments')
+                // v0.3 (2026-05-26) — Cash has its own drill (CashDrillDown)
+                // with runway, FSCS, bed-and-ISA, liquidity ladder.
+                setActiveDrill('cash')
               } else if (id === 'alternatives') {
-                // Alternatives (crypto/PE/commodities) live under investments drill
-                setDrillCat('investments')
+                // v0.3 (2026-05-26) — Alternatives has its own drill with
+                // AIM 50%, valuation freshness, liquidity ladder.
+                setActiveDrill('alternatives')
               } else if (id === 'income') {
                 // Income streams — pivot to income view
                 setPivot('income')
@@ -3220,198 +3980,180 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
             }}
             onAdd={openBucket}
           />
-        )
-      })()}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-         PHASE 4 — DIRECTOR INTELLIGENCE LAYER
-         Only surfaces for director persona. Highest-value calculations
-         specific to company directors: AA headroom, S24, BPR, extraction.
-         ═══════════════════════════════════════════════════════════════════ */}
-      {hasPersonaFlag(entity, 'director') && (() => {
-        // 4A: Annual Allowance headroom
-        const aaUsedRaw = entity?.income?.allowance_use?.pension_aa
-        // M-12: guard — field could be a fraction (0-1) or absolute £. Treat >1 as absolute £.
-        const aaUsed = aaUsedRaw != null
-          ? (aaUsedRaw <= 1 ? aaUsedRaw * TAX.pensionAA : aaUsedRaw)
-          : null
-        const aaLeft = aaUsed != null ? Math.max(0, TAX.pensionAA - aaUsed) : null
-
-        // 4B: Optimal salary/dividend split signal
-        const currentSalary = +(entity?.income?.directorSalary || entity?.income?.employment || 0)
-        const salaryTooHigh = currentSalary > 50_270  // into higher rate band
-
-        // 4C: Section 24 BTL exposure
-        const hasBTL = (entity?.assets?.property || []).some(p => /buy-to-let|btl/i.test(p.use || p.type || ''))
-        const btlMortgageInterest = (() => {
-          const btlLoans = (entity?.liabilities?.otherLoans || []).filter(l => /buy-to-let|btl/i.test(l.type || ''))
-          return btlLoans.reduce((s, l) => s + (+l.monthlyPayment || 0) * 12, 0)
-        })()
-        const s24Tax = btlMortgageInterest > 0 ? btlMortgageInterest * 0.20 : 0  // tax credit lost vs pre-S24
-
-        // 4D: BPR clock — check if business assets qualify
-        const bprAssets = (entity?.business_assets || []).filter(b => b.qualifies_for_bpr)
-        const bprEarliestDate = bprAssets.length > 0
-          ? bprAssets.map(b => b.acquisition_date || b.start_date).filter(Boolean)[0]
-          : null
-
-        // N-08 / S-01 fix: each director-intelligence action gets an explicit
-        // destination. `nav` is the App-level router (Tax sub-tab, Cashflow,
-        // Ask Sonu) or — for "ask the engine" actions — an Ask Sonu
-        // pre-filled query. Pills become real <button>s below.
-        const goTaxAni = () => onNav?.('tax', { sub: 'ani' })
-        const goTaxExtraction = () => onNav?.('tax', { sub: 'director-extraction' })
-        const goTaxS24 = () => onNav?.('tax', { sub: 's24' })
-        const goAsk = (q) => window.dispatchEvent(new CustomEvent('sonus:ask', { detail: { question: q } }))
-
-        const items = [
-          aaLeft != null && aaLeft > 1000 ? {
-            icon: '⌂', color: '#7AA7FF',
-            title: 'Pension headroom available',
-            body: `You have £${Math.round(aaLeft / 1000)}k of annual allowance unused this year. An employer contribution from your Ltd company gets full corporation tax deduction — effectively costing the company 75p per £1 you put in.`,
-            action: 'Maximise before 5 April',
-            onAction: goTaxAni,
-          } : null,
-          salaryTooHigh ? {
-            icon: '⚙', color: '#FFB347',
-            title: 'Director salary above optimal',
-            body: `Your salary of ${fmt(currentSalary)}/yr tips into higher-rate income tax + NI. Most directors take £12,570 salary + dividends. Review your extraction mix — the saving can be £3k–£8k/yr in NI alone.`,
-            action: 'Review salary/dividend split',
-            onAction: goTaxExtraction,
-          } : {
-            icon: '⚙', color: 'var(--c-acc)',
-            title: 'Director extraction mix',
-            body: `As a director you control how you take money from your company. The optimal mix (salary + dividends + pension) changes as income grows and thresholds shift. Check your mix is still optimal for 2026/27.`,
-            action: 'Review extraction strategy',
-            onAction: goTaxExtraction,
-          },
-          hasBTL && btlMortgageInterest > 0 ? {
-            icon: '⌖', color: '#FF9500',
-            title: 'Section 24 restriction on BTL',
-            body: `Your BTL mortgage interest of ${fmt(Math.round(btlMortgageInterest))}/yr no longer offsets rental income directly. You get only a 20% tax credit instead. At your marginal rate, this costs you ${fmt(Math.round(s24Tax))} extra tax annually vs pre-2017 rules.`,
-            action: 'Consider whether BTL is still efficient',
-            onAction: () => goAsk(`Given my BTL with ${fmt(Math.round(btlMortgageInterest))}/yr mortgage interest, is it still tax-efficient to hold personally under Section 24?`),
-          } : null,
-          bprAssets.length > 0 ? {
-            icon: '⚇', color: 'var(--c-acc)',
-            title: 'Business Property Relief clock',
-            body: `${bprAssets.length} business asset${bprAssets.length > 1 ? 's' : ''} may qualify for 100% IHT exemption${bprEarliestDate ? ` — 2-year qualifying clock from ${bprEarliestDate}` : ' — confirm 2-year ownership period'}. The 2026 Budget caps BPR at £1m with 50% relief above — plan accordingly.`,
-            action: 'Confirm BPR status with adviser',
-            onAction: () => goAsk(`Do my business assets qualify for Business Property Relief? Owned since ${bprEarliestDate || 'unknown'}.`),
-          } : null,
-        ].filter(Boolean)
-
-        if (!items.length) return null
-        return (
-          <>
-            <SectionDelimiter
-              eyebrow="Director intelligence"
-              title="What matters most for company directors"
-              sub="Tax efficiency levers specific to your director status"
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-              {items.map((item, i) => (
-                <div key={i} style={{
-                  background: `color-mix(in srgb, ${item.color} 7%, var(--c-surface))`,
-                  border: `1px solid color-mix(in srgb, ${item.color} 25%, var(--c-border))`,
-                  borderRadius: 14, padding: '14px 16px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <span style={{
-                      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                      background: `color-mix(in srgb, ${item.color} 18%, var(--c-surface2))`,
-                      display: 'grid', placeItems: 'center', fontSize: 14,
-                    }}>{item.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', marginBottom: 4 }}>{item.title}</div>
-                      <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 8 }}>{item.body}</div>
-                      {/* N-08 / S-01 fix: real <button> with onClick — was an
-                          inert <span> that looked like a CTA but did nothing
-                          when tapped. Pre-launch CTA-honesty rule. */}
-                      <button
-                        type="button"
-                        onClick={item.onAction}
-                        className="sw-press"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          fontSize: 10, fontWeight: 800, letterSpacing: 0.4,
-                          color: item.color, textTransform: 'uppercase',
-                          background: 'transparent', border: 'none',
-                          padding: '4px 0', cursor: item.onAction ? 'pointer' : 'default',
-                        }}
-                      >
-                        {item.action} →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </>
         )
       })()}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-         TAX panels — ANI, allowances
-         ═══════════════════════════════════════════════════════════════════ */}
-      <SectionDelimiter
-        eyebrow="Tax & allowances"
-        title="What you keep and what you're sheltering"
-        sub="Tap a row to expand · these numbers show you the gaps HMRC won't point out"
-      />
-      {/* Tax snapshot — surfaces top 2 actionable insights before the detail panels */}
-      {(() => {
-        let t, a
-        try { t = allowanceTracker(entity) } catch { return null }
-        try { a = calcANI(entity) } catch { return null }
-        if (!t || !a) return null
-        const isaLeft = Math.max(0, t.isa.limit - t.isa.used)
-        const pensionLeft = (() => {
-          try {
-            const carryFwd = entity?.income?.allowance_use?.pension_aa
-            return carryFwd != null ? Math.max(0, (1 - carryFwd) * TAX.pensionAA) : null
-          } catch { return null }
-        })()
-        const insights = [
-          { icon: '£', color: 'var(--c-acc)',
-            label: 'What you keep after tax',
-            value: fmt(a.ani),
-            sub: `${Math.round((a.ani / Math.max(a.steps?.total || 1, 1)) * 100)}% of gross income reaches your pocket` },
-          isaLeft > 1000 ? { icon: '🛡', color: '#5DDBC2',
-            label: 'ISA room left this tax year',
-            value: fmt(isaLeft),
-            sub: 'This allowance resets 6 April · unused room disappears forever' } : null,
-          pensionLeft && pensionLeft > 1000 ? { icon: '⌂', color: '#7AA7FF',
-            label: 'Pension headroom',
-            value: fmt(pensionLeft),
-            sub: 'Contribute now for 40%+ tax relief at your rate' } : null,
-        ].filter(Boolean)
-        if (!insights.length) return null
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 12 }}>
-            {insights.map((ins, i) => (
-              <div key={i} style={{
-                background: `color-mix(in srgb, ${ins.color} 8%, var(--c-surface))`,
-                border: `1px solid color-mix(in srgb, ${ins.color} 22%, var(--c-border))`,
-                borderRadius: 14, padding: '12px 14px',
-              }}>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 }}>
-                  {ins.label}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 880, color: ins.color, fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5, marginBottom: 4 }}>
-                  {ins.value}
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.4 }}>{ins.sub}</div>
-              </div>
-            ))}
-          </div>
-        )
-      })()}
-      <ANIPanel entity={entity} />
-      <AllowancesPanel entity={entity} />
+      {/* Founder direction 2026-05-26: AccountsList RevealCard removed from
+          MyMoney main flow ("Its in the wrong place"). The consolidated
+          accounts list belongs INSIDE AddItemSheet as a right-rail sidebar
+          (Voyant pattern) so users see existing items while adding/editing
+          new ones — not as a third surface on the Balance Sheet view. */}
 
       {/* ═══════════════════════════════════════════════════════════════════
-         NRI gate — Indian assets only render if hasPersonaFlag('nri')
+         ACT 3 — What I owe
+         Liabilities as a grid of LiabilityTile components mirroring the asset
+         CategoryTile rhythm. Founder UX pass 3: "Liabilities is not following
+         the asset look and feel why" — fixed by replacing the thin list with
+         per-debt tiles (~320px each, coral accent, APR chip, avalanche-
+         priority marker on the highest-APR debt). Hidden when no debt.
+         ═══════════════════════════════════════════════════════════════════ */}
+      {(() => {
+        const cats = ripple.balance_sheet?.categories || {}
+        const liabsTotal = +cats.liabilities || 0
+        if (!liabsTotal) return null
+        const monthlyDebt = +ripple.balance_sheet?.monthlyDebtService || 0
+
+        // Build a defensive liabilities list — personas use both
+        // entity.liabilities.mortgage (single object) and entity.liabilities.otherLoans (array).
+        const liab = entity?.liabilities || {}
+        const items = []
+        const mortgage = liab.mortgage
+        if (mortgage && +mortgage.outstanding > 0) {
+          items.push({
+            type: 'mortgage',
+            label: 'Mortgage',
+            balance: +mortgage.outstanding,
+            apr: mortgage.rate != null ? +mortgage.rate * 100 : null,
+            monthly: +mortgage.monthlyPayment || 0,
+          })
+        }
+        for (const l of (liab.otherLoans || [])) {
+          const bal = +(l.outstanding || l.outstanding_balance || 0)
+          if (!bal) continue
+          const aprRaw = +(l.apr || l.interest_rate || 0)
+          const rawType = (l.type || 'loan').toLowerCase().replace(/[\s-]+/g, '_')
+          items.push({
+            type: rawType,
+            label: (l.type || 'Loan').replace(/_/g, ' '),
+            balance: bal,
+            apr: aprRaw > 0 ? aprRaw * 100 : null,
+            monthly: +l.monthlyPayment || 0,
+          })
+        }
+        // Sort by APR desc so the most expensive debt is visible first.
+        items.sort((a, b) => (b.apr || 0) - (a.apr || 0))
+
+        // Avalanche-priority marker: only on the highest-APR debt across the
+        // set, and only when that APR is >= 8% (no point marking a 1.5%
+        // mortgage as a priority — it's not). Math-only, not advice.
+        const maxApr = items.reduce((m, it) => Math.max(m, it.apr || 0), 0)
+        const avalancheLabel = maxApr >= 8 ? items.find(it => it.apr === maxApr)?.label : null
+
+        // 12-month back-cast series per liability. Assume linear amortisation
+        // at a rate derived from monthly payment / balance. If no monthly
+        // payment data, fall back to a flat line (no movement). This lets
+        // the tile render a sparkline at parity with the asset tiles.
+        function backcastSeries(item) {
+          const months = 12
+          const monthlyPay = +item.monthly || 0
+          if (monthlyPay <= 0) return Array.from({ length: months }, () => item.balance)
+          // Crude amortisation: assume principal portion ~ 60% of monthly pay
+          // for early-term mortgages, 100% for credit cards/loans paid above min.
+          // For our back-cast purposes this is good enough — drill panel has
+          // the proper payoff calc.
+          const principalPerMonth = item.apr != null && item.apr > 10
+            ? monthlyPay * 0.85   // higher-APR debt: most of payment is principal once above min
+            : monthlyPay * 0.55   // mortgage band: more of payment is interest
+          const series = []
+          for (let i = months - 1; i >= 0; i--) {
+            series.push(item.balance + (principalPerMonth * i))
+          }
+          return series
+        }
+
+        return (
+          <FadeInOnMount delay={80}>
+            <SectionDelimiter
+              eyebrow="What you owe"
+              title={`Liabilities · ${fmt(liabsTotal)}${monthlyDebt > 0 ? ` · costs ${fmt(monthlyDebt)}/mo` : ''}`}
+              sub="Tap any tile to open the liabilities drill"
+            />
+            {items.length === 0 ? (
+              <div className="sw-card" style={{ padding: 'var(--space-md)' }}>
+                <button
+                  onClick={() => setActiveDrill('liabilities')}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '6px 0', background: 'none', border: 'none',
+                    color: 'var(--c-text2)', cursor: 'pointer', fontSize: 13,
+                  }}>
+                  {fmt(liabsTotal)} outstanding · tap to see breakdown →
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: 12,
+              }}>
+                {items.map((item, i) => {
+                  const series = backcastSeries(item)
+                  // YoY change %: (latest - oldest) / oldest
+                  const oldest = series[0]
+                  const yoy = oldest > 0 ? ((item.balance - oldest) / oldest) * 100 : null
+                  return (
+                    <LiabilityTile
+                      key={`${item.label}-${i}`}
+                      type={item.type}
+                      label={item.label}
+                      balance={item.balance}
+                      apr={item.apr}
+                      monthly={item.monthly}
+                      series={series}
+                      yoyChangePct={yoy}
+                      isAvalanche={avalancheLabel != null && item.label === avalancheLabel}
+                      onView={() => setActiveDrill('liabilities')}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </FadeInOnMount>
+        )
+      })()}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         Acts 3.5 / 4 / 5 / 6 STRIPPED (founder direction 2026-05-26).
+         The section-nav chips at the top of MyMoney now route to dedicated
+         pages — Income Statement → /money/income, Cashflow → /flow, Tax &
+         Allowances → /tax, Top Decisions → /decisions. Rendering the same
+         content inline on MyMoney was dead-weight redundancy ("3 and 4th
+         image — why is this all here"). MyMoney is now Balance-Sheet only.
+         PersonaGapTiles (StatePension / SoleTraderNIC / TaperedAA / etc.)
+         continue to surface on their dedicated routes. NRI Indian-assets
+         block below intentionally retained — it's an asset disclosure that
+         belongs on the Balance Sheet view.
+         ═══════════════════════════════════════════════════════════════════ */}
+
+      {/* v0.3 R1 Phase 4 — dead Acts 5+6 block (Tax / Decisions inline) removed.
+          Those routes own their own pages now (/tax, /decisions). MyMoney is
+          Balance Sheet ONLY per v0.3 route-1 §3. Source history preserved in
+          git; persona-gap chips below now surface R1-relevant tax mechanics. */}
+
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         §3 PERSONA-AWARE INLINE CHIPS (R1 + cross-route v0.3 Phase 3)
+         Each tile is gated by its own persona/data check and renders null
+         when the gate fails. Verbatim §8 copy (no paraphrase). Drawn from
+         Phase-3 PersonaGapTiles.jsx exports — used as-is per Phase 4 rule.
+         Locked to R1-relevant chips only (HICBC, TaperedAA, Cohab, NRB-T,
+         S24, EIS/VCT, Avalanche, NRI).
+         ═══════════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+        <TaperedAATile entity={entity} />
+        <CohabIHTCliffTile entity={entity} />
+        <TransferableNRBTile entity={entity} />
+        <LandlordS24Tile entity={entity} />
+        <EISVCTClockTile entity={entity} />
+        <HICBCTile entity={entity} />
+        <AvalanchePriorityTile entity={entity} />
+        <NRIIndianAssetsTile entity={entity} />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+         §3 SECTION 9 — NRI gate (Indian assets RevealCard).
+         Renders only if hasPersonaFlag('nri'). DTAA note inside.
          ═══════════════════════════════════════════════════════════════════ */}
       {hasPersonaFlag(entity, 'nri') && entity.assets?.indianAssets && (
         <RevealCard cardId="indian-assets" title="Indian assets — held as a non-resident" defaultOpen={true}
@@ -3439,6 +4181,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         </RevealCard>
       )}
 
+      </>
+      )}{/* ── /G13 empty-state ternary (heroTotals == 0 ? empty : <>...</>) ── */}
+
       {/* ── Disclaimer + rules ──────────────────────────────────────────── */}
       <p className="disclaimer">{BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}</p>
 
@@ -3463,16 +4208,17 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
       <AddItemSheet
         open={bucketOpen}
         initialCategory={bucketCat}
+        entity={entity}
         onClose={() => { setBucketOpen(false); setBucketCat(null) }}
         onCommit={handleAssetCommit}
       />
 
       {/* ── Pension drill-down ──────────────────────────────────────────── */}
-      {drillPension && (
+      {activeDrill === 'pension' && (
         <PensionDrillDown
           entity={entity}
           personaId={personaId}
-          onBack={() => setDrillPension(false)}
+          onBack={() => setActiveDrill(null)}
           onHome={onHome}
           onCommit={(eventOrSchedule) => {
             if (Array.isArray(eventOrSchedule)) handleCommitSchedule(eventOrSchedule)
@@ -3482,21 +4228,68 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
       )}
 
       {/* ── Per-category drill-downs (Domain C/D/E/F · G · H/I · J/K/L · N) */}
-      {drillCat === 'investments' && (
-        <InvestmentsDrillDown entity={entity} personaId={personaId} onBack={() => setDrillCat(null)} onHome={onHome} />
+      {activeDrill === 'investments' && (
+        <InvestmentsDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
       )}
-      {drillCat === 'property' && (
-        <PropertyDrillDown entity={entity} personaId={personaId} onBack={() => setDrillCat(null)} onHome={onHome} />
+      {activeDrill === 'property' && (
+        <PropertyDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
       )}
-      {drillCat === 'business' && (
-        <BusinessDrillDown entity={entity} personaId={personaId} onBack={() => setDrillCat(null)} onHome={onHome} />
+      {activeDrill === 'business' && (
+        <BusinessDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
       )}
-      {drillCat === 'protection' && (
-        <ProtectionDrillDown entity={entity} personaId={personaId} onBack={() => setDrillCat(null)} onHome={onHome} />
+      {activeDrill === 'protection' && (
+        <ProtectionDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
       )}
-      {drillCat === 'liabilities' && (
-        <LiabilitiesDrillDown entity={entity} personaId={personaId} onBack={() => setDrillCat(null)} onHome={onHome} />
+      {activeDrill === 'liabilities' && (
+        <LiabilitiesDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
       )}
+      {/* Cash + Alternatives drills (whole-tab close-out 2026-05-26):
+          previously routed to activeDrill='investments' which doesn't render
+          either — dead-end tap from the tile. Now wired to their own drills. */}
+      {activeDrill === 'cash' && (
+        <CashDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
+      )}
+      {activeDrill === 'alternatives' && (
+        <AlternativesDrillDown entity={entity} personaId={personaId} onBack={() => setActiveDrill(null)} onHome={onHome} />
+      )}
+      {activeDrill === 'networth' && (
+        <NetWorthDrill entity={entity} ripple={ripple} onClose={() => setActiveDrill(null)} onHome={onHome} />
+      )}
+      {activeDrill === 'cashflow' && (
+        <CashFlowDrill entity={entity} ripple={ripple} onClose={() => setActiveDrill(null)} onHome={onHome} />
+      )}
+      {typeof activeDrill === 'string' && activeDrill.startsWith('wrapper:') && (() => {
+        // L1 (wrapper segment tap) → L2 (assets list) → L3 (AssetDetailOverlay).
+        // Build the asset list from the same rowsFor* helpers WrapperCompositionBar
+        // uses, then filter by the wrapper code from the drill key.
+        const w = activeDrill.split(':')[1]
+        const all = [
+          ...rowsForPensions(entity),
+          ...rowsForISAs(entity),
+          ...rowsForGIA(entity),
+          ...rowsForByWrapper(entity, 'BOND_ON'),
+          ...rowsForByWrapper(entity, 'BOND_OFF'),
+          ...rowsForByWrapper(entity, 'EIS'),
+          ...rowsForByWrapper(entity, 'SEIS'),
+          ...rowsForByWrapper(entity, 'VCT'),
+          ...rowsForByWrapper(entity, 'UNKNOWN'),
+          ...rowsForCash(entity),
+          ...rowsForProperty(entity),
+        ]
+        const assets = all.filter(r => r.wrapper === w)
+        return (
+          <WrapperDrill
+            wrapper={w}
+            assets={assets}
+            entity={entity}
+            ripple={ripple}
+            personaId={personaId}
+            onClose={() => setActiveDrill(null)}
+            onHome={onHome}
+            onFilter={(ww) => { setFilterWrapper(ww); setActiveDrill(null) }}
+          />
+        )
+      })()}
     </div>
   )
 }

@@ -118,8 +118,17 @@ export default function X28TopBar({
   useEffect(() => { if (windowProp)   setWindowState(windowProp)   }, [windowProp])
   useEffect(() => { if (viewModeProp) setModeState(viewModeProp)   }, [viewModeProp])
 
-  // persist on change
-  useEffect(() => { writeStore(windowState, modeState) }, [windowState, modeState])
+  // persist on change + broadcast for cross-screen `useTaxYear` consumers
+  // (CX-1, 2026-05-28). `storage` event only fires across tabs; this custom
+  // event handles same-tab propagation so a TY-change in the TopBar updates
+  // every screen consuming the hook without a page reload.
+  useEffect(() => {
+    writeStore(windowState, modeState)
+    if (typeof window !== 'undefined') {
+      try { window.dispatchEvent(new CustomEvent('sonus:taxyear', { detail: { window: windowState } })) }
+      catch { /* old browsers — silent */ }
+    }
+  }, [windowState, modeState])
 
   const [open, setOpen] = useState(false)
   const current = TIME_WINDOWS.find(w => w.id === windowState) || TIME_WINDOWS[3]

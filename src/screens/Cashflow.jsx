@@ -66,6 +66,7 @@ import {
   useCascadeTrigger,
   usePrevious,
 } from '../hooks/useAnimation.jsx'
+import useBundleVersion from '../hooks/useBundleVersion.jsx'
 
 // Phase 2 Batch C — premium Cashflow components. Aliased as *V2 to avoid
 // colliding with the local components of the same name defined below. The
@@ -839,6 +840,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     onScenarioSeedConsumed?.()
   }, [scenarioSeed, onScenarioSeedConsumed])
 
+  // A4 last-mile (2026-05-28): bv invalidates every engine memo below when
+  // the user flips the TY chip, so the screen recomputes against the new
+  // bundle instead of showing yesterday's numbers.
+  const bv = useBundleVersion()
+
   // ── Anchors ────────────────────────────────────────────────────────────
   // Use calcFQ (canonical per Home v1.4 §Q1.2) — was calcFQCalibrated which
   // returned a different total and made the score inconsistent across tabs.
@@ -851,62 +857,62 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // ── Cashflow Health (§3B hero) ─────────────────────────────────────────
   const health = useMemo(
     () => cashflowHealth(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
 
   // ── §A NOW computations ────────────────────────────────────────────────
   const incomeAll = useMemo(
     () => calcAllIncome(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
-  const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity])
-  const lb = useMemo(() => liquidityBuffer(entity), [entity])
+  const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity, bv])
+  const lb = useMemo(() => liquidityBuffer(entity), [entity, bv])
   const surplusAlloc = useMemo(
     () => recommendedSurplusAllocation(entity, ms.surplus),
-    [entity, ms.surplus]
+    [entity, ms.surplus, bv]
   )
 
   // ── §B TRAJECTORY computations ─────────────────────────────────────────
   const swr = useMemo(
     () => swrFromRegime(swrRegime, null, CMA_BUNDLE),
-    [swrRegime]
+    [swrRegime, bv]
   )
-  const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE), [entity])
-  const fi = useMemo(() => fiRatio(entity), [entity])
+  const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE), [entity, bv])
+  const fi = useMemo(() => fiRatio(entity), [entity, bv])
 
   // 1000-run Monte Carlo per spec §5.4 / §5.5 (O-CF-RULES-01).
   const pos = useMemo(
     () => cf_probabilityOfSuccess(entity, CMA_BUNDLE, 1000),
-    [entity]
+    [entity, bv]
   )
   const seqVuln = useMemo(
     () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
   const gkPath = useMemo(
     () => guytonKlingerPath(entity, 30, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
   const fiveScen = useMemo(
     () => cf_fiveCashflowScenarios(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
-  const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity])
-  const coiVar = useMemo(() => coiCashflowVariants(entity), [entity])
-  const prcPcc = useMemo(() => cf_prcPccSpread(entity), [entity])
+  const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv])
+  const coiVar = useMemo(() => coiCashflowVariants(entity), [entity, bv])
+  const prcPcc = useMemo(() => cf_prcPccSpread(entity), [entity, bv])
   const reality = useMemo(
     () => cf_realityEngineFactorisation(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
   const mdd = useMemo(
     () => cf_maxDrawdownExposure(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
   const eff = useMemo(
     () => cf_portfolioEfficiency(entity, CMA_BUNDLE),
-    [entity]
+    [entity, bv]
   )
 
   // ── Render ─────────────────────────────────────────────────────────────

@@ -23,6 +23,7 @@
 
 import { useMemo } from 'react'
 import useTaxYear from '../hooks/useTaxYear.jsx'
+import useBundleVersion from '../hooks/useBundleVersion.jsx'
 import {
   calcAllIncome,
   calcIncomeTax,
@@ -552,11 +553,15 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
   // displays the user's chosen TY. Bundle propagation to engine is the
   // multi-week part — for now the chip on screen makes the selection visible.
   const ty = useTaxYear()
-  const allIncome = useMemo(() => calcAllIncome(entity), [entity])
-  const aniInfo = useMemo(() => calcANI(entity), [entity])
+  // A4 last-mile (2026-05-28): adding `bv` to memo deps means every engine
+  // call re-fires when the user flips the TY chip. Without this the engine
+  // has new rates loaded but the screen displays yesterday's numbers.
+  const bv = useBundleVersion()
+  const allIncome = useMemo(() => calcAllIncome(entity), [entity, bv])
+  const aniInfo = useMemo(() => calcANI(entity), [entity, bv])
   const ani = aniInfo.ani
-  const paUsed = useMemo(() => calcPersonalAllowance(ani), [ani])
-  const taxInfo = useMemo(() => calcIncomeTax(entity), [entity])
+  const paUsed = useMemo(() => calcPersonalAllowance(ani), [ani, bv])
+  const taxInfo = useMemo(() => calcIncomeTax(entity), [entity, bv])
 
   const director = isDirector(entity)
   const soleTrader = isSoleTrader(entity)
@@ -585,7 +590,7 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
   // the full child benefit value (£2,212 for two kids). calcHICBC returns 0
   // when out of band or no child benefit declared, so this is safe across
   // every persona.
-  const hicbcInfo  = useMemo(() => { try { return calcHICBC(entity) } catch { return null } }, [entity])
+  const hicbcInfo  = useMemo(() => { try { return calcHICBC(entity) } catch { return null } }, [entity, bv])
   const hicbcCharge = Math.max(0, hicbcInfo?.charge || 0)
   const netIncome = Math.max(0, gross - incomeTaxTotal - totalNI - hicbcCharge)
   const netPct    = gross > 0 ? Math.round((netIncome / gross) * 100) : 0

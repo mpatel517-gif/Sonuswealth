@@ -2511,6 +2511,7 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
 }
 
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
+import useBundleVersion from '../hooks/useBundleVersion.jsx'
 
 export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey }) {
   // Back-routing (2026-05-28): respect previous screen rather than jumping home.
@@ -2560,11 +2561,17 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   const [x28Window, setX28Window] = useState('current-tax-year')
   const [viewMode, setViewMode] = useState('actual')
 
+  // A4 last-mile (2026-05-28): bv invalidates every engine memo below when
+  // the user flips the TY chip. Tax-Estate is the most rate-sensitive
+  // screen — IHT NRB/RNRB, dividend bands, additional-rate threshold all
+  // shift between bundles.
+  const bv = useBundleVersion()
+
   // ── Derive top-line numbers ──────────────────────────────────────────────
   // calcFQ is canonical per Home v1.4 §Q1.2; calcFQCalibrated drifted from Home's number.
-  const fq    = useMemo(() => safe(() => calcFQ(entity), { total: 0 }), [entity])
-  const risk  = useMemo(() => safe(() => calcRisk(entity), { total: 0 }), [entity])
-  const nw    = useMemo(() => safe(() => netWorth(entity), 0), [entity])
+  const fq    = useMemo(() => safe(() => calcFQ(entity), { total: 0 }), [entity, bv])
+  const risk  = useMemo(() => safe(() => calcRisk(entity), { total: 0 }), [entity, bv])
+  const nw    = useMemo(() => safe(() => netWorth(entity), 0), [entity, bv])
   const fqBd  = useMemo(() => safe(() => fqBand(fq.total)), [fq])
   const rkBd  = useMemo(() => safe(() => riskBand(risk.total)), [risk])
 
@@ -2580,7 +2587,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     const ani = safe(() => calcANI(entity).ani, 0)
     if (ani >= 100000 && ani <= TAX.art) n++  // 60% taper
     return n
-  }, [entity])
+  }, [entity, bv])
 
   const estateBadge = useMemo(() => {
     let n = 0
@@ -2594,12 +2601,12 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     const nsList = Array.isArray(ns?.pensions) ? ns.pensions : Array.isArray(ns) ? ns : []
     if (nsList.some(p => !(p.nominee || p.beneficiary || p.has_nomination))) n++
     return n
-  }, [entity])
+  }, [entity, bv])
 
   // ── X29 diff layer — last-seen totals ────────────────────────────────────
   const snap = useMemo(() => readSnapshot(entity?.id), [entity?.id])
-  const exposureToday = useMemo(() => safe(() => te_ihtExposure(entity), null), [entity])
-  const totalTaxNow   = useMemo(() => safe(() => te_taxThisYear(entity)?.total_tax, 0), [entity])
+  const exposureToday = useMemo(() => safe(() => te_ihtExposure(entity), null), [entity, bv])
+  const totalTaxNow   = useMemo(() => safe(() => te_taxThisYear(entity)?.total_tax, 0), [entity, bv])
   useEffect(() => {
     writeSnapshot(entity?.id, {
       iht: exposureToday?.iht_due || 0,

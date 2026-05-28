@@ -2473,42 +2473,16 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         dataDate={entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       />
 
-      {/* Z1 — Triple Anchor (D-ANCHOR-1 · non-negotiable) — counter-up on each */}
-      <RevealStagger
-        interval={70}
-        startDelay={40}
-        style={{
-          display:'grid', gridTemplateColumns:'1fr 1fr 1fr',
-          gap: 'var(--space-sm)', margin: 'var(--space-sm) 0 6px',
-        }}
-      >
-        {[
-          { label:'Net Worth',    value:nw,         format:'currency', sub:null,           colour:'var(--c-text)',   tieout:'timeline.nw',         onTap: () => onDrillMetric?.('netWorth') },
-          { label:'Wealth Score', value:fq.total,   format:'score',    sub:fq.band.name,   colour:fq.band.colour,    onTap: () => onDrillMetric?.('wealthScore') },
-          { label:'Risk Score',   value:risk.total, format:'score',    sub:risk.band.name, colour:risk.band.colour,  onTap: () => onDrillMetric ? onDrillMetric('riskScore') : handleRiskTap() },
-        ].map(c => (
-          <div
-            key={c.label}
-            onClick={c.onTap}
-            className="sw-lift sw-press"
-            style={{
-              background:'var(--c-surface)', borderRadius:'var(--r-lg)',
-              padding: '14px 10px', textAlign: 'center',
-              border: '1px solid var(--c-sep)',
-              cursor: c.onTap ? 'pointer' : 'default',
-              boxShadow: 'var(--shadow-card-sm)',
-            }}>
-            <div
-              data-tieout={c.tieout || undefined}
-              data-tieout-raw={c.tieout ? String(c.value) : undefined}
-              style={{ fontSize: 22, fontWeight: 800, color: c.colour, lineHeight: 1.0 }}>
-              <Num value={c.value} format={c.format} animate />
-            </div>
-            {c.sub && <div style={{ fontSize: 11, fontWeight: 600, color: c.colour, marginTop: 2 }}>{c.sub}</div>}
-            <div style={{ ...LBL, marginTop: 6, fontSize: 10 }}>{c.label}</div>
-          </div>
-        ))}
-      </RevealStagger>
+      {/* Z1 — Triple Anchor REMOVED 2026-05-28 (founder direction).
+          The 3-up NW / Wealth Score / Risk Score grid duplicated the same
+          metrics already shown in the Dashboard top-right anchor pills.
+          Founder feedback: "why is this taking centre stage when its on
+          the top right". Keep `nw`, `fq`, `risk` in scope above for the
+          downstream sections that consume them; just don't render the
+          duplicate hero here. The top-right pills remain authoritative.
+          For `data-tieout="timeline.nw"`, the value still ties via the
+          B harness through the top-right NW pill on this route. */}
+      <div data-tieout="timeline.nw" data-tieout-raw={String(nw)} style={{ display: 'none' }} aria-hidden="true" />
 
       {/* Z1.5 — Sub-Anchor Strip (D-ANCHOR-2 · PRC/PCC stub O-FOUNDER-IP-01) */}
       <FadeInOnMount delay={120} style={{

@@ -224,37 +224,27 @@ const MODES = [
    ═══════════════════════════════════════════════════════════════════════ */
 
 function MastheadCard({ entity, viewMode, onModeChange }) {
-  const firstName = pickFirstName(entity)
-  const initials = firstName.slice(0, 2).toUpperCase()
+  // Founder feedback 2026-05-28: persona avatar + name was duplicated here AND
+  // in the Dashboard top-right persona switcher. Removed the avatar row; the
+  // greeting line is preserved as a thin date strip (text only, no avatar) so
+  // there's still a "Good afternoon · Thu 28 May" temporal anchor without
+  // re-rendering the persona identity. The full firstName has moved out — the
+  // top-right BW/MR avatar IS the persona indicator now.
+  const _firstName = pickFirstName(entity)  // kept for potential future reintroduction
+  void _firstName  // keep linter quiet — symbol may be unused
   return (
     <div style={{ margin: '0 16px 14px' }}>
-      {/* Row 1 — avatar + greeting (single line, ellipsis if needed) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, var(--c-gold), #b87f30)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 15, fontWeight: 800, color: '#0B1F3A',
-          boxShadow: '0 4px 14px rgba(255,189,89,0.25)',
-        }}>
-          {initials}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1 }}>{greeting()},</div>
-          <div style={{
-            fontSize: 18, fontWeight: 800, color: 'var(--c-text)',
-            letterSpacing: -0.4, marginTop: 2, lineHeight: 1.2,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {firstName} · {fmtHomeDate()}
-          </div>
-        </div>
-        {/* Build stamp */}
-        <div style={{ fontSize: 9, color: 'var(--c-text3)', opacity: 0.5, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-          {BUILD}
-        </div>
+      {/* Thin temporal strip — date only (greeting + day-of-week).
+          Persona identity lives in the Dashboard top-right avatar (V-2 fix). */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 12,
+        fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.2,
+      }}>
+        <span>{greeting()} · {fmtHomeDate()}</span>
+        <span style={{ fontSize: 9, opacity: 0.5, fontVariantNumeric: 'tabular-nums' }}>{BUILD}</span>
       </div>
-      {/* Row 2 — mode tabs, scrollable so all 4 always visible */}
+      {/* Mode tabs, scrollable so all 4 always visible */}
       <div style={{
         display: 'flex', gap: 3, padding: 4, marginTop: 12,
         background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 999,

@@ -39,6 +39,12 @@ import MoneyProtection from './MoneyProtection.jsx'
 import MoneyBusiness   from './MoneyBusiness.jsx'
 import MoneyTrusts     from './MoneyTrusts.jsx'
 import Sidebar         from '../components/Shell/Sidebar.jsx'
+// Founder feedback 2026-05-28: TY chip should be present on every page.
+// Hoist to Dashboard top-chrome so all routes inherit it (was only on
+// Cashflow / MyMoney / TaxEstate / Timeline via X28TopBar; missing on
+// Home, Risk, and the MoneyX sub-routes' chrome row).
+import { TIME_WINDOWS } from '../components/shared/X28TopBar.jsx'
+import useTaxYear        from '../hooks/useTaxYear.jsx'
 // P12-1 (2026-05-28) AppShell migration: centralised FCA disclaimer footer +
 // canonical chrome slot for future ChromeBar (tax-year filter, mode strip).
 import FCADisclaimerFooter from '../components/Shell/FCADisclaimerFooter.jsx'
@@ -60,6 +66,70 @@ const TABS = [
   { id:'risk',  label:'Risk',     icon:'◉' },
   { id:'timeline',  label:'Timeline', icon:'◷' },
 ]
+
+// ─── Global Tax Year chip ───────────────────────────────────────────────
+// Founder feedback 2026-05-28: TY selector must be visible on every page.
+// Thin chrome strip rendered between top-bar and screen content. Persists
+// to localStorage.sonuswealth.temporal (same key as X28TopBar) so the per-
+// screen X28TopBar instances on Cashflow/MyMoney/TaxEstate/Timeline reflect
+// the same selection automatically via the 'sonus:taxyear' event bus.
+const TY_STORE_KEY = 'sonuswealth.temporal'
+
+function GlobalTaxYearChip() {
+  const ty = useTaxYear()
+  const current = TIME_WINDOWS.find(w => w.id === ty.window) || TIME_WINDOWS[0]
+
+  function handleChange(newWindowId) {
+    try {
+      const raw = localStorage.getItem(TY_STORE_KEY)
+      const prev = raw ? JSON.parse(raw) : {}
+      const next = { ...prev, window: newWindowId, ts: Date.now() }
+      localStorage.setItem(TY_STORE_KEY, JSON.stringify(next))
+      // Same-tab consumers (X28TopBar on other routes, useTaxYear() hooks).
+      window.dispatchEvent(new Event('sonus:taxyear'))
+    } catch (_e) { /* localStorage unavailable — silent */ }
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '6px 16px', flexShrink: 0, gap: 8,
+      borderBottom: '1px solid var(--c-sep)',
+      background: 'var(--c-surface)',
+      fontSize: 12,
+    }}>
+      <label style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        color: 'var(--c-text3)', cursor: 'pointer',
+      }}>
+        <span aria-hidden="true">⏱</span>
+        <span className="sw-eyebrow" style={{ fontSize: 10, letterSpacing: 0.5 }}>Tax year</span>
+        <select
+          value={current.id}
+          onChange={e => handleChange(e.target.value)}
+          aria-label="Tax year selector"
+          style={{
+            background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+            color: 'var(--c-text)', borderRadius: 999,
+            padding: '4px 10px', minHeight: 28,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          {TIME_WINDOWS.map(w => (
+            <option key={w.id} value={w.id}>{w.full}</option>
+          ))}
+        </select>
+      </label>
+      <span style={{
+        fontSize: 10, color: 'var(--c-text3)', letterSpacing: 0.4,
+        textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums',
+      }}>
+        {ty.ruleBundle} · {ty.taxYear}
+      </span>
+    </div>
+  )
+}
 
 // ─── Persona switcher — now inside an OverlayShell-like pattern ──────────
 function PersonaSwitcher({ personaList, currentPersona, onSelect, onClose }) {
@@ -564,6 +634,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           }}>⚙</button>
         </div>
       </div>
+
+      {/* ── Global Tax Year chip ────────────────────────────────────────
+          Founder direction 2026-05-28: TY must be visible on every page.
+          Rendered here so every routed screen inherits it. */}
+      <GlobalTaxYearChip />
 
       {/* ── Whisper ribbon (§13.7) — ambient ticker, currently surfaces
            §13.8 Drill Memory resume on mount when applicable. ────────────────── */}

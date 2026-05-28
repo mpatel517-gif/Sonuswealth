@@ -10,7 +10,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
-import { calcFQ, netWorth, monthlySurplus, fqBand, fmt } from '../../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { netWorth, fq as calcFQ } from '../../engine/selectors/index.js'
+import { monthlySurplus, fqBand, fmt } from '../../engine/fq-calculator.js'
 
 // ── Scenario definitions ────────────────────────────────────────────────────
 // Each delta is a pure function: entity → modified entity clone.

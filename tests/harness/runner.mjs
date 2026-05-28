@@ -75,11 +75,31 @@ if (args.matrix) {
   workPersonas = [...new Set([...workPersonas, ...matrixIds])];
   if (workYears.length === 0) workYears = [...ALL_YEARS];
 }
+// Phase A4: --family=mrT loads the 13 engine-test fixtures (mrT-core,
+// mrT-couple, mrT-divorced, ...) that previously sat unused on disk.
+if (args.family) {
+  const familyList = await listPersonas(args.family);
+  const familyIds = familyList.map(p => p.persona_id);
+  workPersonas = [...new Set([...workPersonas, ...familyIds])];
+  if (workYears.length === 0) workYears = [...ALL_YEARS];
+}
 if (args.allPersonas) {
-  // 7 main + 85 matrix = 92 personas
+  // Phase A4: was 7 main + 85 matrix = 92. Now includes mrT family (13) and
+  // historical series (7) — so coverage manifest cells line up.
   const main = ['persona-a','persona-b','persona-c','persona-d','persona-e','persona-f','persona-g'];
-  const matrixList = await listPersonas('matrix');
-  workPersonas = [...main, ...matrixList.map(p => p.persona_id)];
+  const [matrixList, mrTList, historicalList] = await Promise.all([
+    listPersonas('matrix'),
+    listPersonas('mrT'),
+    listPersonas('historical'),
+  ]);
+  workPersonas = [
+    ...main,
+    ...matrixList.map(p => p.persona_id),
+    ...mrTList.map(p => p.persona_id),
+    ...historicalList.map(p => p.persona_id),
+  ];
+  // Dedup in case any family overlaps
+  workPersonas = [...new Set(workPersonas)];
   if (workYears.length === 0) workYears = [...ALL_YEARS];
 }
 if (workPersonas.length === 0) {

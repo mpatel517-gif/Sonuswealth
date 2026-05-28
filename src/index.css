@@ -29,7 +29,7 @@
   --c-border2:  rgba(255,255,255,.18);
   --c-text:     #d4e4fa;       /* primary text */
   --c-text2:    #a9b5c8;
-  --c-text3:    #8793a7;
+  --c-text3:    #95a1b5;       /* P11-2 (2026-05-28): bumped from #8793a7 for AA headroom on c-surface3 */
 
   /* ── Functional 5-colour set ────────────────────────────────── */
   --c-acc:      #5ddbc2;       /* Mathematical Teal — primary accent (Stitch dark) */
@@ -116,7 +116,7 @@
   --c-border2:  rgba(35,48,68,.16);
   --c-text:     #1a1c1e;       /* primary ink */
   --c-text2:    #43474e;       /* muted */
-  --c-text3:    #657286;       /* secondary muted (labels, captions) */
+  --c-text3:    #5a6678;       /* secondary muted (labels, captions) — P11-2 (2026-05-28): darkened from #657286 to clear AA 4.5:1 on c-surface3 (#e3e2e5) which was failing at 4.0:1 */
 
   /* Digital Sterling — Action Indigo replaces green entirely.
      Per spec: "No green or traditional success indicators are used;
@@ -667,3 +667,51 @@ body {
     overflow-x: auto !important;
   }
 }
+
+/* ── V-1 fix (2026-05-28): Mobile top-bar chrome collision ─────────────────
+   At ≤768px the right cluster (avatar 44 + 4 anchor pills + theme 58 + more
+   44 + settings 44 ≈ 440px) was wrapping under the brand wordmark on 375px
+   viewports. Hide the marketing tagline and the duplicative anchor pills at
+   mobile — each route already renders its own anchor numbers in-body. Keep:
+   logo, "Sonuswealth" wordmark, avatar, theme toggle, more, settings.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sw-app-topbar__tagline { display: none !important; }
+  .sw-app-topbar__anchors { display: none !important; }
+}
+
+/* ── Desktop brand de-duplication (2026-05-28) ────────────────────────────
+   At ≥1024px the sidebar shows its own logo + "Sonuswealth" wordmark + tagline.
+   The top-bar also rendering the same logo + wordmark creates a visible
+   double-brand bar across the whole top of every desktop screen — wasted
+   real estate. Hide the top-bar brand cluster at desktop; mobile still shows
+   it because the sidebar is hidden there.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  .sw-app-with-sidebar .sw-app-topbar__brand {
+    display: none !important;
+  }
+}
+
+/* ── N-2 + N-4 fix (2026-05-28): wordmark clipping + chrome overflow at 375px
+   At ≤480px the "Sonuswealth" wordmark (fontSize:22, ~120px) was being clipped
+   by the BW avatar because the brand cluster's text didn't truncate. Shrink
+   the wordmark to 16px AND apply overflow:hidden + text-overflow:ellipsis so
+   the brand still reads but never collides with the right-cluster actions.
+   Also drop the "More" (⋯) button at this size since Settings (⚙) opens the
+   same menu hierarchy — keeps the right cluster to avatar + theme + settings
+   which fits comfortably with the 44px logo + ~80px wordmark in 375px. */
+@media (max-width: 480px) {
+  .sw-app-topbar__brand > div:last-child > div:first-child {
+    font-size: 16px !important;
+    letter-spacing: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 130px;
+  }
+  .sw-app-topbar__actions > button[aria-label="More menu"] {
+    display: none !important;
+  }
+}
+

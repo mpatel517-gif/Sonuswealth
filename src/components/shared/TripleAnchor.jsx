@@ -5,16 +5,23 @@
 // Per D-ANCHOR-1 (20 April 2026): equal weight, equal tile size, always
 // rendered together. Never a twin-anchor, never a solo-anchor.
 //
+// D-ANCHOR-1 OVERRIDE (founder direction 2026-05-25): Net Worth ("You own")
+// has been lifted to the global app header as a persistent top-right badge.
+// On screens that surface the header badge, the TripleAnchor degrades to a
+// Twin (Wealth + Risk only) via the `hideNetWorth` prop. Default behaviour
+// is unchanged (still renders three tiles) so screens roll over one at a time.
+//
 // Consumed by: every primary screen (Home, MyMoney, Cashflow, T&E, Risk,
 //              Timeline, Ask).
 // Props:
-//   netWorthVal  number
-//   fqTotal      number (0-100)
-//   fqBand       { name, colour }
-//   riskTotal    number (0-100)
-//   riskBand     { name, colour }
-//   deltaFQ      number — simulation delta (positive = better)
-//   isSimulating boolean — shows delta chip when true
+//   netWorthVal   number
+//   fqTotal       number (0-100)
+//   fqBand        { name, colour }
+//   riskTotal     number (0-100)
+//   riskBand      { name, colour }
+//   deltaFQ       number — simulation delta (positive = better)
+//   isSimulating  boolean — shows delta chip when true
+//   hideNetWorth  boolean — when true, suppress the NW tile (header owns it)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { fmt } from '../../engine/fq-calculator.js'
@@ -28,10 +35,16 @@ export default function TripleAnchor({
   deltaFQ = 0,
   isSimulating = false,
   nwTrendPct = null,    // MoM % change in NW — shows trend arrow in the NW tile
+  hideNetWorth = false, // D-ANCHOR-1 OVERRIDE — NW now lives in global header
+  hideWealth = false,   // HIGH-1: extend override to Wealth+Risk on non-Home screens
+  hideRisk = false,
   onWealthTap,
   onRiskTap,
   onNetWorthTap,
 }) {
+  // HIGH-1 EARLY EXIT: if all 3 are hidden, render nothing — the screen relies
+  // on the global header chip + degrades gracefully. Saves the body-anchor row.
+  if (hideNetWorth && hideWealth && hideRisk) return null;
   // Defensive — bands should always be passed, but failing loudly in dev is worse
   // than failing gracefully in a demo. Per FP-4 we would rather show an explicit
   // gap than a confident wrong value.
@@ -45,36 +58,42 @@ export default function TripleAnchor({
       padding:    '12px 16px 0',
       gap:        8,
     }}>
-      {/* ─── Tile 1 — Net Worth ─── */}
-      <Tile label="You own" onTap={onNetWorthTap}>
-        <HeroNumber colour="var(--c-text)">
-          {typeof fmt === 'function' ? fmt(netWorthVal ?? 0) : '—'}
-        </HeroNumber>
-        {nwTrendPct != null && (
-          <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700,
-              color: nwTrendPct > 0.1 ? 'var(--c-acc)' : nwTrendPct < -0.1 ? 'var(--c-coral, #FF6F7D)' : 'var(--c-text3)',
-            }}>
-              {nwTrendPct > 0.1 ? '↑' : nwTrendPct < -0.1 ? '↓' : '→'}{' '}
-              {Math.abs(nwTrendPct).toFixed(1)}% this month
-            </span>
-          </div>
-        )}
-      </Tile>
+      {/* ─── Tile 1 — Net Worth (suppressed when hideNetWorth: header owns it) ─── */}
+      {!hideNetWorth && (
+        <Tile label="You own" onTap={onNetWorthTap}>
+          <HeroNumber colour="var(--c-text)">
+            {typeof fmt === 'function' ? fmt(netWorthVal ?? 0) : '—'}
+          </HeroNumber>
+          {nwTrendPct != null && (
+            <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                color: nwTrendPct > 0.1 ? 'var(--c-acc)' : nwTrendPct < -0.1 ? 'var(--c-coral, #FF6F7D)' : 'var(--c-text3)',
+              }}>
+                {nwTrendPct > 0.1 ? '↑' : nwTrendPct < -0.1 ? '↓' : '→'}{' '}
+                {Math.abs(nwTrendPct).toFixed(1)}% this month
+              </span>
+            </div>
+          )}
+        </Tile>
+      )}
 
-      {/* ─── Tile 2 — Sonuswealth Wealth Score ─── */}
-      <Tile label="Wealth Score" borderColour={`${safeFqBand.colour}44`} onTap={onWealthTap}>
-        <ArcGauge value={fqTotal ?? 0} colour={safeFqBand.colour} />
-        {isSimulating && deltaFQ !== 0 && <DeltaChip delta={deltaFQ} />}
-        <BandLabel colour={safeFqBand.colour}>{safeFqBand.name}</BandLabel>
-      </Tile>
+      {/* ─── Tile 2 — Sonuswealth Wealth Score (suppressed when hideWealth) ─── */}
+      {!hideWealth && (
+        <Tile label="Wealth Score" borderColour={`${safeFqBand.colour}44`} onTap={onWealthTap}>
+          <ArcGauge value={fqTotal ?? 0} colour={safeFqBand.colour} />
+          {isSimulating && deltaFQ !== 0 && <DeltaChip delta={deltaFQ} />}
+          <BandLabel colour={safeFqBand.colour}>{safeFqBand.name}</BandLabel>
+        </Tile>
+      )}
 
-      {/* ─── Tile 3 — Sonuswealth Risk Score ─── */}
-      <Tile label="Risk Score" borderColour={`${safeRiskBand.colour}44`} onTap={onRiskTap}>
-        <ArcGauge value={riskTotal ?? 0} colour={safeRiskBand.colour} />
-        <BandLabel colour={safeRiskBand.colour}>{safeRiskBand.name}</BandLabel>
-      </Tile>
+      {/* ─── Tile 3 — Sonuswealth Risk Score (suppressed when hideRisk) ─── */}
+      {!hideRisk && (
+        <Tile label="Risk Score" borderColour={`${safeRiskBand.colour}44`} onTap={onRiskTap}>
+          <ArcGauge value={riskTotal ?? 0} colour={safeRiskBand.colour} />
+          <BandLabel colour={safeRiskBand.colour}>{safeRiskBand.name}</BandLabel>
+        </Tile>
+      )}
     </div>
   )
 }

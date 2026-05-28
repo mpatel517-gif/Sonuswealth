@@ -74,6 +74,45 @@ export default function Sidebar({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="sw-sidebar-avatar-name">{entity?.displayName || entity?.name || 'Persona'}</div>
           <div className="sw-sidebar-avatar-sub">Switch · {persona}</div>
+          {/* Dev-mode identity badge — proves persona token resolves to the
+              correct fixture. Flags red when entity.id doesn't square with
+              the persona token. Catches the bug class that hid the broken
+              `mrt: personaA` routing for months. */}
+          {import.meta.env.DEV && entity?.id && (() => {
+            // Normalise both sides: lowercase + strip `-primary` suffix from
+            // fixture ids (mrT-landlord-primary → mrt-landlord). Match if:
+            //   1. Exact equality after normalisation
+            //   2. fixture id starts with token (mrt-landlord matches mrT-landlord-primary)
+            //   3. mrt-core token aliases to the `mrt` fixture id (mrT-core uses {"id":"mrt"})
+            //   4. Anna Finch snapshots (f-22, f-25, …) — id field varies per snapshot
+            //   5. real-user runtime persona (built from onboarding)
+            const idLow  = (entity.id || '').toLowerCase().replace(/-primary$/, '')
+            const tokLow = (persona   || '').toLowerCase()
+            const idMatch = idLow === tokLow
+              || idLow.startsWith(tokLow + '-')
+              || (tokLow === 'mrt-core' && idLow === 'mrt')
+              || tokLow.startsWith('f-')
+              || tokLow === 'real-user'
+            return (
+              <div
+                data-testid="entity-identity-badge"
+                data-entity-id={entity.id}
+                data-persona-token={persona}
+                style={{
+                  fontSize: 10, marginTop: 4,
+                  padding: '2px 6px', borderRadius: 4,
+                  background: idMatch ? 'rgba(0,229,168,0.15)' : 'rgba(255,69,58,0.25)',
+                  color:      idMatch ? '#00E5A8'              : '#FF453A',
+                  border:    `1px solid ${idMatch ? '#00E5A8' : '#FF453A'}`,
+                  fontFamily: 'monospace',
+                }}
+                title={idMatch ? 'entity.id matches persona token' : 'MISMATCH: persona token does not resolve to this entity.id'}
+              >
+                {idMatch ? '✓' : '⚠'} {entity.id}
+                {entity.age != null && ` · ${entity.age}`}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </aside>

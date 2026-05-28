@@ -142,7 +142,7 @@ export const lens = {
         id: 'INV-OBS-05',
         severity: SEVERITY.MEDIUM,
         category: 'diversification',
-        text: `Portfolio appears UK-only. UK equity is ~4% of global market cap; an internationally-diversified portfolio captures growth where it occurs. Suggested target: <30% UK equity in a global allocation (Vanguard / iShares lifestrategy approach).`,
+        text: `Portfolio appears UK-only. UK equity is ~4% of global market cap; an internationally-diversified portfolio captures growth where it occurs. A globally-diversified allocation typically holds UK equity below 30% — discuss appropriate weights with a regulated investment adviser.`,
         citation: 'CFA Institute international diversification + MSCI All-Country World Index weights',
         finding: { ukConcentration: 1.0, globalUkBenchmark: 0.04 },
       }))
@@ -231,7 +231,7 @@ export const lens = {
         id: 'INV-REC-03',
         strategy_id: 'STRAT-CASH-TO-MMF',
         headline: `Move ${fmt(moveAmount)} from current account to money-market fund — earn ${fmt(interestUplift)}/yr more`,
-        drill_down: `Money-market funds (Royal London, BlackRock ICS, Federated Hermes) currently yield ~4.5% on overnight money with negligible credit risk. Keeping ${fmt(cash)} in a current account at 0-0.5% costs ~${fmt(interestUplift)}/yr in foregone interest. MMFs settle T+1, so liquidity is preserved for emergency-fund purposes.`,
+        drill_down: `Institutional money-market funds currently yield ~4.5% on overnight money with negligible credit risk. Keeping ${fmt(cash)} in a current account at 0-0.5% costs ~${fmt(interestUplift)}/yr in foregone interest. MMFs settle T+1, so liquidity is preserved for emergency-fund purposes. A regulated adviser can identify funds appropriate to your risk profile.`,
         action_steps: [
           'Open MMF position via your platform (most major platforms offer institutional MMFs)',
           'Move excess cash above your strategic buffer',

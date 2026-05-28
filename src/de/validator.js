@@ -52,7 +52,7 @@ import {
   rnrbTaper,
   bprQualifyingValue,
   nominationStatus,
-  costOfInaction,
+  costOfInactionEstate as costOfInaction,  // P0-5 (2026-05-28): tax-estate version (different signature from fq-calculator's)
   taxDrag,
   taxThisYear,
 } from '../engine/tax-estate-engine.js';

@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { TAX } from '../../engine/fq-calculator.js';
+import { monthlyEssentials as getMonthlyEssentials } from '../../engine/selectors/index.js';
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -112,7 +113,7 @@ function IncomeView({ entity }) {
     rows.push({ label, annual: +annual, monthly: Math.round(+annual / 12), taxNote, tone })
   }
   add('Salary or director\'s pay',     income.employment || income.directorSalary, 'Taxed via PAYE plus National Insurance', 'neutral')
-  add('Dividends from your company',   income.directorDividends || income.dividends, 'First £500 tax-free, then 8.75% / 33.75% / 39.35%', 'warn')
+  add('Dividends from your company',   income.directorDividends || income.dividends, 'First £500 tax-free, then 10.75% / 35.75% / 39.35%', 'warn')
   add('Self-employed income',          income.selfEmploymentNet,                    'Income tax + Class 4 NI · digital records required above £50k', 'neutral')
   add('Rental income (after expenses)',income.rentalIncomeNet,                      'Taxed as income · only 20% rebate on mortgage interest', 'warn')
   add('State pension',                 income.statePension?.annual,                 'Taxed as income · paid gross', 'neutral')
@@ -188,7 +189,7 @@ function IncomeView({ entity }) {
         const bands = [
           { label: 'Tax-free', rate: '0%', amount: inPA, tone: 'good', sub: 'Personal allowance' },
           { label: 'Basic rate', rate: '20%', amount: inBasic, tone: 'neutral', sub: `up to £${basicTop.toLocaleString()}` },
-          { label: 'Higher rate', rate: '40%', amount: inHigher, tone: 'warn', sub: `${pa < 12570 ? 'taper bites · ' : ''}up to £${higherTop.toLocaleString()}` },
+          { label: 'Higher rate', rate: '40%', amount: inHigher, tone: 'warn', sub: `${pa < (TAX.pa ?? 12570) ? 'taper bites · ' : ''}up to £${higherTop.toLocaleString()}` },
           { label: 'Additional rate', rate: '45%', amount: inAdditional, tone: 'bad', sub: `above £${higherTop.toLocaleString()}` },
         ]
         return (
@@ -312,10 +313,10 @@ function InsuranceView({ entity }) {
           || +(entity?.income?.employment)
           || +(entity?.income?.directorSalary)
           || 0
-        const essentialsRaw = +(entity?.expenses?.essential_annual)
-          || (+(entity?.expenses?.essential_monthly) * 12)
-        const essentials = essentialsRaw || (grossIncome * 0.55)
-        const essentialsEstimated = !essentialsRaw
+        // BLOCK-1: canonical lookup catches entity.monthlyExpenditure (persona-a..g).
+        const essRead = getMonthlyEssentials(entity)
+        const essentials = essRead.annual || (grossIncome * 0.55)
+        const essentialsEstimated = essRead.isEstimate
         const lifeNeed = grossIncome > 0 ? grossIncome * 10 : 0
         const lifeCover = totalLifeCover
         const lifeGap = Math.max(0, lifeNeed - lifeCover)
@@ -671,7 +672,7 @@ function CashflowView({ entity }) {
 
   // Spending streams
   const spendRows = [
-    { label: 'Essential spending',       monthly: +expenses.essential_monthly || Math.round((totalMonthlyIncome * 0.55)), type: 'spend', estimated: !+expenses.essential_monthly },
+    { label: 'Essential spending',       monthly: getMonthlyEssentials(entity).monthly || Math.round((totalMonthlyIncome * 0.55)), type: 'spend', estimated: getMonthlyEssentials(entity).isEstimate },
     { label: 'Mortgage / rent',          monthly: +expenses.housing_monthly || 0, type: 'spend' },
     { label: 'Debt repayments',          monthly: (() => {
       // H-09: exclude mortgage payment if Mortgage/rent row already shows it from expenses
@@ -768,8 +769,8 @@ function CashflowView({ entity }) {
       <Group title="What this means for you" sub="">
         <div style={{ fontSize: 13, color: 'var(--c-text)', lineHeight: 1.6 }}>
           {pos
-            ? `Your ${fmt(surplus)}/mo surplus is ${fmt(surplus * 12)}/yr you could redirect to wealth-building. Common approaches include using ISA allowances (tax-free growth), pension contributions (tax relief at your marginal rate), and debt reduction — the right order depends on your individual circumstances. Consider speaking with a financial adviser.`
-            : `You're spending ${fmt(Math.abs(surplus))}/mo more than you earn. This won't show up immediately, but it compounds: after 12 months that's ${fmt(Math.abs(surplus) * 12)} of drawn-down savings or new debt. Review the spending categories above and identify the biggest item to cut.`}
+            ? `A ${fmt(surplus)}/mo surplus equates to ${fmt(surplus * 12)}/yr of unallocated cash. Common destinations for surplus cash include ISA allowances (£20k/yr tax-free growth), pension contributions (tax relief at the marginal rate), and debt reduction (when the rate exceeds expected investment return). The right mix depends on tax rate, time horizon, liquidity needs, and personal circumstances — a qualified adviser can help weigh the trade-offs.`
+            : `Spending exceeds income by ${fmt(Math.abs(surplus))}/mo. Over 12 months that compounds to ${fmt(Math.abs(surplus) * 12)} of drawn-down savings or new debt. The spending categories above show where the money goes; the largest categories typically offer the most room for change.`}
         </div>
       </Group>
     </div>
@@ -785,20 +786,15 @@ export function PivotToggle({ pivot, onPivot }) {
     { id: 'bonds',         label: 'Bonds' },
   ]
   return (
-    <div style={{ position: 'relative', maxWidth: '100%', marginBottom: 12,
-      WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent 100%)',
-      maskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent 100%)',
-    }}>
     <div style={{
-      display: 'flex', gap: 4, padding: 4,
+      display: 'grid',
+      gridTemplateColumns: `repeat(${opts.length}, 1fr)`,
+      gap: 4, padding: 4,
       background: 'var(--c-surface2)',
       border: '1px solid var(--c-border)',
-      borderRadius: 100,
-      width: 'fit-content',
-      maxWidth: '100%',
-      overflowX: 'auto',
-      flexWrap: 'nowrap',
-      marginBottom: 0,
+      borderRadius: 14,
+      width: '100%',
+      marginBottom: 14,
     }}>
       {opts.map(o => {
         const active = pivot === o.id
@@ -806,7 +802,9 @@ export function PivotToggle({ pivot, onPivot }) {
           <button key={o.id} onClick={() => onPivot(o.id)}
             className={active ? 'sw-pill-active' : 'sw-press'}
             style={{
-              padding: '7px 16px', borderRadius: 100,
+              height: 40,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 10px', borderRadius: 10,
               border: active
                 ? '1px solid color-mix(in srgb, var(--c-acc) 45%, transparent)'
                 : '1px solid transparent',
@@ -816,18 +814,16 @@ export function PivotToggle({ pivot, onPivot }) {
               color: active ? 'var(--c-acc)' : 'var(--c-text2)',
               fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
               cursor: 'pointer', whiteSpace: 'nowrap',
+              textAlign: 'center',
               boxShadow: active
                 ? '0 0 14px color-mix(in srgb, var(--c-acc) 35%, transparent), inset 0 1px 0 color-mix(in srgb, var(--c-acc) 24%, transparent)'
                 : 'none',
-              transform: active ? 'scale(1.04)' : 'scale(1)',
-              transformOrigin: 'center',
-              transition: 'transform 0.22s var(--ease-out-expo, cubic-bezier(0.16,1,0.3,1)), background 0.18s ease-out, color 0.18s ease-out',
+              transition: 'background 0.18s ease-out, color 0.18s ease-out, border-color 0.18s ease-out',
             }}>
             {o.label}
           </button>
         )
       })}
-    </div>
     </div>
   )
 }

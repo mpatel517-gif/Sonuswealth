@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { calcFQ, fqTrajectory, fmt, daysLeft } from '../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { fq as calcFQ } from '../engine/selectors/index.js'
+import { fqTrajectory, fmt, daysLeft } from '../engine/fq-calculator.js'
 import { DIMENSIONS, narrativeFor } from '../config/dimensions.js'
 
 // Generic improvement actions per dimension — kept generic so they work for
@@ -140,7 +142,7 @@ export default function FQBreakdown({ entity, onClose, onNav, initialTab='radar'
               {fqData.total}/100 · {fqData.band.name}
             </div>
           </div>
-          <button onClick={onClose} style={{
+          <button type="button" onClick={onClose} aria-label="Close FQ breakdown" style={{
             width:36,height:36,borderRadius:'50%',
             background:'rgba(255,255,255,.06)',
             color:'rgba(138,155,192,.8)',fontSize:16,

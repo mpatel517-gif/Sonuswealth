@@ -1,7 +1,29 @@
 {
   "fixture_id": "mrT-aged-out",
-  "fixture_version": "1.0",
-  "fixture_date": "2026-04-23",
+  "fixture_version": "1.1",
+  "fixture_date": "2026-05-28",
+
+  "_refit_2026_05_28": "P11-4: lifted name/dob/age/displayName/income/expenses/targetIncome to root for UI renderability. Nested individual.* preserved for engine consumers. mrT-core uses the same dual-shape pattern.",
+
+  "id": "mrT-aged-out",
+  "name": "Mr T Aged Out",
+  "displayName": "Mr T Aged Out · 18 · Foundation",
+  "dob": "2008-04-23",
+  "age": 18,
+  "lifeStage": "foundation",
+  "jurisdiction": "UK",
+  "jurisdictionContext": { "primary": "UK-2026.1" },
+  "income": {
+    "employment": 8400,
+    "dividends": 0,
+    "rental": 0,
+    "selfEmploymentNet": 0
+  },
+  "targetIncome": 18000,
+  "expenses": {
+    "essentialsMonthly": 1200
+  },
+  "dependants": [],
   "fixture_purpose": "Single UK adult at Foundation life stage, age 18 exactly at fixture date. Exercises JISA-to-adult-ISA auto-conversion on 18th birthday, parent-account data inheritance with consent-to-link, LISA eligibility gate (not yet opened), auto-enrolment threshold boundary (earnings below £10k trigger), and Finio Score confidence-low path from sparse data set. No pension, no property, no protection. Tests engine handling of minimal-data entity and data-inheritance verification flow.",
   "fixture_anchor_archetype": "19",
   "archetypes_exercised": ["19"],

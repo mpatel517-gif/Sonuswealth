@@ -1,0 +1,255 @@
+{
+  "persona_id": "mrT-core",
+  "tax_year": "2026/27",
+  "engine_version": "Sonuswealth-1.0",
+  "rules_version": "UK-2026.1.1",
+  "snapshot_type": "current",
+  "net_worth": 726890,
+  "fq_score": 70,
+  "fq_band": "Optimised",
+  "fq_dims": {
+    "behaviour": 20,
+    "capital": 7,
+    "tax": 6,
+    "protection": 16,
+    "cashflow": 12,
+    "debt": 10,
+    "estate": 0
+  },
+  "risk_score": 74,
+  "risk_band": "Protected",
+  "risk_dims": {
+    "incomeRes": 16,
+    "liquidity": 11,
+    "protCov": 18,
+    "debtVuln": 9,
+    "concRisk": 10,
+    "depExp": 10,
+    "behaviouralTrack": 0
+  },
+  "iht_exposure": 113120,
+  "iht_breakdown": {
+    "gross": 782800,
+    "nrb": 325000,
+    "rnrb": 175000,
+    "taxable": 282800,
+    "beneficiary_rate": 0.8554931016862545,
+    "sipp_contribution": 0
+  },
+  "cost_of_inaction": 0,
+  "balance_sheet": {
+    "cash": 57000,
+    "isa": 93200,
+    "sipp": 243500,
+    "property": 583000,
+    "portfolio": 191440,
+    "business": 0,
+    "alternatives": 0,
+    "gia": 24800,
+    "protection": 0,
+    "mortgage": 215000,
+    "loans": 0,
+    "credit_cards": 0,
+    "other_debt": 0,
+    "net_worth_alias": 726890,
+    "guardrail": 20022,
+    "investable": 500540
+  },
+  "pl": {
+    "gross_income": 60000,
+    "drawdown": 0,
+    "effective_drawdown": 47430,
+    "drawdown_source": "topup",
+    "employment_income": 12570,
+    "state_pension": 0,
+    "target_income": 60000,
+    "income_tax": 11432,
+    "ni": 0,
+    "net_income": 48568,
+    "pension_contributions": null,
+    "monthly_expenditure": null,
+    "effective_tax_rate": 19.1
+  },
+  "cashflow": {
+    "annual_surplus": null,
+    "surplus": null,
+    "funded_ratio": 0.3,
+    "annual_expenditure": null,
+    "sources": {
+      "drawdown": 47430,
+      "employment": 12570,
+      "state_pension": 0
+    }
+  },
+  "estate": {
+    "iht_exposure": 113120,
+    "cost_of_inaction": 0
+  },
+  "protection": {
+    "life_cover": 350000,
+    "life_in_trust": true,
+    "critical_illness": 150000,
+    "income_protection_monthly": 3250,
+    "has_any": true
+  },
+  "asset_allocation": {
+    "cash_pct": 5.8,
+    "equity_pct": 21.1,
+    "bond_pct": 14.1,
+    "property_pct": 59,
+    "total_classified": 988300
+  },
+  "risk": {
+    "total": 74,
+    "dims": {
+      "incomeRes": 16,
+      "liquidity": 11,
+      "protCov": 18,
+      "debtVuln": 9,
+      "concRisk": 10,
+      "depExp": 10,
+      "behaviouralTrack": 0
+    },
+    "band": "Protected"
+  },
+  "fq": {
+    "total": 70,
+    "dims": {
+      "behaviour": 20,
+      "capital": 7,
+      "tax": 6,
+      "protection": 16,
+      "cashflow": 12,
+      "debt": 10,
+      "estate": 0
+    },
+    "band": "Optimised"
+  },
+  "is_couple": false,
+  "spousal_nrb_available": false,
+  "effective_nrb": 325000,
+  "effective_rnrb": 175000,
+  "eligibility": [
+    {
+      "rule": "NI-QUAL-YEARS",
+      "title": "State Pension qualifying years",
+      "status": "PARTIAL",
+      "grade": 0.37142857142857144,
+      "amount": 4661,
+      "reason": "13/35 NI years → £4,661/yr (37% of full)",
+      "fix": "Buy 22 voluntary Class 3 NI years for £19,963 → recovers £7,887/yr state pension. Payback ~2.5 years."
+    },
+    {
+      "rule": "RNRB-DESCENDANT",
+      "title": "RNRB direct-descendant requirement",
+      "status": "NO",
+      "grade": 0,
+      "amount": 0,
+      "reason": "Property £385,000 in estate but no direct descendants — RNRB lost (£175,000 = £70,000 IHT cost)",
+      "fix": "RNRB requires children/grandchildren (including step, adopted, foster, spouse of deceased descendant). If no eligible heirs: consider charity 10% rule or BPR strategies instead."
+    },
+    {
+      "rule": "MPAA",
+      "title": "MPAA reduces Annual Allowance to £10k",
+      "status": "YES",
+      "grade": 1,
+      "amount": 60000,
+      "reason": "MPAA not triggered — full AA £60,000 available",
+      "fix": null
+    },
+    {
+      "rule": "PPR",
+      "title": "Principal Private Residence CGT relief",
+      "status": "YES",
+      "grade": 1,
+      "amount": 0,
+      "reason": "Main residence, full PPR — any gain CGT-free on sale",
+      "fix": null
+    },
+    {
+      "rule": "CARRY-FORWARD-AA",
+      "title": "Carry-forward Annual Allowance",
+      "status": "NO",
+      "grade": 0,
+      "amount": 0,
+      "reason": "No carry-forward available. 2024: NOT a scheme member — no carry-forward; 2025: NOT a scheme member — no carry-forward; 2026: NOT a scheme member — no carry-forward",
+      "fix": "Join a pension scheme NOW. Even a £0-contribution membership preserves future carry-forward."
+    },
+    {
+      "rule": "UK-DOMICILE",
+      "title": "UK domicile (worldwide IHT)",
+      "status": "YES",
+      "grade": 1,
+      "amount": 0,
+      "reason": "UK-domiciled (uk-origin) — worldwide assets in scope of UK IHT",
+      "fix": null
+    }
+  ],
+  "profile": {
+    "fqScore": 70,
+    "fqBand": "Optimised",
+    "riskScore": 74,
+    "riskBand": "Protected",
+    "profileKey": "optimised_protected",
+    "profileName": "Solid / and protected",
+    "chipName": "Solid · and protected",
+    "profileImplication": "Strong finances with good resilience — well positioned for what comes next.",
+    "confidenceLevel": "high"
+  },
+  "apq_count": 4,
+  "macro_used": {
+    "cpi_inflation": 0.025,
+    "boe_base_rate": 0.04,
+    "gdp_growth": 0.012,
+    "wage_growth": 0.045,
+    "house_price_growth": 0.03,
+    "personal_allowance": 12570,
+    "isa_limit": 20000,
+    "pension_aa": 60000
+  },
+  "bundle_used": "UK-2026.1.1",
+  "_ripple": {
+    "ok": true,
+    "scopes": [
+      "balance_sheet",
+      "scores",
+      "iht",
+      "cashflow",
+      "protection",
+      "tax",
+      "timeline"
+    ],
+    "netWorth": 726890,
+    "fqScore": 70,
+    "riskScore": 74,
+    "ihtExposure": 113120,
+    "monthlySurplus": {
+      "income": 6512,
+      "essential": 5000,
+      "committed": 875,
+      "debtService": 1189,
+      "surplus": 0,
+      "deficit": 552
+    },
+    "fundedRatio": {
+      "ratio": 0.3,
+      "required_assets": 3225010,
+      "actual_assets_at_retirement": 971594,
+      "target_income_real": 60000,
+      "swr": 0.04,
+      "regime": "Bengen 4%",
+      "retirement_age": 66,
+      "current_age": 35,
+      "horizon_years": 31,
+      "confidence": "MEDIUM",
+      "insufficient_data": false,
+      "cma_bundle": null
+    },
+    "incomeTax": 23289,
+    "effectiveTaxRate": 26,
+    "lifeGap": 431400,
+    "bundleVersion": 1,
+    "elapsedMs": 1
+  },
+  "computed_at": "2026-05-25T15:01:07.964Z"
+}

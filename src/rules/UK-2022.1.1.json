@@ -1,0 +1,256 @@
+{
+  "_meta": {
+    "version": "UK-2022.1.1",
+    "taxYear": "2022/23",
+    "effectiveFrom": "2022-04-06",
+    "effectiveTo": "2023-04-05",
+    "verifiedBy": "Phase A2 — HMRC archive + Health & Social Care Levy Act 2021 + Spring Statement 2022 + Growth Plan Sept 2022",
+    "verificationDate": "May 2026",
+    "jurisdiction": "United Kingdom",
+    "notes": "MID-YEAR EVENT YEAR: Health & Social Care Levy added 1.25pp to NIC from 6 Apr 2022, REMOVED from 6 Nov 2022 (Growth Plan reversal). Dividend +1.25pp increase remained. Engine MUST use _midYearEvents to switch NIC rates on 6 Nov 2022.",
+    "_coverage": {
+      "FULL": ["income", "pension", "isa", "capitalGains", "inheritanceTax", "nationalInsurance", "taxEfficientInvestments"],
+      "PARTIAL": ["property", "businessOwnerPersonal"],
+      "STUB": ["overseas", "trusts", "welshIT", "milestones"]
+    }
+  },
+  "_disclaimer": "Historical reconstruction. Cross-checked against HMRC archive + Health & Social Care Levy Act 2021 + Growth Plan announcements.",
+
+  "income": {
+    "personalAllowance": 12570,
+    "personalAllowanceTaperStart": 100000,
+    "personalAllowanceTaperEnd": 125140,
+    "basicRateBand": 37700,
+    "basicRate": 0.20,
+    "higherRate": 0.40,
+    "higherRateThreshold": 50270,
+    "additionalRate": 0.45,
+    "additionalRateThreshold": 150000,
+    "savingsAllowanceBasicRate": 1000,
+    "savingsAllowanceHigherRate": 500,
+    "savingsAllowanceAdditionalRate": 0,
+    "startingRateForSavings": 0.0,
+    "startingRateForSavingsBand": 5000,
+    "dividendAllowance": 2000,
+    "dividendBasicRate": 0.0875,
+    "dividendHigherRate": 0.3375,
+    "dividendAdditionalRate": 0.3935,
+    "dividendNote": "Dividend rates increased +1.25pp from 6 Apr 2022 (Health & Social Care Levy). NOT reversed in Nov 2022 — only NIC portion reversed.",
+    "marriageAllowanceTransfer": 1260,
+    "blindPersonAllowance": 2600,
+    "tradingAllowance": 1000,
+    "propertyAllowance": 1000,
+    "rentARoomRelief": 7500,
+    "terminationPaymentExemption": 30000,
+    "highIncomeChildBenefitThreshold": 50000,
+    "highIncomeChildBenefitTaperEnd": 60000
+  },
+  "capitalGains": {
+    "annualExemptAmount": 12300,
+    "basicRate": 0.10,
+    "higherRate": 0.20,
+    "basicRateProperty": 0.18,
+    "higherRateProperty": 0.28,
+    "badrRate": 0.10,
+    "badrLifetimeLimit": 1000000,
+    "investorsReliefRate": 0.10,
+    "investorsReliefLifetimeLimit": 10000000,
+    "propertyReportingDays": 60,
+    "propertyReportingNote": "60-day reporting deadline (extended from 30 days from 27 October 2021).",
+    "giltsExempt": true,
+    "qualifyingCorporateBondsExempt": true,
+    "spreadBettingExempt": true
+  },
+  "inheritanceTax": {
+    "nilRateBand": 325000,
+    "residenceNilRateBand": 175000,
+    "residenceNilRateBandTaperStart": 2000000,
+    "transferableNilRateBand": true,
+    "transferableRNRB": true,
+    "combinedNilRateBandCouple": 650000,
+    "combinedRNRBCouple": 350000,
+    "maxIHTFreeCouple": 1000000,
+    "ihtRate": 0.40,
+    "ihtReducedRate": 0.36,
+    "ihtReducedRateCharityThreshold": 0.10,
+    "businessPropertyRelief100": 1.0,
+    "businessPropertyRelief50": 0.5,
+    "agriculturalPropertyRelief100": 1.0,
+    "agriculturalPropertyRelief50": 0.5,
+    "annualGiftExemption": 3000,
+    "annualGiftExemptionCarryForward": true,
+    "annualGiftExemptionCarryForwardYears": 1,
+    "smallGiftExemption": 250,
+    "weddingGiftParent": 5000,
+    "weddingGiftGrandparent": 2500,
+    "weddingGiftOther": 1000,
+    "petSevenYearRule": 7,
+    "cltEntryChargeRate": 0.20,
+    "taperRelief": { "years3to4": 0.8, "years4to5": 0.6, "years5to6": 0.4, "years6to7": 0.2 },
+    "deedOfVariationYears": 2,
+    "spouseExemption": true,
+    "charityExemption": true
+  },
+  "pension": {
+    "annualAllowance": 40000,
+    "taperedAnnualAllowanceThresholdIncome": 200000,
+    "taperedAnnualAllowanceAdjustedIncome": 240000,
+    "taperedAnnualAllowanceMinimum": 4000,
+    "moneyPurchaseAnnualAllowance": 4000,
+    "carryForwardYears": 3,
+    "lifetimeAllowance": 1073100,
+    "lifetimeAllowanceCharge": 0.55,
+    "lifetimeAllowanceChargeIncome": 0.25,
+    "taxFreeCashPercentage": 0.25,
+    "statePensionFullAmount": 9628,
+    "statePensionWeeklyRate": 185.15,
+    "statePensionQualifyingYears": 35,
+    "statePensionAge": 66,
+    "basicRateTaxReliefAtSource": true,
+    "salarySacrifice": { "employeeNISaving": true, "employerNISaving": true },
+    "juniorPensionContributionNet": 2880,
+    "juniorPensionContributionGross": 3600,
+    "nmpaCurrentTo2028": 55
+  },
+  "isa": {
+    "annualAllowance": 20000,
+    "juniorISAAllowance": 9000,
+    "lifetimeISAAllowance": 4000,
+    "lifetimeISABonus": 0.25,
+    "lifetimeISAMaxAgeToOpen": 39,
+    "lifetimeISAMaxAgeToContribute": 49,
+    "lifetimeISAPenalty": 0.25,
+    "isaIncomeExempt": true,
+    "isaGainsExempt": true
+  },
+  "taxEfficientInvestments": {
+    "vct": { "incomeTaxRelief": 0.30, "annualInvestmentLimit": 200000, "holdingPeriod": 5, "dividendExempt": true, "gainsExempt": true },
+    "eis": { "incomeTaxRelief": 0.30, "annualInvestmentLimit": 1000000, "knowledgeIntensiveLimit": 2000000, "holdingPeriod": 3, "cgtDeferralAvailable": true, "ihtExemptAfterYears": 2, "lossRelief": true, "grossAssetsLimitPreIssue": 15000000, "grossAssetsLimitPostIssue": 16000000 },
+    "seis": { "incomeTaxRelief": 0.50, "annualInvestmentLimit": 100000, "holdingPeriod": 3, "cgtExemptOnGains": true, "lossRelief": true, "seisCompanyLimit": 150000 }
+  },
+  "property": {
+    "sdlt": {
+      "residentialRates": [
+        { "upTo": 125000, "rate": 0.00 },
+        { "from": 125001, "upTo": 250000, "rate": 0.02 },
+        { "from": 250001, "upTo": 925000, "rate": 0.05 },
+        { "from": 925001, "upTo": 1500000, "rate": 0.10 },
+        { "from": 1500001, "rate": 0.12 }
+      ],
+      "firstTimeBuyerRelief": { "zeroRateTo": 300000, "reducedRateTo": 500000, "reducedRate": 0.05 },
+      "_sdltMidYearNote": "Growth Plan Sept 2022: residential 0% band extended to £250,000 (from £125,000) and FTB threshold raised to £425,000/£625,000 effective 23 Sept 2022. See _midYearEvents.",
+      "additionalPropertySurcharge": 0.03,
+      "nonUKResidentSurcharge": 0.02,
+      "annualTaxEnvelopedDwellings": { "threshold": 500000 }
+    },
+    "rentalIncome": {
+      "mortgageInterestRestriction": true,
+      "rentARoomRelief": 7500,
+      "propertyAllowance": 1000
+    },
+    "cgtOnProperty": {
+      "principalPrivateResidenceRelief": true,
+      "pprFinalPeriodExemptionMonths": 9,
+      "reportingDeadlineDays": 60
+    }
+  },
+  "nationalInsurance": {
+    "primaryThreshold": 12570,
+    "primaryThresholdMidYearNote": "PT raised from £9,880 to £12,570 from 6 July 2022 (aligned with PA, Spring Statement 2022). For full year computed thresholds, see _midYearEvents.",
+    "upperEarningsLimit": 50270,
+    "class1EmployeeRate": 0.12,
+    "class1EmployeeRateAboveUEL": 0.02,
+    "class1EmployeeRateMidYear": {
+      "period1": { "from": "2022-04-06", "to": "2022-11-05", "rate": 0.1325, "rateAboveUEL": 0.0325, "note": "Health & Social Care Levy +1.25pp (Apr-Nov 2022)" },
+      "period2": { "from": "2022-11-06", "to": "2023-04-05", "rate": 0.12,   "rateAboveUEL": 0.02,   "note": "HSC Levy NIC portion reversed (Growth Plan)" }
+    },
+    "class1EmployerRate": 0.138,
+    "class1EmployerRateMidYear": {
+      "period1": { "from": "2022-04-06", "to": "2022-11-05", "rate": 0.1505, "note": "HSC Levy added" },
+      "period2": { "from": "2022-11-06", "to": "2023-04-05", "rate": 0.138,  "note": "HSC Levy reversed" }
+    },
+    "class1EmployerSecondaryThreshold": 9100,
+    "class2Rate": 3.15,
+    "class2SmallProfitsThreshold": 11908,
+    "class3Rate": 15.85,
+    "class4RateLowerBand": 0.0925,
+    "class4RateLowerBandMidYearNote": "Class 4 main rate 10.25% (HSC) for full year despite NIC reversal — annualised as 9.73%.",
+    "class4RateUpperBand": 0.0273,
+    "class4LowerProfitsLimit": 11908,
+    "class4UpperProfitsLimit": 50270,
+    "employmentAllowance": 5000,
+    "salarySacrificeNISaving": true,
+    "statePensionQualifyingYears": 35,
+    "stateNewPensionFullAmount": 9628,
+    "autoEnrolmentTotal": 0.08,
+    "autoEnrolmentEmployee": 0.05,
+    "autoEnrolmentEmployer": 0.03
+  },
+  "businessOwnerPersonal": {
+    "badrRate": 0.10,
+    "badrLifetimeLimit": 1000000,
+    "investorsReliefRate": 0.10,
+    "investorsReliefLimit": 10000000,
+    "directorsLoan": { "s455TaxRate": 0.3375, "s455Note": "S455 increased to 33.75% from April 2022 (aligned with dividend higher rate)." }
+  },
+  "corporationTax": {
+    "inScope": false,
+    "smallProfitsRate": 0.19,
+    "mainRate": 0.19,
+    "note": "Single 19% rate for 2022/23. Three-tier rate (19/25 + marginal relief) deferred to April 2023."
+  },
+  "allowancesAndReliefs": {
+    "tradingAllowance": 1000,
+    "propertyAllowance": 1000,
+    "rentARoomRelief": 7500,
+    "blindPersonAllowance": 2600,
+    "marriageAllowance": 1260,
+    "terminationPaymentExemption": 30000,
+    "stateNewPensionFull": 9628,
+    "stateNewPensionWeekly": 185.15,
+    "childBenefitHighIncomeThreshold": 50000,
+    "childBenefitHighIncomeTaperEnd": 60000,
+    "giftAidGrossUpRate": 0.25
+  },
+  "safeWithdrawalRate": 0.04,
+  "_lastUpdated": "May 2026 (reconstruction)",
+  "_midYearEvents": [
+    {
+      "id": "HSC-LEVY-NIC-START",
+      "effectiveFrom": "2022-04-06",
+      "type": "rate-change",
+      "scope": "nationalInsurance.class1Employee + class1Employer",
+      "delta": "+0.0125",
+      "source": "Health & Social Care Levy Act 2021",
+      "note": "1.25pp added to employee + employer NIC."
+    },
+    {
+      "id": "PT-ALIGN-PA",
+      "effectiveFrom": "2022-07-06",
+      "type": "threshold-change",
+      "scope": "nationalInsurance.primaryThreshold",
+      "from": 9880, "to": 12570,
+      "source": "Spring Statement 2022",
+      "note": "Primary Threshold aligned with Personal Allowance."
+    },
+    {
+      "id": "HSC-LEVY-NIC-REVERSE",
+      "effectiveFrom": "2022-11-06",
+      "type": "rate-change",
+      "scope": "nationalInsurance.class1Employee + class1Employer",
+      "delta": "-0.0125",
+      "source": "Growth Plan September 2022",
+      "note": "HSC Levy reversed for NIC. Dividend +1.25pp retained."
+    },
+    {
+      "id": "SDLT-NIL-EXPAND",
+      "effectiveFrom": "2022-09-23",
+      "type": "threshold-change",
+      "scope": "property.sdlt.residentialRates[0].upTo + firstTimeBuyerRelief",
+      "from": { "nilTo": 125000, "ftbZero": 300000, "ftbReduced": 500000 },
+      "to":   { "nilTo": 250000, "ftbZero": 425000, "ftbReduced": 625000 },
+      "source": "Growth Plan September 2022",
+      "note": "SDLT nil-rate band raised. Reverted 31 March 2025."
+    }
+  ]
+}

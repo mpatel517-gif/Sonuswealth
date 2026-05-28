@@ -7,7 +7,7 @@
 //   · FQBreakdown now gets initialTab='actions' when activeDim is set (D04)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import HomeScreen    from './HomeScreen.jsx'
 import FQBreakdown   from './FQBreakdown.jsx'
 import MyMoney       from './MyMoney.jsx'
@@ -31,10 +31,29 @@ import IFAPractice     from './IFAPractice.jsx'
 import DecisionEngine  from './DecisionEngine.jsx'
 import DecisionEngineV2 from './DecisionEngineV2.jsx'
 import MagicShowcase   from './MagicShowcase.jsx'
+// MyMoney sub-routes — section-nav chip targets (founder direction 2026-05-26):
+// each chip is a full-page route, not a scroll anchor. These render in the
+// money/* tab id namespace alongside the existing single-letter tabs.
+import MoneyIncome     from './MoneyIncome.jsx'
+import MoneyProtection from './MoneyProtection.jsx'
+import MoneyBusiness   from './MoneyBusiness.jsx'
+import MoneyTrusts     from './MoneyTrusts.jsx'
 import Sidebar         from '../components/Shell/Sidebar.jsx'
+// Founder feedback 2026-05-28: TY chip should be present on every page.
+// Hoist to Dashboard top-chrome so all routes inherit it (was only on
+// Cashflow / MyMoney / TaxEstate / Timeline via X28TopBar; missing on
+// Home, Risk, and the MoneyX sub-routes' chrome row).
+import { TIME_WINDOWS } from '../components/shared/X28TopBar.jsx'
+import useTaxYear        from '../hooks/useTaxYear.jsx'
+// P12-1 (2026-05-28) AppShell migration: centralised FCA disclaimer footer +
+// canonical chrome slot for future ChromeBar (tax-year filter, mode strip).
+import FCADisclaimerFooter from '../components/Shell/FCADisclaimerFooter.jsx'
 import { driver }      from '../engine/driver-engine.js'
 import { readDrill, recordDrill, drillAsWhisper } from '../state/drillMemory.js'
-import { calcFQ, fqBand, calcAPQ } from '../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { fq as calcFQ } from '../engine/selectors/index.js'
+import { fqBand, calcAPQ, calcRisk, riskBand, fmt, totalCoI } from '../engine/fq-calculator.js'
+import { useRipple } from '../state/ripple.jsx'
 import { getWealthTarget, gapDims as gapDimsVsTarget } from '../config/wealth-targets.js'
 import { useEvents } from '../state/events.jsx'
 
@@ -47,6 +66,70 @@ const TABS = [
   { id:'risk',  label:'Risk',     icon:'◉' },
   { id:'timeline',  label:'Timeline', icon:'◷' },
 ]
+
+// ─── Global Tax Year chip ───────────────────────────────────────────────
+// Founder feedback 2026-05-28: TY selector must be visible on every page.
+// Thin chrome strip rendered between top-bar and screen content. Persists
+// to localStorage.sonuswealth.temporal (same key as X28TopBar) so the per-
+// screen X28TopBar instances on Cashflow/MyMoney/TaxEstate/Timeline reflect
+// the same selection automatically via the 'sonus:taxyear' event bus.
+const TY_STORE_KEY = 'sonuswealth.temporal'
+
+function GlobalTaxYearChip() {
+  const ty = useTaxYear()
+  const current = TIME_WINDOWS.find(w => w.id === ty.window) || TIME_WINDOWS[0]
+
+  function handleChange(newWindowId) {
+    try {
+      const raw = localStorage.getItem(TY_STORE_KEY)
+      const prev = raw ? JSON.parse(raw) : {}
+      const next = { ...prev, window: newWindowId, ts: Date.now() }
+      localStorage.setItem(TY_STORE_KEY, JSON.stringify(next))
+      // Same-tab consumers (X28TopBar on other routes, useTaxYear() hooks).
+      window.dispatchEvent(new Event('sonus:taxyear'))
+    } catch (_e) { /* localStorage unavailable — silent */ }
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '6px 16px', flexShrink: 0, gap: 8,
+      borderBottom: '1px solid var(--c-sep)',
+      background: 'var(--c-surface)',
+      fontSize: 12,
+    }}>
+      <label style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        color: 'var(--c-text3)', cursor: 'pointer',
+      }}>
+        <span aria-hidden="true">⏱</span>
+        <span className="sw-eyebrow" style={{ fontSize: 10, letterSpacing: 0.5 }}>Tax year</span>
+        <select
+          value={current.id}
+          onChange={e => handleChange(e.target.value)}
+          aria-label="Tax year selector"
+          style={{
+            background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+            color: 'var(--c-text)', borderRadius: 999,
+            padding: '4px 10px', minHeight: 28,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          {TIME_WINDOWS.map(w => (
+            <option key={w.id} value={w.id}>{w.full}</option>
+          ))}
+        </select>
+      </label>
+      <span style={{
+        fontSize: 10, color: 'var(--c-text3)', letterSpacing: 0.4,
+        textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums',
+      }}>
+        {ty.ruleBundle} · {ty.taxYear}
+      </span>
+    </div>
+  )
+}
 
 // ─── Persona switcher — now inside an OverlayShell-like pattern ──────────
 function PersonaSwitcher({ personaList, currentPersona, onSelect, onClose }) {
@@ -140,16 +223,50 @@ function PersonaSwitcher({ personaList, currentPersona, onSelect, onClose }) {
   )
 }
 
+// Valid tab ids — top-level tabs + MyMoney sub-routes. The MyMoney sub-routes
+// keep the bottom-nav "My Money" highlighted (see isMoneyTab below) so the
+// user never feels lost between Income, Protection, Business, and the Balance
+// Sheet root.
+const VALID_TABS = [
+  'home', 'money', 'flow', 'tax', 'risk', 'timeline', 'decisions',
+  'money/income', 'money/protection', 'money/business', 'money/trusts',
+]
+
 function readTabParam() {
   if (typeof window === 'undefined') return null
   const raw = new URLSearchParams(window.location.search).get('tab')
   // Migration shim: legacy 'plan' id → 'timeline' (rename 2026-05-15, coord FIX-10).
   const p = raw === 'plan' ? 'timeline' : raw
-  return ['home','money','flow','tax','risk','timeline'].includes(p) ? p : null
+  return VALID_TABS.includes(p) ? p : null
+}
+
+// MyMoney sub-routes still belong to the "money" bottom-nav lane.
+function isMoneyTab(tab) {
+  return tab === 'money' || tab.startsWith('money/')
 }
 
 export default function Dashboard({ entity, persona, personaList, onSwitchPersona, theme, onThemeChange }) {
   const [tab,          setTab]          = useState(readTabParam() || 'home')
+
+  // Back-routing memory (2026-05-28). Most screens currently pass `onHome` to
+  // their back button, so "Back" from MyMoney → Cashflow lands on Home rather
+  // than MyMoney. We track the previous tab here and expose a `goBack` callback
+  // that returns the user to where they came from (falling back to home if no
+  // prior tab is on record). Updates inside an effect so multiple setTab calls
+  // in one render still produce the right "previous" reading.
+  const lastTabRef = useRef(tab)
+  const prevTabRef = useRef(null)
+  useEffect(() => {
+    if (lastTabRef.current !== tab) {
+      prevTabRef.current = lastTabRef.current
+      lastTabRef.current = tab
+    }
+  }, [tab])
+  const goBack = useCallback(() => {
+    const prev = prevTabRef.current
+    if (prev && prev !== tab) setTab(prev)
+    else setTab('home')
+  }, [tab])
 
   // Re-sync tab when URL param changes (snap script navigates between tabs)
   useEffect(() => {
@@ -171,12 +288,52 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   const [scenarioSeed, setScenarioSeed] = useState(null)
   const [dePayload,    setDePayload]    = useState(null)
   const [showMagic,    setShowMagic]    = useState(false)
+  // v0.3 Phase 3 — deep-link hash bus (route-9 §5 v0.2 NEW).
+  //   tabHash    — current in-tab anchor (e.g. 'iht-delta', 'scenario').
+  //   tabSeed    — payload that travelled with the deep-link, consumed by
+  //                the destination screen on first render.
+  //   ihtForceKey — bumped on SCENARIO_SAVED back_flow:'iht' to force the
+  //                IHT delta card to recompute against the new scenario
+  //                without a full page reload (route-9 §7 test #8).
+  const [tabHash,      setTabHash]      = useState(null)
+  const [tabSeed,      setTabSeed]      = useState(null)
+  const [ihtForceKey,  setIHTForceKey]  = useState(0)
 
   // Tab id migration shim (2026-05-15 rename 'plan' → 'timeline', coord FIX-10).
   // Children (HomeScreen onNav, NotificationCentre dest, persisted state) may
   // still pass the legacy id; remap at the boundary so we don't ship a dead nav.
-  const setTabSafe = useCallback((id) => {
-    setTab(id === 'plan' ? 'timeline' : id)
+  //
+  // 2026-05-26: extended to handle the MyMoney section-nav chip targets.
+  //   · 'estate' (Trusts & Estate chip) → 'tax' (Tax & Estate; estate section)
+  //   · 'decisions' (Top decisions chip) → opens DecisionEngineV2 via dePayload
+  //   · 'money/income' / 'money/protection' / 'money/business' pass through
+  const setTabSafe = useCallback((id, opts) => {
+    if (id === 'plan') return setTab('timeline')
+    // Trusts & Estate chip — v0.3 route-9 §5: dedicated page `/money/trusts`,
+    // NO LONGER `/tax#estate`. Section-nav chip lands here.
+    if (id === 'estate' || id === 'trusts') {
+      setTabHash(null); setTabSeed(null)
+      return setTab('money/trusts')
+    }
+    if (id === 'decisions') {
+      // v0.3 route-9 §5 — `/decisions#scenario` deep-link (R8 drawdown save).
+      // If opts carries hash 'scenario' + seed, route through DE overlay with
+      // seed; otherwise fall back to existing DE overlay behaviour.
+      if (opts && opts.hash === 'scenario') {
+        return setDePayload({ ...opts, hash: 'scenario', seed: opts.seed || null })
+      }
+      return setDePayload(opts || {})
+    }
+    // v0.3 route-9 §5 — `/tax#iht-delta` deep-link. Seed carries
+    // `{ pension_total, post_2027_delta }` from R1 SIPP-IHT chip.
+    if (id === 'tax' && opts && opts.hash === 'iht-delta') {
+      setTabHash('iht-delta')
+      setTabSeed(opts.seed || null)
+      return setTab('tax')
+    }
+    // Default — clear any prior hash/seed and switch tab.
+    setTabHash(null); setTabSeed(null)
+    setTab(id)
   }, [])
 
   const handleHomeNav = useCallback((id, payload) => {
@@ -214,9 +371,19 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
 
   const fq       = calcFQ(entity)  // align with HomeScreen anchor — single source of truth
   const band     = fqBand(fq.total)
+
   const _targetDims = getWealthTarget(entity)?.dims || {}
   const _gapCount   = gapDimsVsTarget(fq.dims || {}, _targetDims, 0.15).length
   const bandLabel   = _gapCount > 0 && band.name === 'Optimised' ? 'On Track' : band.name
+
+  // Header anchor (founder direction 2026-05-25): all 3 anchor numbers
+  // (NW + Wealth + Risk) live in the global header top-right. The body
+  // TripleAnchor on MyMoney drops the You-Own tile (Wealth/Risk gauges stay
+  // as visual depth). NW value sourced from ripple — single source of truth.
+  const _nwRipple = useRipple(entity, ['balance_sheet'])
+  const headerNW  = _nwRipple?.balance_sheet?.netWorth
+  const headerRisk = calcRisk(entity)
+  const headerRiskBand = riskBand(headerRisk.total)
 
   // Engine-generated alerts — replaces static entity.alerts for HomeV2
   const liveAlerts = calcAPQ(entity).map(a => ({
@@ -233,10 +400,18 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   }))
   const wireEntity = { ...entity, alerts: liveAlerts }
 
-  // Commit handler passed to any child that produces events
+  // Commit handler passed to any child that produces events.
+  // v0.3 Phase 3 — intercepts SCENARIO_SAVED { back_flow:'iht' } per
+  // route-9 §5 v0.2 NEW. On the back-flow signal, bump ihtForceKey so the
+  // Route 4 IHTDeltaCard recomputes `ihtDeltaPrePost2027(entity)` against
+  // the new scenario state. R1 SIPP-IHT chip listens to the same key via
+  // its own engine read on next render (route-9 §7 consistency test #8).
   const handleCommit = useCallback((event) => {
     if (!event || !event.type) return
     commit(persona, event)
+    if (event.type === 'SCENARIO_SAVED' && event.payload?.back_flow === 'iht') {
+      setIHTForceKey(k => k + 1)
+    }
   }, [commit, persona])
 
   // Open Ask sheet with optional dim context (no longer a tab — D-ASK-1).
@@ -341,7 +516,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         background:'var(--c-bg)', overflow:'hidden' }}>
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div style={{
+      {/* V-1 fix (2026-05-28): className lets responsive CSS hide tagline +
+          anchor pills at mobile width where the right cluster (avatar + 4
+          pills + theme + more + settings = ~440px) was wrapping awkwardly
+          under the brand. See B-V2-EXPANDED-FINDINGS V-1. */}
+      <div className="sw-app-topbar" style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'10px 16px', flexShrink:0, gap:8,
         borderBottom:'1px solid var(--c-sep)',
@@ -351,7 +530,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
            Dark: navy gradient container + teal/cyan SVG fills + halo glow.
            Light: pure-white container + indigo + softer accents, no harsh
            dark-on-light cyan glow. Two SVG renders branch on theme. */}
-        <div style={{ display:'flex', alignItems:'center', gap:10, flex:'1 1 auto', minWidth:0 }}>
+        <div className="sw-app-topbar__brand" style={{ display:'flex', alignItems:'center', gap:10, flex:'1 1 auto', minWidth:0 }}>
           <div style={{
             width:44, height:44, borderRadius:14, flexShrink:0,
             background: theme === 'light'
@@ -370,22 +549,22 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           </div>
           <div style={{ minWidth:0 }}>
             <div style={{ fontSize:22, fontWeight:870, color:'var(--c-text)', letterSpacing:.02, lineHeight:1 }}>Sonuswealth</div>
-            <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2, letterSpacing:.02 }}>Your wealth, in one place.</div>
+            <div className="sw-app-topbar__tagline" style={{ fontSize:11, color:'var(--c-text3)', marginTop:2, letterSpacing:.02 }}>Your wealth, in one place.</div>
           </div>
         </div>
 
         {/* Right: avatar (persona) + Wealth Score + settings */}
-        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <div className="sw-app-topbar__actions" style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
           {/* Avatar button — theme-aware (2026-05-12 parity fix).
              Dark: warm peach gradient + dark text.
              Light: indigo gradient + white text. Both stay distinctively
              persona-flagged but read at-a-glance in their own theme. */}
-          <button onClick={() => setShowSwitcher(true)} style={{
-            width:34, height:34, borderRadius:'50%', border:'none', cursor:'pointer',
+          <button type="button" aria-label="Switch persona" onClick={() => setShowSwitcher(true)} style={{
+            width:44, height:44, borderRadius:'50%', border:'none', cursor:'pointer',
             background: theme === 'light'
               ? 'linear-gradient(135deg,#1c3fe7,#7f57d9)'
               : 'linear-gradient(135deg,#f9d873,#ff8d7a)',
-            fontSize:12, fontWeight:860,
+            fontSize:13, fontWeight:860,
             color: theme === 'light' ? '#ffffff' : '#111620',
             flexShrink:0,
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -396,13 +575,60 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             {(entity?.displayName || entity?.name || 'B').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
           </button>
 
-          <button onClick={() => openBreakdown()} style={{
-            background:'none', border:'none', cursor:'pointer', padding:'2px 6px',
-            display:'flex', flexDirection:'column', alignItems:'flex-end',
-          }}>
-            <div style={{ fontSize:20, fontWeight:800, color:band.colour, lineHeight:1 }}>{fq.total}</div>
-            <div style={{ fontSize:10, color:'var(--c-text3)', marginTop:1, textTransform:'uppercase', letterSpacing:0.8 }}>{bandLabel}</div>
-          </button>
+          {/* HeaderAnchor RESTORED (founder direction 2026-05-26 evening):
+             Earlier removal made Cashflow / Tax / Protection look orphaned
+             relative to Home which had a clear anchor row. Founder explicitly
+             called this out: "we decided to place the 3 anchors on the top
+             right to be consistent on every tab — it missing".
+
+             Chrome pills are the canonical home for the 3 anchor numbers
+             across every tab. Each route body MAY render its own depth
+             panel (e.g. R1 has FinancesHeroCard) but the global header always
+             shows the same 3 figures regardless of route. Consistency wins
+             over the de-duplication argument. */}
+          {(() => {
+            const shortGBP = (v) => {
+              if (typeof v !== 'number' || !isFinite(v)) return '—'
+              const a = Math.abs(v)
+              if (a >= 1_000_000) return `£${(v / 1_000_000).toFixed(2)}m`
+              if (a >= 1_000)     return `£${Math.round(v / 1_000)}k`
+              return `£${Math.round(v)}`
+            }
+            const nwShort = shortGBP(headerNW)
+            const fqShort = fq?.total != null ? `${fq.total}` : '—'
+            const rkShort = headerRisk?.total != null ? `${headerRisk.total}` : '—'
+            const rkColour = headerRiskBand?.colour || 'var(--c-gold)'
+            // CoI total (4th anchor — spec §2 contract). Defensive read.
+            let coiTotal = 0
+            try {
+              coiTotal = +(totalCoI?.(entity)?.total ?? 0)
+            } catch (_e) { /* engine may not be ready on first paint */ }
+            const coiShort = shortGBP(coiTotal)
+            const pill = (label, value, color) => (
+              <div
+                title={label}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  minWidth: 50, padding: '4px 9px',
+                  background: 'var(--c-surface2)',
+                  border: '1px solid var(--c-border)',
+                  borderRadius: 100,
+                  lineHeight: 1,
+                }}
+              >
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.6, textTransform: 'uppercase' }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+              </div>
+            )
+            return (
+              <div className="sw-app-topbar__anchors" style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+                {pill('NW', nwShort, 'var(--c-text)')}
+                {pill('Wealth', fqShort, 'var(--c-acc)')}
+                {pill('Risk', rkShort, rkColour)}
+                {pill('CoI', coiShort, 'var(--c-coral, #FF6F7D)')}
+              </div>
+            )
+          })()}
 
           {/* Theme switcher — Stitch 58×38 pill (replaces invisible 36px circle) */}
           <ThemeTogglePill
@@ -411,16 +637,16 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           />
 
           {/* More menu — opens Data Capture / Vault / Notifications / Reports */}
-          <button onClick={() => setShowMoreMenu(true)} aria-label="More" style={{
-            width:34, height:34, borderRadius:'50%',
+          <button type="button" onClick={() => setShowMoreMenu(true)} aria-label="More menu" style={{
+            width:44, height:44, borderRadius:'50%',
             background:'var(--c-surface2)', border:'1px solid var(--c-border)',
             color:'var(--c-text2)', cursor:'pointer',
             display:'flex', alignItems:'center', justifyContent:'center',
             fontSize:18, lineHeight:1, padding:0, flexShrink:0,
           }}>⋯</button>
 
-          <button onClick={() => setShowSettings(true)} aria-label="Settings" style={{
-            width:34, height:34, borderRadius:'50%',
+          <button type="button" onClick={() => setShowSettings(true)} aria-label="Settings" style={{
+            width:44, height:44, borderRadius:'50%',
             background:'var(--c-surface2)', border:'1px solid var(--c-border)',
             color:'var(--c-text2)', cursor:'pointer',
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -428,6 +654,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           }}>⚙</button>
         </div>
       </div>
+
+      {/* ── Global Tax Year chip ────────────────────────────────────────
+          Founder direction 2026-05-28: TY must be visible on every page.
+          Rendered here so every routed screen inherits it. */}
+      <GlobalTaxYearChip />
 
       {/* ── Whisper ribbon (§13.7) — ambient ticker, currently surfaces
            §13.8 Drill Memory resume on mount when applicable. ────────────────── */}
@@ -439,7 +670,8 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       )}
 
       {/* ── Screen area ──────────────────────────────────────────────────── */}
-      <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex',
+      {/* P12-3 (2026-05-28): id + role main for skip-link target + landmark. */}
+      <main id="main-content" role="main" tabIndex={-1} style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex',
         flexDirection:'column', WebkitOverflowScrolling:'touch' }}>
         {tab === 'home'  && (
           <HomeScreen
@@ -459,37 +691,91 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             personaId={persona}
             onCommit={handleCommit}
             onHome={goHome}
+            onBack={goBack}
             onOpenRisk={() => setShowRiskOverlay(true)}
             onDrillMetric={pushDetail}
             onNav={setTabSafe}
+          />
+        )}
+        {/* MyMoney sub-routes (founder direction 2026-05-26).
+           onBack returns to the Balance Sheet root (/money). */}
+        {tab === 'money/income' && (
+          <MoneyIncome
+            entity={entity}
+            personaId={persona}
+            onBack={() => setTab('money')}
+            onNav={setTabSafe}
+          />
+        )}
+        {tab === 'money/protection' && (
+          <MoneyProtection
+            entity={entity}
+            personaId={persona}
+            onBack={() => setTab('money')}
+            onHome={goHome}
+          />
+        )}
+        {tab === 'money/business' && (
+          <MoneyBusiness
+            entity={entity}
+            personaId={persona}
+            onBack={() => setTab('money')}
+            onHome={goHome}
+            onNav={setTabSafe}
+          />
+        )}
+        {/* v0.3 route-9 §5 — Trusts chip lands on dedicated `/money/trusts`,
+            NOT `/tax#estate`. Phase 6 will build the full R4.5 surface; for
+            now MoneyTrusts is the placeholder route target. */}
+        {tab === 'money/trusts' && (
+          <MoneyTrusts
+            entity={entity}
+            personaId={persona}
+            onBack={() => setTab('money')}
+            onHome={goHome}
+            onNav={setTabSafe}
+            onCommit={handleCommit}
           />
         )}
         {tab === 'flow'  && (
           <Cashflow
             entity={entity}
             onHome={goHome}
+            onBack={goBack}
+            onNav={setTabSafe}
             onOpenRisk={() => setShowRiskOverlay(true)}
             onDrillMetric={pushDetail}
             scenarioSeed={scenarioSeed}
             onScenarioSeedConsumed={() => setScenarioSeed(null)}
           />
         )}
-        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} />}
-        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
-        {tab === 'timeline'  && <Timeline     entity={entity} onNav={setTabSafe} onDrillMetric={pushDetail} />}
-      </div>
+        {/* v0.3 route-9 §5 deep-link wiring — hash + seed + forceKey for the
+            IHT pre/post-2027 delta card. R1 SIPP-IHT chip seeds the hash;
+            R7 SCENARIO_SAVED back_flow bumps ihtForceKey for live recompute. */}
+        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} />}
+        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
+        {tab === 'timeline'  && <Timeline     entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
+        {/* P12-1 (2026-05-28) — canonical FCA disclaimer footer per AppShell
+            slot contract. Rendered at Dashboard scope so every screen inherits
+            without per-file duplication. Per-screen inline compliance notes
+            (DB transfer, COBS 19.1A, etc.) stay where they are — they are
+            contextual, not the boilerplate footer. */}
+        <FCADisclaimerFooter variant="footer" />
+      </main>
 
       {/* ── Bottom nav ───────────────────────────────────────────────────── */}
-      <div data-bottom-nav="true" style={{
+      <nav aria-label="Primary" data-bottom-nav="true" style={{
         display:'flex', height:78, flexShrink:0,
         borderTop:'1px solid var(--c-sep)',
         background:'var(--c-bg)',
         paddingBottom:'env(safe-area-inset-bottom, 0px)',
       }}>
         {TABS.map(t => {
-          const active = tab === t.id
+          // MyMoney sub-routes (money/income, money/protection, money/business)
+          // keep the "My Money" lane active so the user doesn't feel orphaned.
+          const active = t.id === 'money' ? isMoneyTab(tab) : tab === t.id
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
+            <button key={t.id} type="button" onClick={() => setTab(t.id)} aria-current={active ? 'page' : undefined} aria-label={`Navigate to ${t.label}`} style={{
               flex:1, display:'flex', flexDirection:'column',
               alignItems:'center', justifyContent:'center', gap:3,
               border:'none', cursor:'pointer', background:'none',
@@ -511,7 +797,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             </button>
           )
         })}
-      </div>
+      </nav>
 
       {/* ── FQ Breakdown overlay — now uses OverlayShell ─────────────────── */}
       {showFQBreak && (

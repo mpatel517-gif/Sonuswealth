@@ -4,8 +4,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
+// S1 selector migration (Phase 2)
+import { investable } from '../../engine/selectors/index.js'
 import {
-  fmt, investable,
+  fmt,
   taxEfficiencyScore, effectiveBeneficiaryRate, beneficiaryAnalysis, calcAge,
 } from '../../engine/fq-calculator.js'
 
@@ -282,11 +284,14 @@ export default function StateTileRow({ entity }) {
       invertTrend: false,
       explain: `The 25× rule: your target annual retirement income multiplied by 25 gives the pot you need. At a 4% safe withdrawal rate it lasts indefinitely. You've saved ${fmt(inv)} (${Math.round(fiRat * 100)}% of the ${fmt(fiTarget)} target). At 5% real growth your pot reaches ${fmt(Math.round(projectedPot / 1000) * 1000)} by age ${retirementAge}${shortfall > 0 ? ` — still ${fmt(shortfall)} short` : ' — on track'}.`,
       why:     `This is the single most important long-term metric. People underestimate how much they need because they think in terms of what they earn, not what they spend. The rule-of-25 is deliberately conservative — it survives most 30-year retirement windows even in poor-sequence-of-returns scenarios.`,
+      // Tax+FCA / IFA audit 2026-05-26: "focus on maximising" and "highest-
+      // return action available to you" crossed COBS 9A. Reframed as
+      // descriptive mechanics — what tax relief does + how the cap works.
       action:  fiRat < 0.3
-        ? `You're in the early stages — focus on maximising your pension contributions. At your rate, every £1 into a SIPP costs only 60p after 40% tax relief. That's the highest-return action available to you.`
+        ? `Pension contributions attract tax relief at marginal income tax rate. At 40% higher-rate, a £1 gross contribution has a net cost of 60p; at 45% additional rate, 55p; at 20% basic rate, 80p (up to 48% in Scotland for 2026/27).`
         : fiRat < 1
-          ? `You're building momentum. Continuing current contributions plus investment growth should carry you further. Check how close your annual pension contribution is to the £60k annual allowance.`
-          : `You've hit the target. Focus shifts to decumulation planning — withdrawal sequencing, IHT, and pension nominations now matter more than accumulation.`,
+          ? `Pension AA is £60,000 this tax year, plus unused carry-forward from the past 3 years. ISA AA is £20,000 with no carry-forward. Both reset 6 April.`
+          : `Beyond accumulation, decumulation involves withdrawal sequencing across pots, IHT planning, and beneficiary nominations — each governed by different rules.`,
     },
     {
       id:      'estate',

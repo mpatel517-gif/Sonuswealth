@@ -1802,7 +1802,7 @@ export function trustITRate(opts, bundle) {
     const div = _max0(opts.dividendIncome || 0);
     const total = nonDiv + div;
 
-    // Simplified: standard band applies to first £1k at basic rate (20% non-div / 8.75% div) then trust rates
+    // Simplified: standard band applies to first £1k at basic rate (20% non-div / 10.75% div) then trust rates
     // For v1.0 we apply trust rates above the band and nominal basic rates within
     const inBand = Math.min(total, standardBand);
     const aboveBand = _max0(total - standardBand);

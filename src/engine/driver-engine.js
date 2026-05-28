@@ -56,7 +56,7 @@ export function driver(entity, metric, level = 0) {
     case 'plan:estate':    return drvPlanEstate(entity, level)
     case 'plan:gift':      return drvPlanGift(entity, level)
     case 'plan:tax':       return drvPlanTax(entity, level)
-    default:               return terminal(metric, 0, 'Driver tree pending')
+    default:               return terminal(metric, 0, `Drill detail for "${metric}" is not yet wired into the driver tree. Tap Ask Sonu below to ask about ${metric}, or open the underlying tab for the raw data.`)
   }
 }
 

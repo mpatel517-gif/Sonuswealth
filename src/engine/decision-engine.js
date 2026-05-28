@@ -9,7 +9,7 @@ import {
   calcAge,
 } from './fq-calculator.js'
 
-const FCA_BOUNDARY = 'Not regulated financial advice — verify with a qualified FCA-authorised adviser before acting.'
+const FCA_BOUNDARY = 'Information and guidance only. Not personal advice — verify with a qualified FCA-authorised adviser before acting.'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -768,7 +768,7 @@ export function enumeratePaths(entity, decisionType) {
     ],
     'DE-36': [
       { id: 'repay_loan',  label: 'Repay director loan',             riskLevel: 'low',    detail: 'Clears S455 exposure. No tax cost. Requires company liquidity.' },
-      { id: 'div_clear',   label: 'Declare dividend to clear',       riskLevel: 'medium', detail: 'Tax at 8.75%–39.35%. Avoids S455 if dividend before year-end.' },
+      { id: 'div_clear',   label: 'Declare dividend to clear',       riskLevel: 'medium', detail: 'Tax at 10.75%–39.35%. Avoids S455 if dividend before year-end.' },
       { id: 'write_off',   label: 'Write off loan (BIK + CT)',       riskLevel: 'high',   detail: 'Taxed as employment income + BIK charge. Rarely optimal.' },
     ],
     'DE-37': [
@@ -846,7 +846,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     'DE-22': `The annual CGT exempt amount is now just £3,000 (2026) — use it or lose it each April. Selling and rebuying 30+ days later (or immediately into an ISA via bed-and-ISA) resets your base cost at no net cost except the bid-offer spread and any broker fee. Stacking this annually compounds into a meaningful tax saving over time.`,
     'DE-23': `Realising losses in a down market offsets gains from other disposals this year — or carries forward indefinitely to offset future gains. Rebuying inside an ISA (bed-and-ISA) after selling captures the loss and shelters future recovery gains. The 30-day same-asset rule applies; use a spouse account or ISA to rebuy immediately.`,
     'DE-24': `Inter-spouse transfers are free of CGT and IHT. Moving income-producing assets to the lower-rate spouse reduces the household tax bill each year without any gain trigger. Each spouse can also max their own £20k ISA allowance independently — the household tax-free shelter doubles to £40k/yr.`,
-    'DE-25': `The optimal director salary is £9,100 (2026 secondary NI threshold) where employer NI is zero and the personal allowance is largely covered by dividends. Dividends above the basic rate threshold attract 33.75%; pension contributions via the company attract corp tax relief (25%) and no NI — routing surplus above £50k into a SIPP is usually superior to dividends.`,
+    'DE-25': `The optimal director salary is £9,100 (2026 secondary NI threshold) where employer NI is zero and the personal allowance is largely covered by dividends. Dividends above the basic rate threshold attract 35.75%; pension contributions via the company attract corp tax relief (25%) and no NI — routing surplus above £50k into a SIPP is usually superior to dividends.`,
     'DE-26': `EIS/SEIS are high-risk investments in early-stage companies — expect 30–50% failure rates in the portfolio. The tax reliefs (50% SEIS income relief, CGT deferral, loss relief) can reduce downside to ~15p per £1 invested in the worst case. These suit higher-rate taxpayers with a genuine tolerance for illiquidity over 3+ years.`,
     'DE-27': `VCT income tax relief (30%) is the headline attraction, plus tax-free dividends. The 5-year holding requirement and limits on secondary market liquidity are the key constraints. Building a VCT ladder — investing a fixed amount each tax year — smoothes manager and vintage risk. Stick to generalist VCTs from established managers (Octopus, Foresight, Pembroke).`,
     'DE-28': `AIM-listed and unlisted BPR-qualifying investments become IHT-free after just 2 years — faster than the 7-year PET route. The trade-off is investment risk: AIM portfolios carry sector concentration and liquidity risk. Managed BPR funds (Octopus AIM IHT, Foresight) spread across 20–30 names. Confirm qualifying status at inception — not all AIM shares qualify.`,

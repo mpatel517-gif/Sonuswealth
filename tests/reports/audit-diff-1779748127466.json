@@ -1,0 +1,3423 @@
+{
+  "baselinePath": "tests/reports/audit-4469c39d-1779389389388.md",
+  "newPath": "tests/reports/audit-6653d865-1779748100063.md",
+  "transitions": {
+    "PASS→PASS": 47,
+    "PASS→WARN": 0,
+    "PASS→FAIL": 0,
+    "WARN→PASS": 468,
+    "WARN→WARN": 8,
+    "WARN→FAIL": 4,
+    "FAIL→PASS": 12,
+    "FAIL→WARN": 6,
+    "FAIL→FAIL": 1,
+    "NEW→PASS": 52,
+    "NEW→WARN": 50,
+    "NEW→FAIL": 18,
+    "REMOVED": 0
+  },
+  "interesting": [
+    {
+      "persona": "persona-a",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-a",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-a",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-a",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-a",
+      "year": "2025/26",
+      "from": "FAIL",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-a",
+      "year": "2026/27",
+      "from": "FAIL",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-b",
+      "year": "2021/22",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-b",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-b",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-b",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-b",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-b",
+      "year": "2026/27",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-c",
+      "year": "2021/22",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-c",
+      "year": "2022/23",
+      "from": "FAIL",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-c",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-c",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-c",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-c",
+      "year": "2026/27",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-d",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-d",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-d",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-d",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-d",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-d",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-e",
+      "year": "2021/22",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-e",
+      "year": "2022/23",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-e",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-e",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-e",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-e",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-f",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-f",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-f",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-f",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-f",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-f",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-g",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-g",
+      "year": "2022/23",
+      "from": "FAIL",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-g",
+      "year": "2023/24",
+      "from": "FAIL",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-g",
+      "year": "2024/25",
+      "from": "FAIL",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-g",
+      "year": "2025/26",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "persona-g",
+      "year": "2026/27",
+      "from": "FAIL",
+      "to": "WARN"
+    },
+    {
+      "persona": "aged-out-foundation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "aged-out-foundation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "aged-out-foundation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "aged-out-foundation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "aged-out-foundation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "aged-out-foundation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-decumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-decumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-decumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-decumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-decumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-foundation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-foundation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-foundation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-foundation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-foundation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-foundation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "beneficiary-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "bruce-wayne-series",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "bruce-wayne-series",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "bruce-wayne-series",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "bruce-wayne-series",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "bruce-wayne-series",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "bruce-wayne-series",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "CASE-001",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-001",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-001",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-001",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-001",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-001",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-002",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-002",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-002",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-002",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-002",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-002",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-003",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-003",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-003",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-003",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-003",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-003",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "WARN"
+    },
+    {
+      "persona": "CASE-004",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-004",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-004",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-004",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-004",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-004",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-005",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-005",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-005",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-005",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-005",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-006",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-006",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-006",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-006",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-006",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-006",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-007",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-007",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-007",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-007",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-007",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-008",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-008",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-008",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-008",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-008",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-009",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-009",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-009",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-009",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-009",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-010",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-010",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-010",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-010",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-010",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-011",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-011",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-011",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-011",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-011",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-011",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-012",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-012",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-012",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-012",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-012",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-012",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-013",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-013",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-013",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-013",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-014",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-014",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-014",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-014",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-015",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-015",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-015",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-015",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-015",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-015",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-016",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-016",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-016",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-016",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-016",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-016",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-017",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-017",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-017",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-017",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-017",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-017",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-018",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-018",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-018",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-018",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-018",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-019",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-019",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-019",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-019",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-019",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-019",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-020",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-020",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-020",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-020",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-020",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-021",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-021",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-021",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-021",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-021",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-022",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-022",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-022",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-022",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-022",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-022",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-023",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-023",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-023",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-023",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-023",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-023",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-024",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-024",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-024",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-024",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-024",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-024",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-025",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-025",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-025",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-025",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-025",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-025",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-026",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-026",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-026",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-026",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-026",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-026",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-027",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-027",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-027",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-027",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-027",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "CASE-027",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "cohab-sep-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation-uk-in",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation-uk-in",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation-uk-in",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation-uk-in",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation-uk-in",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-in",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-in",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-in",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-in",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-in",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-in",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-th",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-th",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-th",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-th",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation-uk-th",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-decumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-foundation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-foundation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-foundation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-foundation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-foundation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-legacy",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-legacy",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-legacy",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-legacy",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-legacy",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-legacy",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-preservation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-preservation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-preservation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-preservation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-preservation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-preservation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "couple-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-decumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-decumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-decumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-decumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-decumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-decumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-legacy",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-legacy",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-legacy",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-legacy",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-legacy",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-legacy",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-preservation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-preservation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-preservation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-preservation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-preservation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "divorced-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-foundation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-foundation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-foundation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-foundation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "family-primary-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "global-test-matrix",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "global-test-matrix",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "global-test-matrix",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "global-test-matrix",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "global-test-matrix",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "global-test-matrix",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation-uk-in",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation-uk-in",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation-uk-in",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation-uk-in",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation-uk-in",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-decumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-decumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-decumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-decumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-decumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-preservation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-preservation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-preservation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-preservation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-preservation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-preservation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "landlord-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-decumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-decumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-decumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-decumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-decumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-preservation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-preservation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-preservation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-preservation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-preservation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-preservation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "ltd-director-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation-uk-in",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation-uk-in",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation-uk-in",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation-uk-in",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation-uk-in",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation-uk-in",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation-uk-in",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation-uk-in",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation-uk-in",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation-uk-in",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation-uk-in",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation-uk-in",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-consolidation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation-uk-th",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation-uk-th",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation-uk-th",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation-uk-th",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation-uk-th",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation-uk-th",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-decumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-foundation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-foundation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-foundation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-foundation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-foundation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-legacy",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-legacy",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-legacy",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-legacy",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-legacy",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-preservation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-preservation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-preservation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-transition",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "single-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-accumulation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-accumulation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-accumulation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-accumulation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-accumulation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-consolidation",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-consolidation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-consolidation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-consolidation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-consolidation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-foundation",
+      "year": "2022/23",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-foundation",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-foundation",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-foundation",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-foundation",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-transition",
+      "year": "2021/22",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-transition",
+      "year": "2023/24",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-transition",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-transition",
+      "year": "2025/26",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "sole-trader-transition",
+      "year": "2026/27",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "tony-stark-series",
+      "year": "2021/22",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "tony-stark-series",
+      "year": "2022/23",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "tony-stark-series",
+      "year": "2023/24",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "tony-stark-series",
+      "year": "2024/25",
+      "from": "WARN",
+      "to": "PASS"
+    },
+    {
+      "persona": "tony-stark-series",
+      "year": "2025/26",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "tony-stark-series",
+      "year": "2026/27",
+      "from": "FAIL",
+      "to": "PASS"
+    },
+    {
+      "persona": "mrT-beneficiary",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-beneficiary",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-beneficiary",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-beneficiary",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-beneficiary",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-cohab-sep",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-cohab-sep",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-core",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-core",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-couple",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-couple",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-couple",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-couple",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-couple",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-decum-complex",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-decum-complex",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-decum-complex",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-decum-complex",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-decum-complex",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-divorced",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-divorced",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-divorced",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-divorced",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-family",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-family",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-landlord",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-landlord",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-landlord",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-landlord",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-landlord",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-landlord",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-ltd-director",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-ltd-director",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-ltd-director",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-ltd-director",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-ltd-director",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-ltd-director",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-sole-trader",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-sole-trader",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-in",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-in",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-in",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-in",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-uk-in",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "mrT-uk-th",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-th",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-th",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-th",
+      "year": "2025/26",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "mrT-uk-th",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-A",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-A",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-C",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-C",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-C",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-C",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-C",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-D",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-D",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-E",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-E",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-E",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-E",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-F",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "WARN"
+    },
+    {
+      "persona": "persona-series-G",
+      "year": "2021/22",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-G",
+      "year": "2022/23",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-G",
+      "year": "2023/24",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-G",
+      "year": "2024/25",
+      "from": "NEW",
+      "to": "FAIL"
+    },
+    {
+      "persona": "persona-series-G",
+      "year": "2026/27",
+      "from": "NEW",
+      "to": "FAIL"
+    }
+  ]
+}

@@ -89,7 +89,7 @@ The 4 fixed sections enforce the cross-cutting promises (tax discoverability, es
 
 ```
 ┌─ Top bar (60px, pinned across all L levels) ─────────────────────────┐
-│  ← Back to Money    Money › Pensions   [NW £484k] [W64] [R65]       │
+│  ← Back to Money    Money › Pensions   [NW £727k] [W70] [R74]       │
 ├──┬──────────────────────────────────────────────────────────────────┤
 │  │  Time view: [Today][Forecast][Plan][What-if]  [Tax year 26/27]   │
 │ S│                                                                  │
@@ -468,8 +468,8 @@ Mr T (persona at `src/rules/personas/mrT-core.json`, fixture_version 2.0) is ver
 | H Business | Synthetic Tech equity £145k (BPR + BADR qualifying) | BPR position, BADR eligibility |
 | I Share schemes | EMI £18k (8k vested + 12k unvested) | Vesting schedule |
 | J Protection | Life £350k (in trust) + CI £150k + IP £3.25k/mo + Relevant Life £400k + Key Person £250k | All 5 policies + gap analysis |
-| K General insurance | Home + Motor + Travel | All 3 |
-| L Business insurance | PI £1m + Cyber £250k | Both |
+| K General insurance | **Empty in v2.0 fixture (gap)** — Home + Motor + Travel should be added before Wave 3 (per W0-T2 finding 2026-05-25) | Wave 3 builds the panel; fixture gap accepted as Wave 0 baseline. K panel renders "no insurance recorded" until fixture populated. |
+| L Business insurance | **Empty in v2.0 fixture (gap)** — PI £1m + Cyber £250k should be added before Wave 3 (per W0-T2 finding 2026-05-25) | Wave 3 builds the panel; fixture gap accepted as Wave 0 baseline. L panel renders "no insurance recorded" until fixture populated. |
 | M Cash | Monzo £6.2k + Chase £14.8k + Marcus £7.5k | All 3 accounts, blended rate, 5mo essentials |
 | N Liabilities | Residence mortgage £215k + BTL mortgage £124k + student loan £15.8k + Amex £1.85k | All 4 |
 | O Income | Director salary £12,570 + dividends £38k + rental £15k + interest £1.85k | All 4 streams + tax band position |
@@ -479,6 +479,30 @@ Mr T (persona at `src/rules/personas/mrT-core.json`, fixture_version 2.0) is ver
 | X Director | Synthetic Tech Ltd (sole director, 100% shareholding, turnover £220k) | Company dashboard + ANI position |
 
 If any domain renders blank or partial against Mr T after its wave ships, the wave doesn't pass.
+
+**Headline Mr T numbers (2026/27, UK-2026.1.1 bundle, verified W0-T2 2026-05-25):**
+
+| Metric | Actual value | Notes |
+|---|---|---|
+| Net Worth | **£727k** | Was estimated £484k pre-v2.0 fixture rewrite — design doc captured stale numbers, now corrected |
+| Wealth Score | **70 (Optimised)** | Was estimated 64 |
+| Risk Score | **74 (Protected)** | Was estimated 65 |
+| IHT exposure | **£113k** | Was estimated £0-8k. Mr T is single director with no direct descendants → RNRB unavailable, estate £782,800 vs £325k NRB. Correct fixture behaviour. |
+| Monthly surplus | **deficit £552** | Cashflow is tight despite high asset values |
+| Effective tax rate | **19.1%** | – |
+| Funded ratio | **0.30** | Significantly under-funded vs target |
+
+**Known summariser anomalies (pre-existing, must be preserved through Wave 0 F4 regression diff — fix in Wave 5 or later):**
+
+1. Pension double-count in `balance_sheet.categories.pensions`
+2. EIS/SEIS/VCT not aggregated into `balance_sheet.categories` (visible in netWorth but not in summariser buckets)
+3. Bonds (onshore + offshore) same — visible in netWorth, missing from summariser
+4. Alternatives (crypto + PE + wine) same
+5. Business value missing from `balance_sheet.categories.business`
+6. BTL mortgage + student loan + credit card missing from `balance_sheet.categories.liabilities` summary
+7. Cash may under-report (one of the bank accounts not aggregated)
+
+`netWorth()` is correct (£727k); `balance_sheet.categories` is lossy by ~£236k. Fix in a later wave to keep F4 attribution clean.
 
 ---
 

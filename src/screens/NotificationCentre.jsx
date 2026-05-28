@@ -203,6 +203,7 @@ function NotifCard({ n, onNavigate, onAcknowledge, onSnooze, onDismiss }) {
             onClick={() => onDismiss?.(n.id)}
             aria-label="Dismiss notification"
             className="sw-press"
+            aria-label="Dismiss notification"
             style={{
               marginLeft: 'auto',
               padding: '4px 8px', borderRadius: 8,

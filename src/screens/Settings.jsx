@@ -26,8 +26,10 @@
 
 import { useState, useEffect } from 'react'
 import { BRAND } from '../config/brand.js'
+// S1 selector migration (Phase 2)
+import { fq as calcFQ } from '../engine/selectors/index.js'
 import {
-  calcFQ, fqBand, fmt,
+  fqBand, fmt,
   planFor, planStaleness,
   SCORING_VERSION, RISK_VERSION,
   TAX,

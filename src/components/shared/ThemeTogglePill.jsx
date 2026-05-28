@@ -21,6 +21,7 @@ export default function ThemeTogglePill({ theme = 'dark', onToggle }) {
 
   return (
     <button
+      type="button"
       onClick={typeof onToggle === 'function' ? onToggle : undefined}
       aria-label={`Switch to ${isLight ? 'dark' : 'light'} theme`}
       title={`Switch to ${isLight ? 'dark' : 'light'} theme`}
@@ -28,8 +29,8 @@ export default function ThemeTogglePill({ theme = 'dark', onToggle }) {
       style={{
         position: 'relative',
         width: 58,
-        height: 38,
-        padding: 4,
+        minHeight: 44,
+        padding: '4px',
         borderRadius: 999,
         border: '1px solid var(--c-border)',
         background: isLight ? 'var(--c-surface2)' : 'rgba(13,18,27,0.72)',

@@ -22,6 +22,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { CONCERNS, RESOURCES, FACTS } from './ontology.js'
+import { maritalStatus } from '../persona-helpers.js'
 
 const FCA = 'Information not advice. Personal circumstances vary — confirm with a regulated adviser before acting.'
 
@@ -95,7 +96,7 @@ const PLAYS = [
     needs_fact: [FACTS.SPOUSE_PENSION, FACTS.MARITAL_STATUS],
     compute_impact: (p) => {
       const spousePot = num(p?.spouse?.pension) || num(p?.spouse_pension_capital) || 0
-      const haveSpouse = (p?.maritalStatus || p?.marital_status || '').toLowerCase().match(/married|partner/)
+      const haveSpouse = maritalStatus(p).isCouple
       if (!haveSpouse) {
         return { gbp_saved: 0, certainty: 'n/a', why: 'No spouse on file — this play does not apply.' }
       }

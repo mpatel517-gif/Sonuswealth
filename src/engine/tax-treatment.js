@@ -110,7 +110,7 @@ export function getTaxTreatmentSummary(asset, wrapper, bundle) {
         return {
           it: 'Income (dividends/interest) taxed at your marginal rate.',
           cgt: 'Gains above the annual exempt amount taxed at 18% / 24%.',
-          iht: '100% relief under Business Relief after a 2-year qualifying hold (subject to £1m combined cap from April 2026).',
+          iht: '100% relief under Business Relief after a 2-year qualifying hold (subject to £2.5m combined cap from April 2026).',
           hints: [
             { term: 'annual exempt amount', explainerId: HINT.AEA },
             { term: 'Business Relief', explainerId: HINT.BPR },
@@ -149,7 +149,7 @@ export function getTaxTreatmentSummary(asset, wrapper, bundle) {
       return {
         it: '30% income tax relief on subscription (held 3 years).',
         cgt: 'Gains tax-free on disposal after 3 years. Loss relief available against income or gains.',
-        iht: '100% Business Relief after a 2-year qualifying hold (subject to £1m combined cap from April 2026).',
+        iht: '100% Business Relief after a 2-year qualifying hold (subject to £2.5m combined cap from April 2026).',
         hints: [{ term: 'Business Relief', explainerId: HINT.BPR }],
         confidence: 1.0,
       };
@@ -158,7 +158,7 @@ export function getTaxTreatmentSummary(asset, wrapper, bundle) {
       return {
         it: '50% income tax relief on subscription (held 3 years). CGT reinvestment relief on 50% of gain reinvested.',
         cgt: 'Gains tax-free on disposal after 3 years.',
-        iht: '100% Business Relief after a 2-year qualifying hold (subject to £1m combined cap from April 2026).',
+        iht: '100% Business Relief after a 2-year qualifying hold (subject to £2.5m combined cap from April 2026).',
         hints: [{ term: 'Business Relief', explainerId: HINT.BPR }],
         confidence: 1.0,
       };

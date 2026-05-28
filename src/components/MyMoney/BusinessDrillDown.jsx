@@ -3,7 +3,7 @@
 //
 // What this panel surfaces:
 //   1. Total business value (companies + share schemes + DLA)
-//   2. BPR position — qualifying value within £1m combined cap from April 2026
+//   2. BPR position — qualifying value within £2.5m combined cap from April 2026
 //   3. BADR position — 5%+ shareholding, officer/employee, 2yr hold
 //   4. Per-company shareholding, trading vs investment, IHT relief eligibility
 //   5. Share scheme holdings (EMI / CSOP / SAYE / SIP / unapproved) with vesting
@@ -17,6 +17,8 @@ import ExplainerChip from '../shared/Explainer.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
 import DrillContextStub, { BusinessActivityStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
+import { BRAND } from '../../config/brand.js'
+import { TAX } from '../../engine/fq-calculator.js'
 
 function Term({ children, id }) {
   return (
@@ -104,14 +106,19 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
     ...companies.filter(c => c.trading_status === 'trading').map(c => +c.share_value_gbp || +c.value || 0),
     ...businessAssets.filter(b => b.qualifies_for_bpr).map(b => +b.value || +b.value_gbp || 0),
   ].reduce((s, v) => s + v, 0)
-  const bprCap = 1_000_000
+  const bprCap = 2_500_000
   const bprAboveCap = Math.max(bprQualifying - bprCap, 0)
 
   return (
     <OverlayShell title="Business assets · drill-down"
-      subtitle={`${fmt(total)} · ${companies.length} co · ${shareSchemes.length} scheme`}
+      subtitle={`${fmt(total)} · ${companies.length} compan${companies.length === 1 ? 'y' : 'ies'} · ${shareSchemes.length} scheme${shareSchemes.length === 1 ? '' : 's'}`}
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
+
+        {/* Distinctive subtitle (v0.3 delta 1) */}
+        <div className="sw-eyebrow" style={{ fontStyle: 'italic', color: 'var(--c-text3)', marginBottom: 10 }}>
+          How your business pays you, and what you keep
+        </div>
 
         {/* Section 1 — composition */}
         <Section title="1 · Composition">
@@ -133,10 +140,10 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
         </Section>
 
         {/* Section 2 — IHT relief position */}
-        <Section title={<><span>2 · </span><Term id="MM-BPR">BPR</Term><span> position (April 2026)</span></>} sub="100% relief on first £1m of combined business + agricultural property. 50% above. AIM shares now 50% only and treated separately.">
+        <Section title={<><span>2 · </span><Term id="MM-BPR">BPR</Term><span> position (April 2026)</span></>} sub="Business Property Relief — combined £2,500,000 cap on 100% relief assets (unquoted shares, business chattels). Excess + AIM-listed shares get 50% relief. Finance Act 2026 effective April 2026.">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 8 }}>
             <Tile label="BPR-qualifying" value={fmt(bprQualifying)} tone={bprQualifying > 0 ? 'good' : 'neutral'} />
-            <Tile label="£1m combined cap" value={fmt(bprCap)} sub="From April 2026" />
+            <Tile label="£2.5m combined cap" value={fmt(bprCap)} sub="From April 2026" />
             <Tile label="Above cap (50% relief)" value={fmt(bprAboveCap)} tone={bprAboveCap > 0 ? 'warn' : 'good'} sub={bprAboveCap > 0 ? 'Effective IHT 20%' : 'Within cap'} />
           </div>
           <div style={{
@@ -186,6 +193,7 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
                       {trading && <Chip tone="good">BPR eligible</Chip>}
                       {trading && fivePct && <Chip tone="good">BADR · 5%+ qualifying</Chip>}
                       {trading && !fivePct && <Chip tone="warn">BADR · &lt;5% holding</Chip>}
+                      {/* TODO: source from TAX once corp tax small/main rates are exposed on the rules bundle */}
                       <Chip>Corp tax 19/25%</Chip>
                     </div>
                     <button
@@ -282,6 +290,7 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
                 ) : (
                   <>
                     <Chip tone="bad">S455 exposure</Chip>
+                    <Chip tone="warn">s455 — {((TAX.s455Rate ?? 0.3375) * 100).toFixed(2)}% charge on director loans &gt; £10,000 outstanding 9 months after year-end</Chip>
                     {(+dla.balance || 0) > 10000 && <Chip tone="warn">BIK threshold breached</Chip>}
                   </>
                 )}
@@ -289,6 +298,36 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
             </div>
           </Section>
         )}
+
+        {/* Employer NIC (v0.3 delta 3) */}
+        <Section title="Employer NIC">
+          <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, padding: 14 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+              <Chip tone="warn">Rate {((TAX.employerNICRate ?? 0.15) * 100).toFixed(0)}%</Chip>
+              <Chip tone="good">Employment allowance £{(TAX.employmentAllowance ?? 10500).toLocaleString()}/yr</Chip>
+              <Chip>Secondary threshold £{(TAX.employerNICThreshold ?? 5000).toLocaleString()}</Chip>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+              Employer NIC is 15% on salary above the secondary threshold. Employment allowance of £{(TAX.employmentAllowance ?? 10500).toLocaleString()}/yr available to most small companies (raised from £5,000 in April 2025; group cap applies).
+            </div>
+          </div>
+        </Section>
+
+        {/* Salary sacrifice mechanic (v0.3 delta 5) */}
+        <Section title="Salary sacrifice — pension contribution mechanic">
+          <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, padding: 14 }}>
+            <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
+              Salary sacrifice — employee swaps salary for employer pension contribution. Saves employee NIC 8% and employer NIC 15% on sacrificed amount. Pension grows tax-relieved. NMW floor and contract-variation discipline required.
+            </div>
+            <div style={{
+              background: 'var(--c-surface2)', border: '1px dashed var(--c-border)', borderRadius: 10,
+              padding: 10, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5,
+            }}>
+              <div style={{ fontWeight: 700, color: 'var(--c-text2)', marginBottom: 4 }}>Worked example</div>
+              £10,000 salary sacrificed = £10,000 into pension + ~£2,300 NIC saving (employee 8% + employer 15%).
+            </div>
+          </div>
+        </Section>
 
         {/* Section 6 — taxonomy gaps */}
         {/* Section 5b — Knowledge-hall context (filings + sector + valuation) */}
@@ -318,6 +357,9 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
           </div>
         </Section>
 
+        <p style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
+          {BRAND.disclaimer}
+        </p>
       </div>
       {selected && (
         <AssetDetailOverlay

@@ -13,6 +13,7 @@ import {
   ihtSippDelta,
   taperBand,
 } from './fq-calculator.js';
+import { isCouple as readIsCouple } from './_helpers.js';
 
 // ── BUNDLE-DERIVED CONSTANTS ─────────────────────────────────────────────────
 // All declared as `let` so onBundleChange() can refresh them in place. Function
@@ -352,7 +353,7 @@ export function cgtDetail(entity, holdings = [], bundle = 'UK-2026.1') {
     };
   });
 
-  const spousalTransfer = entity.isCouple ? {
+  const spousalTransfer = readIsCouple(entity) ? {
     eligible_value:              pending.reduce((s, p) => s + p.current_value, 0),
     additional_exemption_available: Math.max(0, exemption - exemptionUsed),
   } : null;
@@ -629,13 +630,13 @@ export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
   const net_estate  = Math.max(0, gross - debtTotal - funeral);
 
   // NRB / RNRB
-  let nrb  = NRB;  if (entity.isCouple) nrb  *= 2;
-  let rnrb = RNRB; if (entity.isCouple) rnrb *= 2;
+  let nrb  = NRB;  if (readIsCouple(entity)) nrb  *= 2;
+  let rnrb = RNRB; if (readIsCouple(entity)) rnrb *= 2;
   const rnrbTaperThreshold = IHT.residenceNilRateBandTaperStart || 2000000;
   if (gross > rnrbTaperThreshold) rnrb = Math.max(0, rnrb - (gross - rnrbTaperThreshold) / 2);
   const hasDirectDesc = entity.estate?.directDescendant !== false;
   if (!hasDirectDesc) rnrb = 0;
-  const transferableNRB = entity.isCouple && (entity.spouse?.unusedNRB || 0);
+  const transferableNRB = readIsCouple(entity) && (entity.spouse?.unusedNRB || 0);
   nrb += transferableNRB;
 
   // APR / BPR reliefs — tiered
@@ -739,8 +740,8 @@ export function ihtWaterfall(entity, deltas = {}, bundle = 'UK-2026.1') {
   const afterDownsize = afterGift - propertyDelta;
   const afterTrust    = afterDownsize - trustAmt;
 
-  let nrb  = NRB;  if (entity.isCouple) nrb  *= 2;
-  let rnrb = RNRB; if (entity.isCouple) rnrb *= 2;
+  let nrb  = NRB;  if (readIsCouple(entity)) nrb  *= 2;
+  let rnrb = RNRB; if (readIsCouple(entity)) rnrb *= 2;
   const rnrbTaperAt = IHT.residenceNilRateBandTaperStart || 2000000;
   if (afterTrust > rnrbTaperAt) rnrb = Math.max(0, rnrb - (afterTrust - rnrbTaperAt) / 2);
 
@@ -1023,6 +1024,18 @@ export function taxAndEstateImpact(entity, decision, bundle = 'UK-2026.1') {
 }
 
 // ── §8.14 nominationStatus (full spec — extends existing fq-calculator version) ─
+// CX-4 (2026-05-28): name collision with fq-calculator.nominationStatus.
+// This is the FULLER spec version (returns IHT exposure delta). The
+// fq-calculator version only returns the per-scheme list. Import-rename
+// in callers to `nominationStatusFull` to disambiguate, OR continue
+// importing this one directly from tax-estate-engine.js where the full
+// spec output is needed. Selectors module exports neither (signature
+// difference) — call sites import from the engine module directly.
+
+export function nominationStatusFull(entity, bundle = 'UK-2026.1') {
+  // Re-export under the original name for backwards compatibility.
+  return nominationStatus(entity, bundle);
+}
 
 export function nominationStatus(entity, bundle = 'UK-2026.1') {
   const pensions = entity.assets?.sipp?.pensions || entity.assets?.pensions || [];
@@ -1096,7 +1109,7 @@ export function beneficiaryChain(entity, scenario = null) {
   if (a.isa?.value) {
     const willBenef = entity.estate?.will?.beneficiaries?.[0] || 'Estate';
     routes.push({ person: willBenef, asset_type: 'isa', asset_id: 'isa', value: a.isa.value, route: 'will' });
-    if (entity.isCouple) {
+    if (readIsCouple(entity)) {
       routes.push({ person: 'Spouse (APS)', asset_type: 'isa_aps', asset_id: 'isa_aps', value: a.isa.value, route: 'aps-surviving-spouse' });
     }
   }
@@ -1159,9 +1172,9 @@ export function beneficiaryChain(entity, scenario = null) {
 export function rnrbTaper(entity, bundle = 'UK-2026.1') {
   const gross      = ihtExposure(entity, bundle).gross_estate;
   const taperAt    = IHT.residenceNilRateBandTaperStart || 2000000;
-  const coupleMulti = entity.isCouple ? 2 : 1;
+  const coupleMulti = readIsCouple(entity) ? 2 : 1;
   const baseRnrb   = RNRB * coupleMulti;
-  const transferRnrb = entity.isCouple && entity.spouse?.unusedRNRB ? entity.spouse.unusedRNRB : 0;
+  const transferRnrb = readIsCouple(entity) && entity.spouse?.unusedRNRB ? entity.spouse.unusedRNRB : 0;
   const totalAvail = baseRnrb + transferRnrb;
   const taperLoss  = gross > taperAt ? Math.min(totalAvail, Math.floor((gross - taperAt) / 2)) : 0;
   const netRnrb    = Math.max(0, totalAvail - taperLoss);
@@ -1240,7 +1253,7 @@ export function bprQualifyingValue(entity, bundle = 'UK-2026.1') {
     tier2_50pct_aim_or_not_listed: aimTotal,
     allowance_used:             allowanceUsed,
     allowance_remaining:        allowanceLeft,
-    couple_combined_allowance:  entity.isCouple ? APR_BPR_ALLOWANCE * 2 : null,
+    couple_combined_allowance:  readIsCouple(entity) ? APR_BPR_ALLOWANCE * 2 : null,
     clocks,
     confidence:                 _confidence(entity, ['assets.portfolio']),
     bundle,
@@ -1330,9 +1343,17 @@ export function willLpaStatus(entity) {
   return { will, lpa, flags, confidence: _confidence(entity, ['estate']) };
 }
 
-// ── §8.19 costOfInaction (FULL — arch master §13.3) ──────────────────────────
+// ── §8.19 costOfInactionEstate (FULL — arch master §13.3) ───────────────────
+//
+// 2026-05-28 P0-5: renamed from `costOfInaction` to `costOfInactionEstate` to
+// resolve name collision with fq-calculator's `costOfInaction(e, actionDomain)`.
+// The two functions have DIFFERENT signatures and DIFFERENT return shapes:
+//   - fq-calculator.costOfInaction(e, actionDomain) → number
+//   - tax-estate.costOfInactionEstate(entity, bundle) → { total, per_day, byAction, ... }
+// Deprecated alias `costOfInaction` is exported below to preserve external
+// importers during transition. Remove in next major after consumers migrate.
 
-export function costOfInaction(entity, bundle = 'UK-2026.1') {
+export function costOfInactionEstate(entity, bundle = 'UK-2026.1') {
   const today   = new Date();
   const deadline = PENSION_IHT_DATE;
   const daysLeft = Math.max(0, Math.round((deadline - today) / 86400000));
@@ -1392,9 +1413,9 @@ export function bprAllowanceTracker(entity, bundle = 'UK-2026.1') {
   const allowance = APR_BPR_ALLOWANCE;
 
   // Couple combined
-  const coupleMult   = entity.isCouple ? 2 : 1;
+  const coupleMult   = readIsCouple(entity) ? 2 : 1;
   const coupleTotal  = allowance * coupleMult;
-  const spouseUsed   = entity.isCouple ? (entity.spouse?.bprAllowanceUsed || 0) : 0;
+  const spouseUsed   = readIsCouple(entity) ? (entity.spouse?.bprAllowanceUsed || 0) : 0;
   const coupleUsed   = qv.allowance_used + spouseUsed;
 
   // 7-year refresh date for lifetime gifts
@@ -1448,7 +1469,7 @@ export function bprAllowanceTracker(entity, bundle = 'UK-2026.1') {
       couple_combined_total:    coupleTotal,
       couple_combined_used:     coupleUsed,
       couple_combined_remaining: Math.max(0, coupleTotal - coupleUsed),
-      transferable_on_first_death: entity.isCouple,
+      transferable_on_first_death: readIsCouple(entity),
     },
     holdings_tier1:                    qv.clocks.filter(c => c.cleared && !c.is_aim),
     holdings_tier2_above_allowance:    qv.clocks.filter(c => c.cleared && !c.is_aim && c.current_value > qv.allowance_remaining),
@@ -1484,8 +1505,8 @@ export function ihtProjection(entity, horizonYears = 10) {
                       entity.estate?.directDescendant !== false;
 
   // NRB (static for projection — thresholds frozen per current policy)
-  const nrb  = NRB  * (entity.isCouple ? 2 : 1);
-  const baseRnrb = hasRNRB ? RNRB * (entity.isCouple ? 2 : 1) : 0;
+  const nrb  = NRB  * (readIsCouple(entity) ? 2 : 1);
+  const baseRnrb = hasRNRB ? RNRB * (readIsCouple(entity) ? 2 : 1) : 0;
 
   // RNRB taper threshold (£2m; tapers to £0 at £2.35m single / £2.7m couple)
   const rnrbTaperThreshold = IHT.residenceNilRateBandTaperStart || 2000000;
@@ -1558,3 +1579,12 @@ export function ihtProjection(entity, horizonYears = 10) {
 
   return rows;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2026-05-28 P0-5 DEPRECATED ALIAS
+// External code that previously imported `costOfInaction` from this module
+// continues to work, but should migrate to `costOfInactionEstate` (clearer
+// intent — this is the estate-domain version, distinct from fq-calculator's
+// `costOfInaction(e, actionDomain)` which dispatches across the 12 domains).
+// ─────────────────────────────────────────────────────────────────────────────
+export { costOfInactionEstate as costOfInaction };

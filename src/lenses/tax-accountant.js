@@ -304,7 +304,7 @@ export const lens = {
         id: 'TA-REC-05',
         strategy_id: 'STRAT-CGT-LOSS-HARVEST',
         headline: `Realise ${fmt(giaLosses)} of capital losses to offset future gains`,
-        drill_down: `You have ${fmt(giaLosses)} of unrealised losses in your GIA. Crystallising these before April 5 establishes them as offsettable losses — they can offset realised gains in the same year (after using your £3,000 AEA) and carry forward indefinitely. To avoid the 30-day "bed-and-breakfast" rule, replace the sold holding with a similar-but-not-identical fund (e.g. swap a Vanguard FTSE 100 tracker for an iShares FTSE 100 tracker).`,
+        drill_down: `You have ${fmt(giaLosses)} of unrealised losses in your GIA. Crystallising these before April 5 establishes them as offsettable losses — they can offset realised gains in the same year (after using your £3,000 AEA) and carry forward indefinitely. To avoid the 30-day "bed-and-breakfast" rule, the replacement holding must track the same exposure but be a different fund (e.g. switching from one FTSE 100 tracker family to another). A regulated adviser can confirm whether your specific holdings qualify.`,
         action_steps: [
           'Identify GIA holdings with unrealised losses',
           'Sell at a loss',

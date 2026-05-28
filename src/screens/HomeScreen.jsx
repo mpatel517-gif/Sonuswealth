@@ -37,11 +37,24 @@
 import { useMemo, useState } from 'react'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
+// S1 selector migration (Phase 2): canonical readers come through the
+// engine/selectors/ facade so screens can't drift back to inline raw-field
+// readers (P0-2 class of bug). Direct engine imports in screens are forbidden
+// for selector-covered metrics — see eslint.config.js no-restricted-imports.
 import {
-  calcFQ, calcRisk, calcAPQ, netWorth, fmt,
+  liabilities as engineLiabilitiesTotal,
+  netWorth, investable,
+  fq as calcFQ,
+  protection as protectionScore,
+  concentrationRisk,
+} from '../engine/selectors/index.js'
+import {
+  calcRisk, calcAPQ, fmt,
+  // costOfInaction stays direct: fq-calculator's signature is (entity, actionDomain)
+  // while tax-estate-engine's is (entity, bundle). Don't conflate via facade.
   planFor, diffSet, costOfInaction, totalCoI, ihtSippDelta,
-  investable, liquidityBuffer,
-  debtRatio, protectionScore, estateReadiness, taxEfficiency,
+  liquidityBuffer,
+  debtRatio, estateReadiness, taxEfficiency,
   monthlySurplus,
   daysLeft as engineDaysLeft,
 } from '../engine/fq-calculator.js'
@@ -86,21 +99,41 @@ function greeting() {
 const TITLES = new Set([
   'mr', 'mrs', 'ms', 'miss', 'mx', 'dr', 'prof', 'sir', 'lady', 'dame', 'lord',
 ])
+// P1-11 (2026-05-28): for "Mr T Core" / "Mr T · 35 · …" the previous
+// pickFirstName returned just "T" — the first non-title token in
+// `name` AND in `displayName` was a single letter. New helper applies
+// the same title-preservation rule to both paths.
+function _friendlyFromParts(parts) {
+  let title = null
+  const nonTitle = []
+  for (const tok of parts) {
+    const clean = tok.toLowerCase().replace(/\.$/, '')
+    if (TITLES.has(clean)) {
+      if (!title) title = tok
+    } else {
+      nonTitle.push(tok)
+    }
+  }
+  if (nonTitle.length === 0) return parts[0] || null
+  // Single-letter first token + title present → keep "Mr T" / "Dr T".
+  if (nonTitle[0].length === 1 && title) {
+    return `${title} ${nonTitle[0]}`
+  }
+  return nonTitle[0]
+}
+
 function pickFirstName(entity) {
   // Prefer displayName if present; it's curated.
   const dn = entity?.displayName
   if (typeof dn === 'string' && dn.trim()) {
     const parts = dn.split(/[\s·]+/).filter(Boolean)
-    for (const tok of parts) {
-      if (!TITLES.has(tok.toLowerCase())) return tok
-    }
+    const friendly = _friendlyFromParts(parts)
+    if (friendly) return friendly
   }
   const rawName = entity?.individual?.name || entity?.name || ''
   const parts = rawName.split(/\s+/).filter(Boolean)
-  for (const tok of parts) {
-    if (!TITLES.has(tok.toLowerCase().replace(/\.$/, ''))) return tok
-  }
-  return parts[0] || 'there'
+  const friendly = _friendlyFromParts(parts)
+  return friendly || 'there'
 }
 
 /* ─── Route override map (unchanged from v1 — engine mis-routes these)
@@ -191,50 +224,41 @@ const MODES = [
    ═══════════════════════════════════════════════════════════════════════ */
 
 function MastheadCard({ entity, viewMode, onModeChange }) {
-  const firstName = pickFirstName(entity)
-  const initials = firstName.slice(0, 2).toUpperCase()
+  // Founder feedback 2026-05-28: persona avatar + name was duplicated here AND
+  // in the Dashboard top-right persona switcher. Removed the avatar row; the
+  // greeting line is preserved as a thin date strip (text only, no avatar) so
+  // there's still a "Good afternoon · Thu 28 May" temporal anchor without
+  // re-rendering the persona identity. The full firstName has moved out — the
+  // top-right BW/MR avatar IS the persona indicator now.
+  const _firstName = pickFirstName(entity)  // kept for potential future reintroduction
+  void _firstName  // keep linter quiet — symbol may be unused
   return (
     <div style={{ margin: '0 16px 14px' }}>
-      {/* Row 1 — avatar + greeting (single line, ellipsis if needed) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, var(--c-gold), #b87f30)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 15, fontWeight: 800, color: '#0B1F3A',
-          boxShadow: '0 4px 14px rgba(255,189,89,0.25)',
-        }}>
-          {initials}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1 }}>{greeting()},</div>
-          <div style={{
-            fontSize: 18, fontWeight: 800, color: 'var(--c-text)',
-            letterSpacing: -0.4, marginTop: 2, lineHeight: 1.2,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {firstName} · {fmtHomeDate()}
-          </div>
-        </div>
-        {/* Build stamp */}
-        <div style={{ fontSize: 9, color: 'var(--c-text3)', opacity: 0.5, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-          {BUILD}
-        </div>
+      {/* Thin temporal strip — date only (greeting + day-of-week).
+          Persona identity lives in the Dashboard top-right avatar (V-2 fix). */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 12,
+        fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.2,
+      }}>
+        <span>{greeting()} · {fmtHomeDate()}</span>
+        <span style={{ fontSize: 9, opacity: 0.5, fontVariantNumeric: 'tabular-nums' }}>{BUILD}</span>
       </div>
-      {/* Row 2 — mode tabs, scrollable so all 4 always visible */}
+      {/* Mode tabs, scrollable so all 4 always visible */}
       <div style={{
         display: 'flex', gap: 3, padding: 4, marginTop: 12,
         background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 999,
         overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
       }}>
         {MODES.map(({ id, label }) => (
-          <button key={id} onClick={() => onModeChange?.(id)} style={{
-            padding: '7px 14px', borderRadius: 999, border: 'none', fontFamily: 'inherit',
+          <button key={id} type="button" onClick={() => onModeChange?.(id)} aria-pressed={viewMode === id} style={{
+            padding: '12px 16px', minHeight: 44, borderRadius: 999, border: 'none', fontFamily: 'inherit',
             fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
             background: viewMode === id ? 'var(--c-acc)' : 'transparent',
             color: viewMode === id ? '#0B1F3A' : 'var(--c-text3)',
             cursor: 'pointer', transition: 'background 150ms ease',
             whiteSpace: 'nowrap', flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center',
           }}>
             {label}
           </button>
@@ -271,7 +295,7 @@ function nwComposition(entity) {
     return fromHoldings > 0 ? fromHoldings : num(a.portfolio)
   }, 0) + num(a.investments) + num(a.alternatives)
   const total = pensions + isa + home + cash + business + portfolio || 1
-  return [
+  const segments = [
     { label: 'Pensions',    key: 'pensions',  pct: pensions   / total, color: 'var(--c-acc2)' },
     { label: 'ISA',         key: 'isa',       pct: isa        / total, color: 'var(--c-acc)'  },
     { label: 'Home',        key: 'property',  pct: home       / total, color: 'var(--c-gold)' },
@@ -279,6 +303,19 @@ function nwComposition(entity) {
     { label: 'Business',    key: 'business',  pct: business   / total, color: '#ba8cff' },
     { label: 'Investments', key: 'portfolio', pct: portfolio  / total, color: 'var(--c-success)' },
   ].filter(s => s.pct > 0.005)
+  // V-2 fix (2026-05-28): displayPct uses Hamilton (largest-remainder) so the
+  // printed integers always sum to exactly 100. Earlier each segment was
+  // Math.round(pct*100) independently — produced 21+10+55+4 = 90 on Bruce
+  // because the rounding sliced too aggressively. pct (raw fraction) is kept
+  // for bar widths.
+  const raw = segments.map(s => s.pct * 100)
+  const floors = raw.map(r => Math.floor(r))
+  const remainders = raw.map((r, i) => ({ i, frac: r - floors[i] }))
+  const leftover = 100 - floors.reduce((s, n) => s + n, 0)
+  remainders.sort((a, b) => b.frac - a.frac)
+  const display = floors.slice()
+  for (let k = 0; k < leftover && k < remainders.length; k++) display[remainders[k].i] += 1
+  return segments.map((s, i) => ({ ...s, displayPct: display[i] }))
 }
 
 
@@ -333,7 +370,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
             )}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -1 }}>{fmt(nw)}</span>
+            <span data-tieout="home.nw" data-tieout-raw={String(nw)} style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -1 }}>{fmt(nw)}</span>
           </div>
           <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: 'var(--c-surface2)', marginTop: 8 }}>
             {segments.map(s => <div key={s.label} style={{ width: `${s.pct * 100}%`, background: s.color }} />)}
@@ -342,14 +379,43 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
             {segments.map(s => (
               <button
                 key={s.label}
+                type="button"
                 onClick={() => onDrillMetric?.(`netWorth:${s.key}`)}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
+                aria-label={`Drill into ${s.label} composition (${s.displayPct}%)`}
+                className="sw-tap"
+                style={{ background: 'none', border: 'none', padding: '6px 2px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
               >
                 <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
-                <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments','Inv.')} {Math.round(s.pct * 100)}%</span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments','Inv.')} {s.displayPct}%</span>
               </button>
             ))}
           </div>
+          {/* P13-1 (2026-05-28, IFA must-fix #1): concentration risk chip.
+              Surfaces single-asset-class %  when > 50%. Renders nothing for
+              well-diversified portfolios. Amber at 50–65%, coral at 65%+. */}
+          {(() => {
+            const cr = (() => { try { return concentrationRisk(entity) } catch { return null } })()
+            if (!cr || cr.status === 'ok') return null
+            const label = cr.topClass.charAt(0).toUpperCase() + cr.topClass.slice(1)
+            const pct = Math.round(cr.topPct * 100)
+            const colour =
+              cr.status === 'severe'      ? 'var(--c-coral-text)' :
+              cr.status === 'concentrated'? 'var(--c-amber-text)' :
+                                            'var(--c-amber-text)'
+            const bg =
+              cr.status === 'severe'      ? 'var(--c-tint-coral)' :
+                                            'var(--c-tint-amber)'
+            return (
+              <div title={`${label} accounts for ${pct}% of your wealth — most IFAs would discuss diversification at this level.`} style={{
+                marginTop: 6, padding: '4px 8px',
+                background: bg, color: colour,
+                borderRadius: 6, fontSize: 10, fontWeight: 700,
+                display: 'inline-block', lineHeight: 1.3,
+              }}>
+                Concentration · {label} {pct}%
+              </div>
+            )
+          })()}
         </div>
 
         {/* Score + donut + gaps badge */}
@@ -437,7 +503,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
                 title="Tap to see trend"
                 style={{ cursor: 'zoom-in', borderRadius: 4 }}
               >
-                <Sparkline values={coiSpark} color="var(--c-acc3)" width={40} height={18} />
+                <Sparkline values={coiSpark} color="var(--c-acc3)" width={40} height={18} lowerIsBetter />
               </div>
             )}
           </div>
@@ -1010,7 +1076,7 @@ function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
 }
 
 /* Tiny inline SVG sparkline. `values` = number array, latest last. */
-function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 20, onClick }) {
+function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 20, onClick, lowerIsBetter = false }) {
   if (!values || values.length < 2) return null
   const min = Math.min(...values)
   const max = Math.max(...values)
@@ -1022,10 +1088,22 @@ function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 2
   }).join(' ')
   const last = values[values.length - 1]
   const prev = values[values.length - 2]
-  const trend = last > prev ? 'up' : last < prev ? 'down' : 'flat'
+  const direction = last > prev ? 'up' : last < prev ? 'down' : 'flat'
+  // P1-24 (2026-05-28): semantic colour — for "lower is better" series
+  // (CoI accruing, debt, expenses) rising is BAD. Previous code always
+  // green-on-up which mis-signalled rising CoI as positive.
+  const trend = (lowerIsBetter && direction === 'up') ? 'down'
+              : (lowerIsBetter && direction === 'down') ? 'up'
+              : direction
   const trendColor = trend === 'up' ? 'var(--c-success, #34c759)' : trend === 'down' ? 'var(--c-danger, #ff6b6b)' : color
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} onClick={onClick} style={{ display: 'block', overflow: 'visible', cursor: onClick ? 'zoom-in' : 'default' }}>
+    <svg
+      width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+      onClick={onClick}
+      style={{ display: 'block', overflow: 'visible', cursor: onClick ? 'zoom-in' : 'default' }}
+      role="img"
+      aria-label={`Trend ${trend === 'up' ? 'rising' : trend === 'down' ? 'falling' : 'flat'} — latest ${last.toLocaleString()}, ${values.length} data points`}
+    >
       <polyline points={pts} fill="none" stroke={trendColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
       {/* End dot */}
       <circle
@@ -1598,11 +1676,11 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
   const cash      = safe(() => _num(a.cash) + _num(a.savings) + _num(a.cashSavings) + _num(a.bank), 0)
   const altAssets = safe(() => (Array.isArray(a.alternatives) ? a.alternatives : []).reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0), 0)
 
-  const liabilities = safe(() => {
-    const l = entity?.liabilities || a.liabilities || {}
-    if (Array.isArray(l)) return l.reduce((s, x) => s + (+x.outstanding || +x.balance || 0), 0)
-    return (+l.mortgage || 0) + (+l.loans || 0) + (+l.creditCards || 0) + (+l.otherDebt || 0)
-  }, 0)
+  // P0-2: delegate to the engine's canonical liabilitiesTotal walker so
+  // every screen agrees on the same number. The inline reader that lived
+  // here only knew `l.mortgage` / `l.loans` keys and silently dropped
+  // Bruce's £180k BTL mortgage (stored under `l.otherLoans[]`).
+  const liabilities = safe(() => engineLiabilitiesTotal(entity), 0)
 
   const totalAssets = pensions + isa + property + portfolio + business + cash + altAssets
 
@@ -1788,6 +1866,76 @@ const BUILD = (() => {
   return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
 })()
 
+// ─────────────────────────────────────────────────────────────────────────────
+// P13-2 (2026-05-28, IFA must-fix #2): DeficitBanner
+// Renders only when monthlySurplus(entity) is negative. Leads with the £/mo
+// shortfall, the £/yr cost, and two prominent CTAs (cashflow drill + income).
+// For Mr T at -£552/mo this is the most important number on the dashboard
+// and was previously buried inside the Cashflow tab.
+// ─────────────────────────────────────────────────────────────────────────────
+function DeficitBanner({ entity, onNav }) {
+  const ms = (() => {
+    try { return monthlySurplus(entity) } catch { return null }
+  })()
+  if (!ms) return null
+  const surplus = +ms.surplus || 0
+  const deficit = +ms.deficit || 0
+  const monthly = surplus < 0 ? -surplus : (deficit > 0 ? deficit : 0)
+  if (monthly <= 0) return null  // not in deficit — render nothing
+  const annual = monthly * 12
+  return (
+    <div role="region" aria-label="Cashflow deficit alert" style={{
+      margin: '0 16px 14px',
+      padding: '14px 16px',
+      background: 'var(--c-tint-coral)',
+      border: '1px solid var(--c-coral-text)',
+      borderRadius: 14,
+      display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--c-coral-text)', marginBottom: 4 }}>
+            Monthly shortfall
+          </div>
+          <div data-tieout="home.monthly-deficit" data-tieout-raw={String(monthly)} style={{ fontSize: 26, fontWeight: 800, color: 'var(--c-coral-text)', letterSpacing: -0.6, lineHeight: 1 }}>
+            −{fmt(monthly)}/mo
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4, lineHeight: 1.4 }}>
+            That's <strong>{fmt(annual)}/year</strong> coming out of savings or going onto credit.
+            Fixing this is priority one — the other scores wait.
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => onNav?.('flow')}
+          aria-label="Open Cashflow to investigate the shortfall"
+          style={{
+            padding: '12px 16px', minHeight: 44, borderRadius: 100,
+            background: 'var(--c-coral-text)', color: '#fff',
+            border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center',
+          }}
+        >See where it's going →</button>
+        <button
+          type="button"
+          onClick={() => onNav?.('money/income')}
+          aria-label="Open Income statement"
+          style={{
+            padding: '12px 16px', minHeight: 44, borderRadius: 100,
+            background: 'transparent', color: 'var(--c-coral-text)',
+            border: '1px solid var(--c-coral-text)', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center',
+          }}
+        >Income statement →</button>
+      </div>
+    </div>
+  )
+}
+
 export default function HomeScreen({
   entity,
   viewMode: _viewModeProp,  // eslint-disable-line no-unused-vars — ignored; local state owns this
@@ -1888,6 +2036,12 @@ export default function HomeScreen({
       {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
       <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
 
+      {/* P13-2 (2026-05-28, IFA must-fix #2): deficit-led hero.
+          When monthlySurplus is negative, the dashboard now leads with
+          the deficit headline instead of letting FQ-score lull a user
+          who's losing money each month. Renders nothing when surplus ≥ 0. */}
+      <DeficitBanner entity={entity} onNav={onNav} />
+
       {/* ── Anchor row (inline AnchorRow component defined above) ─────── */}
       <AnchorRow
         nw={nw}
@@ -1953,7 +2107,7 @@ export default function HomeScreen({
         textAlign: 'center', fontSize: 11, color: 'var(--c-text3)',
         padding: '14px 24px 8px', lineHeight: 1.6,
       }}>
-        Information &amp; guidance only · Not regulated financial advice · FCA boundary applies
+        Information and guidance only · Not personal advice · FCA boundary applies
       </div>
 
       {/* Nav spacer — 78px bottom nav + 52px AskPill + 8px gap + 12px breathing room */}
@@ -1967,11 +2121,28 @@ export default function HomeScreen({
    Used inside ActionsCard at the bottom of the right column.
    ═══════════════════════════════════════════════════════════════════════ */
 
-function WhatIfSection({ viewMode, onSelectScenario, onFreeform }) {
+function WhatIfSection({ viewMode, onSelectScenario, onFreeform, entity }) {
   const [freeform, setFreeform] = useState('')
   const [showAll, setShowAll]   = useState(false)
   const isActive = viewMode === 'scenario'
-  const visible  = showAll ? DE_SCENARIOS : DE_SCENARIOS.slice(0, 5)
+  // P1-22 (2026-05-28): prefer user's saved scenarios over canned list.
+  // Each live persona has 3-4 scenarios in entity.scenarios — show those
+  // first, fall back to DE_SCENARIOS canned list when none exist.
+  const userScenarios = Array.isArray(entity?.scenarios) ? entity.scenarios : []
+  const scenarios = userScenarios.length > 0
+    ? [
+        ...userScenarios.map(s => ({
+          key: s.id || s.key || s.name,
+          label: s.name || s.label || 'Scenario',
+          sub: s.summary || s.description || s.note || 'Your saved scenario',
+          icon: s.icon || '⚙',
+          tag: 'YOURS',
+          engine: !!s.engine_backed,
+        })),
+        ...DE_SCENARIOS,
+      ]
+    : DE_SCENARIOS
+  const visible  = showAll ? scenarios : scenarios.slice(0, 5)
 
   return (
     <div style={{
@@ -2169,6 +2340,7 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
             viewMode={viewMode}
             onSelectScenario={setIntakeScenario}
             onFreeform={q => onNav?.('de', { query: q })}
+            entity={entity}
           />
         </>
       )}

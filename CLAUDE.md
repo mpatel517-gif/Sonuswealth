@@ -1,4 +1,4 @@
-# CAELIXA — CLAUDE CODE PROJECT FILE
+# SONUSWEALTH — CLAUDE CODE PROJECT FILE
 
 > **Read this file before doing anything.** It is auto-loaded into every Claude Code session in this repo. It is the operating contract for every agent — human or AI — that touches this codebase.
 
@@ -85,11 +85,11 @@ If a screen doesn't render its purpose, fix it. If the canonical purpose isn't i
 
 ---
 
-## §1 — WHAT CAELIXA IS
+## §1 — WHAT SONUSWEALTH IS
 
-Caelixa is a lifetime financial intelligence platform. It shows users their complete financial picture — assets, liabilities, scores, projections, tax exposure, estate planning — across their entire life. Trading entity: MBKR Limited.
+Sonsuwealth is a lifetime financial intelligence platform. It shows users their complete financial picture — assets, liabilities, scores, projections, tax exposure, estate planning — across their entire life. Trading entity: MBKR Limited.
 
-**May 20 directive (binding):** Full first-version build by **20 May 2026**. No scope cuts. No deferral. No "ships later" tables. Every spec section in every v1.3 (or higher) per-tab spec is in scope. Time is a constraint, not a suggestion.
+**May 20 directive (binding):** Full first-version build by **30 June 2026**. No scope cuts. No deferral. No "ships later" tables. Every spec section in every v1.3 (or higher) per-tab spec is in scope. Time is a constraint, not a suggestion.
 
 ---
 
@@ -101,14 +101,15 @@ Caelixa is a lifetime financial intelligence platform. It shows users their comp
 ├── BUILD-PLAN.md                ← RETIRED. Historical record of Waves 0–2.
 │                                  Do not execute from it. Use per-tab specs +
 │                                  AUTHORITY-MAP.md instead.
-├── parts/                       ← SYMLINK to Google Drive Caelixa folder
+├── parts/                       ← SYMLINK to Google Drive finio folder
 │   ├── 0 Project/               founder skill, tracker
 │   ├── 1-Foundation/            foundation, X28 design, AUTHORITY-MAP.md
 │   ├── 2-Product/               per-tab specs (cashflow, home, mymoney, etc.)
 │   ├── 3-Engine/                engine architecture, fixtures, schema
 │   ├── 4-Operations/            tracker, batch plan, master remaining work
 │   ├── 10-All Clusters/         architecture master, master backlog
-│   ├── 100-Chat transfers/      session handovers, dated
+│   ├── 5 - Goto Maerket
+    |__ 100-Chat transfers/      session handovers, dated
 │   └── 200 Project Updates/     SSR, folder-refresh changelogs
 ├── src/
 │   ├── App.jsx
@@ -144,14 +145,14 @@ Every spec frontmatter cites one or more authority documents (Foundation v1.8, S
 
 ## §4 — NAMING (D-NAME-1)
 
-The product is **Caelixa**. The score is **Caelixa Wealth Score**. The risk score is **Caelixa Risk Score**.
+The product is **Sonuswealth**. The score is **Sonu Wealth Score**. The risk score is **Sonu Risk Score**.
 
 | Banned in user-facing strings | Use instead |
 |---|---|
-| "Finio" (anywhere a user can see it) | "Caelixa" |
-| "Finio Score" / "FQ Score" | "Caelixa Wealth Score" |
-| "Risk Score" alone (ambiguous) | "Caelixa Risk Score" |
-| `{{PRODUCT_NAME}}` placeholder | "Caelixa" (D-NAME-1 closed at v1.2) |
+| "Finio" (anywhere a user can see it) | "Sonu" |
+| "Finio Score" / "FQ Score" | "Sonu Wealth Score" |
+| "Risk Score" alone (ambiguous) | "Sonu Risk Score" |
+| `{{PRODUCT_NAME}}` placeholder | "Sonu" (D-NAME-1 closed at v1.2) |
 
 Filenames keep the historical `finio-` prefix where it already exists (`fq-calculator.js`, `finio-foundation-v1_2.md`). **Do not rename files** to "caelixa-". This is a deliberate split between filename history and user-facing brand.
 
@@ -235,27 +236,27 @@ Output the checklist as a markdown table before writing code. Founder reviews an
 
 ---
 
-## §8 — MAY 20 DIRECTIVE (BINDING)
+## §8 — June 230 DIRECTIVE (BINDING)
 
-Demo on **20 May 2026**. Full first-version build of every per-tab v1.3 spec. No scope cuts. No "Phase 2" deferrals. No "ships later" tables in agent reports.
+Demo on **30 May 2026**. Full first-version build of every per-tab v1.3 spec. No scope cuts. No "Phase 2" deferrals. No "ships later" tables in agent reports.
 
 **What this means in practice:**
 - The 95%+ of Cashflow v1.3 not yet CODED is in scope for this run.
-- All cross-cuttings (X24 mode 3, X28 view modes + variance overlays + plan staleness, X29 six-layer diff, X25 purpose statements, X26 pride layer, X27 estate-readiness) must reach CODED before May 20.
+- All cross-cuttings (X24 mode 3, X28 view modes + variance overlays + plan staleness, X29 six-layer diff, X25 purpose statements, X26 pride layer, X27 estate-readiness) must reach CODED before June 30.
 - Engine stubs reach real implementation, not stay as placeholders.
 - The Risk overlay reaches CODED (currently untracked in git).
-- All five primary tabs reach INTEGRATED (cross-tab flows working) before May 20.
+- All five primary tabs reach INTEGRATED (cross-tab flows working) before June 30.
 
-**What is not in scope for May 20:**
+**What is not in scope for June 20:**
 - PRODUCTION (live deploy with real users) — that is post-demo.
 - Open Banking integration beyond manual entry — Phase 1.1/1.2 phasing in spec stands.
 - Jurisdictions other than UK — UK-2026.1 only at demo.
 
-**Quality bar (D-QUALITY-BAR-1, 4 May 2026):** First-round build target is **85–90% ready, not "demo-grade quick"**. Atomic refactors over shims. Configure properly over expedience. Time pressure does not lower the quality bar.
+**Quality bar (D-QUALITY-BAR-1, 5 June 2026):** First-round build target is **85–90% ready, not "demo-grade quick"**. Atomic refactors over shims. Configure properly over expedience. Time pressure does not lower the quality bar.
 
 If a tradeoff arises between depth-of-feature and surface-coverage, founder decides — never the agent.
 
-**Sequencing note (build order to May 20):**
+**Sequencing note (build order to June 20):**
 1. **Cross-cuttings first.** X24 (goal-seek + "I want this different" affordance), X28 (4-mode view toggle, variance overlays, plan staleness card, plan commit flow), and X29 (six-layer diff layer + `--c-diff` token + DeltaChip / CausalityStripe / PulseRing components) land before per-tab depth pull-through. Every primary tab consumes them; building tabs first and bolting cross-cuttings on second produces rework.
 2. **Engine real-impl in parallel.** The Wave-0 stubs (`goalSeek`, `commitPlan`, `planStaleness`, `varianceFor`, `diffSet`, `causalityChain`, `cashflowHealth`, `fundedRatio`, `probabilityOfSuccess`, etc.) get real implementations on a parallel track to the cross-cutting UI work. Engine and UI converge before any per-tab depth wave starts. **Event store is Supabase from Wave 1A onwards (D-EVENTSTORE-1) — no localStorage stub at any tier.**
 3. **Per-tab depth pull-through after cross-cuttings + engine are stable.** Cashflow §A waterfall / bill calendar / surplus allocator, §B funded-ratio gauge / PoS / MC fan / G-K corridor / 5 scenarios, §C PRC/PCC / Reality Engine / efficient frontier; MyMoney L1/L2/L3 drill-downs; Tax & Estate full IHT + CoI + gift clock; Timeline trajectory + plan-builder; Risk overlay 5×5 cross-map + radar + protection-gap. Per-tab agents follow §7 reading + walk-through checklist before starting.

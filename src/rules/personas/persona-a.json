@@ -11,7 +11,7 @@
   "isCouple": false,
   "hasTrust": true,
   "hasDBPension": false,
-  "isHigherRateTaxpayer": false,
+  "isHigherRateTaxpayer": true,
   "age": 62,
   "targetIncome": 120000,
   "dataLastUpdated": "2026-05-18",

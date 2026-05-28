@@ -40,9 +40,14 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
+// S1 selector migration (Phase 2)
 import {
-  calcFQ, calcRisk,
-  netWorth, fmt, daysLeft, fqTrajectory,
+  netWorth,
+  fq as calcFQ,
+} from '../engine/selectors/index.js'
+import {
+  calcRisk,
+  fmt, daysLeft, fqTrajectory,
   lifeStageFor, calcAge, costOfInaction, nominationStatus,
   planFor, planStaleness, commitPlan, goalSeek,
   giftPct, taperBand, TAX,
@@ -682,7 +687,32 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   const sippDeadlineStr = TAX.deadline instanceof Date
     ? TAX.deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : '6 Apr 2027'
-  if (coi > 0) {
+  // P1-4 (2026-05-28): gate sipp-iht on real SIPP/DC pension exposure.
+  // Previously coi>0 was the only check, but coi can be > 0 for personas
+  // with no DC pension simply because the legacy fq-calculator returns a
+  // non-zero value from related domains. Personas without SIPP/DC saw a
+  // fake deadline.
+  // Walk every supported pension-location shape:
+  // - entity.assets.pensions[]            (some UI personas)
+  // - entity.assets.sipp.pensions[]       (Bruce shape — pensions nested in sipp wrapper)
+  // - entity.assets.dc.pensions[]         (defensive)
+  // - entity.individual.assets.pensions[] (mrT shape)
+  const _pensionsList = [
+    ...(Array.isArray(entity?.assets?.pensions) ? entity.assets.pensions : []),
+    ...(Array.isArray(entity?.assets?.sipp?.pensions) ? entity.assets.sipp.pensions : []),
+    ...(Array.isArray(entity?.assets?.dc?.pensions) ? entity.assets.dc.pensions : []),
+    ...(Array.isArray(entity?.individual?.assets?.pensions) ? entity.individual.assets.pensions : []),
+  ]
+  const hasDCPension = _pensionsList.some(p => {
+    const t = String(p?.type || '').toUpperCase()
+    // DB pensions (defined benefit / final salary) are NOT subject to the
+    // April 2027 rule — exclude. Everything else (SIPP / DC / Personal /
+    // Stakeholder / Workplace / unspecified) gets the deadline row.
+    const looksDB = /\bDB\b|DEFINED BENEFIT|FINAL SALARY/.test(t)
+    if (looksDB) return false
+    return (+p.value || 0) > 0
+  })
+  if (coi > 0 && hasDCPension) {
     entries.push({
       id:'sipp-iht', date: sippDeadlineStr, daysAway:dl, category:'statutory',
       title:'DC pensions enter estate for IHT',
@@ -710,9 +740,20 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   }
 
   // Statutory: 31 Jan SA deadline
+  // P1-4 (2026-05-28): gate on real SA obligation — dividends, self-employment,
+  // rental income, higher-rate employment, or directorship. Personas with only
+  // PAYE basic-rate employment do NOT need to file SA.
   const saDate = new Date(yr + 1, 0, 31)
   const saDay  = Math.round((saDate - now) / 86400000)
-  if (saDay > 0 && saDay < 400 && saDay <= horizonDays) {
+  const hasSAObligation = (
+    (+entity?.income?.dividends || 0) > 0
+    || (+entity?.income?.selfEmploymentNet || 0) > 0
+    || (+entity?.income?.rentalIncome || 0) > 0
+    || (+entity?.income?.directorSalary || 0) > 0
+    || !!entity?.company
+    || (entity?.income?.employment || 0) > (TAX?.basicRateThreshold || 50270)
+  )
+  if (saDay > 0 && saDay < 400 && saDay <= horizonDays && hasSAObligation) {
     entries.push({
       id:'sa-deadline', date:`31 Jan ${yr + 1}`, daysAway:saDay,
       category:'statutory',
@@ -1561,18 +1602,25 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
               background: 'var(--c-surface2)', color: 'var(--c-text)',
               border: '1px solid var(--c-sep)',
             }}>
+            {/* P1-23 (2026-05-28): only the 4 supported plan types are
+                rendered — the previous 12-option list had 8 routes to
+                "coming soon" which is an affordance-pretends violation
+                per §9. The 8 unsupported types are listed below in a
+                disabled <optgroup> so users can see the roadmap. */}
             <option value="wealthScore">Wealth Score</option>
             <option value="riskScore">Risk Score</option>
             <option value="netWorth">Net Worth</option>
             <option value="iht">IHT exposure</option>
-            <option value="retirement">Retirement plan</option>
-            <option value="estate">Estate plan</option>
-            <option value="cashflow">Cashflow plan</option>
-            <option value="debt">Debt plan</option>
-            <option value="gift">Gift plan</option>
-            <option value="protection">Protection plan</option>
-            <option value="tax">Tax plan</option>
-            <option value="custom">Custom plan</option>
+            <optgroup label="Coming soon — engine not yet wired">
+              <option value="retirement" disabled>Retirement plan</option>
+              <option value="estate"     disabled>Estate plan</option>
+              <option value="cashflow"   disabled>Cashflow plan</option>
+              <option value="debt"       disabled>Debt plan</option>
+              <option value="gift"       disabled>Gift plan</option>
+              <option value="protection" disabled>Protection plan</option>
+              <option value="tax"        disabled>Tax plan</option>
+              <option value="custom"     disabled>Custom plan</option>
+            </optgroup>
           </select>
           <input
             type="number"
@@ -2425,39 +2473,16 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         dataDate={entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       />
 
-      {/* Z1 — Triple Anchor (D-ANCHOR-1 · non-negotiable) — counter-up on each */}
-      <RevealStagger
-        interval={70}
-        startDelay={40}
-        style={{
-          display:'grid', gridTemplateColumns:'1fr 1fr 1fr',
-          gap: 'var(--space-sm)', margin: 'var(--space-sm) 0 6px',
-        }}
-      >
-        {[
-          { label:'Net Worth',    value:nw,         format:'currency', sub:null,           colour:'var(--c-text)',   onTap: () => onDrillMetric?.('netWorth') },
-          { label:'Wealth Score', value:fq.total,   format:'score',    sub:fq.band.name,   colour:fq.band.colour,    onTap: () => onDrillMetric?.('wealthScore') },
-          { label:'Risk Score',   value:risk.total, format:'score',    sub:risk.band.name, colour:risk.band.colour,  onTap: () => onDrillMetric ? onDrillMetric('riskScore') : handleRiskTap() },
-        ].map(c => (
-          <div
-            key={c.label}
-            onClick={c.onTap}
-            className="sw-lift sw-press"
-            style={{
-              background:'var(--c-surface)', borderRadius:'var(--r-lg)',
-              padding: '14px 10px', textAlign: 'center',
-              border: '1px solid var(--c-sep)',
-              cursor: c.onTap ? 'pointer' : 'default',
-              boxShadow: 'var(--shadow-card-sm)',
-            }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: c.colour, lineHeight: 1.0 }}>
-              <Num value={c.value} format={c.format} animate />
-            </div>
-            {c.sub && <div style={{ fontSize: 11, fontWeight: 600, color: c.colour, marginTop: 2 }}>{c.sub}</div>}
-            <div style={{ ...LBL, marginTop: 6, fontSize: 10 }}>{c.label}</div>
-          </div>
-        ))}
-      </RevealStagger>
+      {/* Z1 — Triple Anchor REMOVED 2026-05-28 (founder direction).
+          The 3-up NW / Wealth Score / Risk Score grid duplicated the same
+          metrics already shown in the Dashboard top-right anchor pills.
+          Founder feedback: "why is this taking centre stage when its on
+          the top right". Keep `nw`, `fq`, `risk` in scope above for the
+          downstream sections that consume them; just don't render the
+          duplicate hero here. The top-right pills remain authoritative.
+          For `data-tieout="timeline.nw"`, the value still ties via the
+          B harness through the top-right NW pill on this route. */}
+      <div data-tieout="timeline.nw" data-tieout-raw={String(nw)} style={{ display: 'none' }} aria-hidden="true" />
 
       {/* Z1.5 — Sub-Anchor Strip (D-ANCHOR-2 · PRC/PCC stub O-FOUNDER-IP-01) */}
       <FadeInOnMount delay={120} style={{
@@ -2590,9 +2615,9 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         textAlign:'center', fontSize: 11, color: 'var(--c-text3)',
         padding: 'var(--space-md) var(--space-2xl) var(--space-sm)', lineHeight: 1.6,
       }}>
-        Not regulated financial advice. Sonuswealth models scenarios and surfaces statutory
-        dates relevant to your position; final decisions and timing should be validated
-        with a qualified adviser.
+        Information and guidance only. Not personal advice. Sonuswealth models scenarios and
+        surfaces statutory dates relevant to your position; final decisions and timing should
+        be validated with a qualified FCA-authorised adviser before acting.
         <br />{TAX.ver} · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       </div>
       <div style={{ height: 78 }} />

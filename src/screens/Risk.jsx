@@ -35,8 +35,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'
+// S1 selector migration (Phase 2): canonical netWorth via facade. Other
+// risk-specific helpers stay in fq-calculator (their re-export through
+// selectors would force every screen to take the selector module on as
+// a structural dependency without benefit).
 import {
-  fmt, netWorth, calcFQ, fqBand,
+  netWorth,
+  fq as calcFQ,
+} from '../engine/selectors/index.js'
+import {
+  fmt, fqBand,
   calcRisk, riskBand, financialProfile,
   calcAPQ, planFor,
   calcRiskHistory,
@@ -159,7 +167,12 @@ function RiskRing({ score, band }) {
           letterSpacing:-2, lineHeight:1,
         }}>
           <Num value={score} format="score" animate />
-          <span style={{ fontSize:14, fontWeight:400, color:'var(--c-text3)', marginLeft:2 }}>/100</span>
+          {/* V-6 fix (2026-05-28): denominator dropped. Prior "/93" leaked the
+              dimension max-cap into the user-facing display (BTR is 0 at
+              launch, so the engine's effective ceiling is 93). Users read
+              "71/93" as a fraction with an arbitrary denominator. The band
+              label ("Protected" / "Stretched" / etc.) below is enough context;
+              the number stands on its own like the Wealth Score. */}
         </div>
       </foreignObject>
       <text x={100} y={120} textAnchor="middle"
@@ -1418,7 +1431,7 @@ function X25Header({ originLabel = 'Home', onBack }) {
             borderLeft:'3px solid var(--c-acc)',
             padding:'14px 18px',
           }}>
-            <button onClick={() => setCollapsed(true)} className="sw-press" style={{
+            <button type="button" onClick={() => setCollapsed(true)} aria-label="Collapse risk story banner" className="sw-press" style={{
               position:'absolute', right:10, top:10,
               background:'none', border:'none', cursor:'pointer',
               color:'var(--c-text3)', fontSize:14,
@@ -1510,7 +1523,7 @@ function RiskPerceptionQuestionnaire({ entity, onClose, onCommit }) {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div className="sw-eyebrow">Step {step + 1} of {total} · Risk perception</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text3)', fontSize: 18 }}>×</button>
+          <button type="button" onClick={onClose} aria-label="Close risk perception drill" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text3)', fontSize: 18 }}>×</button>
         </div>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)', marginBottom: 6, lineHeight: 1.3 }}>{q.title}</div>
         {q.sub && <div style={{ fontSize: 12, color: 'var(--c-text3)', marginBottom: 16, lineHeight: 1.5 }}>{q.sub}</div>}
@@ -1832,6 +1845,8 @@ function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
             label="You own"
             value={fmt(nw)}
             isMoney
+            tieout="risk.nw"
+            tieoutRaw={nw}
             onTap={() => onDrillMetric?.('netWorth')}
           />
         </div>
@@ -1840,7 +1855,7 @@ function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
   )
 }
 
-function SecondaryTile({ label, value, band, isMoney = false, onTap }) {
+function SecondaryTile({ label, value, band, isMoney = false, onTap, tieout, tieoutRaw }) {
   return (
     <button
       onClick={onTap}
@@ -1864,7 +1879,10 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap }) {
       }}>
         {label}
       </div>
-      <div style={{
+      <div
+        data-tieout={tieout || undefined}
+        data-tieout-raw={tieoutRaw != null ? String(tieoutRaw) : undefined}
+        style={{
         fontSize: isMoney ? 16 : 20,
         fontWeight: 800,
         color: band ? band.colour : 'var(--c-text)',
@@ -1889,7 +1907,7 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Default export — full-page Risk surface.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Risk({ entity, onHome, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
+export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)

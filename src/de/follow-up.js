@@ -132,7 +132,7 @@ export function buildAdviserCTA(tree, offOntology = false) {
       ? 'This scenario is complex enough that an IFA review would add value — the engine has modelled the available paths, but a qualified adviser can account for nuances specific to your situation.'
       : `After ${MAX_ROUNDS} rounds of refinement, some gaps remain. An FCA-authorised adviser can fill in the remaining uncertainty.`,
     confidence: 'PARTIAL',
-    fcaDisclaimer: 'Not regulated financial advice — verify with a qualified FCA-authorised adviser before acting.',
+    fcaDisclaimer: 'Information and guidance only. Not personal advice — verify with a qualified FCA-authorised adviser before acting.',
   };
 }
 

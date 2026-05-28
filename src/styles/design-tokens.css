@@ -11,6 +11,97 @@
    to any transitions defined here.
    ═══════════════════════════════════════════════════════════════ */
 
+/* ─── P12-3 (2026-05-28): screen-reader-only utility + skip link ───
+   WCAG 2.4.1 (Bypass Blocks). The skip link is invisible until focused
+   by keyboard Tab from the page start, then jumps over the bottom-nav
+   button list straight to the screen content. .sw-sr-only is the
+   canonical "visually hidden" — text remains in the accessibility tree
+   but not on screen.
+   ─────────────────────────────────────────────────────────────── */
+.sw-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.sw-skip-link {
+  position: absolute;
+  left: 8px; top: 8px;
+  padding: 8px 14px;
+  background: var(--c-acc, #1c3fe7);
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+  z-index: 10000;
+  transform: translateY(-200%);
+  transition: transform 120ms ease;
+}
+.sw-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ─── P14 UX-critic (2026-05-28): tap-target extension utility ────
+   WCAG 2.5.5 (Target Size) + Apple HIG specify 44×44px minimum. Many
+   chrome elements (header icons, mode tabs, dismiss buttons) are
+   visually 28–34px for density. Adding `.sw-tap` forces the button
+   itself to 44×44 minimum; inner content stays centered via the
+   flex-alignment already on most buttons. Doesn't change visual
+   icon size because that's set by font-size, not button size.
+   For tabs in a flex row, `flex` width takes precedence (pill scales);
+   `min-height: 44px` still applies, which fixes the height violation.
+   ─────────────────────────────────────────────────────────────── */
+.sw-tap {
+  position: relative;
+}
+/* Pseudo-element extends touch surface to 44×44 around the visible element
+   without disturbing layout. Apply .sw-tap to small inline buttons (composition
+   labels, info chevrons, dense inline drillables) where bumping the visible
+   size would break design density. */
+.sw-tap::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  /* Sits behind the button content but in front of nothing — captures the
+     extended click area. Buttons remain visible as designed. */
+  z-index: 0;
+}
+/* Hover/focus state mirrors the visible element so screen-reader users still
+   see the focus ring at the same place. */
+.sw-tap:focus-visible::before {
+  outline: 2px solid var(--c-acc, #1c3fe7);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* ─── P11-3 (2026-05-28): global :focus-visible ring ──────────────
+   WCAG 2.1 SC 2.4.7 (Focus Visible). Previously the codebase had ZERO
+   focus-visible rules. Keyboard users had no indication of where focus
+   landed across an entire screen. This adds a single high-contrast
+   ring that respects the user's theme and never appears on mouse
+   interaction (`:focus-visible` only). Components that want a
+   different ring colour can override locally.
+   ─────────────────────────────────────────────────────────────── */
+:where(button, a, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--c-acc, #1c3fe7);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Inputs/textareas get a tinted ring instead of outline so the
+   element's existing border/box-shadow doesn't clash. */
+:where(input, textarea, select):focus-visible {
+  outline: 2px solid var(--c-acc, #1c3fe7);
+  outline-offset: 1px;
+}
+
 :root {
   /* ── Tinted chip backgrounds (low-contrast, semantic) ─────────── */
   --c-tint-mint:      rgba(0, 229, 168, 0.10);

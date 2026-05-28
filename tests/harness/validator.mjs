@@ -42,9 +42,13 @@ function personaSummary(p) {
   const age = p.age ?? (p.dob ? new Date().getFullYear() - new Date(p.dob).getFullYear() : 'unknown');
   const arch = p.archetype || p.lifeStageName || p.type || 'individual';
   const status = p.household_status || p.status || (p.isCouple ? 'couple' : 'single');
-  const hr = p.isHigherRateTaxpayer ? 'higher-rate taxpayer' : 'basic-rate taxpayer';
+  // Phase C: the static `isHigherRateTaxpayer` flag is unreliable for
+  // decumulation personas (Bruce had it as false despite £96k drawdown). Note
+  // the flag but let DeepSeek decide tax-band from the actual snapshot
+  // pl.gross_income — the prompt below carries that figure.
+  const hrFlag = p.isHigherRateTaxpayer ? 'flagged higher-rate' : 'flagged basic-rate';
   const target = p.targetIncome ? `target income £${p.targetIncome.toLocaleString()}` : '';
-  return `${name}, age ${age}, ${arch} (${status}, ${hr})${target ? '; ' + target : ''}`;
+  return `${name}, age ${age}, ${arch} (${status}, ${hrFlag} — actual band derives from gross income in P&L below)${target ? '; ' + target : ''}`;
 }
 
 export function buildPrompt(persona, taxYear, macroVars, engineOutput) {
@@ -76,6 +80,7 @@ IHT rules reminder (the engine applies these; do not flag as wrong if engine RNR
 - A gross estate of £8M+ has RNRB tapered fully to £0 — that's correct, not a bug
 - SIPPs are OUTSIDE the IHT estate until 6 April 2027. For tax years ending before that date the engine excludes SIPP from gross estate — that is correct.
 - State pension active: ${pl.state_pension > 0 ? 'YES, £' + pl.state_pension.toLocaleString() + '/yr' : 'NO (pre-state-pension-age)'}
+- IHT GROSS ESTATE vs NET WORTH: gross estate is sum of CHARGEABLE assets at death — it does NOT deduct outstanding mortgages, secured loans, or personal debts for the purpose of the NRB/RNRB comparison. So gross estate > net worth is NORMAL on any persona with debt. Example: assets £1.4M, mortgage £0.5M, NW £0.9M but gross estate £1.4M because liabilities reduce NW, not gross estate. Funeral expenses and a small class of allowable debts are deductible at the FINAL liability stage, after gross-estate determination. Do NOT flag (gross estate > NW by amount of mortgage/loan outstanding) as an inconsistency.
 
 Engine output:
 - Net worth: ${fmt(engineOutput.net_worth)}

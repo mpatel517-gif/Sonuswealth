@@ -12,23 +12,31 @@ import {
 
 import {
   loadBundle, loadMacroVariablesForYear, loadPersona,
+  selectRuleBundle, bundleIdForTaxYear,
 } from '../../src/lib/data-source.js';
 
 import { setBundle, resetBundle } from '../../src/engine/_bundle.js';
 import { rippleEffect } from '../../src/engine/ripple.js';
+import { isCouple as _adapterIsCouple } from '../../src/engine/_helpers.js';
 
 import { evaluate as evaluateEligibility } from '../../src/engine/eligibility.js';
 
-// Map a tax year ("2025/26") to the canonical bundle ID we'd expect in
-// Supabase. If a year-matched bundle is not seeded yet, loadBundle() returns
-// the canonical UK-2026.1.1 — so back-tests still run, just with current-year
-// rates against historical personas (the existing behaviour). Once historical
-// bundles (UK-2024.1, UK-2025.1, etc.) are seeded, this map automatically
-// resolves to them.
+// Phase A3: tax-year → bundleId resolution lives in data-source.js
+// (bundleIdForTaxYear + selectRuleBundle). The harness now requests the
+// real year-matched bundle (UK-2021.1.1 ... UK-2026.1.1) with explicit
+// asOfDate so mid-year legislation events fold in correctly. No more
+// silent fallback to UK-2026.1.1.
 function bundleIdFor(taxYear) {
+  return bundleIdForTaxYear(taxYear, 'UK');
+}
+
+// End-of-tax-year asOfDate so any mid-year event that fired during the year
+// has been applied (e.g. CGT 18/24 from 30 Oct 2024 lands for the 2024/25
+// snapshot). Override by passing asOfDate explicitly if you need a snapshot
+// of the rules as-of a specific date within the year.
+function endOfTaxYearDate(taxYear) {
   const start = parseInt(taxYear.split('/')[0], 10);
-  if (start === 2026) return 'UK-2026.1.1';
-  return `UK-${start}.1`;
+  return new Date(`${start + 1}-04-05T23:59:59Z`);
 }
 
 // ─── Balance-sheet summariser ────────────────────────────────────────────────
@@ -65,13 +73,18 @@ function summariseBalanceSheet(entity, { nw, gr, inv }) {
     'value'
   );
 
-  // Each category: flat + nested (canonical helper pattern). Engine's
-  // _propertyTotal walks both; ihtDynamic now does too after the BUG-1 fix.
-  const cash      = flatCash      + nestedCash;
-  const sipp      = flatSipp      + nestedSipp;
-  const property  = flatResidence + nestedProperty;
-  const portfolio = flatPortfolio + nestedInvestments;
-  const isa       = flatIsa       + nestedIsa;
+  // Phase C UX pass 3 — F1 cascade: per-category resolution now matches the
+  // updated `cashTotal()` helper. For categories where BOTH flat + nested
+  // schemas describe the SAME pot (mrT-core has flat `cash.total: 29000` AND
+  // populated `bank[]` summing to 29000), the nested array is the more
+  // detailed schema — use it exclusively, else fall back to flat. Previously
+  // we ADDED them, doubling cash from £29k → £57k and poisoning the CASH
+  // tile's "interest tax" CoW line via marginalRate × inflated balance.
+  const cash      = nestedCash      > 0 ? nestedCash      : flatCash;
+  const sipp      = nestedSipp      > 0 ? nestedSipp      : flatSipp;
+  const property  = nestedProperty  > 0 ? nestedProperty  : flatResidence;
+  const portfolio = nestedInvestments > 0 ? nestedInvestments : flatPortfolio;
+  const isa       = nestedIsa       > 0 ? nestedIsa       : flatIsa;
 
   // Other asset classes not in core NW but worth surfacing for the validator
   const business    = Number(a.business?.value) || Number(entity?.company?.companyValue) || 0;
@@ -204,8 +217,12 @@ function ageBackwards(persona, taxYear, macroVars) {
 export async function generateSnapshot(personaId, taxYear, opts = {}) {
   const persona = await loadPersona(personaId);
   const macroVars = await loadMacroVariablesForYear(taxYear);
-  const bundleId = bundleIdFor(taxYear);
-  const ruled = await loadBundle(bundleId);
+  // Phase A3: route bundle resolution through selectRuleBundle so the engine
+  // gets year-correct rates AND any mid-year legislation events folded in.
+  // asOfDate defaults to end-of-tax-year unless overridden via opts.asOfDate.
+  const asOfDate = opts.asOfDate ? new Date(opts.asOfDate) : endOfTaxYearDate(taxYear);
+  const ruled = await selectRuleBundle(taxYear, asOfDate, { jurisdiction: 'UK' });
+  const bundleId = ruled?._meta?.version || bundleIdFor(taxYear);
 
   // Inject the year-matched bundle into the engine. Subscribed engine modules
   // (fq-calculator, tax-estate-engine, uk-tax-2026-1-1) refresh their module-
@@ -381,11 +398,13 @@ export async function generateSnapshot(personaId, taxYear, opts = {}) {
     })(),
     risk: { total: riskResult?.total, dims: riskResult?.dims, band: riskResult?.band?.name },
     fq:   { total: fqResult?.total, dims: fqResult?.dims, band: fqResult?.band?.name },
-    // Couple context for spousal exemption modeling
-    is_couple: !!adjustedPersona.isCouple,
-    spousal_nrb_available: !!adjustedPersona.isCouple,
-    effective_nrb: adjustedPersona.isCouple ? 650000 : 325000,
-    effective_rnrb: adjustedPersona.isCouple ? 350000 : 175000,
+    // Couple context for spousal exemption modeling — uses canonical
+    // isCouple() reader so nested-shape fixtures (partner: {...}) are
+    // detected as couples too, not just Bruce-shape isCouple: true.
+    is_couple: _adapterIsCouple(adjustedPersona),
+    spousal_nrb_available: _adapterIsCouple(adjustedPersona),
+    effective_nrb: _adapterIsCouple(adjustedPersona) ? 650000 : 325000,
+    effective_rnrb: _adapterIsCouple(adjustedPersona) ? 350000 : 175000,
     // Eligibility verdicts (Phase 8A — 15 rules)
     eligibility: (() => {
       try {

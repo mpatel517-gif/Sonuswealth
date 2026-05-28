@@ -133,6 +133,101 @@ export function ruleValidate(snapshot, persona) {
     issues.push(...snapshot.errors);
   }
 
+  // ── Phase A5 additions: behavioural checks the original C1-C7 missed ──────
+  // C8-C12 catch the bug classes that the Wave 0.6 ALL_PASS audit shipped
+  // (150yr time-covered, 52× income buffer, regulated-sounding labels, etc.).
+
+  // C8: REQUIRED engine outputs present + numeric
+  const REQUIRED = ['net_worth', 'fq_score', 'risk_score', 'rules_version', 'engine_version', 'tax_year'];
+  const missing = REQUIRED.filter(k => snapshot[k] == null);
+  checks.push({ id: 'C8', category: 'structure',
+    status: missing.length === 0 ? 'PASS' : 'FAIL',
+    comment: missing.length === 0
+      ? `All ${REQUIRED.length} required engine outputs present`
+      : `Missing required keys: ${missing.join(', ')}` });
+  if (missing.length) issues.push(`Snapshot missing required keys: ${missing.join(', ')}`);
+
+  // C9: COUPLE-CONSISTENCY — if persona is a couple, the IHT block must
+  // reflect spousal NRB transfer (effective NRB ≥ 2 × base) OR explicitly
+  // record `spousal_nrb_available: true`. Catches the bug class where the
+  // engine silently halves a couple's allowance because spousal context is
+  // missing from the snapshot.
+  const isCoupleForC9 = !!(persona.isCouple || persona.partner || persona.spouse || persona.household_status === 'couple');
+  if (isCoupleForC9 && iht) {
+    const hasSpousalContext = iht.spousal_nrb_available === true
+      || (iht.nrb != null && iht.nrb >= 2 * rules.nrb - 1);
+    checks.push({ id: 'C9', category: 'estate',
+      status: hasSpousalContext ? 'PASS' : 'WARN',
+      comment: hasSpousalContext
+        ? `Couple persona has spousal NRB context (nrb=£${(iht.nrb||0).toLocaleString()})`
+        : `Couple persona but no spousal_nrb_available flag AND engine nrb=£${(iht.nrb||0).toLocaleString()} (expected ≥ £${(2*rules.nrb).toLocaleString()})` });
+    if (!hasSpousalContext) issues.push('C9: couple persona lacks spousal NRB context');
+  }
+
+  // C10: INCOME CONSERVATION — gross_income must equal net_income + income_tax + ni
+  // within tolerance. Catches the snapshot-mapping bug that triggered the
+  // 19-FAIL cluster (incomeTax(0,...) returned 0 because targetIncome wasn't
+  // extracted for decumulation personas).
+  const pl = snapshot.pl;
+  if (pl && pl.gross_income != null) {
+    const components = (pl.net_income ?? 0) + (pl.income_tax ?? 0) + (pl.ni ?? 0);
+    const drift = Math.abs(pl.gross_income - components);
+    const tol = Math.max(50, pl.gross_income * 0.005); // £50 or 0.5% — accounts for rounding + dividend tax not always in pl.income_tax
+    const conserves = drift <= tol;
+    checks.push({ id: 'C10', category: 'income',
+      status: conserves ? 'PASS' : 'WARN',
+      comment: conserves
+        ? `Income conservation: gross £${pl.gross_income.toLocaleString()} = net + tax + NI ±£${Math.round(tol)}`
+        : `Income NOT conserved: gross £${pl.gross_income.toLocaleString()} vs net+tax+NI £${components.toLocaleString()} (drift £${Math.round(drift).toLocaleString()})` });
+    if (!conserves) issues.push(`C10: income not conserved (drift £${Math.round(drift)})`);
+  }
+
+  // C11: AS-OF-DATE CORRECTNESS — snapshot_type='current' MUST match the
+  // current engine tax year (2026/27); 'historical' MUST be any prior year.
+  // Catches the bug where a back-test is silently labelled 'current'.
+  if (snapshot.snapshot_type) {
+    const yearNum = parseInt(taxYear.split('/')[0]);
+    const isCurrent = yearNum === 2026;
+    const labelCorrect = (snapshot.snapshot_type === 'current') === isCurrent;
+    checks.push({ id: 'C11', category: 'structure',
+      status: labelCorrect ? 'PASS' : 'WARN',
+      comment: labelCorrect
+        ? `snapshot_type='${snapshot.snapshot_type}' matches tax_year ${taxYear}`
+        : `snapshot_type='${snapshot.snapshot_type}' MISMATCH for tax_year ${taxYear} (expected '${isCurrent ? 'current' : 'historical'}')` });
+    if (!labelCorrect) issues.push(`C11: snapshot_type mislabelled for ${taxYear}`);
+  }
+
+  // C12: MATH SANITY — catches the absurd-looking metrics that pass C1-C7:
+  //   * time-covered > 200 yr (the MyMoney 150.3 yr bug)
+  //   * income buffer > 30× (the MyMoney 52.4× bug) for personas in deficit
+  //   * net-worth-to-annual-spend ratio implausible given age/lifeStage
+  // The thresholds are intentionally lax — they catch bugs, not edge cases.
+  const ageNow = persona.age || 60;
+  const monthlySpend = persona.monthlyExpenditure || persona.expenses?.essential_monthly || null;
+  const annualSpend = monthlySpend ? monthlySpend * 12 : null;
+  if (annualSpend && annualSpend > 0 && snapshot.net_worth) {
+    const yrsCovered = snapshot.net_worth / annualSpend;
+    const insane = yrsCovered > 200; // anything beyond 200 yr is a calc bug
+    checks.push({ id: 'C12a', category: 'math',
+      status: insane ? 'FAIL' : 'PASS',
+      comment: insane
+        ? `time-covered ${yrsCovered.toFixed(1)} yr is mathematically implausible (NW £${snapshot.net_worth.toLocaleString()} / spend £${annualSpend.toLocaleString()}/yr)`
+        : `time-covered ${yrsCovered.toFixed(1)} yr (NW / annual-spend) within sanity range` });
+    if (insane) issues.push(`C12a: time-covered ${yrsCovered.toFixed(1)} yr — calc bug`);
+  }
+  if (pl && pl.gross_income != null && pl.gross_income > 0 && annualSpend) {
+    const buffer = pl.gross_income / Math.max(1, annualSpend);
+    const insane = buffer > 30 || (buffer < 0.1 && pl.gross_income > 1000);
+    checks.push({ id: 'C12b', category: 'math',
+      status: insane ? 'FAIL' : 'PASS',
+      comment: insane
+        ? `income-buffer ${buffer.toFixed(1)}× is implausible (gross £${pl.gross_income.toLocaleString()} / spend £${annualSpend.toLocaleString()})`
+        : `income-buffer ${buffer.toFixed(1)}× within sanity range` });
+    if (insane) issues.push(`C12b: income-buffer ${buffer.toFixed(1)}× — calc bug`);
+  }
+
+  // ── End Phase A5 additions ───────────────────────────────────────────────
+
   const overall = checks.some(c => c.status === 'FAIL') ? 'FAIL'
                 : checks.some(c => c.status === 'WARN') ? 'WARN' : 'PASS';
   const score = Math.round(100 * checks.filter(c => c.status === 'PASS').length / Math.max(1, checks.length));

@@ -113,6 +113,7 @@ import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
 import AlternativesDrillDown from '../components/MyMoney/AlternativesDrillDown.jsx'
 import FinancesHeroCard      from '../components/MyMoney/FinancesHeroCard.jsx'
+import MoneyXDrawer          from '../components/shared/MoneyXDrawer.jsx'
 import AccountsList          from '../components/MyMoney/AccountsList.jsx'
 import {
   TaperedAATile,
@@ -3361,132 +3362,12 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
       )}
       {viewMode === 'scenario' ? null : <>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-         SECTION NAV — UX pass 3 restoration of the filter drawer founder
-         named "balance sheet · income statement · cashflow · trusts · insurance".
-         The Wave 0.6 "comprehensive scroll" decision killed the old PivotToggle
-         content-filter; this restores navigation without re-introducing the
-         content-filter behaviour. Each chip smooth-scrolls to its Act anchor
-         below — same single-page scroll-as-truth, now navigable.
-         ═══════════════════════════════════════════════════════════════════ */}
-      {(() => {
-        // Section taxonomy derived from v2.7 §3.4 Domain category list +
-        // §3.5 NW math + §3.6 Surplus/Deficit + §1.4 Domain ownership, cross-
-        // verified against mrT-core.json (the all-domain canonical fixture
-        // that has data in every section). NOT my guess, NOT the founder's
-        // casual list — pulled from the binding spec.
-        //
-        // Map: §3.4 domain groups → accounting-statement sections.
-        //   Balance Sheet      = Pensions (A+B) + S&I (C+D+E+F) + Property (G)
-        //                        + Business Assets (H+I+X) + Cash (M)
-        //                        + Alternatives (U) + Liabilities (N)
-        //   Income Statement   = Income (O) + State benefits (W) + Tax/NI
-        //   Cashflow           = Surplus/Deficit (Domain P read from CF)
-        //   Tax & Allowances   = §3.4 Tax tracker (Q-T fed to T&E, surfaced
-        //                        on MM as allowance use)
-        //   Protection & Insurance = J + K + L
-        //   Business           = H + I + X (renders only if director/flags set)
-        //   Trusts & Estate    = estate.will + estate.lpa + trust list
-        //                        (cross-link to T&E)
-        //   Top decisions      = Cost-of-Inaction ranked
-        //
-        // Each chip smooth-scrolls to its anchor; chips for sections the
-        // persona has NO data in are hidden (so Bruce won't see "Business"
-        // since he's not a director).
-        const entityData = entity || {}
-        const hasBusiness = !!(entityData.hasBusiness
-          || (entityData.assets?.business_assets || []).length > 0
-          || entityData.persona?.flags?.includes('director'))
-        const hasTrustOrEstate = !!(entityData.hasTrust
-          || entityData.estate?.will
-          || entityData.estate?.lpa
-          || entityData.assets?.protection?.lifeInsurance?.inTrust)
-
-        // Founder direction 2026-05-26: each chip opens a full-page route, NOT
-        // a scroll anchor. `route` is the Dashboard tab id passed to onNav;
-        // `anchor` is kept for fallback when onNav is unwired (standalone
-        // snap tests). Routes:
-        //   · Balance Sheet → 'money'           (this page — scroll fallback)
-        //   · Income Statement → 'money/income' (new page)
-        //   · Cashflow → 'flow'                 (existing tab)
-        //   · Tax & Allowances → 'tax'          (existing tab)
-        //   · Protection & Insurance → 'money/protection' (new page)
-        //   · Business → 'money/business'       (new page, director-gated)
-        //   · Trusts & Estate → 'estate'        (Dashboard maps → 'tax')
-        //   · Top decisions → 'decisions'       (Dashboard maps → DE overlay)
-        const sections = [
-          { id: 'mm-balance',    label: 'Balance Sheet',          always: true,             route: 'money',            anchor: 'mm-balance'   },
-          { id: 'mm-income',     label: 'Income Statement',       always: true,             route: 'money/income',     anchor: 'mm-income'    },
-          { id: 'mm-flow',       label: 'Cashflow',               always: true,             route: 'flow',             anchor: 'mm-flow'      },
-          { id: 'mm-tax',        label: 'Tax & Allowances',       always: true,             route: 'tax',              anchor: 'mm-tax'       },
-          { id: 'mm-insurance',  label: 'Protection & Insurance', always: true,             route: 'money/protection', anchor: 'mm-insurance' },
-          { id: 'mm-business',   label: 'Business',               always: hasBusiness,      route: 'money/business',   anchor: 'mm-business'  },
-          // v0.3 R9 §7 — Trusts chip MUST land on dedicated `/money/trusts`
-          // route (NOT `/tax#estate`). Dashboard.setTabSafe treats both
-          // 'trusts' and 'estate' the same way (→ 'money/trusts') but we use
-          // the canonical id so the test surface matches the spec.
-          { id: 'mm-trusts',     label: 'Trusts & Estate',        always: hasTrustOrEstate, route: 'trusts',           anchor: 'mm-trusts'    },
-          { id: 'mm-decisions',  label: 'Cost of inaction',       always: true,             route: 'decisions',        anchor: 'mm-decisions' },
-        ].filter(s => s.always)
-        return (
-          <div style={{
-            position: 'sticky', top: 0, zIndex: 40,
-            margin: '0 -16px 8px', padding: '8px 16px',
-            background: 'color-mix(in srgb, var(--c-bg) 92%, transparent)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            borderBottom: '1px solid color-mix(in srgb, var(--c-border) 60%, transparent)',
-            display: 'flex', gap: 6, overflowX: 'auto',
-            scrollbarWidth: 'none',
-          }}>
-            {sections.map(s => {
-              // A9 founder decision (2026-05-26): active-chip state. Balance
-              // Sheet IS the current route (this component) — it gets the
-              // filled accent style so users see which section they're on.
-              // Other chips render in neutral surface style; hover lifts them.
-              const isActive = s.route === 'money'
-              const baseBg = isActive ? 'color-mix(in srgb, var(--c-acc) 18%, var(--c-surface2))' : 'var(--c-surface2)'
-              const baseColor = isActive ? 'var(--c-acc)' : 'var(--c-text2)'
-              const baseBorder = isActive ? 'color-mix(in srgb, var(--c-acc) 55%, var(--c-border))' : 'var(--c-border)'
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={() => {
-                    if (s.route === 'money') {
-                      const target = document.getElementById(s.anchor)
-                      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      return
-                    }
-                    if (typeof onNav === 'function') {
-                      onNav(s.route)
-                      return
-                    }
-                    const target = document.getElementById(s.anchor)
-                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }}
-                  style={{
-                    flexShrink: 0,
-                    padding: '6px 12px',
-                    fontSize: 11, fontWeight: isActive ? 700 : 600,
-                    background: baseBg,
-                    border: `1px solid ${baseBorder}`,
-                    borderRadius: 999,
-                    color: baseColor,
-                    cursor: 'pointer',
-                    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface2))'; e.currentTarget.style.color = 'var(--c-acc)'; e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--c-acc) 35%, var(--c-border))' } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = baseBg; e.currentTarget.style.color = baseColor; e.currentTarget.style.borderColor = baseBorder } }}
-                >
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
-        )
-      })()}
+      {/* SECTION NAV — extracted 2026-05-28 to MoneyXDrawer.jsx so the same
+         8-chip drawer renders consistently on every MoneyX-family screen
+         (Cashflow / TaxEstate / MoneyIncome / MoneyProtection / MoneyBusiness
+         / MoneyTrusts). Director-gated and trust-gated chips hide using the
+         same predicates as before. */}
+      <MoneyXDrawer entity={entity} activeRoute="money" onNav={onNav} />
 
       {/* ═══════════════════════════════════════════════════════════════════
          ACT 1 — Where do I stand?

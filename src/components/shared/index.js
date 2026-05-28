@@ -14,6 +14,12 @@
 export { default as OverlayShell }   from './OverlayShell.jsx'
 export { default as TripleAnchor }   from './TripleAnchor.jsx'
 
+// S4 DS primitives (Phase 8, 2026-05-28)
+export { default as Heading }        from './Heading.jsx'
+export { default as TapTarget }      from './TapTarget.jsx'
+export { default as DrillOverlay }   from './DrillOverlay.jsx'
+export { default as ConfidenceChip } from './ConfidenceChip.jsx'
+
 // New cross-cutting primitives
 export {
   default as X28TopBar,

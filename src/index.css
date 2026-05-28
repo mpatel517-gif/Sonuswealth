@@ -29,7 +29,7 @@
   --c-border2:  rgba(255,255,255,.18);
   --c-text:     #d4e4fa;       /* primary text */
   --c-text2:    #a9b5c8;
-  --c-text3:    #8793a7;
+  --c-text3:    #95a1b5;       /* P11-2 (2026-05-28): bumped from #8793a7 for AA headroom on c-surface3 */
 
   /* ── Functional 5-colour set ────────────────────────────────── */
   --c-acc:      #5ddbc2;       /* Mathematical Teal — primary accent (Stitch dark) */
@@ -116,7 +116,7 @@
   --c-border2:  rgba(35,48,68,.16);
   --c-text:     #1a1c1e;       /* primary ink */
   --c-text2:    #43474e;       /* muted */
-  --c-text3:    #657286;       /* secondary muted (labels, captions) */
+  --c-text3:    #5a6678;       /* secondary muted (labels, captions) — P11-2 (2026-05-28): darkened from #657286 to clear AA 4.5:1 on c-surface3 (#e3e2e5) which was failing at 4.0:1 */
 
   /* Digital Sterling — Action Indigo replaces green entirely.
      Per spec: "No green or traditional success indicators are used;

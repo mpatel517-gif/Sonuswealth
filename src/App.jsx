@@ -323,6 +323,11 @@ function AppInner() {
       display:'flex', flexDirection:'column', overflow:'hidden',
       background:'var(--c-bg)' }}>
 
+      {/* P12-3 (2026-05-28) — WCAG 2.4.1 skip-to-content link.
+          Invisible until keyboard-focused (Tab from page start); on activation
+          jumps the user past chrome to the main screen content. */}
+      <a href="#main-content" className="sw-skip-link">Skip to main content</a>
+
       {/* Floating theme toggle removed 2026-05-11 — now lives in Dashboard
           header as a prominent 58×38 Stitch pill (ThemeTogglePill).
           Pre-app screens (Welcome / Onboarding / Account) inherit theme via

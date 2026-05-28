@@ -42,7 +42,7 @@ export default function TappableNumber({
   scenarioRoute = '/cashflow?tab=scenario',
   askRoute = '/ask',
   children,               // optional inline content shown inside the trigger
-  size = 'inline',        // inline · hero · chip
+  size = 'inline',        // inline · hero · chip · corner
   style,
 }) {
   const [open, setOpen] = useState(false)
@@ -53,6 +53,65 @@ export default function TappableNumber({
     : size === 'chip'
     ? { fontSize: 11, fontWeight: 700 }
     : {}
+
+  // Founder UX pass 4 (2026-05-26): when size === 'corner', the bolt floats
+  // as a top-right notification badge over the children rather than sitting
+  // beside them. This stops the bolt from eating horizontal space + breaking
+  // tile symmetry (asymmetric pills on the Balance Sheet hero card).
+  if (size === 'corner') {
+    return (
+      <>
+        <span
+          style={{
+            display: 'block', position: 'relative', width: '100%', height: '100%',
+            ...style,
+          }}
+        >
+          {children || formatted}
+          <button
+            type="button"
+            aria-label={`What if this were different — ${question || formatted}`}
+            onClick={(e) => { e.stopPropagation(); setOpen(true) }}
+            className="sw-press"
+            style={{
+              position: 'absolute', top: 4, right: 4,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 16, height: 16, borderRadius: '50%',
+              border: '1px solid var(--c-border)',
+              background: 'var(--c-surface2)',
+              color: 'var(--c-text3)',
+              fontSize: 9, fontWeight: 700, lineHeight: 1,
+              padding: 0, cursor: 'pointer', zIndex: 2,
+              transition: 'color 200ms, border-color 200ms, transform 200ms',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--c-acc)'
+              e.currentTarget.style.borderColor = 'var(--c-acc)'
+              e.currentTarget.style.transform = 'scale(1.12)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--c-text3)'
+              e.currentTarget.style.borderColor = 'var(--c-border)'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            ⚡
+          </button>
+        </span>
+        {open && (
+          <WhatIfSheet
+            value={value}
+            formatted={formatted}
+            question={question}
+            context={context}
+            scenarioRoute={scenarioRoute}
+            askRoute={askRoute}
+            onClose={() => setOpen(false)}
+          />
+        )}
+      </>
+    )
+  }
 
   return (
     <>

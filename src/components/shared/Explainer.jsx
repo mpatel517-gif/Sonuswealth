@@ -56,7 +56,7 @@ export const EXPLAINERS = {
   },
   'MM-BPR': {
     title: 'Inheritance-tax shelter for trading businesses',
-    body: 'Shares in a trading company you own (and similar trading assets) can pass to your heirs free of inheritance tax. From April 2026: 100% relief on the first £1m of combined business + farming assets, 50% above that. AIM shares now only get 50% relief (used to be 100%). You need to have held the asset for 2 years before death for the relief to apply. (Technical name: Business Property Relief.)',
+    body: 'Shares in a trading company you own (and similar trading assets) can pass to your heirs free of inheritance tax. From April 2026: 100% relief on the first £2.5m of combined business + farming assets, 50% above that. AIM shares now only get 50% relief (used to be 100%). You need to have held the asset for 2 years before death for the relief to apply. (Technical name: Business Property Relief.)',
   },
   'MM-ANI': {
     title: 'The income figure HMRC actually uses to tax you',

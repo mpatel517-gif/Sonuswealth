@@ -20,15 +20,18 @@
 import { useState, useMemo, useEffect } from 'react'
 
 // Canonical facade engine (Wave 1A): imports cashflow-engine via cf_* re-exports.
+// S1 selector migration (Phase 2): canonical readers pulled via selector facade.
+import { netWorth, fq as calcFQ, ani as _aniSel } from '../engine/selectors/index.js'
+const calcANI = (e, b) => _aniSel(e, b)
 import {
   // Core
-  fmt, netWorth, calcFQ, calcRisk, fqBand, riskBand,
+  fmt, calcRisk, fqBand, riskBand,
   // Cashflow Health (§3B)
   cashflowHealth,
   // §A NOW
   calcAllIncome, classifyIncomeType, monthlySurplus,
   liquidityBuffer, recommendedSurplusAllocation,
-  debtRatio, calcANI,
+  debtRatio,
   // §B TRAJECTORY
   swrFromRegime, fundedRatio, fiRatio,
   guytonKlingerPath, goalSeek,
@@ -711,32 +714,36 @@ function CashflowCalendarHeatmap({ entity }) {
     let annualSurplus = (income - spend)
     if (!annualSurplus) annualSurplus = -spend || income || 12000 // visible variance, sign-honest
     const baseMonthly = annualSurplus / 12
-    // Calendar-month seasonality weights: 0=Jan ... 11=Dec.
-    // Sum to 12 so total = annualSurplus.
-    const seasonality = [
-      0.85, // Jan — post-holiday card bills
-      0.92, // Feb
-      1.05, // Mar — tax-year-end planning bonus push
-      1.18, // Apr — new tax year, fresh allowances, payroll refresh
-      1.10, // May
-      1.05, // Jun
-      0.92, // Jul — summer holidays
-      0.85, // Aug — peak holiday spend
-      1.10, // Sep — return-to-work bump
-      1.05, // Oct
-      0.98, // Nov
-      0.75, // Dec — gifting + holiday spend
-    ]
-    // v0.3 R3 fix (2026-05-26): render Jan→Dec in calendar order instead of
-    // last-12-months ending current month. Seasonality is the story; a strip
-    // that starts at June and wraps confuses the eye. Current month gets a
-    // subtle highlight via the CalendarHeatmap component's range scaling.
+
+    // CX-5 (2026-05-28): seasonality multipliers were fabricated (12 hardcoded
+    // numbers presented as if real). §9 honesty: don't paper over missing
+    // data with invented patterns. If we have monthlySurplusHistory in the
+    // persona, use it. Otherwise return a FLAT 12-month series and let the
+    // heatmap render a uniform colour — visually says "no seasonality data
+    // to show yet".
     const yr = new Date().getFullYear()
+    const realHistory = Array.isArray(entity?.monthlySurplusHistory)
+      ? entity.monthlySurplusHistory
+      : Array.isArray(entity?.trajectories?.monthlySurplusHistory)
+        ? entity.trajectories.monthlySurplusHistory
+        : null
+
     const out = []
-    for (let cm = 0; cm < 12; cm++) {
-      const value = Math.round(baseMonthly * (seasonality[cm] || 1))
-      const ds = `${yr}-${String(cm + 1).padStart(2, '0')}`
-      out.push({ date: ds, value })
+    if (realHistory && realHistory.length === 12) {
+      // Use the real data. Each entry is either { date, value } or just a number.
+      for (let cm = 0; cm < 12; cm++) {
+        const r = realHistory[cm]
+        const value = typeof r === 'number' ? r : Math.round(+r?.value || 0)
+        const ds = (typeof r === 'object' && r?.date) || `${yr}-${String(cm + 1).padStart(2, '0')}`
+        out.push({ date: ds, value })
+      }
+    } else {
+      // No real history — flat baseMonthly. Heatmap renders uniform colour.
+      // The honest empty state.
+      for (let cm = 0; cm < 12; cm++) {
+        const ds = `${yr}-${String(cm + 1).padStart(2, '0')}`
+        out.push({ date: ds, value: Math.round(baseMonthly), isEstimate: true })
+      }
     }
     return out
   })()
@@ -925,6 +932,15 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
           />
         </FadeInOnMount>
 
+        {/* P13-3 (2026-05-28, IFA must-fix #3): SequenceStressHero.
+            At distribution/preservation life-stage, the sequence-of-returns
+            story is the most important conversation an IFA would have. The
+            old sub-score (Sequence resilience 67) buried that. Now the
+            adverse-path story leads at decumulation, before the health hero. */}
+        <FadeInOnMount delay={80}>
+          <SequenceStressHero entity={entity} seqVuln={seqVuln} />
+        </FadeInOnMount>
+
         {/* §3 — Cashflow Health Score hero (band + 5 sub-scores with ⓘ tooltips). */}
         <FadeInOnMount delay={100}>
           <div style={{ position: 'relative' }}>
@@ -1078,7 +1094,11 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
               fundedYears={fr?.fundedYears || fr?.years || null}
             />
             <FiProgressTile fi={fi} />
-            <PoSHeadline pos={pos} />
+            {/* B-1b (2026-05-28): PoSHeadline removed — was a 3rd PoS surface
+                duplicating the % + horizon + terminal values that PoSChartV2
+                already shows in richer form. Founder saw two cards reading
+                "39% / 24y / £0 P10 / £2.43m P90" side-by-side. Now PoSChartV2
+                is the single authoritative PoS surface. */}
             {/* B-1 (2026-05-27): PoSChartV2 was rendering "Calculating…" forever
                 because it read `pos.probability` / `pos.median_path` / `pos.bands`
                 which the engine never produces (engine returns `pos`, `runs`,
@@ -1635,6 +1655,18 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) 
     +(ms?.debt_service_annual ??
       (ms?.debtService != null ? ms.debtService * 12 : 0))
 
+  // P1-15 (2026-05-28) — Protection premiums as a Cashflow line item.
+  // Reads entity.assets.protection.{lifeInsurance,criticalIllness,incomeProtection}.premium
+  // (monthly). Sums across policies, annualises. Zero when no cover declared.
+  // Persona-a (Bruce) has £185 + £230 + £0 = £415/mo → £4,980/yr.
+  const _prot = entity?.assets?.protection || {}
+  const protMonthly =
+    (+(_prot.lifeInsurance?.premium    || 0)) +
+    (+(_prot.criticalIllness?.premium  || 0)) +
+    (+(_prot.incomeProtection?.premium || 0)) +
+    (+(_prot.pmi?.premium              || 0))
+  const protAnn = protMonthly * 12
+
   // Empty state when engine returns no income — no magic numbers.
   if (!gross || gross <= 0) {
     return (
@@ -1658,10 +1690,12 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) 
 
   // Arithmetic-reconciled surplus — never trust engine ms.surplus to match
   // the visible bars; recompute from the same numbers we're rendering.
-  const surplusAnn = gross - taxAnn - pensionAnn - essentialsAnn - debtAnn
+  // P1-15: protection premiums now subtracted.
+  const surplusAnn = gross - taxAnn - pensionAnn - essentialsAnn - debtAnn - protAnn
 
-  // P&L view: relabel steps to match accounting convention
-  const steps = accountantMode
+  // Build base steps; conditionally splice protection row when protAnn > 0
+  // so personas with no cover (e.g. mrT-aged-out) don't see a £0 phantom row.
+  const baseSteps = accountantMode
     ? [
         { id: 'revenue',    label: 'Revenue',              value: gross,            kind: 'income' },
         { id: 'tax',        label: 'Tax & NI',             value: -taxAnn,          kind: 'deduction',
@@ -1686,6 +1720,14 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) 
           note: 'Loans + cards' },
         { id: 'surplus',    label: 'Annual surplus',       value: surplusAnn,       kind: 'surplus' },
       ]
+  const steps = protAnn > 0
+    ? [
+        ...baseSteps.slice(0, -1),  // everything except surplus
+        { id: 'protection', label: 'Protection premiums', value: -protAnn, kind: 'deduction',
+          note: 'Life · CI · IP · PMI cover' },
+        baseSteps[baseSteps.length - 1],  // surplus last
+      ]
+    : baseSteps
 
   return (
     <div className="sw-card sw-card-elevated" style={S.card}>
@@ -1703,86 +1745,16 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) 
 }
 
 // ── §A.1 Cashflow waterfall (§4.3) ───────────────────────────────────────
-function CashflowWaterfall({ entity, incomeAll, ms, accountantMode }) {
-  const grossAnnual = incomeAll?.total || 0
-  const target = entity?.targetIncome || (ms?.essential || 0) * 12 || 0
-  const taxAnnual = Math.max(0, grossAnnual - target - (ms?.surplus || 0) * 12)
-  const dr = debtRatio(entity)
-  const debtAnnual = (dr?.monthlyService || 0) * 12
-  const essentials = Math.max(0, target * 0.62)
-  const discretionary = Math.max(0, target - essentials)
-  const surplusAnnual = (ms?.surplus || 0) * 12
-
-  const bands = [
-    { label: 'Gross income', amount:  grossAnnual,    colour: 'var(--c-mint-text)',   sign: '+' },
-    { label: 'Tax & NI',     amount: -taxAnnual,      colour: 'var(--c-amber-text)',  sign: '−' },
-    { label: 'Pension',      amount: -((ms?.committed || 0) * 12), colour: 'var(--c-blue-text)', sign: '−' },
-    { label: 'Essentials',   amount: -essentials,     colour: 'var(--c-violet-text)', sign: '−' },
-    { label: 'Debt service', amount: -debtAnnual,     colour: 'var(--c-coral-text)',  sign: '−' },
-    { label: 'Discretionary',amount: -discretionary,  colour: 'var(--c-blue-text)',   sign: '−' },
-    { label: 'Surplus',      amount:  surplusAnnual,  colour: surplusAnnual >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)', sign: '=' },
-  ]
-
-  if (accountantMode) {
-    bands.splice(2, 0,
-      { label: 'PAYE / NI split', amount: 0, colour: 'var(--c-text3)', sign: '·', note: true },
-      { label: 'SA accrual',      amount: 0, colour: 'var(--c-text3)', sign: '·', note: true },
-    )
-  }
-
-  const max = Math.max(...bands.map(b => Math.abs(b.amount)), 1)
-
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Cashflow waterfall</div>
-        <span className={`sw-chip sw-chip-sm ${accountantMode ? 'sw-chip-blue' : ''}`}>
-          {accountantMode ? 'Accountant view' : 'Simple view'}
-        </span>
-      </div>
-
-      <div style={{
-        display: 'flex', flexDirection: 'column',
-        gap: 'var(--space-xs)', marginTop: 'var(--space-md)',
-      }}>
-        {bands.map(b => {
-          const w = (Math.abs(b.amount) / max) * 100
-          return (
-            <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-              <div style={{ width: 14, color: 'var(--c-text3)', fontSize: 11 }}>{b.sign}</div>
-              <div className="sw-bar" style={{ flex: 1, height: 10 }}>
-                <div
-                  className="fill"
-                  style={{
-                    width: `${Math.max(2, w)}%`,
-                    background: b.colour,
-                    opacity: b.note ? 0.30 : 0.95,
-                  }}
-                />
-              </div>
-              <div style={{ minWidth: 130, fontSize: 12, color: 'var(--c-text2)' }}>
-                {b.label}
-              </div>
-              <div style={{
-                minWidth: 80, textAlign: 'right',
-                fontSize: 12, fontWeight: 700, color: b.colour,
-                fontVariantNumeric: 'tabular-nums',
-              }}>
-                {b.note ? '—' : fmt(b.amount)}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div style={S.implication}>
-        Essentials-to-income ratio is approximately 62%. At a 4% withdrawal rate,
-        every £1k reduction in annual essentials lowers a 25-year runway
-        requirement by ~£25k. Illustrative — not personal advice.
-      </div>
-    </div>
-  )
-}
+// ── DEAD CODE REMOVED 2026-05-28 (P0-6 closure) ─────────────────────────
+// Old `CashflowWaterfall` legacy component is DELETED. It used hardcoded
+// `target * 0.62` for essentials and Math.max(0, gross - target - surplus*12)
+// for tax — both fabricated. Live rendering uses `CashflowWaterfallReconciled`
+// (above) which reads engine-derived `ms.essentials_annual`, `incomeAll.tax_total_annual`,
+// and arithmetic-sums to a real surplus. There is now a single waterfall
+// implementation and it ties out to engine math.
+//
+// If you ever need to add a discretionary band, do it on `CashflowWaterfallReconciled`,
+// not by reviving this dead function.
 
 // ── §A.2 Essentials vs Discretionary (§4.4) ─────────────────────────────
 function EssentialsDiscretionarySplit({ ms }) {
@@ -2577,6 +2549,76 @@ function MonteCarloFanChart({ pos, entity }) {
 }
 
 // ── §B.6 Sequence-of-returns stress (§5.6) ──────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// P13-3 (2026-05-28, IFA must-fix #3): SequenceStressHero
+// Story-banner version of sequence-of-returns risk. Renders ONLY at
+// distribution / preservation / legacy life-stage (and only if the engine has
+// adverse-path data). At accumulation, no point — there's no drawdown yet.
+// Leads with the bad-luck depletion age + £ at risk; client-comprehensible
+// version of "what happens if early years go wrong."
+// ─────────────────────────────────────────────────────────────────────────────
+function SequenceStressHero({ entity, seqVuln }) {
+  // Accept both string codes ('distribution', 'preservation') and numeric codes
+  // (4=pre-retirement, 5=distribution, 6=legacy/preservation in this codebase).
+  const lifeStageStr = String(entity?.lifeStage || entity?.life_stage || '').toLowerCase()
+  const lifeStageNum = +entity?.lifeStage
+  const isDecum =
+    lifeStageStr === 'distribution' || lifeStageStr === 'preservation' ||
+    lifeStageStr === 'legacy' || lifeStageStr === 'pre-retirement' ||
+    lifeStageNum === 4 || lifeStageNum === 5 || lifeStageNum === 6
+  if (!isDecum) return null
+  if (!seqVuln || seqVuln.insufficient_data) return null
+
+  const sev = seqVuln.bad_years_severity
+  const colour =
+    sev === 'severe'   ? 'var(--c-coral-text)' :
+    sev === 'moderate' ? 'var(--c-amber-text)' :
+                         'var(--c-acc)'
+  const bg =
+    sev === 'severe'   ? 'var(--c-tint-coral)' :
+    sev === 'moderate' ? 'var(--c-tint-amber)' :
+                         'var(--c-tint-blue)'
+
+  const medianAge = seqVuln.median_depletion_age
+  const adverseAge = seqVuln.adverse_depletion_age
+  const yearsLost = medianAge && adverseAge ? medianAge - adverseAge : null
+  const poundsAtRisk = seqVuln.vulnerability_pounds
+
+  return (
+    <div role="region" aria-label="Sequence-of-returns risk story" style={{
+      margin: '0 0 14px', padding: '16px 18px',
+      background: bg,
+      border: `1px solid ${colour}`,
+      borderRadius: 16,
+    }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.9, textTransform: 'uppercase', color: colour, marginBottom: 6 }}>
+        If early retirement years went wrong
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -0.4, lineHeight: 1.3, marginBottom: 8 }}>
+        {yearsLost > 0
+          ? <>A bad-luck sequence in the first few years of drawdown shortens your funded window by <span style={{ color: colour }}>~{yearsLost} years</span>.</>
+          : <>Your funded window is resilient to typical sequence risk — the bad-luck scenario shortens it minimally.</>}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
+        Median scenario: money lasts to age <strong style={{ color: 'var(--c-text)' }}>{medianAge}</strong>.
+        Adverse (1-in-5) scenario: money runs out at age <strong style={{ color: colour }}>{adverseAge}</strong>.
+        {poundsAtRisk > 0 && <> About <strong style={{ color: colour }}>{fmt(poundsAtRisk)}</strong> of plan value sits in this risk band.</>}
+      </div>
+      {seqVuln.mitigation_savings && (
+        <div style={{
+          padding: '8px 10px', background: 'var(--c-surface)', borderRadius: 10,
+          fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5,
+        }}>
+          <strong style={{ color: 'var(--c-text2)' }}>Levers that reduce the gap:</strong>
+          {' '}3-year cash buffer adds <strong style={{ color: 'var(--c-acc)' }}>+{seqVuln.mitigation_savings.hold_3yr_cash_buffer}y</strong> ·
+          {' '}switching to Guyton-Klinger guardrails adds <strong style={{ color: 'var(--c-acc)' }}>+{seqVuln.mitigation_savings.switch_to_gk_corridor}y</strong>.
+          {' '}Both are information only — discuss with a regulated adviser before changing drawdown strategy.
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SequenceOfReturnsCard({ seqVuln }) {
   if (!seqVuln || seqVuln.insufficient_data) {
     return (

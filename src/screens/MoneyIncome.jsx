@@ -22,14 +22,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo } from 'react'
+import useTaxYear from '../hooks/useTaxYear.jsx'
 import {
   calcAllIncome,
-  calcANI,
   calcIncomeTax,
   calcPersonalAllowance,
-  calcHICBC,
   fmt,
 } from '../engine/fq-calculator.js'
+// S1 selector migration: tax readers (ANI, HICBC, PSA) come via facade so
+// future surfaces can't forget to apply the £60k taper rule (P0-10 root cause
+// was a hand-rolled subtraction line that omitted hicbc entirely).
+import {
+  ani as calcANI,
+  hicbc as calcHICBC,
+} from '../engine/selectors/index.js'
 import { TAX } from '../engine/_bundle.js'
 import { hasPersonaFlag } from '../engine/_helpers.js'
 import { Sankey } from '../components/charts'
@@ -250,8 +256,21 @@ function buildSankeyModel({ items, tax, class1, class4, netIncome }) {
   // (post-tax) as flowing to net node.
   const divIn = inboundTo('divTax')
   const savIn = inboundTo('savTax')
-  // dividend net = dvBasic * (1 - dBR) + dvHigher * (1 - dHR) — approximate via TAX.dividendBR
-  const divNet = divIn * (1 - TAX.dividendBR)
+  // P0-9 fix (2026-05-28): band-aware dividend net. Previous code applied
+  // TAX.dividendBR (8.75%) to the entire dividend flow, which understated
+  // tax-take when the dividend straddles higher-rate (33.75%) and additional-
+  // rate (39.35%) bands. Audit example: £40k div, £15k in HR band → previous
+  // Sankey overstated net by £3,750. Now we sum band × (1 − band rate)
+  // contributions from `taxableDiv`, which the engine already splits.
+  const dividendRateByBand = {
+    'div_basic':      TAX.dividendBR ?? 0.0875,
+    'div_higher':     TAX.dividendHR ?? 0.3375,
+    'div_additional': TAX.dividendAR ?? 0.3935,
+  }
+  const divNet = taxableDiv.reduce((sum, b) => {
+    const rate = dividendRateByBand[b.type] ?? TAX.dividendBR ?? 0.0875
+    return sum + (+b.amount || 0) * (1 - rate)
+  }, 0)
   const savNet = savIn * (1 - TAX.br)
   if (divNet > 0) links.push({ source: 'divTax', target: 'net', value: divNet })
   if (savNet > 0) links.push({ source: 'savTax', target: 'net', value: savNet })
@@ -523,6 +542,10 @@ function ReceiptWaterfall({ tax, paUsed, class1, class4 }) {
 
 // ── Main screen ──────────────────────────────────────────────────────────────
 export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
+  // CX-1 (2026-05-28): consume canonical tax-year selector so the screen
+  // displays the user's chosen TY. Bundle propagation to engine is the
+  // multi-week part — for now the chip on screen makes the selection visible.
+  const ty = useTaxYear()
   const allIncome = useMemo(() => calcAllIncome(entity), [entity])
   const aniInfo = useMemo(() => calcANI(entity), [entity])
   const ani = aniInfo.ani
@@ -630,12 +653,14 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
         }}>
           <span style={{ fontSize: 16 }}>←</span> My Money
         </button>
-        <div style={{
-          fontSize: 10, padding: '3px 8px',
-          background: 'var(--c-surface2)', borderRadius: 100,
-          color: 'var(--c-text3)', fontWeight: 700,
-        }}>
-          UK · 2026/27 rules
+        <div
+          title={`Tax year selected: ${ty.taxYear} · rule bundle ${ty.ruleBundle}. Change via the top bar.`}
+          style={{
+            fontSize: 10, padding: '3px 8px',
+            background: 'var(--c-surface2)', borderRadius: 100,
+            color: 'var(--c-text3)', fontWeight: 700,
+          }}>
+          UK · {ty.taxYear} rules
         </div>
       </div>
       <div style={{ fontSize: 22, fontWeight: 870, color: 'var(--c-text)', marginBottom: 4, letterSpacing: -0.4 }}>

@@ -15,8 +15,9 @@
 import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
-import { getWrapper } from '../../engine/_helpers.js'
+import { getWrapper } from '../../engine/selectors/index.js'
 import { useEvents, EV } from '../../state/events.jsx'
+import { DrillableNumber, L4NumberPanel } from './L3/index.js'
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -88,6 +89,24 @@ export default function AssetDetailOverlay({
   const [newValue, setNewValue] = useState(value)
   const [editing, setEditing] = useState(false)
   const [updated, setUpdated] = useState(false)
+  const [openL4, setOpenL4] = useState(null)
+
+  // PP-3 drillability proof — pensions get a round-trip drill on the hero £
+  // (one-number proof; extends to all numbers in later batches).
+  const isPensionWrapper = wrapper === 'PENSION' || wrapper === 'STATE'
+  const ownership = asset?.ownershipShare ?? asset?.ownership_share ?? 1
+  const heroDrillProps = {
+    metric: 'asset_value',
+    value: fmt(value),
+    formula: `Latest valuation × ownership share = ${fmt(value)}`,
+    source: asset?.source || asset?.provider || asset?.providerName || 'Persona fixture',
+    confidence: asset?.confidence || 'medium',
+    breakdown: [
+      { label: 'Latest valuation', value: fmt(value) },
+      { label: 'Ownership share', value: `${Math.round(ownership * 100)}%` },
+      { label: 'Effective value', value: fmt(value * ownership) },
+    ],
+  }
 
   function saveValue() {
     if (+newValue === +value) { setEditing(false); return }
@@ -136,7 +155,16 @@ export default function AssetDetailOverlay({
             fontSize: 32, fontWeight: 800, color: 'var(--c-text)',
             fontVariantNumeric: 'tabular-nums', lineHeight: 1.1,
           }}>
-            {fmt(value)}
+            {isPensionWrapper ? (
+              <DrillableNumber
+                {...heroDrillProps}
+                onDrill={(detail) => setOpenL4(detail)}
+              >
+                {fmt(value)}
+              </DrillableNumber>
+            ) : (
+              fmt(value)
+            )}
           </div>
           <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 6 }}>
             {wrapperText}
@@ -243,6 +271,43 @@ export default function AssetDetailOverlay({
         )}
 
       </div>
+
+      {/* ── L4 drill panel — overlays AssetDetailOverlay (PP-3 round-trip) ── */}
+      {openL4 && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${openL4.metric} drill`}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 600,
+            background: 'var(--c-bg)',
+            display: 'flex', flexDirection: 'column',
+          }}
+        >
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '12px 14px', borderBottom: '1px solid var(--c-sep, var(--c-border))',
+          }}>
+            <button
+              type="button"
+              onClick={() => setOpenL4(null)}
+              className="sw-press"
+              style={{
+                background: 'transparent', border: '1px solid var(--c-border)',
+                color: 'var(--c-text)', borderRadius: 10,
+                padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}
+              aria-label="Back to asset"
+            >← Back</button>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+              {asset?.name || 'Asset'} · drill
+            </div>
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            <L4NumberPanel {...openL4} onBack={() => setOpenL4(null)} />
+          </div>
+        </div>
+      )}
     </OverlayShell>
   )
 }

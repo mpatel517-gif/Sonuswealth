@@ -40,9 +40,14 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useState } from 'react'
+// S1 selector migration (Phase 2)
 import {
-  calcFQ, calcRisk,
-  netWorth, fmt, daysLeft, fqTrajectory,
+  netWorth,
+  fq as calcFQ,
+} from '../engine/selectors/index.js'
+import {
+  calcRisk,
+  fmt, daysLeft, fqTrajectory,
   lifeStageFor, calcAge, costOfInaction, nominationStatus,
   planFor, planStaleness, commitPlan, goalSeek,
   giftPct, taperBand, TAX,
@@ -682,7 +687,32 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   const sippDeadlineStr = TAX.deadline instanceof Date
     ? TAX.deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : '6 Apr 2027'
-  if (coi > 0) {
+  // P1-4 (2026-05-28): gate sipp-iht on real SIPP/DC pension exposure.
+  // Previously coi>0 was the only check, but coi can be > 0 for personas
+  // with no DC pension simply because the legacy fq-calculator returns a
+  // non-zero value from related domains. Personas without SIPP/DC saw a
+  // fake deadline.
+  // Walk every supported pension-location shape:
+  // - entity.assets.pensions[]            (some UI personas)
+  // - entity.assets.sipp.pensions[]       (Bruce shape — pensions nested in sipp wrapper)
+  // - entity.assets.dc.pensions[]         (defensive)
+  // - entity.individual.assets.pensions[] (mrT shape)
+  const _pensionsList = [
+    ...(Array.isArray(entity?.assets?.pensions) ? entity.assets.pensions : []),
+    ...(Array.isArray(entity?.assets?.sipp?.pensions) ? entity.assets.sipp.pensions : []),
+    ...(Array.isArray(entity?.assets?.dc?.pensions) ? entity.assets.dc.pensions : []),
+    ...(Array.isArray(entity?.individual?.assets?.pensions) ? entity.individual.assets.pensions : []),
+  ]
+  const hasDCPension = _pensionsList.some(p => {
+    const t = String(p?.type || '').toUpperCase()
+    // DB pensions (defined benefit / final salary) are NOT subject to the
+    // April 2027 rule — exclude. Everything else (SIPP / DC / Personal /
+    // Stakeholder / Workplace / unspecified) gets the deadline row.
+    const looksDB = /\bDB\b|DEFINED BENEFIT|FINAL SALARY/.test(t)
+    if (looksDB) return false
+    return (+p.value || 0) > 0
+  })
+  if (coi > 0 && hasDCPension) {
     entries.push({
       id:'sipp-iht', date: sippDeadlineStr, daysAway:dl, category:'statutory',
       title:'DC pensions enter estate for IHT',
@@ -710,9 +740,20 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   }
 
   // Statutory: 31 Jan SA deadline
+  // P1-4 (2026-05-28): gate on real SA obligation — dividends, self-employment,
+  // rental income, higher-rate employment, or directorship. Personas with only
+  // PAYE basic-rate employment do NOT need to file SA.
   const saDate = new Date(yr + 1, 0, 31)
   const saDay  = Math.round((saDate - now) / 86400000)
-  if (saDay > 0 && saDay < 400 && saDay <= horizonDays) {
+  const hasSAObligation = (
+    (+entity?.income?.dividends || 0) > 0
+    || (+entity?.income?.selfEmploymentNet || 0) > 0
+    || (+entity?.income?.rentalIncome || 0) > 0
+    || (+entity?.income?.directorSalary || 0) > 0
+    || !!entity?.company
+    || (entity?.income?.employment || 0) > (TAX?.basicRateThreshold || 50270)
+  )
+  if (saDay > 0 && saDay < 400 && saDay <= horizonDays && hasSAObligation) {
     entries.push({
       id:'sa-deadline', date:`31 Jan ${yr + 1}`, daysAway:saDay,
       category:'statutory',
@@ -1561,18 +1602,25 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
               background: 'var(--c-surface2)', color: 'var(--c-text)',
               border: '1px solid var(--c-sep)',
             }}>
+            {/* P1-23 (2026-05-28): only the 4 supported plan types are
+                rendered — the previous 12-option list had 8 routes to
+                "coming soon" which is an affordance-pretends violation
+                per §9. The 8 unsupported types are listed below in a
+                disabled <optgroup> so users can see the roadmap. */}
             <option value="wealthScore">Wealth Score</option>
             <option value="riskScore">Risk Score</option>
             <option value="netWorth">Net Worth</option>
             <option value="iht">IHT exposure</option>
-            <option value="retirement">Retirement plan</option>
-            <option value="estate">Estate plan</option>
-            <option value="cashflow">Cashflow plan</option>
-            <option value="debt">Debt plan</option>
-            <option value="gift">Gift plan</option>
-            <option value="protection">Protection plan</option>
-            <option value="tax">Tax plan</option>
-            <option value="custom">Custom plan</option>
+            <optgroup label="Coming soon — engine not yet wired">
+              <option value="retirement" disabled>Retirement plan</option>
+              <option value="estate"     disabled>Estate plan</option>
+              <option value="cashflow"   disabled>Cashflow plan</option>
+              <option value="debt"       disabled>Debt plan</option>
+              <option value="gift"       disabled>Gift plan</option>
+              <option value="protection" disabled>Protection plan</option>
+              <option value="tax"        disabled>Tax plan</option>
+              <option value="custom"     disabled>Custom plan</option>
+            </optgroup>
           </select>
           <input
             type="number"
@@ -2435,7 +2483,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         }}
       >
         {[
-          { label:'Net Worth',    value:nw,         format:'currency', sub:null,           colour:'var(--c-text)',   onTap: () => onDrillMetric?.('netWorth') },
+          { label:'Net Worth',    value:nw,         format:'currency', sub:null,           colour:'var(--c-text)',   tieout:'timeline.nw',         onTap: () => onDrillMetric?.('netWorth') },
           { label:'Wealth Score', value:fq.total,   format:'score',    sub:fq.band.name,   colour:fq.band.colour,    onTap: () => onDrillMetric?.('wealthScore') },
           { label:'Risk Score',   value:risk.total, format:'score',    sub:risk.band.name, colour:risk.band.colour,  onTap: () => onDrillMetric ? onDrillMetric('riskScore') : handleRiskTap() },
         ].map(c => (
@@ -2450,7 +2498,10 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
               cursor: c.onTap ? 'pointer' : 'default',
               boxShadow: 'var(--shadow-card-sm)',
             }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: c.colour, lineHeight: 1.0 }}>
+            <div
+              data-tieout={c.tieout || undefined}
+              data-tieout-raw={c.tieout ? String(c.value) : undefined}
+              style={{ fontSize: 22, fontWeight: 800, color: c.colour, lineHeight: 1.0 }}>
               <Num value={c.value} format={c.format} animate />
             </div>
             {c.sub && <div style={{ fontSize: 11, fontWeight: 600, color: c.colour, marginTop: 2 }}>{c.sub}</div>}

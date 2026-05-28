@@ -30,9 +30,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react'
-import {
-  calcFQ, calcRisk, costOfInaction, netWorth,
-} from '../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { netWorth, fq as calcFQ } from '../engine/selectors/index.js'
+import { calcRisk, costOfInaction } from '../engine/fq-calculator.js'
 
 // Persona JSONs — used as `entity` on each client row so engine calls return
 // real numbers, not hardcoded literals. (CRIT MATH-1, MATH-2.)

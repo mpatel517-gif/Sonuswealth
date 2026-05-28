@@ -5,7 +5,9 @@
 // Demo URL param (?demo=X) bypasses this screen entirely from App.jsx.
 import { useState } from 'react'
 import { BRAND } from '../config/brand.js'
-import { calcFQ, fqBand, lifeStageFor } from '../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { fq as calcFQ } from '../engine/selectors/index.js'
+import { fqBand, lifeStageFor } from '../engine/fq-calculator.js'
 import { useAuth } from '../state/auth.jsx'
 
 export default function Account({ obData, onEnter }) {

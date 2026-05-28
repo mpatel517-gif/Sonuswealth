@@ -14,6 +14,8 @@ import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import DrillContextStub, { ClaimsPaidStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
+import { BRAND } from '../../config/brand.js'
+import { monthlyEssentials as getMonthlyEssentials } from '../../engine/selectors/index.js'
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -131,52 +133,162 @@ export default function ProtectionDrillDown({ entity, personaId, onBack, onHome 
 
   const totalLifeCover = (life.exists ? +life.amount || 0 : 0) + (relevantLife.exists ? +relevantLife.amount || 0 : 0)
   const ipMonthly = ip.exists ? +ip.monthlyBenefit || 0 : 0
-  const monthlyEssentials = +entity.expenses?.essential_monthly || 2500
-  const monthsCovered = ipMonthly > 0 ? ipMonthly / monthlyEssentials : 0
+  // P1-17 (2026-05-28): hardcoded £2,500 fallback hid the failure mode —
+  // a retiree (employment=0) saw "need £0 of cover" because annualIncome
+  // collapsed to 0 AND essentials hit the £2,500 hardcode, producing a
+  // garbage cover-need calculation. Now we read essentials from the
+  // canonical helper. If it returns 0 we DON'T fake a number — we set
+  // monthsCovered to null and let the UI render the empty state.
+  const _essRead = getMonthlyEssentials(entity)
+  const monthlyEssentials = _essRead.monthly || 0
+  const essentialsAreEstimated = !!_essRead.isEstimate || monthlyEssentials === 0
+  const monthsCovered = (ipMonthly > 0 && monthlyEssentials > 0)
+    ? ipMonthly / monthlyEssentials
+    : null
 
   // Gap score — rudimentary count of the four core types
   const coreCount = [life.exists, ci.exists, ip.exists, pmi.exists].filter(Boolean).length
   const gapTone = coreCount >= 3 ? 'good' : coreCount === 2 ? 'warn' : 'bad'
 
+  // P15 regression fix: life-stage filter moved BELOW annualIncome declaration
+  // because `showIncomeProtection` references annualIncome. The original
+  // placement (above line 174) caused a TDZ ReferenceError that crashed the
+  // whole component — both /money/business + /money/protection routes went
+  // blank because they share the import. Filter now derived after annualIncome.
+
+  // IFA HIGH-7 + MED-34 — protection cover gap (rule-of-thumb only, not advice).
+  // P1-16 (2026-05-28): include dividends + rental + self-employment net.
+  // Previously annualIncome only read employment/salary fields, which
+  // under-stated cover need by 4-6× for directors (income shifted to
+  // dividends), landlords (rental), and self-employed.
+  const indAge = +(entity.individual?.age ?? entity.age ?? 0) || 0
+  const annualIncome = Math.max(
+    +(entity.income?.employment || 0),
+    +(entity.income?.salary || 0),
+    +(entity.gross_salary || 0),
+  ) + (+entity.income?.dividends || 0)
+    + (+entity.income?.rentalIncome || 0)
+    + (+entity.income?.selfEmploymentNet || 0)
+    + (+entity.income?.directorSalary || 0)
+
+  // P13-8 (2026-05-28, IFA hardening): life-stage filter on which gap cards
+  // are clinically relevant. Below annualIncome so the IP gate sees real income.
+  const _lifeStage = String(entity?.lifeStage || entity?.life_stage || '').toLowerCase()
+  const _lifeStageNum = +entity?.lifeStage
+  const _ageForFilter = +(entity?.age ?? entity?.individual?.age ?? 0) || 0
+  const _isPreservation = _lifeStage === 'preservation' || _lifeStage === 'legacy' || _lifeStageNum === 6
+  const showLifeCover = true
+  const showCriticalIllness = !_isPreservation && _ageForFilter < 70
+  const showIncomeProtection = !_isPreservation && annualIncome > 0
+  const showPMI = true
+  const liabsMortgage = +(entity.liabilities?.mortgage?.outstanding || 0)
+  const otherLoansArr = entity.liabilities?.other_loans || entity.liabilities?.otherLoans || []
+  const otherLoansSum = Array.isArray(otherLoansArr)
+    ? otherLoansArr.reduce((s, l) => s + +(l.outstanding || l.balance || 0), 0)
+    : 0
+  const remainingLiabilities = liabsMortgage + otherLoansSum
+  const annualEssentials = monthlyEssentials * 12
+  const needLifeCover = indAge > 0 && indAge < 50
+    ? 10 * annualIncome
+    : remainingLiabilities + 3 * annualEssentials
+  const currentLifeCover = totalLifeCover
+  const lifeCoverGap = Math.max(0, needLifeCover - currentLifeCover)
+
   return (
     <OverlayShell title="Protection · drill-down"
-      subtitle={`${coreCount}/4 core · ${fmt(totalLifeCover)} life cover`}
+      subtitle={coreCount === 0 ? 'No protection on file' : `${coreCount}/4 core · ${fmt(totalLifeCover)} life cover`}
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 
+        {/* Distinctive subtitle — v0.3 eyebrow */}
+        <div
+          className="sw-eyebrow"
+          style={{ fontStyle: 'italic', color: 'var(--c-text3)', marginBottom: 10 }}
+        >
+          What&apos;s covered, by whom, and when it pays
+        </div>
+
         {/* Section 1 — overview */}
-        <Section title="1 · What's covered and where the gaps are" sub="Four cover types — life, critical illness, income protection, private medical. Life cover placed in trust sits outside your estate for inheritance tax.">
+        <Section title="1 · What's covered and where the gaps are" sub="Four cover types — life, critical illness, income protection, private medical. Life cover policies written into a discretionary trust are typically held outside the estate for IHT. The structure depends on personal circumstances — beneficiaries, trustees, scheme rules.">
+          {/* IFA HIGH-7 + MED-34 — life cover gap (rule-of-thumb, information only) */}
+          <div style={{
+            marginBottom: 10, padding: '10px 12px',
+            background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14,
+            fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5,
+          }}>
+            {lifeCoverGap > 0
+              ? <>Cover gap — <strong style={{ color: 'var(--c-coral, #FF6F7D)' }}>{fmt(lifeCoverGap)}</strong>. Based on a rule-of-thumb need of {fmt(needLifeCover)} versus current cover {fmt(currentLifeCover)}.</>
+              : <>Current cover <strong style={{ color: 'var(--c-acc)' }}>{fmt(currentLifeCover)}</strong> is at or above the rule-of-thumb need of {fmt(needLifeCover)}.</>}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
             <Tile label="Pillars covered" value={`${coreCount}/4`} tone={gapTone} sub="Life · CI · IP · PMI" />
             <Tile label="Total life cover" value={fmt(totalLifeCover)} tone="good" sub="Term + relevant life" />
             <Tile label="IP monthly benefit" value={fmt(ipMonthly)} sub="Tax-free if employee-paid" />
-            <Tile label="Months of cover" value={monthsCovered.toFixed(1)} tone={monthsCovered >= 6 ? 'good' : 'warn'} sub={`vs ${fmt(monthlyEssentials)} essentials`} />
+            <Tile
+              label="Months of cover"
+              value={monthsCovered == null ? '—' : monthsCovered.toFixed(1)}
+              tone={monthsCovered == null ? 'neutral' : monthsCovered >= 6 ? 'good' : 'warn'}
+              sub={monthsCovered == null
+                ? 'Add monthly essentials to see months of cover'
+                : essentialsAreEstimated
+                  ? `vs ${fmt(monthlyEssentials)} essentials (estimated)`
+                  : `vs ${fmt(monthlyEssentials)} essentials`}
+            />
           </div>
         </Section>
 
         {/* Section 2 — life / CI / IP / PMI */}
         <Section title="2 · Your core policies">
+          {/* P13-8 (2026-05-28, IFA hardening): life-stage context note when
+              some cover types aren't clinically relevant. The cards still render
+              (transparency), but with reduced-emphasis explainer copy. */}
+          {(!showCriticalIllness || !showIncomeProtection) && (
+            <div style={{
+              marginBottom: 10, padding: '8px 12px',
+              background: 'var(--c-tint-neutral)',
+              borderRadius: 10, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5,
+            }}>
+              At your life-stage, {!showIncomeProtection && 'income protection becomes less relevant once employment income stops'}
+              {!showCriticalIllness && !showIncomeProtection && '; '}
+              {!showCriticalIllness && 'critical illness cover is typically prohibitive to underwrite past 70'}
+              . Life cover discussions shift toward IHT framing rather than income replacement.
+            </div>
+          )}
           <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
-            <PolicyRow title="Life assurance — term" exists={life.exists} amount={life.amount} premium={life.premium} provider={life.provider}
-              inTrust={life.inTrust}
-              extras={[
-                life.term_years && { label: `${life.term_years}y term` },
-                life.start_date && { label: `Since ${String(life.start_date).slice(0,4)}` },
-              ].filter(Boolean)}
-              onTap={() => setSelected({ asset: { ...life, name: 'Life assurance — term', type: 'life-cover', value: life.amount }, category: 'protection', itemType: 'life' })} />
-            <div style={{ borderTop: '1px solid var(--c-sep)' }} />
-            <PolicyRow title="Critical illness cover" exists={ci.exists} amount={ci.amount} premium={ci.premium} provider={ci.provider}
-              onTap={() => setSelected({ asset: { ...ci, name: 'Critical illness cover', type: 'critical-illness', value: ci.amount }, category: 'protection', itemType: 'critical-illness' })} />
-            <div style={{ borderTop: '1px solid var(--c-sep)' }} />
-            <PolicyRow title="Income protection" exists={ip.exists} amount={ip.exists ? ((+ip.monthlyBenefit || 0) * 12) : 0} premium={ip.premium} provider={ip.provider}
-              extras={[
-                ip.deferred_period_weeks != null && { label: `${ip.deferred_period_weeks}-wk deferred` },
-                ip.cover_pct_of_salary != null && { label: `${Math.round(ip.cover_pct_of_salary * 100)}% of salary` },
-              ].filter(Boolean)}
-              onTap={() => setSelected({ asset: { ...ip, name: 'Income protection', type: 'income-protection', value: (+ip.monthlyBenefit || 0) * 12 }, category: 'protection', itemType: 'income-protection' })} />
-            <div style={{ borderTop: '1px solid var(--c-sep)' }} />
-            <PolicyRow title="Private medical (PMI)" exists={pmi.exists} amount={0} premium={pmi.premium} provider={pmi.provider}
-              onTap={() => setSelected({ asset: { ...pmi, name: 'Private medical (PMI)', type: 'pmi', value: 0 }, category: 'protection', itemType: 'pmi' })} />
+            {showLifeCover && (
+              <PolicyRow title="Life assurance — term" exists={life.exists} amount={life.amount} premium={life.premium} provider={life.provider}
+                inTrust={life.inTrust}
+                extras={[
+                  life.term_years && { label: `${life.term_years}y term` },
+                  life.start_date && { label: `Since ${String(life.start_date).slice(0,4)}` },
+                ].filter(Boolean)}
+                onTap={() => setSelected({ asset: { ...life, name: 'Life assurance — term', type: 'life-cover', value: life.amount }, category: 'protection', itemType: 'life' })} />
+            )}
+            {showCriticalIllness && (
+              <>
+                <div style={{ borderTop: '1px solid var(--c-sep)' }} />
+                <PolicyRow title="Critical illness cover" exists={ci.exists} amount={ci.amount} premium={ci.premium} provider={ci.provider}
+                  onTap={() => setSelected({ asset: { ...ci, name: 'Critical illness cover', type: 'critical-illness', value: ci.amount }, category: 'protection', itemType: 'critical-illness' })} />
+              </>
+            )}
+            {showIncomeProtection && (
+              <>
+                <div style={{ borderTop: '1px solid var(--c-sep)' }} />
+                <PolicyRow title="Income protection" exists={ip.exists} amount={ip.exists ? ((+ip.monthlyBenefit || 0) * 12) : 0} premium={ip.premium} provider={ip.provider}
+                  extras={[
+                    ip.deferred_period_weeks != null && { label: `${ip.deferred_period_weeks}-wk deferred` },
+                    ip.cover_pct_of_salary != null && { label: `${Math.round(ip.cover_pct_of_salary * 100)}% of salary` },
+                  ].filter(Boolean)}
+                  onTap={() => setSelected({ asset: { ...ip, name: 'Income protection', type: 'income-protection', value: (+ip.monthlyBenefit || 0) * 12 }, category: 'protection', itemType: 'income-protection' })} />
+              </>
+            )}
+            {showPMI && (
+              <>
+                <div style={{ borderTop: '1px solid var(--c-sep)' }} />
+                <PolicyRow title="Private medical (PMI)" exists={pmi.exists} amount={0} premium={pmi.premium} provider={pmi.provider}
+                  onTap={() => setSelected({ asset: { ...pmi, name: 'Private medical (PMI)', type: 'pmi', value: 0 }, category: 'protection', itemType: 'pmi' })} />
+              </>
+            )}
           </div>
         </Section>
 
@@ -272,6 +384,91 @@ export default function ProtectionDrillDown({ entity, personaId, onBack, onHome 
           </Section>
         )}
 
+        {/* Section 5c — PET-with-cover overlay (v0.3 signature) */}
+        {(() => {
+          const gifts = entity.gifts || []
+          const now = Date.now()
+          const taperRate = (yearsElapsed) => {
+            if (yearsElapsed < 3) return 1.00
+            if (yearsElapsed < 4) return 0.80
+            if (yearsElapsed < 5) return 0.60
+            if (yearsElapsed < 6) return 0.40
+            if (yearsElapsed < 7) return 0.20
+            return 0.00
+          }
+          const livePets = gifts
+            .filter(g => g.dateGiven)
+            .map(g => {
+              const t = new Date(g.dateGiven).getTime()
+              const yearsElapsed = (now - t) / (365.25 * 24 * 3600 * 1000)
+              return { ...g, yearsElapsed, yearsRemaining: Math.max(0, 7 - yearsElapsed) }
+            })
+            .filter(g => g.yearsElapsed < 7)
+
+          const inTrustCoverPool =
+            (life.exists && life.inTrust ? +life.amount || 0 : 0) +
+            (relevantLife.exists ? +relevantLife.amount || 0 : 0)
+
+          return (
+            <Section title="PET-with-cover overlay" sub="7-year taper × gift-inter-vivos cover">
+              <div style={{
+                background: 'var(--card-bg2)', border: '1px solid var(--c-border)',
+                borderRadius: 14, overflow: 'hidden',
+              }}>
+                {livePets.length === 0 ? (
+                  <div style={{ padding: '14px', fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+                    No lifetime gifts recorded — no PET exposure to overlay.
+                  </div>
+                ) : (
+                  livePets.map((g, i) => {
+                    const amt = +g.amount || 0
+                    const rate = taperRate(g.yearsElapsed)
+                    const taperedLiability = Math.round(amt * 0.40 * rate)
+                    const coverShortfall = Math.max(0, taperedLiability - inTrustCoverPool)
+                    return (
+                      <div key={g.id || i} style={{
+                        padding: '12px 14px',
+                        borderBottom: i < livePets.length - 1 ? '1px solid var(--c-sep)' : 'none',
+                        display: 'flex', flexDirection: 'column', gap: 6,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                            Gift {fmt(amt)} {g.recipient ? `→ ${g.recipient}` : ''}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+                            {g.yearsRemaining.toFixed(1)}y to clear
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <Chip>{Math.round(rate * 100)}% taper rate</Chip>
+                          <Chip tone="warn">IHT exposure {fmt(taperedLiability)}</Chip>
+                          {coverShortfall > 0
+                            ? <Chip tone="bad">Cover shortfall {fmt(coverShortfall)}</Chip>
+                            : <Chip tone="good">Covered by in-trust pool</Chip>}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              <div style={{
+                marginTop: 10, padding: '10px 12px',
+                background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14,
+                fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5,
+              }}>
+                <strong style={{ color: 'var(--c-text)' }}>Gift inter-vivos</strong> — term assurance that covers the 7-year tapering IHT liability on lifetime gifts. Cover steps down each year matching taper. Not a transactional product on this surface.
+              </div>
+              <div style={{
+                marginTop: 8, padding: '10px 12px',
+                background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14,
+                fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5,
+              }}>
+                <strong style={{ color: 'var(--c-text)' }}>Gift With Reservation of Benefit (FA 1986 s102)</strong> — a gift you continue to benefit from is treated as still part of your estate for IHT. Examples: house gifted but still lived in rent-free; chattels gifted but still used.
+              </div>
+            </Section>
+          )
+        })()}
+
         {/* Section 5b — Knowledge-hall context (claims-paid + Defaqto + provider quality) */}
         <DrillContextStub
           eyebrow="Provider quality · claims paid"
@@ -300,6 +497,9 @@ export default function ProtectionDrillDown({ entity, personaId, onBack, onHome 
           </div>
         </Section>
 
+        <p style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
+          {BRAND.disclaimer}
+        </p>
       </div>
       {selected && (
         <AssetDetailOverlay

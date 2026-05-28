@@ -75,8 +75,11 @@ export default function DrillContextStub({
       )}
 
       {askQuestion && (
-        <a
-          href={askHref}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('sonus:ask', {
+            detail: { question: askQuestion || title, route: askRoute, href: askHref },
+          }))}
           className="sw-press"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -87,11 +90,12 @@ export default function DrillContextStub({
             fontSize: 12, fontWeight: 700,
             textDecoration: 'none',
             cursor: 'pointer',
+            font: 'inherit',
           }}
         >
           <span aria-hidden="true">☉</span>
           Ask Sonu about this
-        </a>
+        </button>
       )}
     </div>
   )

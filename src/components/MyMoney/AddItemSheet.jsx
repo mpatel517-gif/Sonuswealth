@@ -16,7 +16,9 @@
 // manual high-trust entry path (FP-5 contract: manual = confidence 1.0).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import OwnerChips, { getHouseholdOwners } from './OwnerChips.jsx'
+import AccountsList from './AccountsList.jsx'
 
 // Item taxonomy — distilled from 3-Engine-mm-asset-taxonomy-v1_0.md per category.
 // Each item carries:
@@ -87,7 +89,7 @@ const CAT_TAXONOMY = {
         required: ['address', 'value'],
         optional: ['monthlyRent', 'mortgageBalance', 'vatOption'] },
       { id: 'LAND',           label: 'Land',                 desc: 'Bare land · agricultural',
-        source: { id: 'G09', tax: 'APR on agricultural value (2yr in-hand / 7yr let) · BPR on business value above ag value · combined £1m cap from April 2026' },
+        source: { id: 'G09', tax: 'APR on agricultural value (2yr in-hand / 7yr let) · BPR on business value above ag value · combined £2.5m cap from April 2026' },
         required: ['description', 'value'],
         optional: ['acres', 'aprQualifying', 'underTenancy'] },
     ],
@@ -172,15 +174,105 @@ const CAT_TAXONOMY = {
       { id: 'MAINTENANCE',    label: 'Maintenance',          desc: 'Court-ordered or voluntary',               fields: ['payee', 'monthly'] },
     ],
   },
+  // v0.3 Phase 3 — Gifts category (MASTER §3.3 GIFT_RECORDED · route-4 §8).
+  // Each item maps to a `type` discriminator on the emitted GIFT_RECORDED
+  // event. PET / CLT remain the existing two; the five new IHT-statutory
+  // exemptions (s19 / s20 / s21 / s22) split out from the v0.2-era fabricated
+  // `srsAllowance` per Tax v2 BLOCK-3.
+  gifts: {
+    label: 'Gifts',
+    items: [
+      { id: 'PET',                  label: 'PET (Potentially Exempt Transfer)', desc: 'Lifetime gift — 7-year clock applies',
+        giftType: 'PET',
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'CLT',                  label: 'CLT (Chargeable Lifetime Transfer)', desc: 'Gift into relevant property trust — immediate IHT if above NRB',
+        giftType: 'CLT',
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'NORMAL_EXPENDITURE',   label: 'Normal expenditure from income (IHTA 1984 s21)', desc: 'Habitual gifts from surplus income · no 7-year clock',
+        giftType: 'normal_expenditure',
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'ANNUAL_EXEMPTION',     label: 'Annual exemption £3k (IHTA 1984 s19)', desc: 'Annual gift exemption · carry-forward 1 year',
+        giftType: 'annual_exemption',
+        cap: 3000, carryForwardYears: 1,
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'SMALL_GIFTS',          label: 'Small gifts £250 per donee (IHTA 1984 s20)', desc: 'Up to £250 per donee per tax year',
+        giftType: 'small_gifts',
+        cap: 250, perDonee: true,
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'WEDDING_PARENT',       label: 'Wedding gift — parent→child (IHTA 1984 s22)', desc: 'Up to £5,000 per donor, per marriage',
+        giftType: 'wedding_parent',
+        cap: 5000,
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'WEDDING_GRANDPARENT',  label: 'Wedding gift — grandparent→grandchild', desc: 'Up to £2,500 per donor, per marriage',
+        giftType: 'wedding_grandparent',
+        cap: 2500,
+        required: ['to', 'amount', 'date'], optional: [] },
+      { id: 'WEDDING_OTHER',        label: 'Wedding gift — other', desc: 'Up to £1,000 per donor, per marriage',
+        giftType: 'wedding_other',
+        cap: 1000,
+        required: ['to', 'amount', 'date'], optional: [] },
+    ],
+  },
 }
 
-const CAT_ORDER = ['pensions', 'investments', 'property', 'business', 'protection', 'cash', 'liabilities', 'income', 'alternatives', 'obligations']
+const CAT_ORDER = ['pensions', 'investments', 'property', 'business', 'protection', 'cash', 'liabilities', 'income', 'alternatives', 'gifts', 'obligations']
 
-export default function AddItemSheet({ open, initialCategory = null, onClose, onCommit }) {
+export default function AddItemSheet({ open, initialCategory = null, onClose, onCommit, entity = null }) {
   const [step, setStep] = useState(initialCategory ? 'type' : 'category')
   const [cat, setCat] = useState(initialCategory)
   const [itemType, setItemType] = useState(null)
   const [fields, setFields] = useState({})
+  // Multi-owner attribution chips (Voyant-parity). Default self-only.
+  const [owners, setOwners] = useState(['self'])
+  // Link picker selection — stores the chosen property/mortgage id when the
+  // category supports cross-linking.
+  const [linkedId, setLinkedId] = useState(null)
+
+  // Household owners derived from entity. Falls back to a single "You" chip.
+  const householdOwners = useMemo(() => {
+    const list = getHouseholdOwners(entity)
+    return list.length ? list : [{ id: 'self', name: 'You', color: '#2DF2C3' }]
+  }, [entity])
+
+  // Existing properties / mortgages for the link pickers.
+  const linkablePool = useMemo(() => {
+    if (!entity) return { properties: [], mortgages: [] }
+    const properties = (entity.assets?.property || []).map(p => ({
+      id: p.id || `prop-${p.address || p.label}`,
+      label: p.label || p.address || 'Property',
+      sub: p.use || p.type || 'Residence',
+      value: +p.value || 0,
+    }))
+    // Mortgages live on liabilities.mortgage (single) or in liabilities.otherLoans
+    // tagged with a mortgage type. Filter out anything already linked to a property.
+    const linkedSet = new Set(
+      (entity.assets?.property || [])
+        .map(p => p.linked_mortgage_id || p.mortgageId)
+        .filter(Boolean)
+    )
+    const mortgages = []
+    if (entity.liabilities?.mortgage && +entity.liabilities.mortgage.outstanding > 0) {
+      const mid = entity.liabilities.mortgage.id || 'liab-mortgage'
+      if (!linkedSet.has(mid)) {
+        mortgages.push({
+          id: mid,
+          label: entity.liabilities.mortgage.lender || 'Mortgage',
+          sub: `£${Math.round(+entity.liabilities.mortgage.outstanding).toLocaleString()} outstanding`,
+        })
+      }
+    }
+    for (const l of (entity.liabilities?.otherLoans || [])) {
+      if (!/mortgage/i.test(l.type || '')) continue
+      const lid = l.id || `liab-${l.type}`
+      if (linkedSet.has(lid)) continue
+      mortgages.push({
+        id: lid,
+        label: l.lender || l.type || 'Mortgage',
+        sub: `£${Math.round(+l.outstanding || 0).toLocaleString()} outstanding`,
+      })
+    }
+    return { properties, mortgages }
+  }, [entity])
 
   if (!open) return null
 
@@ -189,6 +281,7 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
 
   function reset() {
     setStep('category'); setCat(null); setItemType(null); setFields({})
+    setOwners(['self']); setLinkedId(null)
   }
   function chooseCat(id) {
     setCat(id); setStep('type')
@@ -208,10 +301,44 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
   }
   function submit() {
     if (!cat || !itemType) return
+    if (!owners.length) return  // Required: at least one owner
     // Strip _docName/_docSize/_docMime out of the asset payload — they're
     // document metadata, not item fields.
     const { _docName, _docSize, _docMime, ...assetFields } = fields
     const assetId = `${itemType.toLowerCase()}-${Date.now().toString(36)}`
+    // Voyant-parity link metadata. For a new mortgage we attach
+    // linked_property_id; for a new property we attach linked_mortgage_id.
+    const linkPayload = {}
+    if (linkedId) {
+      const isMortgageItem = cat === 'liabilities' && /MORTGAGE/i.test(itemType)
+      const isPropertyItem = cat === 'property'
+      if (isMortgageItem) linkPayload.linked_property_id = linkedId
+      else if (isPropertyItem) linkPayload.linked_mortgage_id = linkedId
+    }
+    // v0.3 Phase 3 — Gifts emit GIFT_RECORDED per MASTER §3.3 / route-4 §8.
+    // Shape: { to, amount, date, type } — type discriminator drives downstream
+    // IHT computation (PET clock, CLT NRB, s19/s20/s21/s22 exemptions).
+    if (cat === 'gifts') {
+      const node = CAT_TAXONOMY.gifts.items.find(i => i.id === itemType)
+      const giftType = node?.giftType || 'PET'
+      onCommit?.({
+        type: 'GIFT_RECORDED',
+        ts: Date.now(),
+        correlation_id: `mm-gift-${Date.now()}`,
+        payload: {
+          to:     assetFields.to    || '',
+          amount: +assetFields.amount || 0,
+          date:   assetFields.date  || '',
+          type:   giftType,
+          owners: [...owners],
+          source: 'manual',
+          confidence: 1.0,
+        },
+      })
+      reset()
+      onClose?.()
+      return
+    }
     onCommit?.({
       type: 'ASSET_VALUE_UPDATED',
       ts: Date.now(),
@@ -220,6 +347,8 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
         id: assetId,
         category: cat,
         itemType,
+        owners: [...owners],
+        ...linkPayload,
         fields: assetFields,
         source: 'manual',
         confidence: 1.0,
@@ -329,6 +458,21 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
           // Support both shapes — new (required/optional) + legacy (fields)
           const requiredFields = itemNode.required || itemNode.fields || []
           const optionalFields = itemNode.optional || []
+          // Link-picker mode for this item type:
+          //   · Mortgage liability → pick a property to attach to
+          //   · Property asset     → pick an existing unlinked mortgage
+          const isMortgageItem = cat === 'liabilities' && /MORTGAGE/i.test(itemType)
+          const isPropertyItem = cat === 'property'
+          const linkOptions = isMortgageItem
+            ? linkablePool.properties
+            : isPropertyItem
+              ? linkablePool.mortgages
+              : []
+          const linkLabel = isMortgageItem ? 'Linked property' : 'Existing mortgage'
+          const linkEmpty = isMortgageItem
+            ? 'No properties yet — add a property first to link this mortgage.'
+            : 'No unlinked mortgages — every mortgage is already linked to a property.'
+          const selectedLink = linkOptions.find(o => o.id === linkedId)
           return (
             <>
               <div className="sw-eyebrow" style={{ marginBottom: 6 }}>Step 3 of 3 · Details</div>
@@ -338,6 +482,77 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
               <div style={{ fontSize: 12, color: 'var(--c-text3)', marginBottom: 12, lineHeight: 1.5 }}>
                 {itemNode.desc}
               </div>
+
+              {/* ── Owners (Voyant-parity multi-attribution) ─────────────── */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{
+                  fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
+                  letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 6,
+                }}>
+                  Owners · who holds this {owners.length > 1 ? '· joint' : ''}
+                </div>
+                <OwnerChips owners={householdOwners} selected={owners} onChange={setOwners} />
+              </div>
+
+              {/* ── Linked-item picker (mortgage ↔ property) ─────────────── */}
+              {(isMortgageItem || isPropertyItem) && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{
+                    fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
+                    letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 6,
+                  }}>
+                    {linkLabel} {isMortgageItem ? '(optional)' : '(optional)'}
+                  </div>
+                  {linkOptions.length === 0 ? (
+                    <div style={{
+                      padding: '10px 12px', fontSize: 11,
+                      color: 'var(--c-text3)',
+                      background: 'var(--c-surface2)',
+                      border: '1px dashed var(--c-border)',
+                      borderRadius: 10,
+                    }}>{linkEmpty}</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {linkOptions.map(opt => {
+                        const on = linkedId === opt.id
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setLinkedId(on ? null : opt.id)}
+                            className="sw-pressable"
+                            style={{
+                              padding: '10px 12px', textAlign: 'left', cursor: 'pointer',
+                              background: on
+                                ? 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface2))'
+                                : 'var(--c-surface2)',
+                              border: on
+                                ? '1.5px solid var(--c-acc)'
+                                : '1px solid var(--c-border)',
+                              borderRadius: 10,
+                            }}
+                          >
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                              {opt.label}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
+                              {opt.sub}
+                            </div>
+                          </button>
+                        )
+                      })}
+                      {selectedLink && (
+                        <div style={{
+                          fontSize: 11, color: 'var(--c-acc)', fontWeight: 700,
+                          marginTop: 2,
+                        }}>
+                          Linked to {selectedLink.label}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Taxonomy source banner — from 3-Engine-mm-asset-taxonomy-v1_0.md.
                   Surfaces the canonical tax position so the user knows what
@@ -478,6 +693,21 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
             </>
           )
         })()}
+
+        {/* Voyant-pattern sidebar (founder direction 2026-05-26): existing
+            accounts list lives INSIDE the add/edit sheet so users see what
+            they already have while adding new items. Voyant uses a right
+            rail; on the mobile-first sheet pattern this renders as a
+            stacked footer section below the form. */}
+        {entity && (
+          <div style={{
+            marginTop: 22, paddingTop: 14,
+            borderTop: '1px solid var(--c-border)',
+          }}>
+            <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Your existing accounts</div>
+            <AccountsList entity={entity} />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -540,6 +770,8 @@ function prettyField(f) {
     guaranteePeriod: 'Guarantee period (years)', survivorPct: 'Survivor benefit (%)',
     securedOn: 'Secured against (asset ID)', premium: 'Premium (£/mo)',
     role: 'Role (Director · Shareholder · Officer)',
+    // v0.3 Phase 3 — gift fields
+    to: 'Recipient (donee)', amount: 'Gift amount (£)', date: 'Gift date',
   }
   return map[f] || f
 }

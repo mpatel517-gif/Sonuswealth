@@ -19,14 +19,39 @@ import DecisionTree                    from '../components/DecisionTree/index.js
 
 // ── Starter questions ─────────────────────────────────────────────────────────
 
-const STARTER_QUESTIONS = [
-  { q: 'Should I buy a second property?',              event: 'buy_second_home' },
-  { q: 'Can I afford to retire in 3 years?',           event: 'retire' },
-  { q: 'How do I reduce my IHT before April 2027?',   event: 'iht_planning' },
-  { q: "I'm going part-time — what's the impact?",     event: 'part_time' },
-  { q: 'What do I do with a large inheritance?',       event: 'inheritance_received' },
-  { q: 'Should I set up a trust for my children?',     event: 'setup_trust' },
+// P1-21 (2026-05-28): starter questions now stage-aware — IHT-2027 to a
+// 28-year-old or "retire in 3 years" to a 78-year-old in drawdown was an
+// honesty bug (showed cards user couldn't act on). Each question carries
+// a `stages` array filtered against entity.lifeStage in pickStarters().
+const ALL_STARTER_QUESTIONS = [
+  { q: 'Should I buy a second property?',              event: 'buy_second_home',     stages: ['accumulation', 'consolidation', 'distribution'] },
+  { q: 'Can I afford to retire in 3 years?',           event: 'retire',              stages: ['consolidation', 'pre-retirement'] },
+  { q: 'How do I reduce my IHT before April 2027?',   event: 'iht_planning',         stages: ['consolidation', 'pre-retirement', 'distribution', 'legacy'] },
+  { q: "I'm going part-time — what's the impact?",     event: 'part_time',           stages: ['accumulation', 'consolidation'] },
+  { q: 'What do I do with a large inheritance?',       event: 'inheritance_received', stages: ['accumulation', 'consolidation', 'pre-retirement', 'distribution'] },
+  { q: 'Should I set up a trust for my children?',     event: 'setup_trust',         stages: ['accumulation', 'consolidation', 'pre-retirement'] },
+  // Stage-specific additions
+  { q: 'How much do I need to start investing?',       event: 'start_investing',     stages: ['accumulation'] },
+  { q: 'How should I sequence my drawdown?',           event: 'sequence_drawdown',   stages: ['distribution', 'pre-retirement'] },
+  { q: 'Do I have enough cover for the family?',       event: 'review_cover',        stages: ['accumulation', 'consolidation'] },
+  // P1-20 (2026-05-28): wire 4 previously-invisible canonical domains —
+  // gifting, propertyDecisions, longTermCare, protection (above). Each maps
+  // to an ontology event the engine already knows; the surface was missing.
+  { q: 'How much can I gift this year tax-free?',      event: 'iht_planning',        stages: ['consolidation', 'pre-retirement', 'distribution', 'legacy'] },
+  { q: 'Should I downsize to release equity?',         event: 'downsize',            stages: ['pre-retirement', 'distribution', 'legacy'] },
+  { q: 'How do I plan for long-term care costs?',      event: 'care_home_move',      stages: ['pre-retirement', 'distribution', 'legacy'] },
 ]
+
+function pickStarters(entity) {
+  const stage = String(entity?.lifeStage || entity?.life_stage || '').toLowerCase()
+  if (!stage) return ALL_STARTER_QUESTIONS.slice(0, 6)
+  const filtered = ALL_STARTER_QUESTIONS.filter(q => q.stages.includes(stage))
+  return filtered.length >= 3 ? filtered.slice(0, 6) : ALL_STARTER_QUESTIONS.slice(0, 6)
+}
+
+// Kept for backwards-compat — components reading STARTER_QUESTIONS get the
+// full list, but the JSX below uses pickStarters(entity) for stage filtering.
+const STARTER_QUESTIONS = ALL_STARTER_QUESTIONS
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -149,7 +174,7 @@ function FollowUpPanel({ followUp, round, onAnswer }) {
   )
 }
 
-function IdleState({ onSelect }) {
+function IdleState({ onSelect, entity }) {
   return (
     <div style={{ padding: '24px 20px' }}>
       <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>Ask any life question</h2>
@@ -158,7 +183,7 @@ function IdleState({ onSelect }) {
         options, consequences, deadlines, risks, and the option you didn't think of.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {STARTER_QUESTIONS.map(({ q, event }, i) => (
+        {pickStarters(entity).map(({ q, event }, i) => (
           <button
             key={i}
             onClick={() => onSelect(q, [event])}
@@ -272,7 +297,9 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
       }}>
         {onClose && (
           <button
+            type="button"
             onClick={() => { orc.cancel(); orc.reset(); onClose({ cancelled: true }) }}
+            aria-label="Close decision engine"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text3)', fontSize: 18, padding: 0 }}
           >←</button>
         )}
@@ -300,7 +327,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {/* Idle state */}
         {orc.isIdle && !currentQuery && (
-          <IdleState onSelect={handleSubmit} />
+          <IdleState onSelect={handleSubmit} entity={entity} />
         )}
 
         {/* Loading — show spinner whenever loading=true even if fsm has no label */}

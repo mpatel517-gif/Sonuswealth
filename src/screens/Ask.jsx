@@ -35,7 +35,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { fmt, daysLeft, netWorth, costOfInaction, calcFQ, calcRisk, TAX } from '../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { netWorth, fq as calcFQ } from '../engine/selectors/index.js'
+import { fmt, daysLeft, costOfInaction, calcRisk, TAX } from '../engine/fq-calculator.js'
 import { ProvenanceChip, Num, RevealStagger } from '../components/shared/index.js'
 
 // ─────────────────────────────────────────────────────────────────────────────

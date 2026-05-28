@@ -16,6 +16,17 @@ import ExplainerChip from '../shared/Explainer.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
 import DrillContextStub, { PropertyMapStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
+import { BRAND } from '../../config/brand.js'
+// S1 selector migration (Phase 2)
+import {
+  netWorth,
+  liabilities as liabilitiesTotal,
+  properties as propertyTotal,
+  cash as cashTotal,
+  investments as investmentsTotal,
+  pensions as pensionTotal,
+} from '../../engine/selectors/index.js'
+import { LiquidityLadder } from '../charts/index.js'
 
 function Term({ children, id }) {
   return (
@@ -87,7 +98,12 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
   const [selected, setSelected] = useState(null)
   const a = entity.assets || {}
   const residence = a.residence
-  const btls = Array.isArray(a.property) ? a.property : []
+  // BTL portfolio — accept both the flat a.property[] schema and the
+  // a.rental_portfolio.properties[] schema used by some personas.
+  const btls = [
+    ...(Array.isArray(a.property) ? a.property : []),
+    ...(Array.isArray(a.rental_portfolio?.properties) ? a.rental_portfolio.properties : []),
+  ]
   const liabilities = entity.liabilities || {}
   const primaryMortgage = liabilities.mortgage?.outstanding || 0
   const btlMortgages = (liabilities.otherLoans || [])
@@ -101,11 +117,53 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
   const totalPropertyValue = residenceValue + btlValue
   const totalPropertyEquity = residenceEquity + btlEquity
 
+  // Concentration check — residence share of gross assets.
+  // Threshold informational only (PP-9: plain English, info not advice).
+  const residenceOwned = residenceValue * (+residence?.ownershipShare || 1)
+  const grossAssets = netWorth(entity) + liabilitiesTotal(entity)
+  const concentrationPct = grossAssets > 0 ? (residenceOwned / grossAssets) * 100 : 0
+  const concentrationFlag = concentrationPct >= 40
+  const concentrationTone = concentrationPct > 60 ? 'bad' : 'warn'  // urgent vs watch
+
+  // Marginal-rate hint for S24 impact framing.
+  const grossIncome = (+entity?.income?.salary || 0) + (+entity?.income?.dividends || 0) +
+                      (+entity?.income?.rental || 0) + (+entity?.income?.other || 0)
+  const isHigherRate = grossIncome >= 50270
+
+  // Landlord-shape data — present on mrT-landlord persona via rental_portfolio.
+  // Engine v1.0 spec §G.5 (disposed_properties), §G.7 (portfolio_summary.s24),
+  // §G.3 (ppr_eligibility per property), §G.4 (ownership_split / beneficial
+  // interest), §G.6 (hmo_licence_expiry). All info-only display.
+  const portfolioS24 = a.rental_portfolio?.portfolio_summary?.section_24_restriction
+  const disposed = a.rental_portfolio?.disposed_properties || entity.disposed_properties || []
+  const primaryIndividualId = entity.primary_individual_id ||
+    (Array.isArray(entity.individuals) ? entity.individuals[0]?.id : null)
+
+  function fmtDate(d) {
+    if (!d) return '—'
+    const dt = new Date(d)
+    if (isNaN(dt)) return String(d)
+    return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  function daysUntil(d) {
+    if (!d) return null
+    const dt = new Date(d)
+    if (isNaN(dt)) return null
+    return Math.round((dt.getTime() - Date.now()) / 86400000)
+  }
+
   return (
     <OverlayShell title="Property · drill-down"
       subtitle={`${fmt(totalPropertyValue)} GMV · ${fmt(totalPropertyEquity)} equity`}
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
+
+        <div
+          className="sw-eyebrow"
+          style={{ fontStyle: 'italic', color: 'var(--c-text3)', marginBottom: 10 }}
+        >
+          How your property is taxed, owned, and shaped
+        </div>
 
         {/* Section 1 — composition */}
         <Section title="1 · What you own — main home vs let property"
@@ -151,13 +209,25 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
                 {residence.address || 'Primary residence'}
               </div>
               <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>
-                {residence.ownership === 'sole' ? 'Sole owner' : 'Joint'} · purchased {residence.purchase_date || 'n/a'}
+                {residence.ownership === 'sole' ? 'Sole owner' : 'Joint'} · purchased {residence.purchase_date || '—'}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                 <Chip tone="good">PPR eligible</Chip>
                 <Chip tone="good">RNRB qualifying</Chip>
                 <Chip>No 60-day reporting</Chip>
+                {concentrationFlag && (
+                  <Chip tone={concentrationTone}>
+                    {Math.round(concentrationPct)}% of net worth · illiquid
+                  </Chip>
+                )}
               </div>
+              {concentrationFlag && (
+                <div style={{
+                  fontSize: 11, color: 'var(--c-text3)', marginBottom: 10, lineHeight: 1.4,
+                }}>
+                  Main home is {Math.round(concentrationPct)}% of total assets. Selling takes weeks to months and incurs costs (estate-agent fees, conveyancing, possible CGT on any non-PPR portion).
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
                 <Tile label="Current value" value={fmt(residenceValue)} />
                 <Tile label="Cost basis" value={fmt(+residence.purchase_price || 0)} />
@@ -172,7 +242,7 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
         {/* Section 3 — BTL portfolio */}
         {btls.length > 0 && (
           <Section title="3 · Buy-to-let portfolio" sub={
-            <><Term id="MM-S24">S24</Term> mortgage interest restriction: only 20% basic-rate credit since April 2020. Material IT burden for HR/AR landlords. 60-day reporting on disposal.</>
+            <><Term id="MM-S24">S24</Term> mortgage interest restriction: only 20% basic-rate credit since April 2020. Material IT burden for HR/AR landlords. 60-day reporting on disposal. Residential CGT rates: 18% basic, 24% higher (since 30 Oct 2024). Non-residential property is now the same rates; carried interest is taxed differently — see Tax &amp; Estate.</>
           }>
             <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
               {btls.map((p, i) => {
@@ -197,15 +267,33 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
                       <Chip tone="bad">No PPR</Chip>
                       <Chip tone="bad">No BPR</Chip>
                       <Chip>60-day CGT reporting</Chip>
-                      <Chip tone="warn">+5% SDLT surcharge</Chip>
+                      <Chip tone="warn">
+                        SDLT — additional property surcharge +5% on each band above £40,000 since 31 Oct 2024. First-time buyers exempt up to £425,000 (zero band).
+                      </Chip>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
                       <Tile label="Market value" value={fmt(p.value || p.value_gbp)} />
                       <Tile label="Cost basis" value={fmt(p.purchase_price)} />
-                      <Tile label="Embedded gain" value={fmt(gain)} tone={gain > 0 ? 'warn' : 'neutral'} sub="Taxable on disposal" />
+                      <Tile label="Embedded gain" value={fmt(gain)} tone={gain > 0 ? 'warn' : 'neutral'} sub="Residential CGT 18% / 24%" />
                       <Tile label="Annual rent" value={fmt(annualRent)} sub="Gross" />
                       <Tile label="BTL mortgage" value={fmt(debt)} sub={mortgage?.rate_type || ''} />
                       <Tile label="Equity" value={fmt(equity)} tone={equity > 0 ? 'good' : 'bad'} />
+                      {(+p.mortgage_interest_annual > 0 || +mortgage?.annual_interest > 0) && (() => {
+                        const interest = +p.mortgage_interest_annual || +mortgage?.annual_interest || 0
+                        const credit = interest * 0.20
+                        const preS24 = interest * (isHigherRate ? 0.40 : 0.20)
+                        const netCost = preS24 - credit
+                        return (
+                          <Tile
+                            label="S24 impact"
+                            value={fmt(credit)}
+                            tone="warn"
+                            sub={isHigherRate
+                              ? `Basic-rate credit (vs ${fmt(preS24)} pre-2020 relief · ~${fmt(netCost)} extra tax)`
+                              : 'Basic-rate credit on mortgage interest'}
+                          />
+                        )
+                      })()}
                     </div>
                     <button
                       type="button"
@@ -255,6 +343,49 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
           </div>
         </Section>
 
+        {/* CGT current rates cite (v0.3 spec delta) */}
+        <Section title="CGT on property disposal — current rates">
+          <div style={{
+            background: 'var(--card-bg2)', border: '1px solid var(--c-border)',
+            borderRadius: 14, padding: 14, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5,
+          }}>
+            CGT — 18% in basic-rate band, 24% above. PPR relief (Section 222) full relief for main residence + final 9 months. Lettings relief £40,000 cap, only if shared occupation.
+          </div>
+        </Section>
+
+        {/* Liquidity ladder (v0.3 spec delta) — Property = months tier (slowest) */}
+        <Section title="Liquidity ladder">
+          {(() => {
+            const cashV = cashTotal(entity)
+            const invV = investmentsTotal(entity)
+            const penV = pensionTotal(entity)
+            const propV = propertyTotal(entity)
+            return (
+              <LiquidityLadder
+                ariaLabel="Liquidity ladder · Property is the slowest tier"
+                tiers={[
+                  { label: 'Hours', items: cashV > 0 ? [{ name: 'Cash', value: cashV }] : [] },
+                  { label: 'Days',  items: [] },
+                  { label: 'Weeks', items: invV > 0
+                    ? [
+                        { name: 'ISA', value: invV * 0.5 },
+                        { name: 'GIA', value: invV * 0.5 },
+                      ]
+                    : [] },
+                  { label: 'Months', items: [
+                      ...(penV > 0 ? [{ name: 'Pension', value: penV }] : []),
+                      ...(propV > 0 ? [{ name: 'Property (this tier · slowest)', value: propV }] : []),
+                    ] },
+                  { label: 'Years', items: [] },
+                ]}
+              />
+            )
+          })()}
+        </Section>
+
+        <p style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
+          {BRAND.disclaimer}
+        </p>
       </div>
       {selected && (
         <AssetDetailOverlay

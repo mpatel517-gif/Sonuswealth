@@ -36,10 +36,21 @@ const TONE = {
 
 export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
   // Convert steps into running balance.
+  // Dataviz fix (2026-05-26): the surplus step is the OUTCOME of the chain,
+  // not a deduction. The previous logic added the surplus value (= the
+  // running) to itself, producing 2× the correct hero figure (e.g. Bruce
+  // showed £-172k when actual surplus was £-86k). Skip the running update
+  // on 'surplus' steps — the running before that step IS the surplus.
   let running = 0
   const enriched = steps.map(s => {
     const before = running
-    running = s.kind === 'income' ? s.value : running + s.value
+    if (s.kind === 'income') {
+      running = s.value
+    } else if (s.kind === 'surplus') {
+      // Surplus = running already. Do not mutate.
+    } else {
+      running = running + s.value
+    }
     return { ...s, runningBefore: before, runningAfter: running }
   })
 

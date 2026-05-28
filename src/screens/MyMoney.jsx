@@ -20,24 +20,33 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useMemo, useEffect } from 'react'
+// S1 selector migration (Phase 2): canonical reads via facade.
+import {
+  netWorth, investable,
+  fq as calcFQ,
+  ani as calcANI,
+  hicbc as calcHICBC,
+  psa as calcPSA,
+  coiForDomain,
+  getWrapper,
+} from '../engine/selectors/index.js'
 import {
   // formatting + identity
-  fmt, netWorth, netWorthAtWindow, investable, guardrail,
+  fmt, netWorthAtWindow, guardrail,
   // CoI + IHT
   ihtDynamic, ihtSippDelta, costOfInaction, totalCoI, coiCashflowVariants,
-  coiForDomain,
   // Triple-anchor scores
-  calcFQ, calcRisk, fqBand, riskBand,
+  calcRisk, fqBand, riskBand,
   // Pension drilldown
   sippProjection, sippProjectionSeries, nominationStatus,
   drawdownEfficiencyRatio, prcPccSpread,
   // Wrapper / persona / surplus / liquidity
-  getWrapper, hasPersonaFlag, monthlySurplus, liquidityBuffer,
+  hasPersonaFlag, monthlySurplus, liquidityBuffer,
   // 5-method drawdown
   bengenProjection, guytonKlingerPath, bucketAllocation,
   floorUpsideSplit, swrFromRegime, drawdownMatrix,
-  // Tax
-  calcANI, calcPersonalAllowance, calcDividendTax, calcHICBC, calcPSA,
+  // Tax (calcANI, calcHICBC, calcPSA migrated to selectors above)
+  calcPersonalAllowance, calcDividendTax,
   calcAllIncome, classifyIncomeType, allowanceTracker, calcMarriageAllowance,
   // Plan / temporal
   planFor, planStaleness, varianceFor,
@@ -57,7 +66,9 @@ import {
 // (b) several of their call sites diverge from ripple's defaults
 // (e.g. ihtDynamic with includeSipp=true override, mutated entity).
 import { useRipple } from '../state/ripple.jsx'
-import { getMonthlyEssentials } from '../engine/_helpers.js'
+// S1 selector migration (Phase 2): monthlyEssentials reader pulled via selector
+// facade. Resolves the 4 known persona shapes consistently with engine canon.
+import { monthlyEssentials as getMonthlyEssentials } from '../engine/selectors/index.js'
 // Pension audit P3 (2026-05-26): effective AA (standard / MPAA / tapered)
 // and per-tax-year carry-forward — used by PensionDrillDown to replace the
 // previous static "This year's cap / Reduced cap / Unused room" tiles.
@@ -126,7 +137,7 @@ import {
 // import { Marimekko } from '../components/charts/index.js'  // ← retired
 // v0.3 R1 §8 — SIPP-IHT chip on Pensions tile uses canonical pre/post-2027
 // delta helper (single source of truth, no recompute in screen).
-import { ihtDeltaPrePost2027 } from '../engine/canonical-metrics.js'
+import { ihtDeltaPrePost2027 } from '../engine/selectors/index.js'
 // v0.3 R8 Pension drill (2026-05-26) — Liquidity ladder is reused across all
 // drills. Inline PensionDrillDown at line ~1872 owns the v0.3 deltas because
 // it shadows the standalone PensionDrillDown.jsx component (which is unused).
@@ -652,14 +663,30 @@ function rowsForAlternatives(entity) {
       })
     }
   }
-  for (const a of (entity.alternatives || entity.alt_assets || [])) {
-    out.push({
-      id: a.id, label: a.name || a.type,
-      value: +(a.value_gbp ?? a.value ?? 0) || 0,
-      sub: a.type || '',
-      // C-01 fix: same reasoning — alternatives are not GIA. Preserve source.
-      wrapper: a.wrapper || null, tag: 'ALT',
-    })
+  // TO-5 fix (2026-05-28): also walk `entity.assets.alternatives[]` (canonical
+  // schema location used by Tony Stark and any other persona storing alts
+  // under the assets wrapper). The old `entity.alternatives` and
+  // `entity.alt_assets` shapes are legacy/root-level. Tony's £315k of
+  // crypto/gold lived in `assets.alternatives[]` and never made it into the
+  // CategoryTile because this loop didn't read that location.
+  // See 0-Active/audit/B-V2-EXPANDED-FINDINGS-2026-05-28.md TO-5.
+  const altArrays = [
+    entity.alternatives,
+    entity.alt_assets,
+    entity.assets?.alternatives,
+  ];
+  for (const arr of altArrays) {
+    if (!Array.isArray(arr)) continue;
+    for (const a of arr) {
+      if (a?.status === 'disposed') continue;
+      out.push({
+        id: a.id, label: a.name || a.type,
+        value: +(a.value_gbp ?? a.value ?? 0) || 0,
+        sub: a.type || '',
+        // C-01 fix: alternatives are not GIA. Preserve source.
+        wrapper: a.wrapper || null, tag: 'ALT',
+      })
+    }
   }
   return out
 }
@@ -1826,7 +1853,7 @@ function AssetCaptureSheet({ open, onClose, onCommit, entity }) {
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text3)',
                   textTransform: 'uppercase', letterSpacing: 0.5 }}>Provider</span>
                 <input value={provider} onChange={e => setProvider(e.target.value)}
-                  placeholder="e.g. Vanguard, HSBC"
+                  placeholder="e.g. your provider name"
                   style={{
                     width: '100%', marginTop: 4, padding: '8px 10px',
                     background: 'var(--c-surface2)',
@@ -2462,7 +2489,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                   color: 'var(--c-text)',
                 }} />
               {schedule.length > 1 && (
-                <button onClick={() => removeYear(i)} style={{
+                <button type="button" onClick={() => removeYear(i)} aria-label="Remove this year from schedule" style={{
                   width: 28, height: 28, borderRadius: 6,
                   background: 'transparent', border: '1px solid var(--c-sep)',
                   color: 'var(--c-text3)', cursor: 'pointer',
@@ -3842,7 +3869,12 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
               ? subtotals.cash / monthlyEssentialsForTiles
               : null
             const months = Number.isFinite(monthsRaw) ? monthsRaw : 0
+            // P0-13b (2026-05-28): cap display at 20+ yr — past that point the
+            // "X years of essentials covered" framing stops being useful (cash
+            // dwarfs liquidity-buffer purpose; user wants "this cash is excess"
+            // not a half-life number). Without a cap persona-e shows 199.8yr.
             if (monthsRaw == null) tile.contextLine = `${fmt(subtotals.cash)} cash · add monthly essentials to see months of cover`
+            else if (months >= 240) tile.contextLine = `20+ yr cover · cash holding is well above liquidity buffer`
             else if (months > 0) tile.contextLine = months >= 12
               ? `${(months / 12).toFixed(1)} yr of essentials covered`
               : `${months.toFixed(1)} mo of essentials covered`
@@ -3850,7 +3882,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
             // BLOCK-4: replace value-laden "Strong buffer" with the numeric
             // band — neutral, rubric-explicit. User reads the months figure
             // and the label together, no regulated-sounding word required.
-            if (months >= 6) tile.status = { label: `${months >= 12 ? (months / 12).toFixed(1) + 'yr' : Math.round(months) + 'mo'} cover`, tone: 'good' }
+            if (months >= 6) tile.status = { label: `${months >= 240 ? '20+yr' : months >= 12 ? (months / 12).toFixed(1) + 'yr' : Math.round(months) + 'mo'} cover`, tone: 'good' }
             else if (months >= 3) tile.status = { label: `${Math.round(months)}mo cover`, tone: 'neutral' }
             else tile.status = { label: `${Math.round(months)}mo cover`, tone: 'warn' }
           }

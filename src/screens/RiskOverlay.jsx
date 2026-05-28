@@ -16,7 +16,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
-import { calcRisk, riskBand, calcFQ, fqBand } from '../engine/fq-calculator.js'
+// S1 selector migration (Phase 2)
+import { fq as calcFQ } from '../engine/selectors/index.js'
+import { calcRisk, riskBand, fqBand } from '../engine/fq-calculator.js'
 import { BRAND } from '../config/brand.js'
 import { RiskBody } from './Risk.jsx'  // re-use composed body
 import { Num, FadeInOnMount } from '../components/shared/index.js'
@@ -130,7 +132,7 @@ export default function RiskOverlay({ entity, onClose, originLabel = 'Home', onN
               borderLeft:'3px solid var(--c-acc)',
               padding:'14px 18px',
             }}>
-              <button onClick={() => setHeroCollapsed(true)} className="sw-press" style={{
+              <button type="button" onClick={() => setHeroCollapsed(true)} aria-label="Collapse hero" className="sw-press" style={{
                 position:'absolute', right:10, top:10,
                 background:'none', border:'none', cursor:'pointer',
                 color:'var(--c-text3)', fontSize:14,

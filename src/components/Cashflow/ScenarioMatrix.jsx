@@ -128,17 +128,30 @@ export default function ScenarioMatrix({
                   display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
                 }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>
-                    {s.name}
+                    {s.name ?? s.label ?? s.id}
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>
-                    {fmtCompact(s.drawdownAnnual)}/yr
+                    {fmtCompact(s.drawdownAnnual ?? s.annual_drawdown ?? 0)}/yr
                   </span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.5 }}>
-                  {s.desc}
+                  {s.desc ?? (() => {
+                    const id = s.id || s.name || ''
+                    const map = {
+                      do_nothing: 'No drawdown — portfolio compounds and depletes only via spending elsewhere.',
+                      guardrail:  'Guyton-Klinger floor — protects capital in down years.',
+                      optimal:    'Tax-efficient draw within basic-rate band.',
+                      bengen_4pct:'Classic 4% safe-withdrawal rate.',
+                      custom:     'Your manual drawdown target.',
+                    }
+                    return map[id] || ''
+                  })()}
                 </div>
               </div>
-              <Spark points={s.spark} color={color} />
+              <Spark
+                points={s.spark ?? (s.annual_table || []).map(r => +(r.portfolio || 0))}
+                color={color}
+              />
               <div style={{ textAlign: 'right' }}>
                 <div style={{
                   fontSize: 15, fontWeight: 800, color,

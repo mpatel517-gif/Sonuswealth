@@ -30,6 +30,7 @@ import {
   giftClockAll,
 } from '../engine/fq-calculator.js';
 import { monthlyFlow } from '../engine/monthly-flow-engine.js';
+import { maritalStatus } from '../engine/persona-helpers.js';
 
 // ── Safe engine call ──────────────────────────────────────────────────────────
 // All composer engine calls are wrapped — a missing entity field should never
@@ -126,7 +127,7 @@ function buildUserState(entity) {
     allowances:            allowance,
     giftClocks:            giftClks,
     jurisdiction:          entity?.profile?.country ?? entity?.jurisdiction ?? 'UK',
-    maritalStatus:         entity?.profile?.maritalStatus ?? entity?.marital_status ?? null,
+    maritalStatus:         maritalStatus(entity).status === 'unknown' ? null : maritalStatus(entity).status,
     retirementAge:         entity?.profile?.retirementAge ?? entity?.target_retirement_age ?? null,
   };
 }

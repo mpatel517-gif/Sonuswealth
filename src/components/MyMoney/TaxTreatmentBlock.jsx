@@ -20,7 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { getTaxTreatmentSummary } from '../../engine/tax-treatment.js'
-import { getWrapper } from '../../engine/_helpers.js'
+import { getWrapper } from '../../engine/selectors/index.js'
 import ExplainerChip from '../shared/Explainer.jsx'
 
 const ROW_META = {

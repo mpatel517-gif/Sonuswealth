@@ -14,6 +14,8 @@ import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import ExplainerChip from '../shared/Explainer.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
+import { BRAND } from '../../config/brand.js'
+import { LiquidityLadder } from '../charts/index.js'
 
 function Term({ children, id }) {
   return (
@@ -115,8 +117,11 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
   const otherTotal = otherLoans.reduce((s, l) => s + (+l.outstanding || +l.outstanding_balance || 0), 0)
   const totalDebt = mortgageOutstanding + otherTotal
 
-  // LTV on primary residence
-  const residenceValue = +entity.assets?.residence?.value || 0
+  // LTV on primary residence — apply the household's ownership share so the
+  // ratio reflects the value the household actually owns, not the gross
+  // property value. (Joint owners commonly hold 50%; ignoring this overstates
+  // the equity cushion and understates LTV.)
+  const residenceValue = (+entity.assets?.residence?.value || 0) * (+entity.assets?.residence?.ownershipShare || 1)
   const ltv = residenceValue > 0 ? mortgageOutstanding / residenceValue : 0
 
   // Estate-deductible total
@@ -130,11 +135,47 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
     ...otherLoans,
   ].filter(Boolean)
 
+  // Liquidity ladder tiers — asset sources that could pay down high-APR debt.
+  const cashTotal = +entity.assets?.cash?.total
+    || ((+entity.assets?.cash?.currentAccount || 0) + (+entity.assets?.cash?.savingsAccount || 0) + (+entity.assets?.cash?.emergencyFund || 0))
+    || 0
+  const isaTotal = +entity.assets?.isa?.total
+    || (Array.isArray(entity.assets?.isa) ? entity.assets.isa.reduce((s, x) => s + (+x.value || 0), 0) : 0)
+    || (+entity.assets?.isa?.value || 0)
+  const giaTotal = +entity.assets?.gia?.total
+    || (Array.isArray(entity.assets?.gia) ? entity.assets.gia.reduce((s, x) => s + (+x.value || 0), 0) : 0)
+    || (+entity.assets?.gia?.value || 0)
+  const pensionTotal = +entity.assets?.pension?.total
+    || (Array.isArray(entity.assets?.pension) ? entity.assets.pension.reduce((s, x) => s + (+x.value || 0), 0) : 0)
+    || (+entity.assets?.pension?.value || 0)
+  const age = +entity.profile?.age || 0
+  const liquidityTiers = [
+    { label: 'Hours', items: cashTotal > 0 ? [{ name: 'Cash (immediate)', value: cashTotal }] : [] },
+    { label: 'Days', items: isaTotal > 0 ? [{ name: 'ISA (penalty-free)', value: isaTotal }] : [] },
+    { label: 'Weeks', items: giaTotal > 0 ? [{ name: 'GIA (T+2)', value: giaTotal }] : [] },
+    { label: 'Months', items: [] },
+    { label: 'Years', items: pensionTotal > 0 ? [{ name: age >= 55 ? 'Pension (accessible)' : 'Pension (55+)', value: pensionTotal }] : [] },
+  ]
+
+  // Sort: highest APR first; loans without APR sink to the bottom.
+  const sortedLoans = [...allLoans].sort((a, b) => {
+    const aRate = +a.interest_rate || +a.apr || 0
+    const bRate = +b.interest_rate || +b.apr || 0
+    if (aRate === 0 && bRate === 0) return 0
+    if (aRate === 0) return 1
+    if (bRate === 0) return -1
+    return bRate - aRate
+  })
+
   return (
     <OverlayShell title="What you owe · drill-down"
-      subtitle={`${fmt(totalDebt)} total · ${allLoans.length} loans`}
+      subtitle={`${fmt(totalDebt)} total · ${allLoans.length} loan${allLoans.length === 1 ? '' : 's'}`}
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
+
+        <div className="sw-eyebrow" style={{ fontStyle: 'italic', color: 'var(--c-text3)', fontSize: 12, marginBottom: 16 }}>
+          What you owe, what it costs, and the fastest path to zero
+        </div>
 
         {/* Section 1 — composition */}
         <Section title="1 · What you owe" sub="Real debts (money borrowed for value) reduce your estate for inheritance tax. Student loans don't — they're written off on death, so they don't affect your estate.">
@@ -165,8 +206,11 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
 
         {/* Section 3 — per-loan */}
         <Section title="3 · Each debt in detail" sub="Interest rate, rate type, when your fix ends, and the monthly payment. A fix ending within 24 months is the trigger to start remortgage planning.">
+          <div className="sw-eyebrow" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>
+            Ordered by APR (highest first)
+          </div>
           <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
-            {allLoans.map((l, i) => {
+            {sortedLoans.map((l, i) => {
               const cat = loanCategory(l)
               const rate = +l.interest_rate || +l.apr || 0
               const out = +l.outstanding || +l.outstanding_balance || 0
@@ -175,10 +219,15 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
               const fixYear = rateType && /(\d{4})/.exec(rateType)?.[1]
               const fixApproachingSoon = fixYear && (+fixYear - new Date().getFullYear()) <= 2
               const deductible = isEstateDeductible(l)
+              // Payoff timeline — months at current minimums.
+              const monthlyInterest = (rate * out) / 12
+              const principalPerMonth = Math.max(1, monthly - monthlyInterest)
+              const payoffMonths = out > 0 && monthly > 0 ? Math.ceil(out / principalPerMonth) : null
+              const hasApr = rate > 0
               return (
                 <div key={l.id || i} style={{
                   padding: '14px',
-                  borderBottom: i < allLoans.length - 1 ? '1px solid var(--c-sep)' : 'none',
+                  borderBottom: i < sortedLoans.length - 1 ? '1px solid var(--c-sep)' : 'none',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <button
@@ -214,16 +263,36 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
                       </span>
                     )}
                   </div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 8, fontStyle: 'italic' }}>
+                    {hasApr
+                      ? (payoffMonths ? `~ ${payoffMonths} months at current minimums` : 'Months to payoff at current rate — payment not recorded')
+                      : 'APR not recorded'}
+                  </div>
                 </div>
               )
             })}
-            {allLoans.length === 0 && (
+            {sortedLoans.length === 0 && (
               <div style={{ padding: 16, fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', fontStyle: 'italic' }}>
                 No liabilities captured. Tap + Add on the Liabilities tile to record a loan.
               </div>
             )}
           </div>
+          {sortedLoans.length > 1 && (
+            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
+              Highest-APR debts close fastest by directing extra payments there.
+            </div>
+          )}
         </Section>
+
+        {/* Section 3.5 — liquidity ladder of paydown sources */}
+        {sortedLoans.length > 0 && (
+          <Section title="Sources to pay down" sub="The tiers of money you could draw on to clear high-cost debt — ordered by how quickly they can be turned into cash without penalty.">
+            <LiquidityLadder tiers={liquidityTiers} ariaLabel="Asset sources to pay down debt" />
+            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
+              Cash and ISA are first lines of defence against high-APR debt.
+            </div>
+          </Section>
+        )}
 
         {/* Section 4 — taxonomy gaps */}
         <Section title="4 · Not captured yet" sub="Other liability types you could add here:">
@@ -238,6 +307,9 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
           </div>
         </Section>
 
+        <p style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
+          {BRAND.disclaimer}
+        </p>
       </div>
       {selected && (
         <AssetDetailOverlay

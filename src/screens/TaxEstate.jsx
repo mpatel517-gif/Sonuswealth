@@ -12,14 +12,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useState, useRef } from 'react'
+// S1 selector migration (Phase 2)
+import {
+  netWorth,
+  fq as calcFQ,
+  ani as calcANI,
+} from '../engine/selectors/index.js'
 import {
   // basics
-  fmt, daysLeft, netWorth, calcAge, lifeStageFor, TAX, guardrail,
-  calcFQ, calcRisk, fqBand, riskBand,
+  fmt, daysLeft, calcAge, lifeStageFor, TAX, guardrail,
+  calcRisk, fqBand, riskBand,
   // legacy IHT (still used as a robust fallback for ihtDynamic-shape data)
   ihtDynamic,
-  // tax sub-tab
-  calcANI, calcAllIncome, calcDividendTax, calcPersonalAllowance,
+  // tax sub-tab (calcANI migrated above)
+  calcAllIncome, calcDividendTax, calcPersonalAllowance,
   welshIncomeTax, scottishIncomeTax,
   allowanceTracker, drawdownMatrix,
   figStatus, trfStatus,
@@ -46,7 +52,8 @@ import {
 } from '../components/shared/index.js'
 import { useCascadeTrigger, useCounterAnimation, useInView } from '../hooks/useAnimation.jsx'
 import InheritanceStory from '../components/TaxEstate/InheritanceStory.jsx'
-import { ihtProjection } from '../engine/tax-estate-engine.js'
+// S1 selector migration: canonical IHT projection via facade.
+import { ihtProjection } from '../engine/selectors/index.js'
 
 // ── v0.3 Phase 5 R4 imports ─────────────────────────────────────────────────
 // Spec: 0-Active/route-specs/route-4-tax-estate.md §3 — signature is the
@@ -72,7 +79,8 @@ import {
   carryForwardByYear,
   holdingClock,
 } from '../engine/persona-helpers.js'
-import { ihtDeltaPrePost2027 } from '../engine/canonical-metrics.js'
+// S1 selector migration: canonical IHT delta source for R4 signature card.
+import { ihtDeltaPrePost2027 } from '../engine/selectors/index.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & helpers
@@ -351,7 +359,10 @@ function SubAnchorStrip({ a, b, c }) {
           <span>{cell.label}</span>
           {cell.eyebrowAccessory}
         </div>
-        <div style={{
+        <div
+          data-tieout={cell.tieout || undefined}
+          data-tieout-raw={cell.tieoutRaw != null ? String(cell.tieoutRaw) : undefined}
+          style={{
           fontSize: 16, fontWeight: 700,
           color: cell.colour || 'var(--c-text)',
           fontVariantNumeric: 'tabular-nums', letterSpacing: -0.2,
@@ -1917,6 +1928,98 @@ function BPRDrillPanel({ entity, onClose }) {
             }}>
               BPR must be held ≥2 years to qualify. Relief rates may change following Budget announcements.
             </div>
+
+            {/* P13-7 (2026-05-28, IFA hardening): BPR refresh clock.
+                Finance Act 2026 introduces a £2.5m combined APR/BPR allowance per
+                individual (transferable to spouse). Inside allowance = 100% relief.
+                Above = 50%. Plus a 7-year refresh window for individual gifts and
+                a 10-year window for trust-settled assets. The clock surfaces both
+                the allowance position AND the earliest refresh date — figures an
+                IFA would lead with for any client with private company shares. */}
+            {(() => {
+              const ALLOWANCE = 2_500_000
+              const totalBprValue = rows.reduce((s, r) => s + r.value, 0)
+              const allowanceUsed = Math.min(totalBprValue, ALLOWANCE)
+              const allowanceLeft = Math.max(0, ALLOWANCE - allowanceUsed)
+              const above = Math.max(0, totalBprValue - ALLOWANCE)
+              const pctUsed = Math.round((allowanceUsed / ALLOWANCE) * 100)
+
+              // Find the oldest qualifying-tagged holding to project the next 7yr refresh
+              const holdings = (entity?.assets?.portfolio?.holdings || [])
+                .filter(h => h?.bprTagged && h?.acquisitionDate)
+                .sort((a, b) => new Date(a.acquisitionDate) - new Date(b.acquisitionDate))
+              const oldest = holdings[0]
+              const refresh7 = oldest
+                ? new Date(new Date(oldest.acquisitionDate).setFullYear(new Date(oldest.acquisitionDate).getFullYear() + 7))
+                : null
+              const refreshFmt = (d) => d ? d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
+
+              return (
+                <div style={{
+                  background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+                  borderRadius: 18, padding: '14px 18px', marginBottom: 12,
+                }}>
+                  <div className="sw-eyebrow" style={{ marginBottom: 12 }}>BPR allowance + refresh clock</div>
+
+                  {/* Allowance bar */}
+                  <div style={{ fontSize: 12, color: 'var(--c-text3)', marginBottom: 6 }}>
+                    £{Math.round(allowanceUsed).toLocaleString('en-GB')} of £2,500,000 used ({pctUsed}%)
+                    {above > 0 && (
+                      <span style={{ color: 'var(--c-amber-text)', fontWeight: 700 }}>
+                        {' '}· £{Math.round(above).toLocaleString('en-GB')} above allowance (50% relief, effective 20% IHT)
+                      </span>
+                    )}
+                  </div>
+                  <div style={{
+                    height: 8, borderRadius: 100,
+                    background: 'var(--c-surface2)', overflow: 'hidden', marginBottom: 12,
+                  }}>
+                    <div style={{
+                      width: `${pctUsed}%`, height: '100%',
+                      background: pctUsed > 100 ? 'var(--c-coral-text)' : pctUsed > 80 ? 'var(--c-amber-text)' : 'var(--c-acc)',
+                    }} />
+                  </div>
+
+                  {/* Refresh windows */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
+                    <div style={{
+                      padding: 10, background: 'var(--c-tint-neutral)',
+                      borderRadius: 10,
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--c-text3)' }}>
+                        Individual refresh · 7 years
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginTop: 4 }}>
+                        {oldest ? refreshFmt(refresh7) : '—'}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+                        {oldest
+                          ? `Oldest tagged: ${refreshFmt(new Date(oldest.acquisitionDate))}`
+                          : 'No tagged BPR holdings on file'}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: 10, background: 'var(--c-tint-neutral)',
+                      borderRadius: 10,
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--c-text3)' }}>
+                        Trust refresh · 10 years
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginTop: 4 }}>
+                        Per-trust
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
+                        Each settlor-related trust has its own £2.5m allowance refresh (post-30 Oct 2024 trusts share one).
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                    Finance Act 2026 (s65 sch12). £2.5m allowance frozen until 6 April 2031, then CPI-indexed. AIM and unrecognised-exchange shares get 50% BPR in all cases from April 2026 (was 100%).
+                  </div>
+                </div>
+              )
+            })()}
           </>
         )}
 
@@ -2332,6 +2435,81 @@ function AllowanceDrillPanel({ entity, onClose }) {
 // MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
+// ─────────────────────────────────────────────────────────────────────────────
+// P13-6 (2026-05-28, IFA hardening): SippIhtCountdownBanner
+// Daily-refreshing countdown to 6 April 2027 — the date SIPPs enter the estate
+// for IHT under the 2024 Budget change. Pre-event: shows months remaining +
+// scroll-to-IHT CTA. Post-event: shows a neutral "in effect" chip. Hidden if
+// the entity has no pension assets.
+// ─────────────────────────────────────────────────────────────────────────────
+function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
+  const pensionPot = (() => {
+    try {
+      const a = entity?.assets || {}
+      return (+(a?.sipp?.total)   || 0) +
+             (+(a?.sipp?.value)   || 0) +
+             (+(a?.pension?.total)|| 0) +
+             (Array.isArray(a?.pensions) ? a.pensions.reduce((s, p) => s + (+p?.value || +p?.balance || 0), 0) : 0) +
+             (Array.isArray(a?.sipp?.pensions) ? a.sipp.pensions.reduce((s, p) => s + (+p?.value || +p?.balance || 0), 0) : 0)
+    } catch { return 0 }
+  })()
+  if (pensionPot <= 0) return null  // banner irrelevant — no pension exposure
+  const today = new Date()
+  const deadline = new Date('2027-04-06')
+  const msDelta = deadline - today
+  const daysLeft = Math.round(msDelta / 86400000)
+  const past = daysLeft <= 0
+  const monthsLeft = Math.max(0, Math.round(daysLeft / 30.44))
+  const colour =
+    past             ? 'var(--c-text2)' :
+    daysLeft <= 60   ? 'var(--c-coral-text)' :
+    daysLeft <= 180  ? 'var(--c-amber-text)' :
+                       'var(--c-acc)'
+  const bg =
+    past             ? 'var(--c-tint-neutral)' :
+    daysLeft <= 60   ? 'var(--c-tint-coral)'   :
+    daysLeft <= 180  ? 'var(--c-tint-amber)'   :
+                       'var(--c-tint-blue)'
+  return (
+    <div role="region" aria-label="SIPP-IHT planning window" style={{
+      margin: '4px 16px 12px', padding: '12px 14px',
+      background: bg,
+      border: `1px solid ${colour}`,
+      borderRadius: 12,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: 12, flexWrap: 'wrap',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: colour, marginBottom: 2 }}>
+          SIPP-IHT window {past ? '· in effect' : `· ${monthsLeft} month${monthsLeft === 1 ? '' : 's'} left`}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3 }}>
+          {past
+            ? 'From 6 April 2027, unused pensions are inside your estate for IHT (Finance Act 2024).'
+            : `From 6 April 2027 — in ~${monthsLeft} months — unused pensions enter your estate for IHT. Planning options collapse after this date.`}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.4 }}>
+          Your current pension exposure: <strong style={{ color: 'var(--c-text)' }}>£{Math.round(pensionPot).toLocaleString('en-GB')}</strong>
+          {!past && daysLeft <= 365 && ' · this is the planning window.'}
+        </div>
+      </div>
+      {!past && (
+        <button
+          type="button"
+          onClick={onScrollToIHT}
+          aria-label="Jump to IHT projection card"
+          style={{
+            padding: '8px 12px', borderRadius: 100,
+            background: colour, color: '#fff',
+            border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700, flexShrink: 0,
+          }}
+        >See impact ›</button>
+      )}
+    </div>
+  )
+}
+
 export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric }) {
   // ── Viewport detection (for mobile reordering — F-CAT-03 / F-VIS-01) ──────
   const [isMobile, setIsMobile] = useState(() => {
@@ -2486,8 +2664,8 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
       </span>
     )
     return {
-      a: { label: 'IHT today', value: fmt(ihtNow), colour: 'var(--c-danger)' },
-      b: { label: 'Family receives', value: fmt(beneficiaryNet), colour: 'var(--c-success)' },
+      a: { label: 'IHT today', value: fmt(ihtNow), colour: 'var(--c-danger)', tieout: 'tax.iht-today', tieoutRaw: ihtNow },
+      b: { label: 'Family receives', value: fmt(beneficiaryNet), colour: 'var(--c-success)', tieout: 'tax.beneficiary-net', tieoutRaw: beneficiaryNet },
       c: {
         label: 'Pension-IHT',
         value: `${daysToPensionIHT} days`,
@@ -2548,6 +2726,12 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
         rulesVersion={BRAND.rulesVersion}
         dataDate={BRAND.dataDate}
       />
+
+      {/* P13-6 (2026-05-28, IFA hardening): SIPP-IHT April 2027 countdown banner.
+          Shows remaining window in months/days until SIPPs enter the estate. After
+          6 April 2027 the banner switches to a post-event explainer. Suppressed
+          once the entity has zero pension assets (banner irrelevant). */}
+      <SippIhtCountdownBanner entity={entity} onScrollToIHT={scrollToIHTDual} />
 
       {/* ── Triple anchor — every primary screen ──────────────────────────
           Founder 2026-05-25 round 6: hideNetWorth across all primary screens — NW lives in global header chip */}

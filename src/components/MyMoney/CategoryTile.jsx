@@ -127,7 +127,10 @@ export default function CategoryTile({
       overflow: 'hidden',
       cursor: onView ? 'pointer' : 'default',
       transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
-      minHeight: 200,
+      // Founder UX pass 2 (2026-05-26): enforce symmetric height — tiles with
+      // short content (Alternatives, Obligations, empty states) were 95px
+      // shorter than tiles with full COW + status, breaking the grid rhythm.
+      minHeight: 320,
       display: 'flex', flexDirection: 'column',
     }}
     onClick={onView}>
@@ -154,7 +157,10 @@ export default function CategoryTile({
           onMouseLeave={e => { e.currentTarget.style.background = `color-mix(in srgb, ${accentColor} 12%, var(--c-surface2))` }}
         >{icon}</button>
 
-        {/* 12-month sparkline — center-flex so it stretches to fill */}
+        {/* 12-month sparkline — center-flex so it stretches to fill.
+            Wave 0.6 founder fix: "spark not drillable". Wrapped in a button
+            that fires sonus:ask so tapping the line opens an Ask Sonu
+            conversation about this category's trend. */}
         {!isEmpty && Array.isArray(series) && series.length >= 2 && (() => {
           const W = 64, H = 22, pad = 2
           const xs = series.map((_, i) => pad + (i / (series.length - 1)) * (W - pad * 2))
@@ -165,8 +171,27 @@ export default function CategoryTile({
           const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ')
           const fillPath = `${path} L${xs[xs.length - 1].toFixed(1)},${H - pad} L${xs[0].toFixed(1)},${H - pad} Z`
           const stroke = liability ? 'var(--c-coral, #FF6F7D)' : 'var(--c-acc)'
+          const sparkQ = `How is my ${(label || id || 'this').toLowerCase()} trending?`
           return (
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('sonus:ask', {
+                  detail: {
+                    question: sparkQ,
+                    context: { metric: 'categoryTrend', category: id, series },
+                  },
+                }))
+              }}
+              aria-label={`Ask Sonu about ${label || id} trend`}
+              title={`Tap to ask Sonu: ${sparkQ}`}
+              style={{
+                position: 'relative', flexShrink: 0,
+                background: 'none', border: 'none', padding: 0,
+                cursor: 'pointer', display: 'block',
+              }}
+            >
               <svg
                 viewBox={`0 0 ${W} ${H}`}
                 width={W}
@@ -196,7 +221,7 @@ export default function CategoryTile({
                 fontSize: 9, color: 'var(--c-text3)', opacity: 0.7,
                 lineHeight: 1, pointerEvents: 'none',
               }}>est.</span>
-            </div>
+            </button>
           )
         })()}
 
@@ -218,13 +243,25 @@ export default function CategoryTile({
         </div>
       </div>
 
-      {/* Hero value */}
-      <div style={{
-        fontSize: 24, fontWeight: 880, color: valueColor,
-        letterSpacing: -0.5, lineHeight: 1, marginBottom: 4,
-        fontVariantNumeric: 'tabular-nums',
-      }}>
-        {isEmpty ? '—' : fmt(liability ? -Math.abs(total) : total)}
+      {/* Hero value — tappable to fire "What if?" sheet (HIGH #4) */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        data-tieout={id ? `money.cat.${id}` : undefined}
+        data-tieout-raw={!isEmpty ? String(liability ? -Math.abs(total) : total) : undefined}
+        style={{
+          fontSize: 24, fontWeight: 880, color: valueColor,
+          letterSpacing: -0.5, lineHeight: 1, marginBottom: 4,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+        {isEmpty ? '—' : (
+          <TappableNumber
+            value={Math.abs(total)}
+            display={fmt(liability ? -Math.abs(total) : total)}
+            size="hero"
+            question={`What if my ${(label || id || 'this').toLowerCase()} changed?`}
+            context={{ metric: 'categoryTotal', category: id, liability }}
+          />
+        )}
       </div>
       {/* domainCodes (engineering taxonomy codes) intentionally hidden — kept as a
           prop for internal use only per the plain-English principle. */}
@@ -251,22 +288,56 @@ export default function CategoryTile({
             ))}
           </div>
           <div style={{
-            display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap',
+            display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap',
             fontSize: 10, color: 'var(--c-text3)',
           }}>
-            {wrappers.slice(0, 3).map(w => (
-              <span key={w.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER,
-                  display: 'inline-block',
-                }} />
-                <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>
-                  {WRAPPER_LAY_LABEL[w.label] || w.label.replace(/_/g, ' ')}
-                </span>
-                <span>{Math.round(w.share * 100)}%</span>
-              </span>
-            ))}
+            {wrappers.slice(0, 3).map(w => {
+              const chipLabel = WRAPPER_LAY_LABEL[w.label] || w.label.replace(/_/g, ' ')
+              return (
+                <button
+                  key={w.label}
+                  type="button"
+                  className="sw-press"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    window.dispatchEvent(new CustomEvent('sonus:ask', {
+                      detail: {
+                        question: `Show me my ${chipLabel} ${(label || id || 'holdings').toLowerCase()} in detail`,
+                        seed: { category: id, chip: w.label, value: w.value, share: w.share },
+                      },
+                    }))
+                  }}
+                  aria-label={`Ask about ${chipLabel} in ${label || id}`}
+                  title={`Ask Sonu about your ${chipLabel} holdings`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    background: 'none', border: '1px solid transparent',
+                    padding: '4px 6px', borderRadius: 6, cursor: 'pointer',
+                    color: 'inherit', fontSize: 'inherit',
+                    minHeight: 28,
+                    transition: 'border-color 0.15s ease, background 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = `color-mix(in srgb, ${WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER} 40%, transparent)`
+                    e.currentTarget.style.background = `color-mix(in srgb, ${WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER} 8%, transparent)`
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'transparent'
+                    e.currentTarget.style.background = 'none'
+                  }}
+                >
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER,
+                    display: 'inline-block',
+                  }} />
+                  <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>
+                    {chipLabel}
+                  </span>
+                  <span>{Math.round(w.share * 100)}%</span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
@@ -302,31 +373,45 @@ export default function CategoryTile({
             </TappableNumber>
           </div>
         )}
-        {status && !isEmpty && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '4px 10px', borderRadius: 100,
-              background: statusBg(status.tone),
-              color: statusFg(status.tone),
-              border: `1px solid ${statusBorder(status.tone)}`,
-              fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
-              textTransform: 'uppercase',
-              alignSelf: 'flex-start',
-              marginBottom: 12,
-            }}>
-            <span style={{
-              width: 5, height: 5, borderRadius: '50%',
-              background: statusFg(status.tone),
-              boxShadow: `0 0 6px ${statusFg(status.tone)}`,
-            }} />
-            <span>{status.label}</span>
-            {/* Drillable explainer — chip opens registry entry on click.
-                Each status mapped to its canonical definition via id. */}
-            {status.explainerId && <ExplainerChip id={status.explainerId} size={13} />}
-          </div>
-        )}
+        {status && !isEmpty && (() => {
+          // v0.3 R1 §5 — when status.onTap is provided (e.g. SIPP-IHT chip on
+          // Pensions tile carrying the iht-delta deep-link seed), the chip
+          // becomes a button with its own tap target distinct from the tile
+          // body. Without onTap, the chip is a static label as before.
+          const isTappable = typeof status.onTap === 'function'
+          const Tag = isTappable ? 'button' : 'div'
+          return (
+            <Tag
+              type={isTappable ? 'button' : undefined}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (isTappable) status.onTap(e)
+              }}
+              aria-label={isTappable ? `${status.label} — open detail` : undefined}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 10px', borderRadius: 100,
+                background: statusBg(status.tone),
+                color: statusFg(status.tone),
+                border: `1px solid ${statusBorder(status.tone)}`,
+                fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                alignSelf: 'flex-start',
+                marginBottom: 12,
+                cursor: isTappable ? 'pointer' : 'default',
+              }}>
+              <span style={{
+                width: 5, height: 5, borderRadius: '50%',
+                background: statusFg(status.tone),
+                boxShadow: `0 0 6px ${statusFg(status.tone)}`,
+              }} />
+              <span>{status.label}</span>
+              {/* Drillable explainer — chip opens registry entry on click.
+                  Each status mapped to its canonical definition via id. */}
+              {status.explainerId && <ExplainerChip id={status.explainerId} size={13} />}
+            </Tag>
+          )
+        })()}
         {isEmpty && (
           <div style={{
             fontSize: 11, color: 'var(--c-text3)', marginBottom: 12, lineHeight: 1.5,

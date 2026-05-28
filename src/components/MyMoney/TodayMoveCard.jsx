@@ -20,6 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
+import { monthlyEssentials as getMonthlyEssentials } from '../../engine/selectors/index.js'
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -127,8 +128,9 @@ function generateCandidates(entity) {
     + (+entity?.income?.directorDividends || 0)
     + (+entity?.income?.selfEmploymentNet || 0)
     + (+entity?.income?.rentalIncomeNet || 0)
-  const monthlyEss = +entity?.expenses?.essential_monthly ||
-                     (grossAnnual * 0.55) / 12
+  // BLOCK-1: canonical lookup includes entity.monthlyExpenditure (persona-a..g)
+  const monthlyEss = getMonthlyEssentials(entity).monthly
+    || (grossAnnual * 0.55) / 12
   if (monthlyEss > 0 && ipBenefit < monthlyEss * 0.6) {
     const gapMonthly = monthlyEss - ipBenefit
     moves.push({

@@ -19,6 +19,11 @@ function fmt(v) {
 // ── TrendBox — equal-height square card for the hero metrics ─────────────────
 // All boxes forced to same height via parent gridAutoRows: '1fr' + height: 100%
 function TrendBox({ label, labelDetail, color, children, question, value, context }) {
+  // Founder UX pass 4 (2026-05-26): the previous wrapper used size="chip" which
+  // rendered the ⚡ bolt as a sibling node *next to* the tile via inline-flex,
+  // making each tile narrower than its neighbour and breaking symmetry. The
+  // corner-badge mode positions the bolt as an absolute top-right notification
+  // dot inside the tile so every tile renders at equal width.
   const inner = (
     <div style={{
       background: `color-mix(in srgb, ${color} 10%, var(--c-surface2))`,
@@ -37,6 +42,7 @@ function TrendBox({ label, labelDetail, color, children, question, value, contex
           fontSize: 8, fontWeight: 800, color: 'var(--c-text3)',
           textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          paddingRight: 18,  // reserve space for corner bolt so labels don't collide
         }}>
           {label}
         </div>
@@ -58,7 +64,7 @@ function TrendBox({ label, labelDetail, color, children, question, value, contex
   if (!question) return inner
   return (
     <TappableNumber value={value} display={`${label}: ${String(children)}`}
-      question={question} context={context} size="chip">
+      question={question} context={context} size="corner">
       {inner}
     </TappableNumber>
   )
@@ -166,8 +172,13 @@ export default function TileGrid({
   const planPct = planTarget && planTarget > 0 ? (netWorth / planTarget) * 100 : null
 
   // Assets trend: last-month change as a pct
-  const assetsMomPct = momDelta != null && totalAssets > 0 ? (momDelta / totalAssets) * 100 : null
-  const liabMomPct = momDelta != null && totalLiabilities > 0 ? (-momDelta / totalLiabilities) * 100 : null
+  // Asset/liab MoM percentages were used by the inline ASSETS / LIABILITIES
+  // block in the hero card, removed 2026-05-25 (founder audit round 6).
+  // Kept as `_`-prefixed to flag the math is still derivable if the inline
+  // block is ever resurrected — but they're not rendered today.
+  const _assetsMomPct = momDelta != null && totalAssets > 0 ? (momDelta / totalAssets) * 100 : null
+  const _liabMomPct = momDelta != null && totalLiabilities > 0 ? (-momDelta / totalLiabilities) * 100 : null
+  void _assetsMomPct; void _liabMomPct;
 
   const map = {}
   for (const c of categories) map[c.id] = c
@@ -229,7 +240,7 @@ export default function TileGrid({
     trendBoxes.push({ key: 'runway', label: 'Time covered', labelDetail: 'wealth ÷ annual spending', color: 'var(--c-acc)',
       question: 'What if my essential spending rose — how much runway would I still have?', value: yearsCovered,
       context: { metric: 'yearsCovered', current: yearsCovered },
-      children: yearsCovered >= 1 ? `${yearsCovered.toFixed(1)} yr` : `${(yearsCovered * 12).toFixed(0)} mo` })
+      children: yearsCovered >= 20 ? `20+ yr` : yearsCovered >= 1 ? `${yearsCovered.toFixed(1)} yr` : `${(yearsCovered * 12).toFixed(0)} mo` })
   }
   if (prcPcc) {
     const color = prcPcc.band === 'STRONG' || prcPcc.band === 'COMFORTABLE' ? 'var(--c-acc)' : prcPcc.band === 'TIGHT' ? '#FFB347' : 'var(--c-coral, #FF6F7D)'
@@ -255,96 +266,172 @@ export default function TileGrid({
         marginBottom: 12,
         overflow: 'hidden',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+        {/* Founder UX pass 2 (2026-05-26): vertical stack — eyebrow +
+            sparkline ribbon at top, metric tiles as ONE equal-width horizontal
+            strip in the middle, WHAT YOU CAN ACCESS legend + bar at the
+            bottom. Replaces the previous flex-row that put 6 metric tiles in a
+            cramped 180px column to the right of the sparkline — visually
+            asymmetric, hard to scan on mobile, and broke the layout's rhythm. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* Left — NW headline + sparkline + Assets / Liabilities */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Balance sheet</div>
-            <div style={{
-              fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
-              letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 2,
-            }}>
-              Net worth{projection ? ` · ${projection.viewMode || 'forecast'} · ${projection.windowLabel}` : ''}
-            </div>
-            <div style={{
-              fontSize: 'clamp(28px, 4vw, 40px)',
-              fontWeight: 880, color: 'var(--c-text)',
-              letterSpacing: -0.5, lineHeight: 1.05,
-              fontVariantNumeric: 'tabular-nums',
-              textShadow: '0 0 18px var(--c-radar-glow)',
-            }}>
-              <TappableNumber
-                value={netWorth}
-                size="hero"
-                question="What if my net worth grew faster — or slower — than the current trajectory?"
-                context={{ metric: 'netWorth', current: netWorth, projection }}
-              >
-                {/* M-03 fix: render through engine fmt() so the hero number
-                    is character-identical to the TripleAnchor "You own" tile
-                    immediately above. Was <Num format="currency"/> which gave
-                    "£727.0k" while TripleAnchor gave "£727k". */}
-                {fmt(netWorth)}
-              </TappableNumber>
-            </div>
-
-            {/* 12-month NW sparkline — trajectory trend */}
-            <MiniSparkline
-              data={trajectory}
-              color={momDelta == null || momDelta >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)'}
-              label="12-month net worth"
-              width={110}
-              height={22}
-            />
-
-            {/* Phase 1A — Liquidity split: what you can actually access.
-                M-10 fix: alternatives bucket now rendered alongside
-                liquid / pension / illiquid so liquid + pension + illiquid +
-                alt = 100% on every persona. */}
-            {(liquidAmt > 0 || semiLiquidAmt > 0 || illiquidAmt > 0 || altAmt > 0) && (
-              <div style={{ marginTop: 8, marginBottom: 2 }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>
-                  What you can access
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {liquidAmt > 0 && (
-                    <div title="Cash + investments — accessible in days" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-acc)', display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Liquid</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>{fmt(liquidAmt)}</span>
-                    </div>
-                  )}
-                  {semiLiquidAmt > 0 && (
-                    <div title="Pension — locked until age 57" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: '#7AA7FF', display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Pension</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#7AA7FF', fontVariantNumeric: 'tabular-nums' }}>{fmt(semiLiquidAmt)}</span>
-                    </div>
-                  )}
-                  {illiquidAmt > 0 && (
-                    <div title="Property + business — weeks/months to sell" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: '#FFB347', display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Illiquid</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#FFB347', fontVariantNumeric: 'tabular-nums' }}>{fmt(illiquidAmt)}</span>
-                    </div>
-                  )}
-                  {altAmt > 0 && (
-                    <div title="Alternatives — crypto, wine, art, gold, PE" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: '#BA8CFF', display: 'inline-block', flexShrink: 0 }} />
-                      <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Alt</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#BA8CFF', fontVariantNumeric: 'tabular-nums' }}>{fmt(altAmt)}</span>
-                    </div>
-                  )}
-                </div>
-                {/* Proportional liquidity bar — % computed off liqTotal so the
-                    four segments always sum to 100% (M-10 fix). */}
-                <div style={{ display: 'flex', height: 3, borderRadius: 100, overflow: 'hidden', marginTop: 5, background: 'var(--c-surface2)', gap: 1 }}>
-                  {liquidAmt > 0     && <div style={{ width: `${liquidPct}%`,     background: 'var(--c-acc)' }} />}
-                  {semiLiquidAmt > 0 && <div style={{ width: `${semiLiquidPct}%`, background: '#7AA7FF'      }} />}
-                  {illiquidAmt > 0   && <div style={{ width: `${illiquidPct}%`,   background: '#FFB347'      }} />}
-                  {altAmt > 0        && <div style={{ width: `${altPct}%`,        background: '#BA8CFF'      }} />}
-                </div>
+          {/* Row 1 — slim eyebrow + 12-month NW sparkline only.
+              Founder fix 2026-05-26 (triple-NW): the £698k figure was rendering
+              here AND in the FinancesHeroCard strip above AND in the X28 score
+              chip. Three surfaces for one number. Removed the hero £ and the
+              "+£6k this month" delta from this card; the strip is now the
+              single canonical NW surface. Sparkline + delta context kept since
+              they describe the *trend* not the value. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 2 }}>Balance sheet</div>
+              <div style={{
+                fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
+                letterSpacing: 0.6, textTransform: 'uppercase',
+              }}>
+                Net worth trend{projection ? ` · ${projection.viewMode || 'forecast'} · ${projection.windowLabel}` : ''}
               </div>
-            )}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('sonus:ask', {
+                  detail: {
+                    question: 'How did my net worth move over this period?',
+                    context: { metric: 'netWorth', view: 'trend', trajectory },
+                  },
+                }))
+              }}
+              aria-label="Drill into net worth trend"
+              title="Tap to ask Sonu about this trend"
+              style={{
+                background: 'none', border: 'none', padding: 0,
+                cursor: 'pointer', display: 'flex', alignItems: 'center',
+              }}
+            >
+              {(() => {
+                const last12 = Array.isArray(trajectory) ? trajectory.slice(-12) : trajectory
+                return (
+                  <MiniSparkline
+                    data={last12}
+                    color={momDelta == null || momDelta >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)'}
+                    label="12-month net worth"
+                    width={140}
+                    height={28}
+                  />
+                )
+              })()}
+            </button>
+          </div>
+
+          {/* Row 2 — Equal-width metric tiles strip (was crammed in a 180px
+              column to the right of the sparkline). Now full-width, all tiles
+              the same size, all on the same baseline. */}
+          {trendBoxes.length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${Math.min(trendBoxes.length, 6)}, 1fr)`,
+              gap: 6,
+            }}>
+              {trendBoxes.map(b => (
+                <TrendBox
+                  key={b.key}
+                  label={b.label}
+                  labelDetail={b.labelDetail}
+                  color={b.color}
+                  question={b.question}
+                  value={b.value}
+                  context={b.context}
+                >
+                  {b.children}
+                </TrendBox>
+              ))}
+            </div>
+          )}
+
+          {/* F-5 fix (2026-05-26 snap audit): "What you can access · liquidity
+              timeline" is the third composition view on a single Balance Sheet
+              surface — competing with the Marimekko signature above and the
+              now-removed wrapper bar (F-4). Per spec §3 v0.3.1, liquidity
+              should be encoded in the Marimekko legend overlay, not as a
+              separate widget. Section gated to `false` to preserve the legacy
+              logic below for safe re-enable, but the UI shows ZERO sections
+              from this block. (Founder-grep proof: `WHAT YOU CAN ACCESS`
+              should not appear in the rendered DOM after this gate.) */}
+          {false && (
+          <div style={{ minWidth: 0 }}>
+            {(liquidAmt > 0 || semiLiquidAmt > 0 || illiquidAmt > 0 || altAmt > 0) && (() => {
+              // Founder direction (Wave 0.6): "the buttons on the right look horrible —
+              // place them in above the line and make them equal." Chips now render
+              // as equal-width buttons in a grid, above the proportional bar.
+              const segs = [
+                liquidAmt > 0     && { key: 'liquid',     view: 'cash',         label: 'Liquid',   amt: liquidAmt,     color: 'var(--c-acc)', title: 'Cash + investments — accessible in days' },
+                semiLiquidAmt > 0 && { key: 'pension',    view: 'pensions',     label: 'Pension',  amt: semiLiquidAmt, color: '#7AA7FF',      title: 'Pension — locked until age 57' },
+                illiquidAmt > 0   && { key: 'illiquid',   view: 'property',     label: 'Illiquid', amt: illiquidAmt,   color: '#FFB347',      title: 'Property + business — weeks/months to sell' },
+                altAmt > 0        && { key: 'alt',        view: 'alternatives', label: 'Alt',      amt: altAmt,        color: '#BA8CFF',      title: 'Alternatives — crypto, wine, art, gold, PE' },
+              ].filter(Boolean)
+              const chipBtn = {
+                background: 'none', border: 'none', padding: '6px 8px',
+                cursor: 'pointer', borderRadius: 8, color: 'inherit',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 4, minHeight: 36, width: '100%',
+                transition: 'background 0.15s ease',
+              }
+              // HIGH-2: WHAT YOU CAN ACCESS amounts duplicated the wrapper bar
+              // (HOW YOUR MONEY IS HELD) and category tiles — same £850k pension
+              // shown 3 times on one screen. Reduce L1 to a labelled bar + dot
+              // legend (no amounts). Amount + tap-to-drill stays via title + click.
+              return (
+                <div style={{ marginTop: 8, marginBottom: 2 }}>
+                  <div style={{ fontSize: 8, fontWeight: 800, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>
+                    What you can access · liquidity timeline
+                  </div>
+                  {/* Compact legend — dots + labels only, no £ amounts (deduped vs wrapper bar). */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+                    {segs.map(s => (
+                      <button
+                        key={s.key}
+                        type="button"
+                        title={`${s.label}: ${fmt(s.amt)} — tap to drill`}
+                        onClick={(e) => { e.stopPropagation(); onView?.(s.view) }}
+                        className="sw-press"
+                        style={{
+                          background: 'none', border: 'none', padding: '2px 4px',
+                          cursor: 'pointer', borderRadius: 4, color: 'inherit',
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ fontSize: 10, color: 'var(--c-text2)' }}>{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {/* Proportional liquidity bar — segments tappable. */}
+                  <div style={{ display: 'flex', height: 6, borderRadius: 100, overflow: 'hidden', marginTop: 2, background: 'var(--c-surface2)', gap: 1 }}>
+                    {segs.map(s => {
+                      const pct = s.key === 'liquid' ? liquidPct
+                        : s.key === 'pension' ? semiLiquidPct
+                        : s.key === 'illiquid' ? illiquidPct
+                        : altPct
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          aria-label={`${s.label}: ${fmt(s.amt)} — open detail`}
+                          title={`${s.label}: ${fmt(s.amt)}`}
+                          onClick={(e) => { e.stopPropagation(); onView?.(s.view) }}
+                          style={{
+                            width: `${pct}%`, background: s.color,
+                            border: 'none', padding: 0, cursor: 'pointer',
+                            height: '100%',
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
 
             {projection && projection.currentValue != null && (
               <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6 }}>
@@ -359,196 +446,17 @@ export default function TileGrid({
               </div>
             )}
 
-            {/* Assets + Liabilities with trend arrows */}
-            <div style={{ display: 'flex', gap: 20, marginTop: 14 }}>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
-                  letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 3 }}>
-                  Assets
-                  {assetsMomPct != null && (
-                    <span style={{
-                      fontSize: 8, fontWeight: 700, marginLeft: 4,
-                      color: assetsMomPct >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)',
-                    }}>
-                      {assetsMomPct >= 0 ? '↑' : '↓'}{Math.abs(assetsMomPct).toFixed(1)}%
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-acc)',
-                  fontVariantNumeric: 'tabular-nums' }}>
-                  <TappableNumber value={totalAssets} display={fmt(totalAssets)} size="hero"
-                    question="What if I shifted my asset mix — more pensions, less property?"
-                    context={{ metric: 'totalAssets', current: totalAssets }}>
-                    {fmt(totalAssets)}
-                  </TappableNumber>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
-                  letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 3 }}>
-                  Liabilities
-                  {liabMomPct != null && (
-                    <span style={{
-                      fontSize: 8, fontWeight: 700, marginLeft: 4,
-                      color: liabMomPct >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)',
-                    }}>
-                      {liabMomPct >= 0 ? '↓' : '↑'}{Math.abs(liabMomPct).toFixed(1)}%
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)',
-                  fontVariantNumeric: 'tabular-nums' }}>
-                  <TappableNumber value={totalLiabilities} display={`−${fmt(totalLiabilities)}`} size="hero"
-                    question="What if I overpaid debt — how much faster would I clear it?"
-                    context={{ metric: 'totalLiabilities', current: totalLiabilities }}>
-                    −{fmt(totalLiabilities)}
-                  </TappableNumber>
-                </div>
-              </div>
-            </div>
           </div>
-
-          {/* Right — equal-height trend metric boxes */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gridTemplateRows: `repeat(${rows}, 1fr)`,
-            gap: 6,
-            flexShrink: 0,
-            alignSelf: 'stretch',
-            width: 180,
-          }}>
-            {trendBoxes.map(b => (
-              <TrendBox
-                key={b.key}
-                label={b.label}
-                labelDetail={b.labelDetail}
-                color={b.color}
-                question={b.question}
-                value={b.value}
-                context={b.context}
-              >
-                {b.children}
-              </TrendBox>
-            ))}
-          </div>
+          )}{/* end F-5 disabled liquidity-timeline block */}
         </div>
       </div>
 
-      {/* Phase 3B — NW Waterfall: month-on-month attribution chart.
-          M-01 fix: previously the waterfall attributed the entire MoM delta
-          to the three highest positive asset categories only (pensions /
-          investments / property). Liabilities, cash, alternatives, business
-          and any unattributable residual were silently omitted — so Opening
-          + Σ(bars) ≠ Closing on every persona. The waterfall now includes
-          ALL primary asset categories, liability changes (when negative
-          implies pay-down i.e. positive NW contribution), and an explicit
-          "Unattributed" bar absorbing the residual so the bars always
-          reconcile: Opening + Σ(deltas) = Closing. */}
-      {Array.isArray(trajectory) && trajectory.length >= 2 && momDelta != null && (() => {
-        const prev = +trajectory[trajectory.length - 2]?.value || 0
-        const curr = +trajectory[trajectory.length - 1]?.value || 0
-        const totalDelta = curr - prev
-
-        // Pro-rata attribution of the MoM delta across ALL meaningful balance
-        // -sheet components. Using subtotal weights is still an estimate (we
-        // don't have per-category time series for Mr T's fixture) but at
-        // least every component participates, and the residual is shown
-        // honestly rather than hidden.
-        const pensionSub = map.pensions?.subtotal     || 0
-        const investSub  = map.investments?.subtotal  || 0
-        const propSub    = map.property?.subtotal     || 0
-        const cashSub    = map.cash?.subtotal         || 0
-        const businessSub= map.business?.subtotal     || 0
-        const altSub     = map.alternatives?.subtotal || 0
-        const liabAbs    = Math.abs(totalLiabilities || 0)
-
-        const weightedTotal = pensionSub + investSub + propSub + cashSub + businessSub + altSub + liabAbs
-        if (totalDelta === 0 && weightedTotal === 0) return null
-
-        // Attribute the delta proportionally — for every component, the
-        // share of the delta = (weight / totalWeight) × totalDelta. Positive
-        // totalDelta → positive shares; negative totalDelta → negative
-        // shares. This handles both growth and decline symmetrically and
-        // lets liabilities show up as a positive bar when paid down.
-        const share = (w) => weightedTotal > 0 ? (w / weightedTotal) * totalDelta : 0
-        const attrBars = [
-          { label: 'Pensions',      value: share(pensionSub),  color: '#7AA7FF' },
-          { label: 'Investments',   value: share(investSub),   color: 'var(--c-acc)' },
-          { label: 'Property',      value: share(propSub),     color: '#FFB347' },
-          { label: 'Cash',          value: share(cashSub),     color: '#34C759' },
-          { label: 'Business',      value: share(businessSub), color: 'var(--c-acc)' },
-          { label: 'Alternatives',  value: share(altSub),      color: '#BA8CFF' },
-          // Liabilities: a reduction in debt is a positive NW contribution.
-          // We use the absolute weight; the sign of the share follows
-          // totalDelta. For a more honest read, label is "Debt change".
-          { label: 'Debt change',   value: share(liabAbs),     color: 'var(--c-coral, #FF6F7D)' },
-        ].filter(b => Math.abs(b.value) >= 1)  // drop pennies
-
-        const attributed = attrBars.reduce((s, b) => s + b.value, 0)
-        const residual = totalDelta - attributed
-        if (Math.abs(residual) >= 1) {
-          attrBars.push({
-            label: 'Unattributed',
-            value: residual,
-            color: 'var(--c-text3)',
-          })
-        }
-
-        const bars = [
-          { label: 'Opening', value: prev, isBase: true, color: 'var(--c-text3)' },
-          ...attrBars,
-          { label: 'Closing', value: curr, isBase: true,
-            color: totalDelta >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)' },
-        ]
-
-        const maxVal = Math.max(...bars.map(b => Math.abs(b.isBase ? b.value : b.value) + (b.isBase ? 0 : prev)))
-        const barMaxW = 100  // % width for the widest bar
-
-        return (
-          <div style={{
-            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-            borderRadius: 14, padding: '14px 16px', marginBottom: 12,
-          }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-text3)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10 }}>
-              What moved your net worth this month
-            </div>
-            {bars.map((b, i) => {
-              const barW = b.isBase
-                ? (b.value / maxVal) * barMaxW
-                : (Math.abs(b.value) / maxVal) * barMaxW
-              const isPos = b.value >= 0
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <div style={{ width: 72, fontSize: 9, color: 'var(--c-text3)', textAlign: 'right', flexShrink: 0 }}>
-                    {b.label}
-                  </div>
-                  <div style={{ flex: 1, position: 'relative', height: 18 }}>
-                    <div style={{
-                      position: 'absolute',
-                      [isPos ? 'left' : 'right']: 0,
-                      width: `${barW}%`,
-                      height: '100%',
-                      background: b.isBase ? `color-mix(in srgb, ${b.color} 30%, var(--c-surface2))` : b.color,
-                      borderRadius: 3,
-                      opacity: 0.85,
-                    }} />
-                  </div>
-                  <div style={{ width: 52, fontSize: 9, fontWeight: 700, color: b.color, textAlign: 'right', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                    {b.isBase ? fmt(b.value) : `${isPos ? '+' : '−'}${fmt(Math.abs(b.value))}`}
-                  </div>
-                </div>
-              )
-            })}
-            <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
-              Bars reconcile: Opening + Σ(changes) = Closing. Estimated
-              attribution based on asset class proportions; "Unattributed"
-              absorbs the residual from any movement not yet wired to
-              per-category history.
-            </div>
-          </div>
-        )
-      })()}
+      {/* NW MoM attribution block — RELOCATED to NetWorthDrill (L3 panel,
+          opened by tapping the NW number in TripleAnchor). Founder feedback:
+          the attribution belongs in the drill, not on the scan-friendly L2.
+          Same math + bars now live in
+          src/components/MyMoney/NetWorthDrill.jsx (Section 2). Do not
+          re-add inline here — L2 stays clean. */}
 
       {/* ── All 9 category tiles in one unified grid ──────────────────────── */}
       <div className="sw-tile-grid sw-tile-grid-3" style={{

@@ -525,12 +525,14 @@ export function coiForDomain(entity, domain, bundle, marketAssumptions = default
       if (cash <= 0 || left < 1000) return null;
       const protect = Math.min(left, cash);
       const annualDrag = protect * cashInterestRate * marginalRate(entity);
-      return `£${(annualDrag / 1000).toFixed(1)}k/yr of tax saved if you shelter £${(protect/1000).toFixed(0)}k into your ISA`;
+      // V-5 fix (2026-05-28): sub-£1k values render as "£NNN/yr" not "£0.Xk/yr".
+      return `${annualDrag < 1000 ? `£${Math.round(annualDrag)}` : `£${(annualDrag / 1000).toFixed(1)}k`}/yr of tax saved if you shelter £${(protect/1000).toFixed(0)}k into your ISA`;
     }
     case 'property': {
       const v = propertyDecisionsCoI(entity, bundle);
       if (v < 500) return null;
-      return `£${(v / 1000).toFixed(1)}k/yr in extra tax because mortgage interest no longer fully offsets rental income`;
+      // V-5 fix (2026-05-28): sub-£1k → "£NNN/yr" not "£0.Xk/yr".
+      return `${v < 1000 ? `£${Math.round(v)}` : `£${(v / 1000).toFixed(1)}k`}/yr in extra tax because mortgage interest no longer fully offsets rental income`;
     }
     case 'business': {
       const bpr = (entity?.business_assets || [])
@@ -560,7 +562,8 @@ export function coiForDomain(entity, domain, bundle, marketAssumptions = default
       const debt = liabilitiesTotal(entity);
       if (debt < 1000) return null;
       const annualInterest = debt * debtInterestRate;
-      return `£${(annualInterest / 1000).toFixed(1)}k/yr in interest while this debt runs`;
+      // V-5 fix (2026-05-28): sub-£1k → "£NNN/yr" not "£0.Xk/yr".
+      return `${annualInterest < 1000 ? `£${Math.round(annualInterest)}` : `£${(annualInterest / 1000).toFixed(1)}k`}/yr in interest while this debt runs`;
     }
     case 'cash': {
       const cash = cashTotal(entity);

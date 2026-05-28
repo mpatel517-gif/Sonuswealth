@@ -68,7 +68,11 @@ const WRAPPER_LAY_LABEL = {
 }
 
 // Compose a top-3 wrapper composition from rows; everything else collapsed
-// into "Other". Returns array of { label, value, share }.
+// into "Other". Returns array of { label, value, share, displayPct }.
+// V-2 fix (2026-05-28): displayPct uses Hamilton (largest-remainder) method
+// so the printed percentages always sum to exactly 100. Previously each
+// segment was independently Math.round(share*100), which produced 53+48=101
+// on Bruce's ISA/GIA breakdown. share (raw fraction) is kept for bar widths.
 function composeWrappers(rows) {
   if (!rows?.length) return []
   const byW = {}
@@ -81,7 +85,19 @@ function composeWrappers(rows) {
   const restTotal = sorted.slice(3).reduce((s, [, v]) => s + v, 0)
   if (restTotal > 0) top3.push(['OTHER', restTotal])
   const total = top3.reduce((s, [, v]) => s + v, 0) || 1
-  return top3.map(([w, v]) => ({ label: w, value: v, share: v / total }))
+  const segments = top3.map(([w, v]) => ({ label: w, value: v, share: v / total }))
+  // Hamilton method: floor each, hand out leftover units to segments with the
+  // largest fractional remainders. Guarantees Σ displayPct === 100 (or 0).
+  const raw = segments.map(s => s.share * 100)
+  const floors = raw.map(r => Math.floor(r))
+  const remainders = raw.map((r, i) => ({ i, frac: r - floors[i] }))
+  let leftover = 100 - floors.reduce((s, n) => s + n, 0)
+  remainders.sort((a, b) => b.frac - a.frac)
+  const display = floors.slice()
+  for (let k = 0; k < leftover && k < remainders.length; k++) {
+    display[remainders[k].i] += 1
+  }
+  return segments.map((s, i) => ({ ...s, displayPct: display[i] }))
 }
 
 export default function CategoryTile({
@@ -284,7 +300,7 @@ export default function CategoryTile({
                   background: WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER,
                   boxShadow: `0 0 6px ${WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER}55`,
                 }}
-                title={`${w.label}: ${fmt(w.value)} (${Math.round(w.share * 100)}%)`} />
+                title={`${w.label}: ${fmt(w.value)} (${w.displayPct}%)`} />
             ))}
           </div>
           <div style={{
@@ -334,7 +350,7 @@ export default function CategoryTile({
                   <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>
                     {chipLabel}
                   </span>
-                  <span>{Math.round(w.share * 100)}%</span>
+                  <span>{w.displayPct}%</span>
                 </button>
               )
             })}

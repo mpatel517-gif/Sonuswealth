@@ -585,15 +585,29 @@ function CashflowMoneySankey({ entity, incomeAll, ms }) {
   const sinkLabel = surplus >= 0 ? 'Net surplus' : 'Net deficit'
   const sinkId = 'sink:net'
 
-  const sourceNodes = sources.map(s => ({ id: s.id, label: s.label, type: 'source' }))
+  // N-1 fix (2026-05-28): when surplus < 0, the previous model spread each
+  // source proportionally across all stages — but the stage TOTAL exceeded
+  // gross income, so the Sankey library's source-node labels showed each
+  // source's edges summing to (stage_total × src.share), inflating Bruce's
+  // Rental from £19,200 to £54,214 (×2.83). Fix: model the deficit as a
+  // virtual "Drawdown / borrowing" source whose value equals |deficit|.
+  // Effective gross = real gross + |deficit|. Real sources now contribute
+  // their actual £-value worth of outflow; the virtual source contributes
+  // the rest.
+  const deficitGap = surplus < 0 ? Math.abs(surplus) : 0
+  const effectiveGross = gross + deficitGap
+
+  const virtualSource = deficitGap > 0
+    ? { id: 'src:drawdown_gap', label: 'From savings / borrowing', value: deficitGap }
+    : null
+
+  const sourceNodes = [
+    ...sources.map(s => ({ id: s.id, label: s.label, type: 'source' })),
+    ...(virtualSource ? [{ id: virtualSource.id, label: virtualSource.label, type: 'source', tone: 'coral' }] : []),
+  ]
   const sinkNode = [{ id: sinkId, label: sinkLabel, type: 'sink' }]
   const nodes = [...sourceNodes, ...stageNodes, sinkNode[0]]
 
-  // Links: every source contributes proportionally to each stage + sink.
-  // Simplification: route each source to the sink at its proportion of gross,
-  // and each stage receives gross × stagePortion from a synthetic flow.
-  // For visual honesty, route ALL sources into a virtual "in" stage first,
-  // then split that to stages + sink.
   const links = []
   const stages = [
     taxAnn > 0       && { id: 'stage:tax',        value: taxAnn,      label: 'Tax & NI' },
@@ -602,32 +616,22 @@ function CashflowMoneySankey({ entity, incomeAll, ms }) {
     debtService > 0  && { id: 'stage:debt',       value: debtService, label: 'Debt service' },
   ].filter(Boolean)
 
-  // Source → stage (proportional)
-  for (const src of sources) {
-    const srcShare = src.value / gross
+  // Effective inflow set: real sources + (virtual drawdown source when in deficit).
+  const allInflows = virtualSource ? [...sources, virtualSource] : sources
+
+  // Source → stage (proportional to effectiveGross). Each real source's
+  // outgoing edges now sum to its actual src.value (since effectiveGross
+  // includes the deficit gap), restoring honest source-side labels.
+  for (const src of allInflows) {
+    const srcShare = src.value / effectiveGross
     for (const stg of stages) {
       const flow = Math.round(stg.value * srcShare)
       if (flow > 0) links.push({ source: src.id, target: stg.id, value: flow, label: `${src.label} → ${stg.label}` })
     }
-    // Source → sink (their share of surplus, if positive)
+    // Source → sink (their share of surplus). Only fires in the positive-surplus case.
     if (surplus > 0) {
       const sinkFlow = Math.round(surplus * srcShare)
       if (sinkFlow > 0) links.push({ source: src.id, target: sinkId, value: sinkFlow, label: `${src.label} → ${sinkLabel}` })
-    }
-  }
-  // For deficit case, route a coral-tinted "shortfall" flow from sink-back to user
-  if (surplus < 0) {
-    // Show the deficit as a single coral-tagged flow from essentials back to sink
-    // (sankey can't draw arrows backwards in our shape, so represent the deficit
-    // as a labelled flow with value=|surplus| from the largest stage to the sink).
-    const biggestStage = stages.sort((a, b) => b.value - a.value)[0]
-    if (biggestStage) {
-      links.push({
-        source: biggestStage.id,
-        target: sinkId,
-        value: Math.abs(surplus),
-        label: `Deficit ${Math.abs(surplus).toLocaleString()}`,
-      })
     }
   }
 
@@ -652,6 +656,34 @@ function CashflowMoneySankey({ entity, incomeAll, ms }) {
         links={links}
         ariaLabel={`Money flow Sankey. ${sources.length} sources totalling £${Math.round(gross/1000)}k, ${stages.length} expense stages, ${sinkLabel.toLowerCase()} £${Math.round(Math.abs(surplus)/1000)}k.`}
       />
+      {/* V-3 fix (2026-05-28): explicit reconciliation strip so the headline
+          ("Net deficit −£86k") ties out visibly to the receipt items. Before
+          this strip the user could read Rental + Dividends + State pension on
+          the left and Essentials + Debt service on the right, see them roughly
+          net to zero, and miss the Tax & NI stage that bridges the −£86k gap.
+          Showing Tax & NI + Pension (even when £0) makes the math transparent. */}
+      <div style={{
+        marginTop: 10, padding: '8px 10px',
+        background: 'var(--c-tint-neutral)', borderRadius: 8,
+        fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6,
+        fontVariantNumeric: 'tabular-nums',
+      }} aria-label="Cashflow reconciliation strip">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(gross/1000)}k</strong> gross</span>
+          <span style={{ color: 'var(--c-text3)' }}>−</span>
+          <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(taxAnn/1000)}k</strong> tax & NI</span>
+          <span style={{ color: 'var(--c-text3)' }}>−</span>
+          <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(pensionAnn/1000)}k</strong> pension</span>
+          <span style={{ color: 'var(--c-text3)' }}>−</span>
+          <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(essentials/1000)}k</strong> essentials</span>
+          <span style={{ color: 'var(--c-text3)' }}>−</span>
+          <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(debtService/1000)}k</strong> debt</span>
+          <span style={{ color: 'var(--c-text3)' }}>=</span>
+          <span><strong style={{ color: surplus >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)' }}>
+            {surplus < 0 ? '−' : ''}£{Math.round(Math.abs(surplus)/1000)}k
+          </strong> {sinkLabel.toLowerCase()}</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -2579,8 +2611,17 @@ function SequenceStressHero({ entity, seqVuln }) {
     sev === 'moderate' ? 'var(--c-tint-amber)' :
                          'var(--c-tint-blue)'
 
-  const medianAge = seqVuln.median_depletion_age
-  const adverseAge = seqVuln.adverse_depletion_age
+  const medianAgeRaw = seqVuln.median_depletion_age
+  const adverseAgeRaw = seqVuln.adverse_depletion_age
+  // V-4 fix (2026-05-28): cap displayed terminal age at 100. Engine math
+  // stays unchanged — display layer only. Beyond 100 the projection is
+  // clinically nonsense and corrodes trust even when arithmetically correct
+  // (Bruce 62 + 54y horizon → "age 116" reads as absurd).
+  const TERMINAL_CAP = 100
+  const medianAge = medianAgeRaw
+  const adverseAge = adverseAgeRaw
+  const medianOutlives = typeof medianAgeRaw === 'number' && medianAgeRaw > TERMINAL_CAP
+  const adverseOutlives = typeof adverseAgeRaw === 'number' && adverseAgeRaw > TERMINAL_CAP
   const yearsLost = medianAge && adverseAge ? medianAge - adverseAge : null
   const poundsAtRisk = seqVuln.vulnerability_pounds
 
@@ -2600,8 +2641,13 @@ function SequenceStressHero({ entity, seqVuln }) {
           : <>Your funded window is resilient to typical sequence risk — the bad-luck scenario shortens it minimally.</>}
       </div>
       <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
-        Median scenario: money lasts to age <strong style={{ color: 'var(--c-text)' }}>{medianAge}</strong>.
-        Adverse (1-in-5) scenario: money runs out at age <strong style={{ color: colour }}>{adverseAge}</strong>.
+        {medianOutlives
+          ? <>Median scenario: money <strong style={{ color: 'var(--c-text)' }}>outlives the plan horizon</strong>.</>
+          : <>Median scenario: money lasts to age <strong style={{ color: 'var(--c-text)' }}>{medianAge}</strong>.</>}
+        {' '}
+        {adverseOutlives
+          ? <>Adverse (1-in-5) scenario: money <strong style={{ color: colour }}>outlives the plan horizon</strong>.</>
+          : <>Adverse (1-in-5) scenario: money runs out at age <strong style={{ color: colour }}>{adverseAge}</strong>.</>}
         {poundsAtRisk > 0 && <> About <strong style={{ color: colour }}>{fmt(poundsAtRisk)}</strong> of plan value sits in this risk band.</>}
       </div>
       {seqVuln.mitigation_savings && (

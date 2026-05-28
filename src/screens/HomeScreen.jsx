@@ -305,7 +305,7 @@ function nwComposition(entity) {
     return fromHoldings > 0 ? fromHoldings : num(a.portfolio)
   }, 0) + num(a.investments) + num(a.alternatives)
   const total = pensions + isa + home + cash + business + portfolio || 1
-  return [
+  const segments = [
     { label: 'Pensions',    key: 'pensions',  pct: pensions   / total, color: 'var(--c-acc2)' },
     { label: 'ISA',         key: 'isa',       pct: isa        / total, color: 'var(--c-acc)'  },
     { label: 'Home',        key: 'property',  pct: home       / total, color: 'var(--c-gold)' },
@@ -313,6 +313,19 @@ function nwComposition(entity) {
     { label: 'Business',    key: 'business',  pct: business   / total, color: '#ba8cff' },
     { label: 'Investments', key: 'portfolio', pct: portfolio  / total, color: 'var(--c-success)' },
   ].filter(s => s.pct > 0.005)
+  // V-2 fix (2026-05-28): displayPct uses Hamilton (largest-remainder) so the
+  // printed integers always sum to exactly 100. Earlier each segment was
+  // Math.round(pct*100) independently — produced 21+10+55+4 = 90 on Bruce
+  // because the rounding sliced too aggressively. pct (raw fraction) is kept
+  // for bar widths.
+  const raw = segments.map(s => s.pct * 100)
+  const floors = raw.map(r => Math.floor(r))
+  const remainders = raw.map((r, i) => ({ i, frac: r - floors[i] }))
+  const leftover = 100 - floors.reduce((s, n) => s + n, 0)
+  remainders.sort((a, b) => b.frac - a.frac)
+  const display = floors.slice()
+  for (let k = 0; k < leftover && k < remainders.length; k++) display[remainders[k].i] += 1
+  return segments.map((s, i) => ({ ...s, displayPct: display[i] }))
 }
 
 
@@ -378,12 +391,12 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
                 key={s.label}
                 type="button"
                 onClick={() => onDrillMetric?.(`netWorth:${s.key}`)}
-                aria-label={`Drill into ${s.label} composition (${Math.round(s.pct * 100)}%)`}
+                aria-label={`Drill into ${s.label} composition (${s.displayPct}%)`}
                 className="sw-tap"
                 style={{ background: 'none', border: 'none', padding: '6px 2px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
               >
                 <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
-                <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments','Inv.')} {Math.round(s.pct * 100)}%</span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments','Inv.')} {s.displayPct}%</span>
               </button>
             ))}
           </div>

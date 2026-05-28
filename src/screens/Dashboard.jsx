@@ -426,7 +426,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         background:'var(--c-bg)', overflow:'hidden' }}>
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <div style={{
+      {/* V-1 fix (2026-05-28): className lets responsive CSS hide tagline +
+          anchor pills at mobile width where the right cluster (avatar + 4
+          pills + theme + more + settings = ~440px) was wrapping awkwardly
+          under the brand. See B-V2-EXPANDED-FINDINGS V-1. */}
+      <div className="sw-app-topbar" style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'10px 16px', flexShrink:0, gap:8,
         borderBottom:'1px solid var(--c-sep)',
@@ -436,7 +440,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
            Dark: navy gradient container + teal/cyan SVG fills + halo glow.
            Light: pure-white container + indigo + softer accents, no harsh
            dark-on-light cyan glow. Two SVG renders branch on theme. */}
-        <div style={{ display:'flex', alignItems:'center', gap:10, flex:'1 1 auto', minWidth:0 }}>
+        <div className="sw-app-topbar__brand" style={{ display:'flex', alignItems:'center', gap:10, flex:'1 1 auto', minWidth:0 }}>
           <div style={{
             width:44, height:44, borderRadius:14, flexShrink:0,
             background: theme === 'light'
@@ -455,12 +459,12 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           </div>
           <div style={{ minWidth:0 }}>
             <div style={{ fontSize:22, fontWeight:870, color:'var(--c-text)', letterSpacing:.02, lineHeight:1 }}>Sonuswealth</div>
-            <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:2, letterSpacing:.02 }}>Your wealth, in one place.</div>
+            <div className="sw-app-topbar__tagline" style={{ fontSize:11, color:'var(--c-text3)', marginTop:2, letterSpacing:.02 }}>Your wealth, in one place.</div>
           </div>
         </div>
 
         {/* Right: avatar (persona) + Wealth Score + settings */}
-        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <div className="sw-app-topbar__actions" style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
           {/* Avatar button — theme-aware (2026-05-12 parity fix).
              Dark: warm peach gradient + dark text.
              Light: indigo gradient + white text. Both stay distinctively
@@ -527,7 +531,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
               </div>
             )
             return (
-              <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
+              <div className="sw-app-topbar__anchors" style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
                 {pill('NW', nwShort, 'var(--c-text)')}
                 {pill('Wealth', fqShort, 'var(--c-acc)')}
                 {pill('Risk', rkShort, rkColour)}

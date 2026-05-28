@@ -167,11 +167,12 @@ function RiskRing({ score, band }) {
           letterSpacing:-2, lineHeight:1,
         }}>
           <Num value={score} format="score" animate />
-          {/* P1-7 (2026-05-28): show /93 because D7 BTR is hardcoded 0 at
-              launch — score's effective ceiling is 93 for every user until
-              behavioural-track data lands (planned Phase 8). /100 was
-              misleading: users could never hit 100 today. */}
-          <span style={{ fontSize:14, fontWeight:400, color:'var(--c-text3)', marginLeft:2 }}>/93</span>
+          {/* V-6 fix (2026-05-28): denominator dropped. Prior "/93" leaked the
+              dimension max-cap into the user-facing display (BTR is 0 at
+              launch, so the engine's effective ceiling is 93). Users read
+              "71/93" as a fraction with an arbitrary denominator. The band
+              label ("Protected" / "Stretched" / etc.) below is enough context;
+              the number stands on its own like the Wealth Score. */}
         </div>
       </foreignObject>
       <text x={100} y={120} textAnchor="middle"

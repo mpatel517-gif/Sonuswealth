@@ -236,11 +236,27 @@ export default function X28TopBar({
         <div style={{ flex: 1 }} />
 
         {/* Rules-version chip — human-readable label, technical version in tooltip */}
+        {/* V-7 fix (2026-05-28): label reflects the selected window. Prior
+            version always rendered "UK tax 2026/27" regardless of whether the
+            user picked Next year / 5y / etc. — that contradicted the window
+            chip ("Next year") sitting right next to it. Now the chip slides
+            forward/back with the selected tax year. */}
         {(() => {
-          // Convert 'UK-2026.1' → 'UK tax 2026/27' so users know what it means
           const m = rulesVersion?.match(/^UK-(\d{4})\.(\d+)$/)
-          const label = m ? `UK tax ${m[1]}/${String(+m[1] + 1).slice(-2)}` : rulesVersion
-          const tip = `Current UK tax rules and allowances (${rulesVersion}) · Last verified: ${dataDate} · Tap any value to see what rules apply`
+          const baseYear = m ? +m[1] : null
+          // Shift the displayed tax year by the window's `years` offset.
+          // For multi-year horizons (5y/10y/20y/Lifetime) keep the base
+          // engine-version year — those modes are projections, not single TYs.
+          const displayYear =
+            baseYear != null && Math.abs(current.years) === Math.abs(current.years) && Math.abs(current.years) <= 1
+              ? baseYear + (current.years || 0)
+              : baseYear
+          const label = displayYear != null
+            ? `UK tax ${displayYear}/${String(displayYear + 1).slice(-2)}`
+            : rulesVersion
+          const tip = current.years === 0
+            ? `Current UK tax rules and allowances (${rulesVersion}) · Last verified: ${dataDate} · Tap any value to see what rules apply`
+            : `Projected against the ${current.full.toLowerCase()} — engine version ${rulesVersion}. Future-year figures are extrapolated.`
           return (
             <span title={tip} className="sw-chip sw-chip-sm" style={{ letterSpacing: 0.3, cursor: 'help' }}>
               {label}
@@ -248,8 +264,13 @@ export default function X28TopBar({
           )
         })()}
 
-        {/* [Now] pill — X28 invariant marker; mint outline, refined. */}
-        {showNowPill && (
+        {/* [Now] pill — X28 invariant marker; mint outline, refined.
+            V-7 fix (2026-05-28): hide the pill entirely when the user has
+            selected a non-current window. Showing "NOW" while the chip says
+            "Next year" contradicts itself — the pill is a *snap-to-now*
+            affordance and a *current-state* marker, both of which become
+            meaningless once the window is in the future or past. */}
+        {showNowPill && current.direction === 'now' && (
           <button
             onClick={onNowTap}
             disabled={nowDimmed}

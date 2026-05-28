@@ -667,3 +667,16 @@ body {
     overflow-x: auto !important;
   }
 }
+
+/* ── V-1 fix (2026-05-28): Mobile top-bar chrome collision ─────────────────
+   At ≤768px the right cluster (avatar 44 + 4 anchor pills + theme 58 + more
+   44 + settings 44 ≈ 440px) was wrapping under the brand wordmark on 375px
+   viewports. Hide the marketing tagline and the duplicative anchor pills at
+   mobile — each route already renders its own anchor numbers in-body. Keep:
+   logo, "Sonuswealth" wordmark, avatar, theme toggle, more, settings.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sw-app-topbar__tagline { display: none !important; }
+  .sw-app-topbar__anchors { display: none !important; }
+}
+

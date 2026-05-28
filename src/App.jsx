@@ -40,9 +40,19 @@ import mrTFamily       from './rules/personas/mrT-family.json'
 import mrTUkIn         from './rules/personas/mrT-uk-in.json'
 import mrTUkTh         from './rules/personas/mrT-uk-th.json'
 
-// Flat entity map — Anna Finch snapshots registered individually
+// Flat entity map — Anna Finch snapshots registered individually.
+//
+// 2026-05-28: `f` previously resolved to personaF — a `type:"life_arc"`
+// wrapper holding `snapshots[]` with no top-level assets. MyMoney's readers
+// (entity.assets.pensions, entity.income.*, etc.) then collapsed to 0 and
+// the FinancesHeroCard hid because totalAssets === 0. Now `f` resolves to
+// the FIRST snapshot (f-22, age 22) by default — matching how PERSONA_LIST
+// presents Anna's selector entry. The full `personaF` wrapper is still
+// available via `f-wrapper` for code that needs the snapshot index. URL
+// users hitting `?demo=f` now get a renderable snapshot.
+const _annaDefault = (personaF.snapshots && personaF.snapshots[0]) || personaF
 const ENTITIES = {
-  a: personaA, b: personaB, c: personaC, d: personaD, e: personaE, f: personaF, g: personaG,
+  a: personaA, b: personaB, c: personaC, d: personaD, e: personaE, f: _annaDefault, 'f-wrapper': personaF, g: personaG,
   // Mr T routing fix (P0-14): every mrT variant resolves to its own object so
   // the URL ?demo=mrt-X is no longer a lie. mrT-core is the only one with
   // live-UI shape; the other 12 are nested-shape and the renderer surfaces

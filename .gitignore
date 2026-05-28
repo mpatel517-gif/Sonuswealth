@@ -42,3 +42,12 @@ tests/harness/_probe*.mjs
 deepseek-output.txt
 
 .superpowers/
+
+# Scripts with hardcoded API keys — MUST refactor to env var + rotate key
+# before these are committed. See 0-Active/audit/SESSION-CLOSE-2026-05-28.
+deepseek-direct.mjs
+scripts/deepseek-direct.mjs
+
+# Local working dirs (handover archives, ad-hoc audit scratch)
+.audit/
+handover/

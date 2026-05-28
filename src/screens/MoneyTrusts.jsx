@@ -21,6 +21,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { EstateVault } from '../components/charts/index.js'
 import { lpaStatus } from '../engine/selectors/index.js'
+import { ihtDynamic, fmt } from '../engine/fq-calculator.js'
+import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
 import useTaxYear from '../hooks/useTaxYear.jsx'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -282,6 +284,42 @@ export default function MoneyTrusts({ entity, onBack, onHome, onNav, onCommit })
         Wills, lasting powers of attorney, beneficiary nominations, and trusts —
         the four documents that decide where your money goes when you can't.
       </div>
+
+      {/* Tab-aware finances strip (founder image-3, 2026-05-28). Surfaces
+          Vehicles / Estate / Reliefs / IHT so the user has the same chrome
+          rhythm as Balance Sheet / Income Statement. Pre-2027 includeSipp=
+          false (pensions still outside the estate today); the screen below
+          shows the post-2027 picture in detail. */}
+      {(() => {
+        const iht = (() => { try { return ihtDynamic(entity, false) } catch { return null } })()
+        if (!iht) return null
+        const estate = +iht.gross || 0
+        const ihtDue = +iht.iht || 0
+        // Reliefs = the share of the gross estate that escapes IHT. That's
+        // gross − taxable (NRB + RNRB + BPR + spousal exemption all roll up
+        // into this difference). Earlier draft also subtracted ihtDue which
+        // double-counted and pinned the figure to zero on Bruce.
+        const taxable = +iht.taxable || 0
+        const reliefs = Math.max(0, estate - taxable)
+        const vehicleCount = (entity?.estate?.trusts?.length || 0)
+          + (entity?.estate?.will?.status === 'current' ? 1 : 0)
+          + (lpa.health.status === 'registered' ? 1 : 0)
+          + (lpa.finance.status === 'registered' ? 1 : 0)
+        return (
+          <FinancesHeroCard
+            entity={entity}
+            variant="trusts"
+            count={vehicleCount}
+            estate={fmt(estate)}
+            estateRaw={estate}
+            reliefs={fmt(reliefs)}
+            reliefsRaw={reliefs}
+            iht={fmt(ihtDue)}
+            ihtRaw={ihtDue}
+            onAddOrEdit={() => (onNav || onBack)?.('money')}
+          />
+        )
+      })()}
 
       {/* ── 2. EstateVault hero ──────────────────────────────────────────── */}
       <div style={{ marginBottom: 14 }}>

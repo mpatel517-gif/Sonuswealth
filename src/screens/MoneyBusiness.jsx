@@ -15,6 +15,7 @@
 // FCA boundary preserved — information / guidance / storage only. No advice.
 // ─────────────────────────────────────────────────────────────────────────────
 import BusinessDrillDown from '../components/MyMoney/BusinessDrillDown.jsx'
+import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
 import { fmt } from '../engine/fq-calculator.js'
 import { hasPersonaFlag } from '../engine/_helpers.js'
 import useTaxYear from '../hooks/useTaxYear.jsx'  // P1-6 chrome consistency
@@ -170,6 +171,23 @@ export default function MoneyBusiness({ entity, personaId, onBack, onHome, onNav
   return (
     <div className="screen" style={{ padding: '12px 16px 80px' }}>
       <PageHeader onBack={onBack} ty={ty} />
+
+      {/* Tab-aware finances strip (founder image-3, 2026-05-28). Surfaces
+          Holdings / Value / Distributions / Director pay so the user has the
+          same chrome rhythm as Balance Sheet / Income Statement. CTA routes
+          back to MyMoney's AddItemSheet (Business panel). */}
+      <FinancesHeroCard
+        entity={entity}
+        variant="business"
+        count={ba.length}
+        businessValue={totalBusinessValue}
+        businessValueRaw={totalBusinessValue}
+        distributions={dividends}
+        distributionsRaw={dividends}
+        directorPay={salary}
+        directorPayRaw={salary}
+        onAddOrEdit={() => (onNav || onBack)?.('money')}
+      />
 
       {/* Extraction mix */}
       <Card title="Director extraction mix" eyebrow="Annual flows out of the Ltd" footer={`Total extracted: ${fmt(totalExtraction)}.`}>

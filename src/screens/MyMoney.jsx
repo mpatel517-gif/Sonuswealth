@@ -1388,7 +1388,7 @@ function ANIPanel({ entity }) {
 
   return (
     <RevealCard cardId="tax-ani" title="What you actually keep from what you earn" defaultOpen={false}
-      headerAccessory={<span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>ANI {fmt(a.ani)}</span>}
+      headerAccessory={<span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }} title="Adjusted Net Income (ANI) — the HMRC figure used to taper your personal allowance and decide HICBC">Taxable income {fmt(a.ani)}</span>}
     >
       <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 'var(--space-sm)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <strong>How your take-home income is calculated</strong>
@@ -2048,7 +2048,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                   </div>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--c-text2)', marginBottom: 4 }}>
-                      <span>LSDBA · £{lsdbaCap.toLocaleString()}</span>
+                      <span title="Lump Sum and Death Benefit Allowance — HMRC cap on total tax-free pension lump sums paid out across your lifetime (LSDBA)">Death-benefit lump sum cap · £{lsdbaCap.toLocaleString()}</span>
                       <span>{lsdbaPct}% used</span>
                     </div>
                     <div style={{ height: 6, background: 'var(--c-surface2)', borderRadius: 4, overflow: 'hidden' }}>
@@ -2122,7 +2122,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
             Frames the existing UFPLS / FAD / Annuity stack the drill goes on
             to show. Information-only, no advice verbs. */}
         <div className="sw-card" style={{ padding: '10px 14px', marginBottom: 14 }}>
-          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Three orders of decumulation</div>
+          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Three ways to take pension income</div>
           <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>
             <strong>Order 1</strong> — tax-free cash + crystallise (UFPLS).
             <br />

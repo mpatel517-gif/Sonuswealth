@@ -680,3 +680,25 @@ body {
   .sw-app-topbar__anchors { display: none !important; }
 }
 
+/* ── N-2 + N-4 fix (2026-05-28): wordmark clipping + chrome overflow at 375px
+   At ≤480px the "Sonuswealth" wordmark (fontSize:22, ~120px) was being clipped
+   by the BW avatar because the brand cluster's text didn't truncate. Shrink
+   the wordmark to 16px AND apply overflow:hidden + text-overflow:ellipsis so
+   the brand still reads but never collides with the right-cluster actions.
+   Also drop the "More" (⋯) button at this size since Settings (⚙) opens the
+   same menu hierarchy — keeps the right cluster to avatar + theme + settings
+   which fits comfortably with the 44px logo + ~80px wordmark in 375px. */
+@media (max-width: 480px) {
+  .sw-app-topbar__brand > div:last-child > div:first-child {
+    font-size: 16px !important;
+    letter-spacing: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 130px;
+  }
+  .sw-app-topbar__actions > button[aria-label="More menu"] {
+    display: none !important;
+  }
+}
+

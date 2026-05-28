@@ -23,6 +23,7 @@ import { EstateVault } from '../components/charts/index.js'
 import { lpaStatus } from '../engine/selectors/index.js'
 import { ihtDynamic, fmt } from '../engine/fq-calculator.js'
 import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
+import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import useTaxYear from '../hooks/useTaxYear.jsx'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -284,6 +285,9 @@ export default function MoneyTrusts({ entity, onBack, onHome, onNav, onCommit })
         Wills, lasting powers of attorney, beneficiary nominations, and trusts —
         the four documents that decide where your money goes when you can't.
       </div>
+
+      {/* MoneyX 8-chip drawer — every screen organised the same way (2026-05-28). */}
+      <MoneyXDrawer entity={entity} activeRoute="trusts" onNav={onNav} />
 
       {/* Tab-aware finances strip (founder image-3, 2026-05-28). Surfaces
           Vehicles / Estate / Reliefs / IHT so the user has the same chrome

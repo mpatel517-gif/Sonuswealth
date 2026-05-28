@@ -1907,7 +1907,7 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap, tieout, tie
 // ─────────────────────────────────────────────────────────────────────────────
 // Default export — full-page Risk surface.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Risk({ entity, onHome, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
+export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)

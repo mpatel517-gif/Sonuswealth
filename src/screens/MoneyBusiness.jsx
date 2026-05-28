@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import BusinessDrillDown from '../components/MyMoney/BusinessDrillDown.jsx'
 import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
+import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import { fmt } from '../engine/fq-calculator.js'
 import { hasPersonaFlag } from '../engine/_helpers.js'
 import useTaxYear from '../hooks/useTaxYear.jsx'  // P1-6 chrome consistency
@@ -171,6 +172,9 @@ export default function MoneyBusiness({ entity, personaId, onBack, onHome, onNav
   return (
     <div className="screen" style={{ padding: '12px 16px 80px' }}>
       <PageHeader onBack={onBack} ty={ty} />
+
+      {/* MoneyX 8-chip drawer — every screen organised the same way (2026-05-28). */}
+      <MoneyXDrawer entity={entity} activeRoute="money/business" onNav={onNav} />
 
       {/* Tab-aware finances strip (founder image-3, 2026-05-28). Surfaces
           Holdings / Value / Distributions / Director pay so the user has the

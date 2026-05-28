@@ -2510,7 +2510,9 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
   )
 }
 
-export default function TaxEstate({ entity, onHome, onBack, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey }) {
+import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
+
+export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey }) {
   // Back-routing (2026-05-28): respect previous screen rather than jumping home.
   const goBackOrHome = onBack || onHome
   // ── Viewport detection (for mobile reordering — F-CAT-03 / F-VIS-01) ──────
@@ -2719,6 +2721,9 @@ export default function TaxEstate({ entity, onHome, onBack, onOpenRisk, onDrillM
           Live · {BRAND.rulesVersion}
         </span>
       </div>
+
+      {/* MoneyX 8-chip drawer — every screen the same (2026-05-28). */}
+      <MoneyXDrawer entity={entity} activeRoute="tax" onNav={onNav} />
 
       {/* ── X28 top-bar (per §X28-PATCH-1 / D-X28-OPTION-D) ─────────────── */}
       <X28TopBar

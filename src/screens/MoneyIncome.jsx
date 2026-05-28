@@ -51,6 +51,7 @@ import {
 // MoneyX sub-route with screen-appropriate stats. Here: Income Statement uses
 // the `income` variant which renders Sources / Gross / Tax / Net.
 import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
+import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 
 // ── persona detection (uses bundle helpers + entity shape) ────────────────────
 function isDirector(entity) {
@@ -674,6 +675,9 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
       <div style={{ fontSize: 12, color: 'var(--c-text3)', marginBottom: 16 }}>
         What comes in, what HMRC takes, what you keep.
       </div>
+
+      {/* MoneyX 8-chip drawer — every screen organised the same way (2026-05-28). */}
+      <MoneyXDrawer entity={entity} activeRoute="money/income" onNav={onNav} />
 
       {/* Tab-aware finances strip — Sources count + Gross/Tax/Net triplet.
           Same affordance as MyMoney's Balance Sheet strip but reading

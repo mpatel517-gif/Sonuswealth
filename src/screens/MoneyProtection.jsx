@@ -16,6 +16,7 @@
 import { useMemo } from 'react'
 import ProtectionDrillDown from '../components/MyMoney/ProtectionDrillDown.jsx'
 import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
+import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import { fmt } from '../engine/fq-calculator.js'
 import { getMonthlyEssentials } from '../engine/_helpers.js'
 
@@ -73,6 +74,7 @@ export default function MoneyProtection({ entity, personaId, onBack, onHome, onN
           rhythm as Balance Sheet / Income Statement. CTA returns to MyMoney
           where AddItemSheet's Protection panel lives. */}
       <div style={{ padding: '12px 16px 0' }}>
+        <MoneyXDrawer entity={entity} activeRoute="money/protection" onNav={onNav} />
         <FinancesHeroCard
           entity={entity}
           variant="protection"

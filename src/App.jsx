@@ -7,6 +7,12 @@ import Dashboard     from './screens/Dashboard.jsx'
 import PersonaSelect from './screens/PersonaSelect.jsx'
 import { EventsProvider, useEffectiveEntity } from './state/events.jsx'
 import { AuthProvider, useAuth } from './state/auth.jsx'
+import { installBundleAutoSync } from './engine/bundle-wiring.js'
+
+// A4 (2026-05-28): bridge the global TY chip to the engine's setBundle so
+// every consumer (PA, NRB, RNRB, dividend rates, NIC bands) live-updates
+// when the user changes the temporal window. Idempotent at module-load.
+installBundleAutoSync()
 import { StepUpProvider } from './state/step-up.jsx'
 import { bootRules } from './lib/boot-rules.js'
 

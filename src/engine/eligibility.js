@@ -512,7 +512,7 @@ registerRule({
   id: 'BPR-2YR-HOLDING',
   title: 'BPR 2-year holding requirement',
   category: 'iht',
-  description: 'Business Property Relief: 100% IHT exemption on qualifying business/AIM shares held for ≥2 years. From April 2026: £1M combined APR/BPR allowance, then 50% relief.',
+  description: 'Business Property Relief: 100% IHT exemption on qualifying business/AIM shares held for ≥2 years. From April 2026: £2.5M combined APR/BPR allowance, then 50% relief.',
   applicability: (p) => {
     const aim = p.assets?.aim_portfolio?.value ?? 0;
     const business = p.assets?.business?.value ?? 0;

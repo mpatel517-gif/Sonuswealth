@@ -165,6 +165,13 @@ function estimateEstateValue(entity) {
  * Cohabitees are treated as strangers for IHT: the partner's leg of the joint
  * estate above their personal NRB is fully taxable at 40%.
  *
+ * @deprecated 2026-05-28 — No active callers in src/. The audit (P2 dead-code
+ *   purge) flagged this. The active surface for this concept is
+ *   `<CohabIHTCliffTile>` in `components/MyMoney/PersonaGapTiles.jsx` which
+ *   uses `tax-estate-engine.cohabIHTExposure()` (different signature). Kept
+ *   exported so we don't break a future caller; remove in a focused cleanup
+ *   after confirming with grep that no external consumer exists.
+ *
  * @param {object} entity
  * @returns {({ exposure:number })|null}
  */
@@ -327,6 +334,12 @@ export function maritalStatus(entity) {
   }
   // Probe order: live-UI shape first, then snake, then alternative naming,
   // then nested fixture shape. Last hit wins only when earlier ones miss.
+  // P4-S3.5 (2026-05-28): mrT fixtures use entity.relationships[0].type
+  // (e.g. 'married', 'divorced', 'cohabiting') with end_date semantics.
+  // Without this probe mrT-couple/family/divorced silently behaved as 'single'.
+  const activeRelation = Array.isArray(entity.relationships)
+    ? entity.relationships.find(r => r?.type && !r?.end_date) || entity.relationships[0]
+    : null;
   const probes = [
     ['maritalStatus',     entity.maritalStatus],
     ['marital_status',    entity.marital_status],
@@ -334,6 +347,7 @@ export function maritalStatus(entity) {
     ['household_status',  entity.household_status],
     ['individual.marital_status', entity?.individual?.marital_status],
     ['individual.maritalStatus',  entity?.individual?.maritalStatus],
+    ['relationships[0].type', activeRelation?.type],
   ];
   const hit = probes.find(([, v]) => typeof v === 'string' && v.length > 0);
   if (!hit) return { status: 'unknown', isCouple: false, isCohab: false, isMarried: false, isSingle: false, rawField: null };

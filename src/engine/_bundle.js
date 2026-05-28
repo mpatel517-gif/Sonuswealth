@@ -54,6 +54,12 @@ function _buildTAX(b) {
     cgaAllowance:  b.cgaAllowance  ?? b.cgt?.annualExemption             ?? b.capitalGains?.annualExemptAmount ?? 3000,
     isaAllowance:  b.isaAllowance  ?? b.pension?.isaAllowance            ?? b.isa?.annualAllowance ?? 20000,
     pensionAA:     b.pensionAA     ?? b.pension?.annualAllowance         ?? 60000,
+    // Pension audit P2 (2026-05-26): MPAA + tapered-AA keys were missing
+    // from the bundle, so the MyMoney pension drill's "Reduced cap" tile
+    // always rendered "—" and `effectiveAA` fell back to literals.
+    mpaa:          b.mpaa          ?? b.pension?.moneyPurchaseAnnualAllowance         ?? 10000,
+    taperedAAAdj:  b.taperedAAAdj  ?? b.pension?.taperedAnnualAllowanceAdjustedIncome ?? 260000,
+    taperedAAFloor:b.taperedAAFloor?? b.pension?.taperedAnnualAllowanceMinimum        ?? 10000,
     swr:           b.swr           ?? b.pension?.safeWithdrawalRate      ?? 0.04,
     deadline:      new Date(b.deadline ?? b.iht?.sippsEnterEstateDate    ?? b.inheritanceTax?.pensionIHTInclusionDate ?? '2027-04-06'),
     giftExemption: b.giftAnnualExemption ?? b.iht?.giftAnnualExemption   ?? b.inheritanceTax?.giftAnnualExemption ?? 3000,
@@ -70,6 +76,55 @@ function _buildTAX(b) {
                        ?? b.nationalInsurance?.stateNewPensionFullAmount ?? 11502,
     statePensionQualYears: b.pension?.statePensionQualifyingYears
                        ?? b.nationalInsurance?.statePensionQualifyingYears ?? 35,
+
+    // ── v0.3 ROUTE-SPECS BUNDLE ADDITIONS (MASTER-SPEC §3.4) ─────────────────
+    // 28 new TAX keys required BEFORE any v0.3 route component can build.
+    // Cross-referenced against app-prototype/rules-uk.js where canonical.
+    // Where rules-uk.js does not yet carry the figure, value taken from
+    // Budget 2024 / Budget 2025 / Budget 2026 / Finance Act 2026 (cited inline).
+
+    // Income tax / NIC -----------------------------------------------------
+    adjustedNetIncomeCliff: b.income?.adjustedNetIncomeCliff   ?? 100000,        // ITA 2007 s35 — PA taper start
+    nicClass1Main:          b.nationalInsurance?.class1MainRate ?? 0.08,         // Post-2024 NIC cut (10% → 8%)
+    nicClass4Main:          b.nationalInsurance?.class4MainRate ?? 0.06,         // Post-2024 NIC cut (9% → 6%)
+    employerNICRate:        b.nationalInsurance?.employerRate   ?? 0.15,         // Budget 2024 — effective April 2025
+    employerNICThreshold:   b.nationalInsurance?.employerThreshold ?? 5000,      // Budget 2024 — effective April 2025
+    hicbcFloor:             b.income?.hicbcFloor               ?? 60000,         // Spring Budget 2024
+    hicbcCeiling:           b.income?.hicbcCeiling             ?? 80000,         // Spring Budget 2024 (taper width 20k)
+
+    // Dividends — Budget 2025 (rates take effect from April 2026) -----------
+    dividendBR:             b.income?.dividendBasicRate        ?? 0.1075,
+    dividendHR:             b.income?.dividendHigherRate       ?? 0.3575,
+    dividendAR:             b.income?.dividendAdditionalRate   ?? 0.3935,
+
+    // Pension — names verified against existing bundle shape ----------------
+    taperedAATIThreshold:   b.pension?.taperedAATIThreshold    ?? 200000,        // TI gate (FA 2020)
+    // taperedAAAdj (260000) + taperedAAFloor (10000) + statePensionFull
+    // already populated above — DO NOT duplicate.
+    s455Rate:               b.corp?.s455Rate                   ?? 0.3375,        // CTA 2010 s455 — overdrawn DLA charge (from April 2022)
+
+    // IHT / Estate -------------------------------------------------------
+    bprCombinedCap:         b.iht?.bprCombinedCap              ?? 2500000,       // FA 2026 — combined BPR+APR cap per individual
+    aimBPRRate:             b.iht?.aimBPRRate                  ?? 0.50,          // FA 2026 — AIM BPR rate
+    petTaperByYear:         b.iht?.petTaperByYear              ?? [0, 0, 0, 0.2, 0.4, 0.6, 0.8, 1.0], // IHTA 1984 s7 PET taper 0-7 yrs
+    // Gift exemptions split — v0.3 BLOCK-3 fix (was fabricated `srsAllowance`)
+    smallGiftsExemption:    b.iht?.smallGiftsExemption         ?? 250,           // IHTA 1984 s20
+    weddingGiftToChild:     b.iht?.weddingGiftToChild          ?? 5000,          // IHTA 1984 s22
+    weddingGiftToGrandchild:b.iht?.weddingGiftToGrandchild     ?? 2500,          // IHTA 1984 s22
+    weddingGiftOther:       b.iht?.weddingGiftOther            ?? 1000,          // IHTA 1984 s22
+    annualGiftExemption:    b.iht?.annualGiftExemption ?? b.iht?.giftAnnualExemption ?? b.inheritanceTax?.giftAnnualExemption ?? 3000, // IHTA 1984 s19
+    normalExpenditureFromIncome: b.iht?.normalExpenditureFromIncome ?? true,     // IHTA 1984 s21 flag
+
+    // CGT / Property / VCT -------------------------------------------------
+    cgtBasic:               b.cgt?.basicRate                   ?? 0.18,          // Post-Autumn Budget 2024
+    cgtHigher:              b.cgt?.higherRate                  ?? 0.24,          // Post-Autumn Budget 2024
+    badrRate:               b.cgt?.badrRate                    ?? 0.18,          // FA 2026 — Business Asset Disposal Relief (was 14% pre-2026)
+    sdltAdditionalProperty: b.sdlt?.additionalPropertySurcharge ?? 0.05,         // FA 2024 — from 31 Oct 2024 (+5%, was +3%)
+    vctITRate:              b.vct?.incomeTaxReliefRate         ?? 0.20,          // FA 2026 — VCT IT relief (was 30% pre-April 2026)
+
+    // Allowance freeze -----------------------------------------------------
+    paFreezeUntil:          b.income?.paFreezeUntil ?? b._meta?.paFreezeUntil ?? '2031-04-05', // Autumn Budget 2025 — freeze to end of 2030/31 tax year
+    // ── END v0.3 ROUTE-SPECS BUNDLE ADDITIONS ─────────────────────────────
     scottishBands: [
       { name: 'Starter',      from: b.income?.scottishStarterBandFrom      ?? 12570,  to: b.income?.scottishStarterBandTo        ?? 14876,  rate: b.income?.scottishStarterRate      ?? 0.19 },
       { name: 'Basic',        from: b.income?.scottishBasicBandFrom        ?? 14876,  to: b.income?.scottishBasicBandTo          ?? 26561,  rate: b.income?.scottishBasicRate        ?? 0.20 },

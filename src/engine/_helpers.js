@@ -56,6 +56,13 @@ export function pensionTotal(entity) {
     for (const p of a.pensions) {
       if (p.type === 'occupational-DB' && p.cetv == null) continue;
       total += +(p.cetv ?? p.balance_gbp ?? p.balance ?? p.value ?? 0) || 0;
+      // Phase C: include pending Pension Sharing Order incoming transfers. The
+      // mrT-divorced fixture stores £180k pending in `pso_incoming_pending`
+      // because it's flagged as in-transit (not yet on the SIPP statement) but
+      // legally belongs to this individual — it WILL land within months. The
+      // engine's NW walker previously skipped this, causing a £180k miss vs
+      // the fixture's own stated NW range. See FP-4 (PSO timing) in null_coverage.
+      total += +(p.pso_incoming_pending ?? 0) || 0;
     }
   }
   return total;
@@ -126,6 +133,35 @@ export function giaTotal(entity) {
 }
 
 /**
+ * Total alternatives value (crypto, gold, P2P, art, wine, private equity, etc).
+ * CANONICAL — added 2026-05-28 to close TO-1 (B-track tie-out finding).
+ *
+ * Background: engine `netWorth()` previously omitted alternatives entirely.
+ * Display walker at `MyMoney.jsx:3199 heroTotalAssets` had always included them,
+ * so personas holding alternatives (Tony Stark £315k, Mr T £28k) saw an
+ * arithmetically broken hero strip — NW ≠ Assets − Liabilities. Also rippled
+ * to `calcFQ`, `fundedRatio`, `investable`-adjacent metrics.
+ *
+ * Note: alternatives are deliberately NOT added to `investable()` — they are
+ * typically illiquid (gold bars, art, crypto with custody risk, P2P locked).
+ * @param {object} entity
+ * @returns {number}
+ */
+export function alternativesTotal(entity) {
+  const a = entity?.assets || {};
+  let total = 0;
+  if (Array.isArray(a.alternatives)) {
+    for (const alt of a.alternatives) {
+      if (alt?.status === 'disposed') continue;
+      const raw  = +(alt.value_gbp ?? alt.value ?? alt.estimated_value ?? 0) || 0;
+      const frac = +(alt.beneficial_interest_this_individual ?? alt.ownershipShare ?? 1) || 1;
+      total += raw * frac;
+    }
+  }
+  return total;
+}
+
+/**
  * Total residential / property value.
  * CANONICAL
  * @param {object} entity
@@ -161,16 +197,22 @@ export function propertyTotal(entity) {
  * @returns {number}
  */
 export function cashTotal(entity) {
+  // Phase C UX pass 3 — F1 cascade fix: previous version summed BOTH the
+  // legacy `assets.cash.total` AND the nested `assets.bank[]` array. For
+  // mrT-core (mixed schema fixture) this double-counted: a single £29k
+  // cash position was reported as £57k, then propagated to CASH tile's
+  // "interest tax" CoW via marginalRate-driven calc → £712/yr (real ~£61).
+  //
+  // Fix: choose the more detailed schema. If bank[] is populated, it is
+  // authoritative (per-account detail); else fall back to the aggregated
+  // legacy cash.total / cash.own scalar.
   const a = entity?.assets || {};
-  let total = 0;
-  if (a.cash?.total != null) total += +a.cash.total || 0;
-  else if (a.cash?.own != null) total += +a.cash.own || 0;
-  if (Array.isArray(a.bank)) {
-    for (const b of a.bank) {
-      total += +(b.balance_gbp ?? b.balance ?? 0) || 0;
-    }
+  if (Array.isArray(a.bank) && a.bank.length > 0) {
+    return a.bank.reduce((s, b) => s + (+(b.balance_gbp ?? b.balance ?? 0) || 0), 0);
   }
-  return total;
+  if (a.cash?.total != null) return +a.cash.total || 0;
+  if (a.cash?.own != null)   return +a.cash.own   || 0;
+  return 0;
 }
 
 /**
@@ -219,19 +261,36 @@ export function monthlyDebtService(entity) {
  * @returns {number}
  */
 export function annualIncome(entity) {
-  // nested: individual.gross_salary
+  // Phase C UX pass 3 — F1 root cause fix: previous version DOUBLE-SUMMED
+  // salary across `individual.gross_salary` and `income.employment` (same
+  // underlying figure in two schemas), and added `inc.rental` PLUS
+  // `inc.rentalIncome` (alias pair). For Mr T this inflated annual income
+  // from £42k → £78k, flipping the persona to higher-rate band and
+  // poisoning EVERY marginal-rate-driven Cost-of-Waiting tile downstream.
+  //
+  // Fix: take MAX of equivalent fields, not SUM.
   const ind = entity?.individual;
-  let total = 0;
-  if (ind?.gross_salary != null) total += +ind.gross_salary || 0;
-  // legacy: income.{employment, dividends, rentalIncome, overseasIncome}
-  const inc = entity?.income;
-  if (inc && !Array.isArray(inc)) {
-    total += (+inc.employment || 0) + (+inc.dividends || 0) +
-             (+inc.rentalIncome || 0) + (+inc.overseasIncome || 0) +
-             (+inc.salary || 0) + (+inc.selfEmployed || 0) + (+inc.rental || 0) + (+inc.other || 0);
-  }
-  total += +entity?.drawdown || 0;
-  return total;
+  const inc = entity?.income || {};
+
+  // Salary: nested individual.gross_salary OR legacy income.employment / income.salary.
+  // Use MAX — they are the same underlying figure expressed in different schemas.
+  const salary = Math.max(
+    +(ind?.gross_salary || 0),
+    +(inc.employment || 0),
+    +(inc.salary || 0),
+  );
+
+  // Rental: inc.rental and inc.rentalIncome are aliases. MAX, not SUM.
+  const rental = Math.max(+(inc.rental || 0), +(inc.rentalIncome || 0));
+
+  // Other income streams ADD (genuinely distinct sources).
+  const dividends      = +(inc.dividends || 0);
+  const overseasIncome = +(inc.overseasIncome || 0);
+  const selfEmployed   = +(inc.selfEmployed || 0);
+  const other          = +(inc.other || 0);
+  const drawdown       = +entity?.drawdown || 0;
+
+  return salary + dividends + rental + overseasIncome + selfEmployed + other + drawdown;
 }
 
 /**
@@ -280,6 +339,174 @@ export function statePensionAnnual(entity) {
     return Math.round((accrued / yrs) * full);
   }
   return 0;
+}
+
+// ── HOUSEHOLD STATUS READER — Phase C engine couple-reader fix ──────────────
+// Returns true if persona is in a couple. Reads any of: `isCouple` flag (Bruce
+// schema), nested `partner: {...}` object (mrT-* fixtures), nested
+// `spouse: {...}`, or explicit `household_status === 'couple'`. Was previously
+// only checking `entity.isCouple` — caused 36 cells of mrT couple fixtures
+// to silently lose spousal NRB transfer (engine returned NRB=£325k not £650k).
+export function isCouple(entity) {
+  if (!entity) return false;
+  if (entity.isCouple === true) return true;
+  if (entity.household_status === 'couple') return true;
+  if (entity.individual?.marital_status === 'married' || entity.individual?.marital_status === 'civil-partnership') return true;
+  // Partner / spouse object MUST have at least one identifying field to count
+  // (otherwise an empty placeholder `partner: {}` would trigger false positives).
+  const p = entity.partner || entity.spouse;
+  if (p && typeof p === 'object' && (p.id || p.name || p.dob || p.age || p.marital_status)) return true;
+  return false;
+}
+
+// ── EXPENSE READERS — Phase C BLOCK-1 fix ───────────────────────────────────
+// Canonical reader for monthly essential spend across all persona shapes.
+// Previously the lookup chain ignored `entity.monthlyExpenditure` (which is
+// where persona-a..g store it) and fell through to 55% × annualIncome — a
+// fallback so wrong it produced the visible bugs the founder kept flagging:
+//   * MyMoney TIME_COVERED = 150.3 yr (real ~32-46 yr)
+//   * MyMoney INCOME_BUFFER = 52.4× (real ~0.27-1×)
+//   * CASH tile "6.9 yr essentials covered" (vs same screen's "22 months")
+//
+// Lookup order (most explicit → least):
+//   1. expenses.essential_monthly  (mrT-* engine-test schema)
+//   2. expenses.essential_annual / 12  (canonical-metrics expected this)
+//   3. expenses.monthly  (alternative field on some fixtures)
+//   4. monthlyExpenditure  (persona-a..g shape — PRIMARY for live UI)
+//   5. monthly_expenditure / monthly_essential (snake_case variants)
+//   6. annualIncome × 0.55 / 12  (fallback ONLY — never first choice)
+//
+// Returns { monthly, annual, source, isEstimate } so callers can flag estimates.
+export function getMonthlyEssentials(entity) {
+  if (!entity) return { monthly: 0, annual: 0, source: 'none', isEstimate: true };
+  const e = entity.expenses || {};
+  // 1
+  if (+e.essential_monthly > 0) {
+    const m = +e.essential_monthly;
+    return { monthly: m, annual: m * 12, source: 'expenses.essential_monthly', isEstimate: false };
+  }
+  // 2
+  if (+e.essential_annual > 0) {
+    const a = +e.essential_annual;
+    return { monthly: a / 12, annual: a, source: 'expenses.essential_annual', isEstimate: false };
+  }
+  // 3
+  if (+e.monthly > 0) {
+    const m = +e.monthly;
+    return { monthly: m, annual: m * 12, source: 'expenses.monthly', isEstimate: false };
+  }
+  // 4 — persona-a..g shape (CRITICAL — this was the missed lookup)
+  if (+entity.monthlyExpenditure > 0) {
+    const m = +entity.monthlyExpenditure;
+    return { monthly: m, annual: m * 12, source: 'entity.monthlyExpenditure', isEstimate: false };
+  }
+  // 5 — snake_case variants seen in some fixtures
+  if (+entity.monthly_expenditure > 0) {
+    const m = +entity.monthly_expenditure;
+    return { monthly: m, annual: m * 12, source: 'entity.monthly_expenditure', isEstimate: false };
+  }
+  if (+entity.monthly_essential > 0) {
+    const m = +entity.monthly_essential;
+    return { monthly: m, annual: m * 12, source: 'entity.monthly_essential', isEstimate: false };
+  }
+  // 6 — fallback (label as estimate so UI can show "est." badge)
+  // Import-free fallback: caller can pass annualIncome via a wrapper if needed.
+  // Default to ZERO here rather than guessing — callers that need a fallback
+  // should explicitly pass it. Returning 0 makes the "estimate" branch visible.
+  return { monthly: 0, annual: 0, source: 'none', isEstimate: true };
+}
+
+/**
+ * Convenience: annualised version.
+ */
+export function getAnnualEssentials(entity) {
+  return getMonthlyEssentials(entity).annual;
+}
+
+// ── §X — runwayWithDrawdown (NEW v0.3 — MASTER-SPEC §3.1) ──────────────────
+/**
+ * Months of essential expenses covered by cash PLUS planned drawdown over
+ * the horizon. Closes IFA face-fall #1 from v0.2 critique: Bruce's runway
+ * previously read cash÷essentials = deficit, ignoring his £96k/yr planned
+ * drawdown. Spec: route-3-cashflow.md §6 + A3 + §8 (shared bullet).
+ *
+ * Behaviour:
+ *   · Decum personas (life-stage ≥ 4 OR flexibleDrawdownTriggered flag) →
+ *     plannedDrawdownOverHorizon = entity.drawdownSchedule[year] summed over
+ *     horizonMonths (best-effort: scalar fallback uses annualDrawdown × frac).
+ *   · Accumulation personas → plannedDrawdownOverHorizon = 0; reduces to cash
+ *     ÷ essentials (legacy R3 v0.1 behaviour).
+ *   · essentials = getMonthlyEssentials(entity); if 0/estimated, returns
+ *     Infinity-safe 0-months result so UI can render empty state.
+ *
+ * @param {object} entity
+ * @param {number} [horizonMonths=12]
+ * @returns {{ months:number, cash:number, plannedDrawdownOverHorizon:number, essentialsMonthly:number, isDecum:boolean }}
+ */
+export function runwayWithDrawdown(entity, horizonMonths = 12) {
+  const cash = cashTotal(entity);
+  const ess = getMonthlyEssentials(entity);
+  const essentialsMonthly = ess.monthly || 0;
+
+  // Decum detection — life-stage ≥ 4 OR MPAA / FAD trigger flags.
+  const lifeStage = +(entity?.lifeStage ?? entity?.individual?.lifeStage ?? entity?.individual?.life_stage ?? 0);
+  const fadFlag = !!(
+    entity?.flexibleDrawdownTriggered === true ||
+    entity?.individual?.flexibleDrawdownTriggered === true ||
+    entity?.pension?.mpaaActive === true
+  );
+  const isDecum = lifeStage >= 4 || fadFlag;
+
+  // Planned drawdown over horizon — best-effort across persona shapes.
+  let plannedDrawdownOverHorizon = 0;
+  if (isDecum) {
+    const sched = entity?.drawdownSchedule;
+    if (Array.isArray(sched) && sched.length > 0) {
+      // Schedule shape: array of yearly amounts [yr0, yr1, …]. Sum the
+      // fractional years that fall inside the horizon.
+      const horizonYears = horizonMonths / 12;
+      const wholeYears = Math.floor(horizonYears);
+      const frac = horizonYears - wholeYears;
+      for (let i = 0; i < wholeYears && i < sched.length; i++) {
+        plannedDrawdownOverHorizon += +sched[i] || 0;
+      }
+      if (frac > 0 && wholeYears < sched.length) {
+        plannedDrawdownOverHorizon += (+sched[wholeYears] || 0) * frac;
+      }
+    } else if (typeof sched === 'object' && sched != null) {
+      // Object shape keyed by year offset — sum the in-horizon entries.
+      const horizonYears = horizonMonths / 12;
+      for (const [k, v] of Object.entries(sched)) {
+        const yr = +k;
+        if (Number.isFinite(yr) && yr < horizonYears) {
+          plannedDrawdownOverHorizon += +v || 0;
+        }
+      }
+    } else {
+      // Scalar fallback: entity.drawdown is the annual rate.
+      const annualDrawdown = +entity?.drawdown || 0;
+      plannedDrawdownOverHorizon = annualDrawdown * (horizonMonths / 12);
+    }
+  }
+
+  if (essentialsMonthly <= 0) {
+    return {
+      months: 0,
+      cash,
+      plannedDrawdownOverHorizon: Math.round(plannedDrawdownOverHorizon),
+      essentialsMonthly: 0,
+      isDecum,
+    };
+  }
+
+  const months = (cash + plannedDrawdownOverHorizon) / essentialsMonthly;
+  return {
+    months: Math.round(months * 10) / 10,
+    cash: Math.round(cash),
+    plannedDrawdownOverHorizon: Math.round(plannedDrawdownOverHorizon),
+    essentialsMonthly: Math.round(essentialsMonthly),
+    isDecum,
+  };
 }
 
 // ── PROTECTION READERS ──────────────────────────────────────────────────────

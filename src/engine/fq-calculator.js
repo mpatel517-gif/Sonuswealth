@@ -8,12 +8,13 @@
 import { TAX, onBundleChange } from './_bundle.js';
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
 import {
-  pensionTotal     as _pensionTotal,
-  investmentsTotal as _investmentsTotal,
-  isaTotal         as _isaTotal,
-  giaTotal         as _giaTotal,
-  propertyTotal    as _propertyTotal,
-  cashTotal        as _cashTotal,
+  pensionTotal      as _pensionTotal,
+  investmentsTotal  as _investmentsTotal,
+  isaTotal          as _isaTotal,
+  giaTotal          as _giaTotal,
+  propertyTotal     as _propertyTotal,
+  cashTotal         as _cashTotal,
+  alternativesTotal as _alternativesTotal,
   liabilitiesTotal as _liabilitiesTotal,
   monthlyDebtService as _monthlyDebtService,
   annualIncome     as _annualIncome,
@@ -25,7 +26,11 @@ import {
   jurisdictionOf   as _jurisdictionOf,
   getWrapper       as _getWrapper,
   detectSchema     as _detectSchema,
+  isCouple         as _isCouple,
 } from './_helpers.js';
+// P3-S3 wiring (2026-05-28): unified dependants reader resolves children[]
+// vs dependants[] schema drift. calcHICBC now sees mrT-family kids.
+import { dependants as _dependantsUnified } from './persona-normalizer.js';
 
 // ── TAX OBJECT — derived from active bundle via _bundle.js ──────────────────
 // TAX is re-populated in place by _bundle.js whenever setBundle() fires, so
@@ -126,8 +131,11 @@ export function netWorth(e) {
   // only; flat-side values (a.isa.value etc.) are intentionally NOT added,
   // because in mixed personas they duplicate items already inside the nested
   // arrays (ISA in a.investments[], cash in a.bank[], SIPP in a.pensions[]).
+  // TO-1 fix (2026-05-28): alternatives (crypto/gold/P2P/art) were missing
+  // entirely. Display walker at MyMoney heroTotalAssets included them; engine
+  // didn't. See 0-Active/audit/B-TIEOUT-FINDINGS-2026-05-28.md.
   return _pensionTotal(e) + _investmentsTotal(e) + _propertyTotal(e) +
-         _cashTotal(e) - _liabilitiesTotal(e);
+         _cashTotal(e) + _alternativesTotal(e) - _liabilitiesTotal(e);
 }
 
 /**
@@ -591,9 +599,9 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
 
   const gross = propertyVal + sippVal + isaVal + giaVal + cashVal + protEstate;
 
-  let nrb  = TAX.nrb;  if (e.isCouple) nrb  *= 2;
+  let nrb  = TAX.nrb;  if (_isCouple(e)) nrb  *= 2;
   let rnrb;
-  if (e.isCouple) {
+  if (_isCouple(e)) {
     // RNRB is per-individual with transferable allowance. Each individual's
     // £175k RNRB tapers against their own share of the estate at £2M, not
     // against the combined living assets. 50/50 split assumed absent evidence.
@@ -616,7 +624,7 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
     gross, nrb, rnrb, taxable, iht,
     beneficiaryRate:   gross > 0 ? (gross - iht) / gross : 1,
     sippContribution:  includeSipp ? Math.round(sippVal * TAX.ihtRate) : 0,
-    rnrbLost:          e.isCouple ? Math.max(0, TAX.rnrb * 2 - rnrb) : Math.max(0, TAX.rnrb - rnrb),
+    rnrbLost:          _isCouple(e) ? Math.max(0, TAX.rnrb * 2 - rnrb) : Math.max(0, TAX.rnrb - rnrb),
     residenceForRnrb,  // exposed for verification + UI debug
   };
 }
@@ -883,11 +891,40 @@ function _isStale(dateStr) {
 }
 
 // Exported for UI (MyMoney pension drill-down). Returns per-pension status.
-// Each pension row: { name, value, nominationDate, isStale, ageYears, status }
-// status: 'current' (< 2y) · 'aging' (2-3y) · 'stale' (> 3y) · 'missing' (no date)
+// Each pension row: { name, value, nominationDate, isStale, ageYears, status, schemeKind }
+// status:     'current' (< 2y) · 'aging' (2-3y) · 'stale' (> 3y) · 'missing' (no date)
+// schemeKind: 'DC' (default) · 'DB' (occupational defined benefit)
+//
+// Pension audit P1 fix (2026-05-26): previously read only
+// `entity.assets.sipp.pensions`, which meant Mr T's Railway DB scheme and the
+// Director's three `assets.pensions[]` entries (£1.18m of real money) were
+// invisible in the scheme list. Merging both arrays + normalising the shape.
 export function nominationStatus(entity) {
-  const pensions = entity.assets?.sipp?.pensions || [];
-  return pensions.map(p => {
+  const sippPensions = entity.assets?.sipp?.pensions || [];
+  const arrayPensions = entity.assets?.pensions || [];
+
+  const normalisedArray = arrayPensions.map(p => {
+    const t = (p.type || '').toLowerCase();
+    const isDB = t.includes('db')
+      || t.includes('defined-benefit') || t.includes('defined benefit')
+      || t.includes('final-salary') || t.includes('final salary')
+      || t === 'occupational-db';
+    return {
+      name: p.name || p.scheme_name || p.provider || 'Pension',
+      value: +p.balance_gbp || +p.balance || +p.cetv || +p.value || 0,
+      type: p.type,
+      provider: p.provider,
+      nominationDate: p.nomination?.date_set || p.nominationDate || p.nomination_date,
+      schemeKind: isDB ? 'DB' : 'DC',
+    };
+  });
+
+  const merged = [
+    ...sippPensions.map(p => ({ ...p, schemeKind: p.schemeKind || 'DC' })),
+    ...normalisedArray,
+  ];
+
+  return merged.map(p => {
     if (!p.nominationDate) {
       return { ...p, isStale: true, ageYears: null, status: 'missing' };
     }
@@ -1038,7 +1075,7 @@ export function calcRisk(e) {
   const dependants    = e.dependants || [];
   const minorChildren = dependants.filter(d => d.type === 'child' && (d.age || 0) < 18);
   const hasDependants = dependants.some(d => d.financiallyDependent !== false) ||
-                        (e.isCouple && dependants.length === 0);  // couple have mutual dependency
+                        (_isCouple(e) && dependants.length === 0);  // couple have mutual dependency
   const pensions      = a.sipp?.pensions || [];
 
   // Will score: 3=current, 1=old/exists, 0=absent
@@ -2140,8 +2177,8 @@ function _taxAllowancesCoI(e) {
     .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0);
   const unused = Math.max(0, TAX.isaAllowance - used);
   if (cash <= 0) return 0;
-  // Tax saved: unused × dividend yield × dividend rate (basic = 8.75%, higher = 33.75%)
-  const rate = e.isHigherRateTaxpayer ? 0.3375 : 0.0875;
+  // Tax saved: unused × dividend yield × dividend rate (basic = 10.75%, higher = 35.75%)
+  const rate = e.isHigherRateTaxpayer ? 0.3575 : 0.1075;
   return Math.round(Math.min(unused, cash) * 0.025 * rate);
 }
 function _estatePlanningCoI(e) {
@@ -2853,12 +2890,21 @@ export function recommendedSurplusAllocation(entity, surplus) {
 export function calcANI(entity, bundle) {
   const inc = entity?.income || {};
   const ind = entity?.individual || {};
+  // P14 tax-accountant audit (2026-05-28): ANI was undercounting for directors
+  // (income.directorSalary missing) and modern self-employed (income.selfEmploymentNet
+  // missing — older shape was income.selfEmployed). This caused the £100k cliff
+  // edge warning to fire late or not at all for the personas it should catch.
+  // Pension contribution: both monthly + annual fields accepted (UI sometimes
+  // captures only one). Monthly × 12 added to the annual figure.
   const total = (+ind.gross_salary || 0) + (+inc.salary || 0) + (+inc.employment || 0) +
+                (+inc.directorSalary || 0) +
                 (+inc.dividends || 0) + (+inc.rentalIncome || 0) + (+inc.rental || 0) +
-                (+inc.selfEmployed || 0) + (+inc.savingsInterest || 0) + (+inc.other || 0) +
+                (+inc.selfEmployed || 0) + (+inc.selfEmploymentNet || 0) +
+                (+inc.savingsInterest || 0) + (+inc.other || 0) +
                 (+inc.overseasIncome || 0) + (+entity.drawdown || 0);
   const giftAid     = +entity.giftAidAnnual || 0;
-  const pensionRel  = +entity.pensionContribAnnual || 0;
+  const pensionMonthly = +entity.pensionContribMonthly || 0;
+  const pensionRel  = (+entity.pensionContribAnnual || 0) + (pensionMonthly * 12);
   const tradeLosses = +entity.tradeLosses || 0;
   const interestPaid = +entity.qualifyingInterest || 0;
   const ani = Math.max(0, total + giftAid * 0.25 - pensionRel - tradeLosses - interestPaid);
@@ -2988,7 +3034,12 @@ export function calcHICBC(entity, bundle) {
   const ani = calcANI(entity, bundle).ani;
   const threshold = TAX_JSON.income?.highIncomeChildBenefitThreshold || 60000;
   const cap = threshold + TAX.hicbcTaperWidth;
-  const kids = (entity?.dependants || []).filter(d => d.type === 'child' && (d.age || 0) < 18 && d.financiallyDependent !== false);
+  // P3-S3 wiring (2026-05-28): unified dependants reader so mrT-family
+  // (children[]) and UI personas a-g (dependants[]) both feed the same path.
+  // Previously this read entity.dependants directly and silently returned
+  // charge=0 for any persona using the children[] shape.
+  const allDeps = _dependantsUnified(entity);
+  const kids = allDeps.filter(d => d.type === 'child' && (d.age || 0) < 18 && d.financiallyDependent !== false);
   if (kids.length === 0 || ani <= threshold) return { charge: 0, ani, threshold, dependantsCount: kids.length, eligible: kids.length > 0 };
   // Approximate child benefit: £25.60/wk first child + £16.95/wk each additional
   const benefit = (25.60 + 16.95 * (kids.length - 1)) * 52;
@@ -3025,7 +3076,7 @@ export function calcPSA(entity, bundle) {
  * @returns {{ eligible:boolean, transferAmount:number, taxSaving:number, reason?:string }}
  */
 export function calcMarriageAllowance(entity, bundle) {
-  if (!entity.isCouple || !entity.spouse) {
+  if (!_isCouple(entity) || !entity.spouse) {
     return { eligible: false, transferAmount: 0, taxSaving: 0, reason: 'Not married/civil partnership' };
   }
   const transfer = TAX_JSON.income?.marriageAllowanceTransfer || 1260;
@@ -3071,7 +3122,12 @@ export function calcAllIncome(entity, bundle) {
   if (ind.gross_salary)  items.push({ type: 'employment', amount: +ind.gross_salary });
   if (inc.salary)        items.push({ type: 'employment', amount: +inc.salary });
   if (inc.employment)    items.push({ type: 'employment', amount: +inc.employment });
+  // P14 tax-accountant audit (2026-05-28): directors with separate directorSalary
+  // field were missed by calcAllIncome — same gap as in calcANI. Adding here so
+  // the income-type breakdown shown on MoneyIncome captures it.
+  if (inc.directorSalary) items.push({ type: 'employment', amount: +inc.directorSalary });
   if (inc.selfEmployed)  items.push({ type: 'self-employment', amount: +inc.selfEmployed });
+  if (inc.selfEmploymentNet) items.push({ type: 'self-employment', amount: +inc.selfEmploymentNet });
   if (inc.dividends)     items.push({ type: 'dividends', amount: +inc.dividends });
   if (inc.rental || inc.rentalIncome) items.push({ type: 'rental', amount: +(inc.rental || inc.rentalIncome) });
   if (inc.savingsInterest) items.push({ type: 'savings-interest', amount: +inc.savingsInterest });
@@ -3253,7 +3309,7 @@ export function willLpaStatus(entity) {
 export function intestacyDistribution(entity) {
   const totalEstate = netWorth(entity);
   const beneficiaries = [];
-  const hasSpouse = entity.isCouple || (Array.isArray(entity.relationships) && entity.relationships.some(r => r.type === 'spouse' || r.type === 'civil-partner'));
+  const hasSpouse = _isCouple(entity) || (Array.isArray(entity.relationships) && entity.relationships.some(r => r.type === 'spouse' || r.type === 'civil-partner'));
   const issue = (entity.dependants || []).filter(d => d.type === 'child');
   // Statutory legacy 2026: £322,000 to spouse
   const STATUTORY_LEGACY = 322000;
@@ -3363,9 +3419,9 @@ export function bprQualifyingValue(entity) {
   return {
     tier1Full: tier1,
     tier2Aim: tier2,
-    allowance: entity.isCouple ? allowance * 2 : allowance,
+    allowance: _isCouple(entity) ? allowance * 2 : allowance,
     used: Math.round(used),
-    remaining: Math.max(0, (entity.isCouple ? allowance * 2 : allowance) - used),
+    remaining: Math.max(0, (_isCouple(entity) ? allowance * 2 : allowance) - used),
   };
 }
 
@@ -3378,7 +3434,7 @@ export function bprQualifyingValue(entity) {
 export function bprAprAllowance(entity) {
   const ind = TAX_JSON.inheritanceTax?.aprBprCombinedAllowance || 2500000;
   const couple = TAX_JSON.inheritanceTax?.aprBprCombinedAllowanceCouple || 5000000;
-  const total = entity.isCouple ? couple : ind;
+  const total = _isCouple(entity) ? couple : ind;
   const used = bprQualifyingValue(entity).used;
   return { individual: ind, couple, used, remaining: Math.max(0, total - used) };
 }

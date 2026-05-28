@@ -70,8 +70,116 @@ function jsonBundle(bundleId) {
   // Anything else: try same convention
   const file = `src/rules/${bundleId}.json`;
   if (fs.existsSync(path.join(REPO_ROOT, file))) return readJSON(file);
-  // Fallback to canonical 2026 if specific year not seeded
-  return readJSON('src/rules/UK-2026.1.1.json');
+  // PHASE A3: silent fallback to UK-2026.1.1 removed. The previous behaviour
+  // applied 2026/27 rules to every year that lacked a bundle, hiding the fact
+  // that 2021-2025 had no real coverage. Now this errors loudly so callers
+  // either (a) request a year that exists, or (b) handle the gap explicitly.
+  throw new Error(`[data-source.jsonBundle] No JSON bundle on disk for "${bundleId}". Expected at ${file}. See selectRuleBundle() for tax-year → bundle resolution.`);
+}
+
+// ─── Tax-year → bundle id resolution (Phase A3) ─────────────────────────────
+// One row per UK tax year; bundleId points to the canonical rule file. Add
+// new years here when the next Budget cycle's bundle lands. NOT YET a multi-
+// jurisdiction map — Phase D adds India/Thailand/etc.
+const UK_BUNDLE_BY_TAX_YEAR = {
+  '2021/22': 'UK-2021.1.1',
+  '2022/23': 'UK-2022.1.1',
+  '2023/24': 'UK-2023.1.1',
+  '2024/25': 'UK-2024.1.1',
+  '2025/26': 'UK-2025.1.1',
+  '2026/27': 'UK-2026.1.1',
+};
+
+/**
+ * Resolve a tax year to its rule bundle, then optionally fold in any mid-year
+ * legislation events whose effectiveFrom is <= asOfDate. Use this from the
+ * engine instead of loadBundle() directly so date-sensitive rates resolve
+ * correctly (e.g. CGT 10/20 vs 18/24 around 30 Oct 2024).
+ *
+ * Returns the (possibly mutated) bundle. Mutations are non-destructive: a
+ * shallow clone is made before applying any event.
+ *
+ * @param {string} taxYear  e.g. '2024/25'
+ * @param {Date|string} [asOfDate]  optional — defaults to end of tax year
+ * @param {{jurisdiction?: string, source?: string}} [opts]
+ */
+export async function selectRuleBundle(taxYear, asOfDate = null, opts = {}) {
+  const jurisdiction = opts.jurisdiction || 'UK';
+  if (jurisdiction !== 'UK') {
+    throw new Error(`[selectRuleBundle] jurisdiction "${jurisdiction}" not yet implemented. Phase D will add India/Thailand/Canada/Ireland/Australia.`);
+  }
+  const bundleId = UK_BUNDLE_BY_TAX_YEAR[taxYear];
+  if (!bundleId) {
+    throw new Error(`[selectRuleBundle] No bundle registered for tax year "${taxYear}". Known years: ${Object.keys(UK_BUNDLE_BY_TAX_YEAR).join(', ')}.`);
+  }
+  const raw = await loadBundle(bundleId, opts);
+  if (!asOfDate) return raw;
+  return applyMidYearEvents(raw, asOfDate);
+}
+
+/**
+ * Fold any mid-year events with effectiveFrom <= asOfDate into the bundle's
+ * canonical fields. Returns a NEW shallow-cloned bundle (input untouched).
+ *
+ * Supported event types:
+ *   - rate-change      sets bundle[scope] = event.to     (or applies delta)
+ *   - threshold-change sets bundle[scope] = event.to
+ *
+ * Path syntax: dot-separated, e.g. "capitalGains.higherRate".
+ */
+export function applyMidYearEvents(bundle, asOfDate) {
+  const events = bundle?._midYearEvents || [];
+  if (!events.length) return bundle;
+  const cutoff = asOfDate instanceof Date ? asOfDate : new Date(asOfDate);
+  if (Number.isNaN(cutoff.getTime())) {
+    throw new Error(`[applyMidYearEvents] asOfDate is invalid: ${asOfDate}`);
+  }
+  // Filter to events that have ALREADY happened by asOfDate
+  const due = events.filter(e => new Date(e.effectiveFrom) <= cutoff);
+  if (!due.length) return bundle;
+  // Shallow clone (deep enough for the paths we touch)
+  const out = JSON.parse(JSON.stringify(bundle));
+  out._appliedMidYearEvents = [];
+  for (const ev of due) {
+    const targets = String(ev.scope || '').split('+').map(s => s.trim()).filter(Boolean);
+    for (const target of targets) {
+      const path = target.split('.');
+      const last = path.pop();
+      let node = out;
+      for (const seg of path) {
+        if (node[seg] == null) { node[seg] = {}; }
+        node = node[seg];
+      }
+      // Prefer event.to if defined; otherwise apply delta
+      if (ev.to !== undefined) {
+        if (typeof ev.to === 'object' && ev.to !== null) {
+          // Multi-field event (e.g. {basic, higher}) — caller must spell out
+          // exact subkeys; we copy each.
+          Object.assign(node[last] ?? (node[last] = {}), ev.to);
+        } else {
+          node[last] = ev.to;
+        }
+      } else if (ev.delta !== undefined) {
+        const delta = typeof ev.delta === 'string' ? parseFloat(ev.delta) : ev.delta;
+        if (typeof node[last] === 'number' && Number.isFinite(delta)) {
+          node[last] = node[last] + delta;
+        }
+      }
+    }
+    out._appliedMidYearEvents.push({ id: ev.id, effectiveFrom: ev.effectiveFrom, scope: ev.scope });
+  }
+  return out;
+}
+
+// Expose the mapping so callers (manifest builder, harness) can iterate.
+export function listTaxYears(jurisdiction = 'UK') {
+  if (jurisdiction !== 'UK') return [];
+  return Object.keys(UK_BUNDLE_BY_TAX_YEAR);
+}
+
+export function bundleIdForTaxYear(taxYear, jurisdiction = 'UK') {
+  if (jurisdiction !== 'UK') return null;
+  return UK_BUNDLE_BY_TAX_YEAR[taxYear] || null;
 }
 
 function jsonMacroBaseline() {
@@ -127,23 +235,34 @@ function jsonPersona(personaId) {
 }
 
 function jsonListPersonas(family) {
+  // Phase A4: 13 mrT-*.json fixtures live at the top of personas/ but are a
+  // distinct test population from persona-a..g. Split them out as their own
+  // family so --family=mrT works in the runner without conflating with main.
   const folders = {
     main: 'src/rules/personas',
     matrix: 'src/rules/personas/matrix',
     historical: 'src/rules/personas/historical',
   };
+  const isMrT = (filename) => /^mrT-/.test(filename);
   const out = [];
   for (const [fam, rel] of Object.entries(folders)) {
-    if (family && family !== fam) continue;
     const dir = path.join(REPO_ROOT, rel);
     if (!fs.existsSync(dir)) continue;
     for (const f of fs.readdirSync(dir)) {
       if (!f.endsWith('.json')) continue;
       const id = f.replace(/\.json$/, '');
+      // main/ folder contains BOTH persona-a..g AND mrT-*; split by filename
+      const effectiveFam = (fam === 'main' && isMrT(f)) ? 'mrT' : fam;
+      if (family && family !== effectiveFam) continue;
       try {
         const p = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-        out.push({ persona_id: id, family: fam, name: p.name || id,
-                   archetype: p.archetype, life_stage: p.life_stage });
+        // mrT fixtures store name at p.name OR p.individual.name (engine-test shape)
+        const name = p.name || p.individual?.name || p.fixture_purpose?.slice(0, 80) || id;
+        out.push({
+          persona_id: id, family: effectiveFam, name,
+          archetype: p.archetype || p.fixture_anchor_archetype,
+          life_stage: p.life_stage || p.lifeStageName,
+        });
       } catch { /* skip malformed */ }
     }
   }

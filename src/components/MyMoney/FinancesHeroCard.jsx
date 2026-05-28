@@ -83,19 +83,101 @@ function Sep() {
   )
 }
 
+// Variant config (2026-05-28). Founder complaint: "accounts 28 this should
+// also be on the income statement tab and where else it needs to be and the
+// data in the middle should be appropriate for that tab". The strip's left
+// cluster (count + icon) keeps the same affordance per screen but with a
+// screen-appropriate label; the middle cluster swaps the stat triplet so
+// Income Statement shows Gross/Tax/Net rather than NW/Assets/Liab.
+//
+// Add a new screen by adding a key here and rendering the card with the
+// matching `variant` prop + the data props it expects.
+const VARIANTS = {
+  balance: {
+    leftLabel: 'Accounts',
+    stats: (p) => [
+      { label: 'Net worth',   value: p.netWorth,         tone: 'good', tieout: 'money.nw',          tieoutRaw: p.netWorth },
+      { label: 'Assets',      value: p.totalAssets,                    tieout: 'money.assets',      tieoutRaw: p.totalAssets },
+      { label: 'Liabilities', value: p.totalLiabilities, tone: p.totalLiabilities > 0 ? 'bad' : undefined, tieout: 'money.liabilities', tieoutRaw: p.totalLiabilities },
+    ],
+    ctaLabel: 'Add or edit',
+  },
+  income: {
+    leftLabel: 'Sources',
+    stats: (p) => [
+      { label: 'Gross', value: p.gross,    tieout: 'income.gross',    tieoutRaw: p.gross },
+      { label: 'Tax',   value: p.taxTotal, tone: p.taxTotal > 0 ? 'bad' : undefined, tieout: 'income.tax', tieoutRaw: p.taxTotal },
+      { label: 'Net',   value: p.net,      tone: 'good', tieout: 'income.net', tieoutRaw: p.net },
+    ],
+    ctaLabel: 'Update income',
+  },
+  protection: {
+    leftLabel: 'Policies',
+    stats: (p) => [
+      { label: 'Cover',      value: p.cover,    tone: 'good',                                       tieout: 'protection.cover',    tieoutRaw: p.cover },
+      { label: 'Premiums',   value: p.premiums,                                                     tieout: 'protection.premiums', tieoutRaw: p.premiums },
+      { label: 'Gap',        value: p.gap,      tone: (+(p.gapRaw || 0) > 0) ? 'bad' : undefined,   tieout: 'protection.gap',      tieoutRaw: p.gapRaw },
+    ],
+    ctaLabel: 'Update cover',
+  },
+  business: {
+    leftLabel: 'Holdings',
+    stats: (p) => [
+      { label: 'Value',         value: p.businessValue,                  tieout: 'business.value',         tieoutRaw: p.businessValueRaw },
+      { label: 'Distributions', value: p.distributions, tone: 'good',    tieout: 'business.distributions', tieoutRaw: p.distributionsRaw },
+      { label: 'Director pay',  value: p.directorPay,                    tieout: 'business.directorPay',   tieoutRaw: p.directorPayRaw },
+    ],
+    ctaLabel: 'Update business',
+  },
+  trusts: {
+    leftLabel: 'Vehicles',
+    stats: (p) => [
+      { label: 'Estate',  value: p.estate,                                             tieout: 'trusts.estate', tieoutRaw: p.estateRaw },
+      { label: 'Reliefs', value: p.reliefs, tone: 'good',                              tieout: 'trusts.reliefs', tieoutRaw: p.reliefsRaw },
+      { label: 'IHT',     value: p.iht,     tone: (+(p.ihtRaw || 0) > 0) ? 'bad' : undefined, tieout: 'trusts.iht', tieoutRaw: p.ihtRaw },
+    ],
+    ctaLabel: 'Update estate',
+  },
+}
+
 export default function FinancesHeroCard({
   entity,
+  variant = 'balance',
+  // count override — when omitted, count is derived from countAccounts(entity)
+  count,
+  // balance-sheet variant props (defaults)
   totalAssets = 0,
   totalLiabilities = 0,
   netWorth = 0,
-  windowLabel,        // e.g. "Last year", "5 years", "Lifetime"
-  windowYears,        // numeric; <0 historical, 0 now, >0 forward
-  viewMode,           // 'actual' | 'forecast' | 'plan' | 'scenario'
-  historyMissing,     // true if past-window selected but no trajectory data
+  // income variant props
+  gross,
+  taxTotal,
+  net,
+  // protection / business / trusts (pass strings, mostly fmt(...) at caller)
+  cover, premiums, gap, gapRaw,
+  businessValue, businessValueRaw, distributions, distributionsRaw, directorPay, directorPayRaw,
+  estate, estateRaw, reliefs, reliefsRaw, iht, ihtRaw,
+  // window context
+  windowLabel,
+  windowYears,
+  viewMode,
+  historyMissing,
   onAddOrEdit,
 }) {
-  const accounts = countAccounts(entity)
-  if (accounts === 0 && totalAssets === 0 && totalLiabilities === 0) return null
+  const cfg = VARIANTS[variant] || VARIANTS.balance
+  const accounts = count != null ? count : countAccounts(entity)
+
+  // Hide rule kept tight on balance variant only (legacy behaviour). Other
+  // variants render even when empty — the empty state is itself useful info.
+  if (variant === 'balance' && accounts === 0 && totalAssets === 0 && totalLiabilities === 0) return null
+
+  const stats = cfg.stats({
+    netWorth, totalAssets, totalLiabilities,
+    gross, taxTotal, net,
+    cover, premiums, gap, gapRaw,
+    businessValue, businessValueRaw, distributions, distributionsRaw, directorPay, directorPayRaw,
+    estate, estateRaw, reliefs, reliefsRaw, iht, ihtRaw,
+  })
 
   // Window context strap — surfaces the time dimension so the X28 selector
   // visibly drives the strip. "Net worth · as at Last year" / "projected to
@@ -138,17 +220,28 @@ export default function FinancesHeroCard({
             <circle cx="17" cy="14" r="1.2" fill="currentColor" />
           </svg>
         </span>
-        <Stat label="Accounts" value={accounts} />
+        <Stat label={cfg.leftLabel} value={accounts} />
       </div>
 
-      {/* Middle cluster — Net worth · Assets · Liabilities + optional window context */}
+      {/* Middle cluster — variant-driven stat triplet + optional window context.
+          Default `balance`: NW / Assets / Liabilities. `income`: Gross / Tax / Net.
+          Each Stat already handles fmt() at the call-site (callers may pass
+          pre-formatted strings or raw numbers; we format numbers, leave strings
+          alone). */}
       <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
         <div style={{ display: 'inline-flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 0 }}>
-          <Stat label="Net worth"   value={fmt(netWorth)}        tone="good" tieout="money.nw" tieoutRaw={netWorth} />
-          <Sep />
-          <Stat label="Assets"      value={fmt(totalAssets)} tieout="money.assets" tieoutRaw={totalAssets} />
-          <Sep />
-          <Stat label="Liabilities" value={fmt(totalLiabilities)} tone={totalLiabilities > 0 ? 'bad' : undefined} tieout="money.liabilities" tieoutRaw={totalLiabilities} />
+          {stats.map((s, i) => (
+            <span key={s.label} style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+              {i > 0 && <Sep />}
+              <Stat
+                label={s.label}
+                value={typeof s.value === 'number' ? fmt(s.value) : (s.value ?? '—')}
+                tone={s.tone}
+                tieout={s.tieout}
+                tieoutRaw={s.tieoutRaw}
+              />
+            </span>
+          ))}
         </div>
         {windowContext && (
           <span style={{
@@ -177,7 +270,7 @@ export default function FinancesHeroCard({
           flexShrink: 0, whiteSpace: 'nowrap',
         }}
       >
-        Add or edit <span aria-hidden style={{ fontSize: 13 }}>→</span>
+        {cfg.ctaLabel} <span aria-hidden style={{ fontSize: 13 }}>→</span>
       </button>
     </div>
   )

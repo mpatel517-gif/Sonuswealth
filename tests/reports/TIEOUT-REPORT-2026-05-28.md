@@ -2,15 +2,15 @@
 
 Engine canonical readers vs displayed DOM values, per (persona × tieout-key).
 
-**Run:** 2026-05-28T12:25:27.966Z
+**Run:** 2026-05-28T15:01:03.490Z
 **Scope:** 13 personas × 9 tieout keys = 117 cells max.
 
 ## Summary
 
 | Verdict | Count |
 |---|---|
-| PASS | 181 |
-| FAIL | 1 |
+| PASS | 182 |
+| FAIL | 0 |
 | MISSING_DISPLAY (engine expects a value, DOM has none) | 0 |
 | NO_EXPECTED (scraped persona not in expected set) | 0 |
 
@@ -22,7 +22,7 @@ CLAUDE.md §9.5 Gate 2: every hero strip showing NW + Assets + Liabilities must 
 |---|---|---|---|---|---|---|
 | a | £3,900,000 | £4,080,000 | £180,000 | £3,900,000 | £0 | ✅ PASS |
 | b | £1,535,000 | £1,535,000 | £0 | £1,535,000 | £0 | ✅ PASS |
-| c | £11,490,000 | £11,490,000 | £0 | £11,490,000 | £0 | ✅ PASS |
+| c | £11,109,000 | £11,109,000 | £0 | £11,109,000 | £0 | ✅ PASS |
 | d | £51,600 | £80,000 | £28,400 | £51,600 | £0 | ✅ PASS |
 | e | £6,260,000 | £6,260,000 | £0 | £6,260,000 | £0 | ✅ PASS |
 | f-22 | £-36,600 | £7,400 | £44,000 | £-36,600 | £0 | ✅ PASS |
@@ -36,13 +36,7 @@ CLAUDE.md §9.5 Gate 2: every hero strip showing NW + Assets + Liabilities must 
 
 ## Engine ↔ DOM Findings
 
-### ❌ FAIL — display drift from engine canonical
-
-| Persona | Tieout Key | Expected (engine) | Scraped (DOM) | Drift |
-|---|---|---|---|---|
-| c | `money.cat.pensions` | £1,430,000 | £1,049,000 | £381,000 (-26.6%) |
-
-### ✅ PASS — 162 cells matched
+### ✅ PASS — 163 cells matched
 
 <details><summary>Expand pass detail</summary>
 
@@ -74,14 +68,15 @@ CLAUDE.md §9.5 Gate 2: every hero strip showing NW + Assets + Liabilities must 
 | b | `money.cat.investments` | £280,000 | £280,000 |
 | b | `money.cat.property` | £340,000 | £340,000 |
 | b | `money.cat.cash` | £95,000 | £95,000 |
-| c | `home.nw` | £11,490,000 | £11,490,000 |
-| c | `risk.nw` | £11,490,000 | £11,490,000 |
-| c | `timeline.nw` | £11,490,000 | £11,490,000 |
+| c | `home.nw` | £11,109,000 | £11,109,000 |
+| c | `risk.nw` | £11,109,000 | £11,109,000 |
+| c | `timeline.nw` | £11,109,000 | £11,109,000 |
 | c | `tax.iht-today` | £3,766,000 | £3,766,000 |
 | c | `tax.beneficiary-net` | £5,974,000 | £5,974,000 |
-| c | `money.nw` | £11,490,000 | £11,490,000 |
-| c | `money.assets` | £11,490,000 | £11,490,000 |
+| c | `money.nw` | £11,109,000 | £11,109,000 |
+| c | `money.assets` | £11,109,000 | £11,109,000 |
 | c | `money.liabilities` | £0 | £0 |
+| c | `money.cat.pensions` | £1,049,000 | £1,049,000 |
 | c | `money.cat.investments` | £1,620,000 | £1,620,000 |
 | c | `money.cat.property` | £8,000,000 | £8,000,000 |
 | c | `money.cat.cash` | £125,000 | £125,000 |

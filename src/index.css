@@ -680,6 +680,19 @@ body {
   .sw-app-topbar__anchors { display: none !important; }
 }
 
+/* ── Desktop brand de-duplication (2026-05-28) ────────────────────────────
+   At ≥1024px the sidebar shows its own logo + "Sonuswealth" wordmark + tagline.
+   The top-bar also rendering the same logo + wordmark creates a visible
+   double-brand bar across the whole top of every desktop screen — wasted
+   real estate. Hide the top-bar brand cluster at desktop; mobile still shows
+   it because the sidebar is hidden there.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  .sw-app-with-sidebar .sw-app-topbar__brand {
+    display: none !important;
+  }
+}
+
 /* ── N-2 + N-4 fix (2026-05-28): wordmark clipping + chrome overflow at 375px
    At ≤480px the "Sonuswealth" wordmark (fontSize:22, ~120px) was being clipped
    by the BW avatar because the brand cluster's text didn't truncate. Shrink

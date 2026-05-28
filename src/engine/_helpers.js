@@ -51,7 +51,23 @@ export function detectSchema(entity) {
 export function pensionTotal(entity) {
   const a = entity?.assets || {};
   let total = 0;
-  if (a.sipp?.total != null) total += +a.sipp.total || 0;
+  // TO-4 fix (2026-05-28): when `sipp.pensions[]` exists (the canonical
+  // per-product breakdown), derive sipp's contribution from THAT array
+  // rather than reading the standalone `sipp.total` field. Personas like
+  // Tony Stark carried a stale `sipp.total: 1,430,000` that didn't match
+  // the array sum (£1,049,000) — a £381k phantom that fed into NW, IHT,
+  // and drawdown projections. Array is single source of truth.
+  if (Array.isArray(a.sipp?.pensions)) {
+    for (const p of a.sipp.pensions) {
+      // DB entries carry value:0 by convention; CETV is informational only.
+      // Skip DB unless an explicit cetv-as-balance flag is set (none today).
+      if ((p.type === 'occupational-DB' || p.type === 'Occupational DB') && (p.value == null || +p.value === 0)) continue;
+      total += +(p.value ?? p.balance_gbp ?? p.balance ?? 0) || 0;
+    }
+  } else if (a.sipp?.total != null) {
+    // Fallback: persona has only the flat total field (older fixture shape).
+    total += +a.sipp.total || 0;
+  }
   if (Array.isArray(a.pensions)) {
     for (const p of a.pensions) {
       if (p.type === 'occupational-DB' && p.cetv == null) continue;

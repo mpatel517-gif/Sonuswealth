@@ -7,7 +7,7 @@
 //   · FQBreakdown now gets initialTab='actions' when activeDim is set (D04)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import HomeScreen    from './HomeScreen.jsx'
 import FQBreakdown   from './FQBreakdown.jsx'
 import MyMoney       from './MyMoney.jsx'
@@ -247,6 +247,26 @@ function isMoneyTab(tab) {
 
 export default function Dashboard({ entity, persona, personaList, onSwitchPersona, theme, onThemeChange }) {
   const [tab,          setTab]          = useState(readTabParam() || 'home')
+
+  // Back-routing memory (2026-05-28). Most screens currently pass `onHome` to
+  // their back button, so "Back" from MyMoney → Cashflow lands on Home rather
+  // than MyMoney. We track the previous tab here and expose a `goBack` callback
+  // that returns the user to where they came from (falling back to home if no
+  // prior tab is on record). Updates inside an effect so multiple setTab calls
+  // in one render still produce the right "previous" reading.
+  const lastTabRef = useRef(tab)
+  const prevTabRef = useRef(null)
+  useEffect(() => {
+    if (lastTabRef.current !== tab) {
+      prevTabRef.current = lastTabRef.current
+      lastTabRef.current = tab
+    }
+  }, [tab])
+  const goBack = useCallback(() => {
+    const prev = prevTabRef.current
+    if (prev && prev !== tab) setTab(prev)
+    else setTab('home')
+  }, [tab])
 
   // Re-sync tab when URL param changes (snap script navigates between tabs)
   useEffect(() => {
@@ -671,6 +691,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             personaId={persona}
             onCommit={handleCommit}
             onHome={goHome}
+            onBack={goBack}
             onOpenRisk={() => setShowRiskOverlay(true)}
             onDrillMetric={pushDetail}
             onNav={setTabSafe}
@@ -720,6 +741,8 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           <Cashflow
             entity={entity}
             onHome={goHome}
+            onBack={goBack}
+            onNav={setTabSafe}
             onOpenRisk={() => setShowRiskOverlay(true)}
             onDrillMetric={pushDetail}
             scenarioSeed={scenarioSeed}
@@ -729,9 +752,9 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         {/* v0.3 route-9 §5 deep-link wiring — hash + seed + forceKey for the
             IHT pre/post-2027 delta card. R1 SIPP-IHT chip seeds the hash;
             R7 SCENARIO_SAVED back_flow bumps ihtForceKey for live recompute. */}
-        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} />}
-        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
-        {tab === 'timeline'  && <Timeline     entity={entity} onNav={setTabSafe} onDrillMetric={pushDetail} />}
+        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} />}
+        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
+        {tab === 'timeline'  && <Timeline     entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
         {/* P12-1 (2026-05-28) — canonical FCA disclaimer footer per AppShell
             slot contract. Rendered at Dashboard scope so every screen inherits
             without per-file duplication. Per-screen inline compliance notes

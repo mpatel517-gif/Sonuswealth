@@ -805,7 +805,113 @@ function CashflowCalendarHeatmap({ entity }) {
   )
 }
 
-export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION DRAWER (2026-05-28) — MoneyX 8-chip cross-page nav.
+//
+// Founder direction (2026-05-28 session): every MoneyX-family screen (Balance
+// Sheet / Income / Cashflow / Tax / Protection / Business / Trusts / Decisions)
+// should carry the same drawer so the user can pivot between them from any
+// tab. Lifted verbatim from MyMoney.jsx §3358 with `Cashflow` as the active
+// chip. Director-gated chip (`Business`) and trust-gated chip (`Trusts &
+// Estate`) hide when the persona has no data in those domains, matching the
+// MyMoney behaviour so the chip set is consistent across screens.
+//
+// Chip → route mapping mirrors Dashboard.setTabSafe so `onNav('money/income')`,
+// `onNav('flow')`, `onNav('tax')`, etc. all resolve correctly.
+// ─────────────────────────────────────────────────────────────────────────────
+function CashflowSectionDrawer({ entity, onNav }) {
+  const entityData = entity || {}
+  const hasBusiness = !!(entityData.hasBusiness
+    || (entityData.assets?.business_assets || []).length > 0
+    || entityData.persona?.flags?.includes('director'))
+  const hasTrustOrEstate = !!(entityData.hasTrust
+    || entityData.estate?.will
+    || entityData.estate?.lpa
+    || entityData.assets?.protection?.lifeInsurance?.inTrust)
+
+  const sections = [
+    { id: 'mm-balance',    label: 'Balance Sheet',          always: true,             route: 'money'            },
+    { id: 'mm-income',     label: 'Income Statement',       always: true,             route: 'money/income'     },
+    { id: 'mm-flow',       label: 'Cashflow',               always: true,             route: 'flow'             },
+    { id: 'mm-tax',        label: 'Tax & Allowances',       always: true,             route: 'tax'              },
+    { id: 'mm-insurance',  label: 'Protection & Insurance', always: true,             route: 'money/protection' },
+    { id: 'mm-business',   label: 'Business',               always: hasBusiness,      route: 'money/business'   },
+    { id: 'mm-trusts',     label: 'Trusts & Estate',        always: hasTrustOrEstate, route: 'trusts'           },
+    { id: 'mm-decisions',  label: 'Cost of inaction',       always: true,             route: 'decisions'        },
+  ].filter(s => s.always)
+
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 40,
+      margin: '0 -16px 8px', padding: '8px 16px',
+      background: 'color-mix(in srgb, var(--c-bg) 92%, transparent)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      borderBottom: '1px solid color-mix(in srgb, var(--c-border) 60%, transparent)',
+      display: 'flex', gap: 6, overflowX: 'auto',
+      scrollbarWidth: 'none',
+    }}>
+      {sections.map(s => {
+        const isActive = s.route === 'flow'
+        const baseBg = isActive
+          ? 'color-mix(in srgb, var(--c-acc) 18%, var(--c-surface2))'
+          : 'var(--c-surface2)'
+        const baseColor = isActive ? 'var(--c-acc)' : 'var(--c-text2)'
+        const baseBorder = isActive
+          ? 'color-mix(in srgb, var(--c-acc) 55%, var(--c-border))'
+          : 'var(--c-border)'
+        return (
+          <button
+            key={s.id}
+            type="button"
+            aria-current={isActive ? 'page' : undefined}
+            onClick={() => {
+              if (isActive) {
+                // Already on Cashflow — scroll to top instead of re-navigating.
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+                return
+              }
+              if (typeof onNav === 'function') onNav(s.route)
+            }}
+            style={{
+              flexShrink: 0,
+              padding: '6px 12px',
+              fontSize: 11, fontWeight: isActive ? 700 : 600,
+              background: baseBg,
+              border: `1px solid ${baseBorder}`,
+              borderRadius: 999,
+              color: baseColor,
+              cursor: 'pointer',
+              transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+              // WCAG 2.5.5 tap target — drawer rows can be tight, pad implicit
+              minHeight: 32,
+            }}
+            onMouseEnter={e => { if (!isActive) {
+              e.currentTarget.style.background = 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface2))'
+              e.currentTarget.style.color = 'var(--c-acc)'
+              e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--c-acc) 35%, var(--c-border))'
+            }}}
+            onMouseLeave={e => { if (!isActive) {
+              e.currentTarget.style.background = baseBg
+              e.currentTarget.style.color = baseColor
+              e.currentTarget.style.borderColor = baseBorder
+            }}}
+          >
+            {s.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed }) {
+  // Back-routing (2026-05-28): if the user came from another screen (e.g.
+  // MyMoney → Cashflow via section-nav chip), the back chevron should return
+  // there, not jump to Home. Dashboard threads `onBack=goBack` which reads
+  // the previous tab from Dashboard's history ref. Fallback to onHome when
+  // unwired (standalone snap, deep-link entry, etc.).
+  const goBackOrHome = onBack || onHome
   const [windowId, setWindowId] = useState('current-period')
   // Phase 2 note: 'forecast' and 'plan' are user-selectable via X28TopBar (Future/Plan tabs)
   // but the content sections below do not yet branch per mode — all three non-scenario modes
@@ -915,8 +1021,13 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
     <div style={S.shell}>
       {/* ── Header bar ──────────────────────────────────────────────── */}
       <div style={S.header}>
-        <button onClick={onHome} className="sw-press" style={S.backBtn}>
-          <span style={{ fontSize: 16 }}>←</span> Home
+        <button
+          onClick={goBackOrHome}
+          className="sw-press"
+          style={S.backBtn}
+          aria-label={onBack ? 'Back to previous screen' : 'Back to home'}
+        >
+          <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <div style={S.headerTitle}>Cashflow</div>
         <button
@@ -938,6 +1049,14 @@ export default function Cashflow({ entity, onHome, onOpenRisk, onDrillMetric, sc
            header (NW/Wealth/Risk) or surfaced engineer-jargon (PRC/PCC) above the story.
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
+
+        {/* §0 — SECTION DRAWER (2026-05-28) — same 8-chip MoneyX nav that lives
+             on MyMoney. Founder direction: every MoneyX-family screen should
+             carry the same drawer so the user can pivot between Balance Sheet,
+             Income Statement, Cashflow, Tax, Protection, Business, Trusts and
+             Cost-of-inaction from any tab. Chips that lead off this screen call
+             onNav(route); the active chip (Cashflow) is filled accent. */}
+        <CashflowSectionDrawer entity={entity} onNav={onNav} />
 
         {/* §1 — Today / Future / Plan / What if — PRIMARY navigation chrome.
             Moved to top of body (was mid-page round 7) so the user has the

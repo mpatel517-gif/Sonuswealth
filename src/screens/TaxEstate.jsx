@@ -2510,7 +2510,9 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
   )
 }
 
-export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric }) {
+export default function TaxEstate({ entity, onHome, onBack, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey }) {
+  // Back-routing (2026-05-28): respect previous screen rather than jumping home.
+  const goBackOrHome = onBack || onHome
   // ── Viewport detection (for mobile reordering — F-CAT-03 / F-VIS-01) ──────
   const [isMobile, setIsMobile] = useState(() => {
     try { return typeof window !== 'undefined' && window.matchMedia('(max-width: 599px)').matches } catch { return false }
@@ -2702,14 +2704,15 @@ export default function TaxEstate({ entity, onHome, onOpenRisk, onDrillMetric })
         padding: '8px 16px 4px',
       }}>
         <button
-          onClick={onHome}
+          onClick={goBackOrHome}
+          aria-label={onBack ? 'Back to previous screen' : 'Back to home'}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6,
             color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
           }}
         >
-          <span style={{ fontSize: 16 }}>←</span> Home
+          <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <span className="sw-chip sw-chip-sm sw-chip-mint sw-chip-outline" title={`${BRAND.rulesVersion} · ${BRAND.dataDate}`}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />

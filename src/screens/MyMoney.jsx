@@ -3031,7 +3031,10 @@ function DecumulationPanel({ entity, setActiveDrill }) {
 // §13 MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
-export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRisk, onDrillMetric, onNav }) {
+export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, onOpenRisk, onDrillMetric, onNav }) {
+  // Back-routing (2026-05-28): if the user came from another screen, return
+  // them there. Fallback to onHome when not threaded.
+  const goBackOrHome = onBack || onHome
   // B3 fix: single drill state — prevents two overlay panels co-rendering with stale data.
   // values: 'pension' | 'investments' | 'property' | 'business' | 'protection' | 'liabilities' | 'networth' | 'cashflow'
   //       | 'wrapper:<WRAPPER_CODE>'  (e.g. 'wrapper:ISA', 'wrapper:PENSION', 'wrapper:PROPERTY')
@@ -3286,12 +3289,16 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onOpenRis
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '8px 0 4px',
       }}>
-        <button onClick={onHome} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 6,
-          color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
-        }}>
-          <span style={{ fontSize: 16 }}>←</span> Home
+        <button
+          onClick={goBackOrHome}
+          aria-label={onBack ? 'Back to previous screen' : 'Back to home'}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+            color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
+          }}
+        >
+          <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         {viewMode !== 'actual' && (() => {
           // Founder UX pass 5 (2026-05-26): the badge previously read just

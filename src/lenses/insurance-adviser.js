@@ -202,7 +202,7 @@ export const lens = {
         headline: `Take out ${fmt(g.lifeGap)} level term life cover for ${termYears} years`,
         drill_down: `Close the life cover gap with level-term assurance. Level (not decreasing) preserves the sum assured throughout the term. ${termYears}-year term gets you to age ${age + termYears} — past the period when dependants are most reliant. Write the policy in trust from the outset (zero extra cost) so the payout pays directly to beneficiaries, outside the IHT estate, in weeks not months. Indicative annual premium: ${fmt(annualPremium)} for a healthy non-smoker at your age — locked-in level premium for the term.`,
         action_steps: [
-          'Defaqto 5-star whole-of-market quote (panel: LV, Vitality, Aviva, Zurich, Legal & General)',
+          'Get a whole-of-market quote rated Defaqto 4★ or higher — a qualified protection adviser can compare the live insurer panel',
           'Disclose all material health/lifestyle facts upfront — non-disclosure invalidates the claim',
           'Set up bare trust with named beneficiaries (templates from the insurer at no charge)',
           'Single direct debit; review every 5 years or after life events',

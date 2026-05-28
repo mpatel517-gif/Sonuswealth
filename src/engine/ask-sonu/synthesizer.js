@@ -16,6 +16,7 @@
 import { getPlayById } from './knowledge-graph.js'
 import { PLAY_INTENT } from './classifier.js'
 import { getActionSteps, getAdvisors } from './play-actions.js'
+import { maritalStatus } from '../persona-helpers.js'
 
 // Self-critique: pick the first play in rankedPlays whose intent_type contains
 // the query intent. If none match, fall back to the highest-scoring play but
@@ -86,9 +87,9 @@ function buildPersonalIntro(persona) {
   const home = num(persona?.assets?.property) + num(persona?.assets?.home)
   if (home > 0) parts.push(`a home worth ${fmt(home)}`)
 
-  const marital = (persona?.maritalStatus || persona?.marital_status || '').toLowerCase()
-  if (/married|partner/.test(marital)) parts.push('married')
-  else if (/cohab/.test(marital))      parts.push('cohabiting')
+  const m = maritalStatus(persona)
+  if (m.isMarried) parts.push('married')
+  else if (m.isCohab) parts.push('cohabiting')
 
   const deps = persona?.dependents
   if (Array.isArray(deps) && deps.length > 0) {

@@ -121,7 +121,7 @@ export const ACTION_STEPS = {
     'Consider an immediate-needs annuity quote if/when care begins — caps your cost certainty',
   ],
   income_protection_gap: [
-    'Get 3 IP quotes (Royal London, LV=, Aviva) for 65% of gross income to retirement age',
+    'Get income-protection quotes via a regulated protection adviser — target 65% of gross income to retirement age',
     'Pick own-occupation cover (most generous definition of "unable to work")',
     'Set the deferred period as long as your savings can sustain (longer = cheaper premium)',
   ],
@@ -139,12 +139,12 @@ export const ACTION_STEPS = {
   ],
   emergency_fund_first: [
     'Estimate 6 months of household expenses (rent/mortgage + bills + food + travel + insurance)',
-    'Park that amount in an instant-access savings account at competitive rate (Marcus, Chase, etc.)',
+    'Park that amount in an instant-access savings account paying a competitive rate (FSCS-protected providers; compare via MoneySavingExpert or Which?)',
     'Treat this as untouchable; deploy ONLY the surplus into wrappers / investments / dated gilts',
   ],
   gilt_ladder_for_dated_spend: [
     'Identify the spend date(s) — e.g. school fees in 2027, deposit on a house in 2028',
-    'Buy short-dated gilts maturing on/before each date (use HL/AJ Bell broker), or the iShares UK Gilts 0-5y ETF (IGLS) for simplicity',
+    'Hold short-dated gilts maturing on/before each spend date (your platform may list individual gilts, or a short-gilt ETF for simplicity) — a regulated adviser can confirm suitability',
     'Hold to maturity — coupons taxed at income rate, but capital appreciation is CGT-free',
   ],
 }

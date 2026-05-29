@@ -1,0 +1,197 @@
+name: ci
+
+# L1-5 (2026-05-28). Block-on-red gate for every PR and push to main.
+# Complements regression-smoke.yml (engine matrix) by running the fast
+# build + lint + unit tests on every change, not just engine/rules paths.
+#
+# Steps:
+#   1. lint       — eslint . (existing npm script)
+#   2. build      — vite build (must succeed cleanly)
+#   3. tests      — three Node-based test scripts:
+#                    - tests/r08-validate.js     (schema validation)
+#                    - tests/home-engine-smoke.js (engine smoke)
+#                    - tests/visual-qa.js         (visual QA harness)
+#   4. secrets-scan — grep dist/ for any client-side leaked secret patterns
+#                     after build. Belt-and-braces post-L1-1.
+#
+# Heavy MCP snap-verify (3 viewports × 2 themes) is NOT in CI — it requires
+# a running dev server + Chrome. That's a manual / pre-release gate.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs when a new commit is pushed to the same PR.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-build-test:
+    name: lint · build · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      # ── Step 1: lint ──────────────────────────────────────────────────────
+      # Fail the build on lint errors. Existing eslint config at .eslintrc /
+      # eslint.config.js. ESLint also enforces the no-restricted-imports rule
+      # added in P2-3 that blocks direct fq-calculator.js imports outside the
+      # selector layer.
+      - name: ESLint
+        run: npm run lint
+
+      # ── Step 2: build ─────────────────────────────────────────────────────
+      # Vite production build must succeed. Any TypeScript/JSX parse error or
+      # missing module crashes here.
+      - name: Vite build
+        run: npm run build
+
+      # ── Step 3: tests ─────────────────────────────────────────────────────
+      # Each test script is `node tests/<file>.js` — they exit non-zero on
+      # failure. We run all three regardless of which one fails so the PR
+      # author sees the full picture.
+      - name: Test — r08 schema
+        run: npm run test:r08
+
+      - name: Test — home engine smoke
+        run: npm run test:home
+
+      - name: Test — visual QA harness
+        run: npm run test:qa
+
+      # L2-4 (2026-05-28): synthetic-onboarding contract test. 12 archetypes
+      # × 20 selectors. Proves the engine survives arbitrary new-user payloads,
+      # not just the hand-crafted fixture personas. Caught the netWorth
+      # legacy-fast-path bug that mis-summed ownershipShare + businesses[].
+      - name: Test — dynamic onboarding contract
+        run: npm run test:dynamic
+
+      # L2-3 (2026-05-28): validateEntity gate. Asserts the Onboarding →
+      # Account → Dashboard handoff rejects malformed entities (missing name,
+      # missing age+dob, forward-incompat taxonomy version) and accepts the
+      # buildUserPersona shape produced by real onboarding answers.
+      - name: Test — L2-3 onboarding validateEntity gate
+        run: npm run test:l2-3-gate
+
+      # L2-6a (2026-05-28): event-shape validator at the reducer boundary.
+      # Stops DataCapture / Dashboard.handleCommit from committing malformed
+      # events that silently corrupt the applyEvents fold.
+      - name: Test — L2-6a event validator gate
+        run: npm run test:l2-6a-gate
+
+      # L2-5a (2026-05-28): device-side onboarding save/restore.
+      # Locks in the localStorage round-trip behaviour + the safe fallbacks
+      # (version mismatch, corrupt JSON, disabled localStorage).
+      - name: Test — L2-5a onboarding persistence
+        run: npm run test:l2-5a-persist
+
+      # L3-4 (2026-05-28): content bundle shape. Catches JSON typos and
+      # missing required keys before they ship as fail-soft silent fallbacks.
+      # The test maintains a list of every key wired via getContent() — add
+      # to it when you add a new call site.
+      - name: Test — L3-4 content bundle shape
+        run: npm run test:l3-4-bundle
+
+      # L4-2 (2026-05-28): cron-health staleness decision logic.
+      # Locks down the threshold math + summarise/alertLines shape so the
+      # Edge Function can't silently regress to "always healthy."
+      - name: Test — L4-2 cron-health decision
+        run: npm run test:l4-2-cron-health
+
+      # L4-4 (2026-05-28): nightly regression diff decision logic.
+      # Locks down the diff math + hash stability + alert formatter so the
+      # nightly cron can't silently regress to "always green."
+      - name: Test — L4-4 regression-diff decision
+        run: npm run test:l4-4-regression-diff
+
+      # L4-10 (2026-05-28): quota-aware localStorage wrapper.
+      # Locks down LRU eviction order + warning thresholds + safe degradation.
+      - name: Test — L4-10 safe-storage LRU
+        run: npm run test:l4-10-safe-storage
+
+      # L4-7 (2026-05-28): snapshot version drift detection.
+      # Locks down the stale-snapshot decision logic + bundle-id resolver
+      # (handles 6 historical snapshot shapes).
+      - name: Test — L4-7 snapshot-version
+        run: npm run test:l4-7-snapshot-version
+
+      # L4-3 (2026-05-28): gov.uk page-watch registry shape.
+      # Catches URL typos / non-gov.uk URLs / duplicate keys before deploy.
+      - name: Test — L4-3 budget-watch pages
+        run: npm run test:l4-3-budget-watch
+
+      # L5-2 (2026-05-28): bereavement / mental-capacity / child-dependent
+      # vulnerability fixtures. Asserts derivedVulnerability fires correctly.
+      - name: Test — L5-2 edge-case fixtures
+        run: npm run test:l5-2-fixtures
+
+      # L5-7 (2026-05-28): engine coverage gate. Floor at 40% lines+statements
+      # across src/engine + src/lib. Current state ~47% — gate exists to
+      # catch regressions, not to gate on rising coverage.
+      - name: Test — L5-7 engine coverage gate
+        run: npm run test:coverage:gate
+
+      # ── Step 4: secrets scan (post-L1-1) ──────────────────────────────────
+      # Belt-and-braces. If a future PR re-introduces VITE_ANTHROPIC_KEY or
+      # any other secret pattern that lands in the built bundle, fail loudly.
+      # Patterns covered:
+      #   - sk-ant-* (Anthropic)
+      #   - sk-or-*  (OpenRouter)
+      #   - sk_live_* / sk_test_* (Stripe)
+      #   - direct fetch to api.anthropic.com (must go via proxy)
+      - name: Secrets scan in dist/
+        run: |
+          set -e
+          echo "Scanning dist/ for client-bundled secrets…"
+          if grep -rE "sk-ant-api[0-9]+-[A-Za-z0-9_-]{20,}" dist/ ; then
+            echo "::error::Anthropic API key detected in production bundle."
+            exit 1
+          fi
+          if grep -rE "sk-or-v[0-9]+-[A-Za-z0-9]{20,}" dist/ ; then
+            echo "::error::OpenRouter API key detected in production bundle."
+            exit 1
+          fi
+          if grep -rE "sk_(live|test)_[A-Za-z0-9]{24,}" dist/ ; then
+            echo "::error::Stripe key detected in production bundle."
+            exit 1
+          fi
+          if grep -rE "api\.anthropic\.com/v1/messages" dist/ ; then
+            echo "::error::Direct Anthropic fetch detected in bundle — must route via ask-sonu-proxy."
+            exit 1
+          fi
+          if grep -rE "live\.trading212\.com/api" dist/ ; then
+            echo "::error::Direct Trading212 fetch detected in bundle — L1-1b removed this integration; route any future return via a server-side proxy."
+            exit 1
+          fi
+          if grep -rE "VITE_TRADING212_API_KEY" dist/ ; then
+            echo "::error::Trading212 key reference detected in bundle — should be gone after L1-1b."
+            exit 1
+          fi
+          echo "OK — no leaked secrets or direct upstream fetches."
+
+      # ── Artifact: failed build logs / test outputs ────────────────────────
+      - name: Upload dist (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-failure-${{ github.run_id }}
+          path: |
+            dist/
+            tests/reports/
+          retention-days: 14

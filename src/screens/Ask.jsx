@@ -1,5 +1,7 @@
-﻿// 🚨 SECURITY-CRITICAL: Anthropic API key is currently bundled into client JS.
-// Tracking: D-ASK-SEC-1. Pre-launch blocker. Move to server-side proxy before any public access.
+﻿// ✅ D-ASK-SEC-1 RESOLVED (L1-1, 2026-05-28). Anthropic key removed from client.
+// All Claude calls now route through Supabase Edge Function `ask-sonu-proxy`,
+// which holds ANTHROPIC_API_KEY server-side and requires a valid Supabase JWT
+// per request. Unauthenticated callers receive demo-fallback responses.
 // ─────────────────────────────────────────────────────────────────────────────
 // Ask.jsx — bottom-sheet content renderer (D-ASK-1, D-SHEET-1)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,18 +41,15 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { netWorth, fq as calcFQ } from '../engine/selectors/index.js'
 import { fmt, daysLeft, costOfInaction, calcRisk, TAX } from '../engine/fq-calculator.js'
 import { ProvenanceChip, Num, RevealStagger } from '../components/shared/index.js'
+import { supabase } from '../lib/supabase.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 🚨 SECURITY-CRITICAL FLAG (D-ASK-SEC-1)
-// `import.meta.env.VITE_*` keys are bundled into the client. The Anthropic API
-// key is exposed in the JS bundle on every Vite build.
-// PRE-LAUNCH BLOCKER: replace fetch(...) with a server-side proxy
-//   (e.g. /api/ask) that holds the secret server-side. Tracked: D-ASK-SEC-1.
-// When VITE_ANTHROPIC_KEY is unset, the demo-response fallback path is the
-// default (see send() try/catch — empty key → 401 → catch → getDemoResponse).
+// L1-1: Proxy endpoint. No Anthropic key on the client. The proxy validates
+// a Supabase JWT before forwarding to api.anthropic.com. Unauth callers fall
+// back to the demo-response path via the catch in send().
 // ─────────────────────────────────────────────────────────────────────────────
-const API_KEY = import.meta.env.VITE_ANTHROPIC_KEY || ''
-const USE_DEMO_FALLBACK = !API_KEY
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const ASK_PROXY_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/ask-sonu-proxy` : ''
 
 // Canonical FCA boundary string — used in static footer, per-response auto-append,
 // and system-prompt instruction. ONE source of truth. (Fixes F-ASK-DUP-01.)
@@ -130,7 +129,7 @@ function classifyIntent(q) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 8. OFF-TOPIC REDIRECT (D-ASK-2, §8.2)
 // ─────────────────────────────────────────────────────────────────────────────
-const FINANCE_TERMS = /\b(score|wealth|risk|tax|iht|inheritance|pension|sipp|isa|drawdown|estate|gift|will|lpa|nominat|protect|insur|mortgage|debt|cashflow|income|investment|portfolio|allowance|trust|bpr|cgt|rnrb|nrb|finio|caelixa|sonus|adviser|money|fund|bond|equity|property|rental|annuity|jurisdic|nri)\b/i
+const FINANCE_TERMS = /\b(score|wealth|risk|tax|iht|inheritance|pension|sipp|isa|drawdown|estate|gift|will|lpa|nominat|protect|insur|mortgage|debt|cashflow|income|investment|portfolio|allowance|trust|bpr|cgt|rnrb|nrb|finio|sonuswealth|sonus|adviser|money|fund|bond|equity|property|rental|annuity|jurisdic|nri)\b/i
 
 function isOffTopic(q) {
   if (!q || q.length < 3) return false
@@ -192,7 +191,7 @@ function tintFor(text) {
   const s = (text || '').toLowerCase()
   if (/\b(iht|estate|deadline|2027|inheritance)\b/.test(s))     return 'amber'
   if (/\b(risk|protect|insur|gap)\b/.test(s))                   return 'coral'
-  if (/\b(score|wealth|caelixa|finio|sonus|sonuswealth|sonu)\b/.test(s)) return 'mint'
+  if (/\b(score|wealth|sonuswealth|finio|sonus|sonuswealth|sonu)\b/.test(s)) return 'mint'
   if (/\b(tax|allowance|cgt|isa)\b/.test(s))                    return 'blue'
   if (/\b(gift|trust|bpr)\b/.test(s))                           return 'violet'
   return 'neutral'
@@ -370,7 +369,7 @@ function getDemoResponse(question, entity) {
   const days = daysLeft()
   const sipp = entity.assets?.sipp?.total || 0
 
-  if (q.includes('score') || q.includes('sonus') || q.includes('finio') || q.includes('wealth') || q.includes('caelixa') || q.includes('dimension')) {
+  if (q.includes('score') || q.includes('sonus') || q.includes('finio') || q.includes('wealth') || q.includes('sonuswealth') || q.includes('dimension')) {
     return {
       text: `Your Wealth Score of **${fq.total}/100** is in the **${fq.band.name}** band. The three dimensions with the most room to improve are: Estate (the pension deadline is the single biggest lever), Protection (no cover in place), and Tax Efficiency (allowances available). One option to consider: model pension drawdown for this tax year on the Tax & Estate screen to see the live IHT impact before deciding.`,
       followUps: ['What moves my score most?', 'How is my score calculated?', 'What does each dimension mean?'],
@@ -984,16 +983,20 @@ export default function Ask({
     }
 
     try {
-      // Demo-fallback is the default when no API key is bundled. This prevents
-      // a guaranteed 401 from leaking the absence of a key in network logs.
-      if (USE_DEMO_FALLBACK) throw new Error('demo_fallback')
+      // L1-1: route through server-side proxy. Proxy URL absent (dev without
+      // Supabase config) or no auth session → demo-fallback. Proxy enforces
+      // JWT auth; we therefore need a valid Supabase session to make a live call.
+      if (!ASK_PROXY_URL) throw new Error('proxy_unconfigured')
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) throw new Error('no_session')
+
       const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }))
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch(ASK_PROXY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
@@ -1002,7 +1005,7 @@ export default function Ask({
           messages: history,
         }),
       })
-      if (!res.ok) throw new Error('api error')
+      if (!res.ok) throw new Error('proxy_error')
       const data = await res.json()
       const replyRaw = data.content?.find(b => b.type === 'text')?.text || ''
       const filtered = fcaBoundaryCheck(replyRaw)

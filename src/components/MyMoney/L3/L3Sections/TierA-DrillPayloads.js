@@ -20,6 +20,143 @@ import { fmt } from '../../../../engine/fq-calculator.js'
 
 const placeholder = (label) => [{ label, value: 'No detail recorded yet' }]
 
+// Helper — format a percentage rate consistently across L5 drills.
+const pct = (n, dp = 2) => `${(n * 100).toFixed(dp)}%`
+
+// ── L5 payload builders ────────────────────────────────────────────────────
+// Each turns a single nested entity item (a pension scheme, a property, a
+// protection policy, a liability) into the L panel content shape:
+//   { metric, formula, source, confidence, breakdown }
+// Returned object is consumed by BreakdownList → DrillableNumber → next L.
+
+export function pensionSchemeL5(p, parentSource) {
+  if (!p) return null
+  const balance = +(p.value ?? p.balance_gbp ?? p.balance ?? 0) || 0
+  const rows = []
+  if (p.provider)             rows.push({ label: 'Provider',                value: p.provider })
+  if (p.type)                 rows.push({ label: 'Scheme type',             value: String(p.type) })
+  rows.push({                    label: 'Current value',                    value: fmt(balance) })
+  if (p.cetv != null)         rows.push({ label: 'Cash-equivalent transfer value', value: fmt(+p.cetv) })
+  if (p.charge != null)       rows.push({ label: p.chargeIsEstimate ? 'Charge (estimate)' : 'Annual charge', value: pct(+p.charge) })
+  if (p.transferEligible != null) rows.push({ label: 'Transfer eligible',   value: p.transferEligible ? 'Yes' : 'No' })
+  if (p.crystalised)          rows.push({ label: 'Crystallised',            value: fmt(+p.crystalised) })
+  if (p.tfcTaken)             rows.push({ label: 'Tax-free cash taken',     value: fmt(+p.tfcTaken) })
+  if (p.nominationDate)       rows.push({ label: 'Death-benefit nomination updated', value: String(p.nominationDate) })
+  if (p.growth != null)       rows.push({ label: 'Assumed growth',          value: pct(+p.growth) })
+  if (p.pso_incoming_pending) rows.push({ label: 'Pending pension-sharing order', value: fmt(+p.pso_incoming_pending) })
+  return {
+    metric: `Pension scheme · ${p.name || p.provider || 'Unnamed'}`,
+    formula: 'Single-scheme balance plus optional metadata (provider charges, transfer eligibility, nomination date). Aggregated by pensionTotal at the panel level.',
+    source: `${parentSource} — single row drilled into its full record.`,
+    confidence: 'high',
+    breakdown: rows.length > 0 ? rows : placeholder('Scheme detail'),
+  }
+}
+
+export function propertyL5(prop, parentSource, parentLabel = 'Property') {
+  if (!prop) return null
+  const rows = []
+  if (prop.address) rows.push({ label: 'Address', value: prop.address })
+  if (prop.value != null || prop.value_gbp != null) {
+    rows.push({ label: 'Current value', value: fmt(+(prop.value ?? prop.value_gbp)) })
+  }
+  if (prop.beneficial_interest_this_individual != null) {
+    rows.push({ label: 'Your beneficial share', value: pct(+prop.beneficial_interest_this_individual, 0) })
+  }
+  if (prop.ownership) rows.push({ label: 'Ownership', value: String(prop.ownership) })
+  if (prop.isRental != null) rows.push({ label: 'Let to tenants', value: prop.isRental ? 'Yes' : 'No' })
+  if (prop.rentalGrossAnnual != null) rows.push({ label: 'Gross rental (yr)', value: fmt(+prop.rentalGrossAnnual) })
+  if (prop.rentalNetAnnual != null)   rows.push({ label: 'Net rental (yr)',  value: fmt(+prop.rentalNetAnnual) })
+  if (prop.rental_income != null && prop.rentalGrossAnnual == null) {
+    rows.push({ label: 'Rental income (yr)', value: fmt(+prop.rental_income) })
+  }
+  if (prop.purchaseDate)  rows.push({ label: 'Purchase date',  value: String(prop.purchaseDate) })
+  if (prop.purchasePrice != null) {
+    rows.push({ label: 'Purchase price', value: fmt(+prop.purchasePrice) })
+    if (prop.value != null) {
+      const gain = +prop.value - +prop.purchasePrice
+      rows.push({ label: 'Paper gain',  value: fmt(gain) })
+    }
+  }
+  if (prop.growth != null) rows.push({ label: 'Assumed growth (yr)', value: pct(+prop.growth) })
+  if (prop.status) rows.push({ label: 'Status', value: String(prop.status) })
+  return {
+    metric: `${parentLabel} · ${prop.name || prop.address || 'Unnamed property'}`,
+    formula: 'Single-property record. Gross rental sums to the panel total before S24 mortgage-interest restriction; net subtracts mortgage interest and allowable expenses.',
+    source: `${parentSource} — single row drilled into its full record.`,
+    confidence: 'high',
+    breakdown: rows.length > 0 ? rows : placeholder('Property detail'),
+  }
+}
+
+export function investmentHoldingL5(inv, parentSource, parentLabel = 'Holding') {
+  if (!inv) return null
+  const rows = []
+  if (inv.provider) rows.push({ label: 'Provider', value: inv.provider })
+  if (inv.type)     rows.push({ label: 'Wrapper / type', value: String(inv.type) })
+  if (inv.wrapper)  rows.push({ label: 'Wrapper', value: String(inv.wrapper) })
+  rows.push({ label: 'Current value', value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? inv.estimated_value ?? 0)) })
+  if (inv.purchase_date)  rows.push({ label: 'Purchase date',  value: String(inv.purchase_date) })
+  if (inv.purchase_value != null) rows.push({ label: 'Purchase value', value: fmt(+inv.purchase_value) })
+  if (inv.annual_dividend != null) rows.push({ label: 'Annual dividend', value: fmt(+inv.annual_dividend) })
+  if (inv.yield != null) rows.push({ label: 'Yield', value: pct(+inv.yield) })
+  if (inv.bpr_qualifying != null) rows.push({ label: 'BPR qualifying', value: inv.bpr_qualifying ? 'Yes' : 'No' })
+  if (inv.verified_by_user) rows.push({ label: 'User-verified', value: 'Yes' })
+  if (inv.last_valuation_date) rows.push({ label: 'Last valued', value: String(inv.last_valuation_date) })
+  return {
+    metric: `${parentLabel} · ${inv.name || inv.provider || 'Unnamed holding'}`,
+    formula: 'Single-holding record. Sums to the wrapper bucket at panel level.',
+    source: `${parentSource} — single row drilled into its full record.`,
+    confidence: inv.verified_by_user ? 'high' : 'medium',
+    breakdown: rows.length > 0 ? rows : placeholder('Holding detail'),
+  }
+}
+
+export function protectionPolicyL5(policy, kind, parentSource) {
+  if (!policy || !policy.exists) return null
+  const rows = []
+  rows.push({ label: 'Cover type', value: kind })
+  if (policy.provider) rows.push({ label: 'Provider', value: policy.provider })
+  if (policy.amount != null) rows.push({ label: 'Sum assured', value: fmt(+policy.amount) })
+  if (policy.monthlyBenefit != null && +policy.monthlyBenefit > 0) {
+    rows.push({ label: 'Monthly benefit', value: fmt(+policy.monthlyBenefit) })
+  }
+  if (policy.premium != null) rows.push({ label: 'Premium (mo)', value: fmt(+policy.premium) })
+  if (policy.inTrust != null) rows.push({ label: 'Written into trust', value: policy.inTrust ? 'Yes' : 'No (in estate)' })
+  if (policy.type) rows.push({ label: 'Term type', value: String(policy.type) })
+  if (policy.expiryAge != null) rows.push({ label: 'Cover expires at age', value: String(policy.expiryAge) })
+  return {
+    metric: `Protection · ${kind}`,
+    formula: 'Single-policy record. The sum-assured pays out on the insured event; premiums are monthly amounts the insurer collects.',
+    source: parentSource,
+    confidence: 'high',
+    breakdown: rows.length > 0 ? rows : placeholder(kind),
+  }
+}
+
+export function liabilityL5(loan, kind, parentSource) {
+  if (!loan) return null
+  const rows = []
+  rows.push({ label: 'Loan type', value: kind })
+  if (loan.name) rows.push({ label: 'Loan name', value: loan.name })
+  if (loan.outstanding != null) rows.push({ label: 'Outstanding balance', value: fmt(+loan.outstanding) })
+  if (loan.monthlyPayment != null) rows.push({ label: 'Monthly payment', value: fmt(+loan.monthlyPayment) })
+  if (loan.rate != null) rows.push({ label: 'Rate', value: pct(+loan.rate) })
+  if (loan.rateType) rows.push({ label: 'Rate type', value: String(loan.rateType) })
+  if (loan.remainingYears != null) rows.push({ label: 'Years remaining', value: String(loan.remainingYears) })
+  if (loan.fixedRateExpiry) rows.push({ label: 'Fixed-rate expiry', value: String(loan.fixedRateExpiry) })
+  if (loan.secured != null) rows.push({ label: 'Secured', value: loan.secured ? 'Yes' : 'No' })
+  if (loan.property) rows.push({ label: 'Secured against', value: String(loan.property) })
+  return {
+    metric: `Liability · ${loan.name || kind}`,
+    formula: 'Single-loan record. Mortgage interest restriction (S24) is applied at the cashflow layer, not here.',
+    source: parentSource,
+    confidence: 'high',
+    breakdown: rows.length > 0 ? rows : placeholder(kind),
+  }
+}
+
+
 // ── INCOME PAYLOADS ─────────────────────────────────────────────────────────
 
 export function incomePayload(entity, sourceKey, total) {
@@ -65,6 +202,7 @@ export function incomePayload(entity, sourceKey, total) {
             .map((x) => ({
               label: x.name || x.type || 'Holding',
               value: fmt(+x.annual_dividend || 0),
+              drill: investmentHoldingL5(x, 'assets.investments[]', 'Dividend-paying holding'),
             }))
         : []
       return {
@@ -85,18 +223,20 @@ export function incomePayload(entity, sourceKey, total) {
       // Rental: aliases — show the source path that was non-zero
       const rA = +inc.rental || 0
       const rB = +inc.rentalIncome || 0
-      const fromProperties = Array.isArray(a.property)
-        ? a.property
-            .filter((p) => p?.rental_income > 0 || p?.rentalIncome > 0)
-            .map((p) => ({
-              label: p.address || p.name || 'Let property',
-              value: fmt(+(p.rental_income ?? p.rentalIncome ?? 0)),
-            }))
+      // Walk assets.property[] for let units. Each row carries a `drill`
+      // payload so tapping the gross-rent value pushes the per-property L5.
+      const letProps = Array.isArray(a.property)
+        ? a.property.filter((p) => p?.isRental || p?.rentalGrossAnnual > 0 || p?.rental_income > 0 || p?.rentalIncome > 0)
         : []
+      const fromProperties = letProps.map((p) => ({
+        label: p.address || p.name || 'Let property',
+        value: fmt(+(p.rentalGrossAnnual ?? p.rental_income ?? p.rentalIncome ?? 0)),
+        drill: propertyL5(p, 'assets.property[]', 'Rental property'),
+      }))
       return {
         formula: 'Sum of gross rental income across all let properties, before allowable expenses (S24 mortgage-interest restriction applied separately).',
         source: fromProperties.length > 0
-          ? 'Per-property rental_income on assets.property[]'
+          ? 'Per-property rentalGrossAnnual on assets.property[]'
           : `income.${rA >= rB ? 'rental' : 'rentalIncome'} (alias-deduped via MAX)`,
         confidence: fromProperties.length > 0 ? 'high' : (total > 0 ? 'medium' : 'low'),
         breakdown: fromProperties.length > 0
@@ -196,6 +336,7 @@ export function wrapperPayload(entity, bucketKey, total) {
         breakdown.push({
           label: inv.name || inv.provider || (inv.type || 'ISA holding'),
           value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)),
+          drill: investmentHoldingL5(inv, 'assets.investments[] (ISA)', 'ISA holding'),
         })
       }
       return {
@@ -218,6 +359,7 @@ export function wrapperPayload(entity, bucketKey, total) {
         breakdown.push({
           label: p.name || p.provider || (p.type || 'SIPP holding'),
           value: fmt(+(p.value ?? p.balance_gbp ?? p.balance ?? 0)),
+          drill: pensionSchemeL5(p, 'assets.sipp.pensions[]'),
         })
       }
       for (const p of standalone) {
@@ -225,6 +367,7 @@ export function wrapperPayload(entity, bucketKey, total) {
         breakdown.push({
           label: p.name || p.provider || (p.type || 'Pension'),
           value: fmt(+(p.cetv ?? p.balance_gbp ?? p.balance ?? p.value ?? 0)),
+          drill: pensionSchemeL5(p, 'assets.pensions[]'),
         })
       }
       // Legacy flat: only show if we found nothing nested
@@ -255,6 +398,7 @@ export function wrapperPayload(entity, bucketKey, total) {
         breakdown.push({
           label: inv.name || inv.provider || 'GIA holding',
           value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)),
+          drill: investmentHoldingL5(inv, 'assets.investments[] (GIA)', 'GIA holding'),
         })
       }
       return {
@@ -275,6 +419,7 @@ export function wrapperPayload(entity, bucketKey, total) {
       const breakdown = matched.map((inv) => ({
         label: `${inv.type || 'Holding'} — ${inv.name || inv.provider || 'Unnamed'}`,
         value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)),
+        drill: investmentHoldingL5(inv, 'assets.investments[] (tax-advantaged alt.)', 'Tax-advantaged holding'),
       }))
       return {
         formula: 'Sum of EIS + SEIS + VCT + onshore/offshore bond holdings on assets.investments[].',

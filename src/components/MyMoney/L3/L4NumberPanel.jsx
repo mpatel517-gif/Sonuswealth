@@ -24,6 +24,9 @@
 //   - onBack      : callback invoked when user dismisses the panel (e.g. back button)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { DrillableNumber } from './DrillableNumber.jsx'
+import { useDrillStackContext } from './DrillStack.jsx'
+
 export function L4NumberPanel({
   metric,
   value,
@@ -35,6 +38,9 @@ export function L4NumberPanel({
   whatIf,
   onBack,
 }) {
+  // L5+ recursive drill: any breakdown row carrying a `drill` payload
+  // pushes the next-level L panel onto the stack when tapped.
+  const { pushNumber } = useDrillStackContext()
   return (
     <div
       className="sw-l4-number-panel"
@@ -96,10 +102,12 @@ export function L4NumberPanel({
         </div>
       </L4Section>
 
-      {/* Section 4 — Visual breakdown (placeholder; Wave 4 wires DrillableChart) */}
+      {/* Section 4 — Visual breakdown. Rows with a `.drill` payload become
+          drillable; tapping them pushes the next L panel onto the stack
+          (L4 → L5 → L6 — DrillStack supports arbitrary depth). */}
       <L4Section label="VISUAL BREAKDOWN">
         {breakdown
-          ? <BreakdownList items={breakdown} />
+          ? <BreakdownList items={breakdown} pushNumber={pushNumber} />
           : <div style={{ fontSize: 9, opacity: 0.65 }}>
               Chart wires in Wave 4 · breakdown not provided
             </div>}
@@ -155,22 +163,42 @@ function L4Section({ label, children }) {
   )
 }
 
-// Section-4 breakdown list — simple {label, value} rows for now.
-function BreakdownList({ items }) {
+// Section-4 breakdown list. Each row carries an optional `.drill` payload
+// (the next-level L panel content). When present, the value is rendered as
+// a DrillableNumber that pushes the drill payload onto the stack.
+function BreakdownList({ items, pushNumber }) {
   if (!Array.isArray(items) || items.length === 0) return null
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {items.map((item, i) => (
         <div
           key={item.key ?? i}
+          data-breakdown-row={item.key ?? i}
           style={{
             display: 'flex',
             justifyContent: 'space-between',
+            alignItems: 'center',
             fontSize: 10,
           }}
         >
           <span style={{ opacity: 0.7 }}>{item.label}</span>
-          <span style={{ fontWeight: 600 }}>{item.value}</span>
+          {item.drill && typeof pushNumber === 'function' ? (
+            <span style={{ fontWeight: 600 }}>
+              <DrillableNumber
+                metric={item.drill.metric ?? item.label}
+                value={item.value}
+                formula={item.drill.formula}
+                source={item.drill.source}
+                confidence={item.drill.confidence}
+                breakdown={item.drill.breakdown}
+                onDrill={pushNumber}
+              >
+                {item.value}
+              </DrillableNumber>
+            </span>
+          ) : (
+            <span style={{ fontWeight: 600 }}>{item.value}</span>
+          )}
         </div>
       ))}
     </div>

@@ -83,6 +83,8 @@ import {
   normalisePersona as _normalisePersona,
   validatePersona as _validatePersona,
   lpaStatus as _lpaStatus,
+  warnIfLegacy as _warnIfLegacy,
+  detectSchema as _detectSchema,
 } from '../persona-normalizer.js';
 
 // ── Balance-sheet selectors ─────────────────────────────────────────────────
@@ -374,6 +376,31 @@ export const validatePersona = (entity) => _validatePersona(entity);
  * `{ exists, registered, signedDate, staleFlag, status, source }`.
  */
 export const lpaStatus = (entity) => _lpaStatus(entity);
+
+/**
+ * L2-9 — Two-schema collapse deprecation gate.
+ * Emits a dev-mode console.warn once per (caller, entity-id) when a LEGACY
+ * FLAT or MIXED schema is detected. Returns the schema kind so callers can
+ * branch without re-calling detectSchema.
+ *
+ * Wire at engine-boundary mount points (selector entry, screen mount) rather
+ * than per-call — the dedup key includes the caller string.
+ *
+ * Example:
+ *   const kind = warnIfLegacy(entity, 'home-engine')
+ *   if (kind === 'unknown') return null
+ *
+ * @param {object} entity
+ * @param {string} [caller] - context label for log clarity and dedup
+ * @returns {'legacy'|'nested'|'mixed'|'unknown'}
+ */
+export const warnIfLegacy = (entity, caller) => _warnIfLegacy(entity, caller);
+
+/**
+ * Direct schema detector (no side effects). Wraps _helpers.js detectSchema
+ * so callers have a single import surface for everything schema-related.
+ */
+export const detectSchema = (entity) => _detectSchema(entity);
 
 // ── History / trajectory ────────────────────────────────────────────────────
 /** Net worth history series — 12mo / 24mo / 5yr. */

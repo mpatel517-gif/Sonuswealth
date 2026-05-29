@@ -22,6 +22,7 @@
     "test:l4-7-snapshot-version": "node tests/l4-7-snapshot-version.mjs",
     "test:l4-3-budget-watch": "node tests/l4-3-budget-watch-pages.mjs",
     "test:l5-2-fixtures": "node tests/l5-2-edge-case-fixtures.mjs",
+    "test:l2-9-schema": "node tests/l2-9-schema-collapse.mjs",
     "test:coverage": "c8 --reporter=text --reporter=lcov --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --check-coverage=false node tests/dynamic-onboarding.mjs",
     "test:coverage:gate": "c8 --reporter=text --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --lines=40 --statements=40 node tests/dynamic-onboarding.mjs",
     "regression:capture": "node tests/harness/regression-capture.mjs",

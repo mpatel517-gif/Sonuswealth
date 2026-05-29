@@ -550,3 +550,80 @@ export function validatePersona(entity) {
     canonical,
   };
 }
+
+// ── §4 — L2-9 two-schema collapse: deprecation visibility ──────────────────
+// Plan reference: ~/.claude/plans/why-do-you-have-async-balloon.md §L2-9.
+//
+// The engine helpers in _helpers.js are schema-agnostic — they read FLAT
+// (persona-a..g) and NESTED (mrT-*) shapes via fallback chains. That works,
+// but it hides the migration debt: we cannot tell at runtime which personas
+// still live on the deprecated FLAT shape and which have moved to NESTED.
+//
+// warnIfLegacy(entity, caller) is the centralised seam. Call it once per
+// (caller, entity) at the engine boundary (selectors entry or screen mount).
+// It emits a single dev-mode console.warn per unique (caller, entity-id)
+// pair so we don't spam logs across re-renders. The function returns the
+// detected schema kind so callers can branch on it without re-calling
+// detectSchema.
+//
+// Migration target: all production personas at schema='nested'. Once the 7
+// flat personas (persona-a..g) and the 12 mrT-* fixtures are migrated, the
+// FLAT fallback branches in fq-calculator/_helpers can be removed and this
+// helper turned into an assertion. Until then it is purely instrumentation.
+
+import { detectSchema as _detectSchema } from './_helpers.js'
+
+const _legacyWarnedFor = new Set()
+
+function _resolveEntityKey(entity) {
+  return (
+    entity?.id ||
+    entity?.name ||
+    entity?.individual?.name ||
+    entity?.profile?.name ||
+    '<anon>'
+  )
+}
+
+/**
+ * Dev-mode deprecation warning when a LEGACY FLAT (or MIXED) persona is
+ * detected at the engine boundary. Emits once per (caller, entity-id) pair.
+ *
+ * @param {object} entity
+ * @param {string} [callerContext] - label for the caller (e.g. 'home-engine',
+ *   'selectors/index', 'mymoney-mount'). Used for dedup + log clarity.
+ * @returns {'legacy'|'nested'|'mixed'|'unknown'}
+ */
+export function warnIfLegacy(entity, callerContext = 'engine') {
+  const kind = _detectSchema(entity)
+  if (kind === 'legacy' || kind === 'mixed') {
+    const key = _resolveEntityKey(entity)
+    const dedupKey = `${callerContext}::${key}::${kind}`
+    if (!_legacyWarnedFor.has(dedupKey)) {
+      _legacyWarnedFor.add(dedupKey)
+      if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+        console.warn(
+          `[L2-9] schema=${kind} entity='${key}' caller=${callerContext}. ` +
+          `LEGACY FLAT shape is deprecated; migrate assets to NESTED arrays ` +
+          `(assets.{pensions[], investments[], property[], bank[]}). ` +
+          `Engine still works via _helpers.js fallback chains; FLAT will be removed once all personas are migrated.`
+        )
+      }
+    }
+  }
+  return kind
+}
+
+/**
+ * Test-only: reset the dedup memory between cases.
+ */
+export function _resetLegacyWarnings() {
+  _legacyWarnedFor.clear()
+}
+
+/**
+ * Re-export of detectSchema for callers that prefer a single import surface
+ * (persona-normalizer.js for everything schema-related).
+ */
+export const detectSchema = _detectSchema
+

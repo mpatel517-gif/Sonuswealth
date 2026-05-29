@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Test coverage output (regenerable via npm run test:coverage)
+coverage/
+
+# Windows null device artifact
+nul
+
 # Environment files (API keys, secrets)
 .env
 .env.*

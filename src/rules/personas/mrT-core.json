@@ -1,14 +1,23 @@
 {
+  "name": "Mr T Core",
+  "dob": "1991-04-23",
+  "age": 35,
   "fixture_id": "mrT-core",
   "fixture_version": "2.0",
   "fixture_date": "2026-05-12",
   "fixture_purpose": "All-domain canonical regression fixture. Deliberately maximalist: populates every spec'd domain (A-X per MyMoney v2.7) with at least one realistic instance so screens render fully and engine paths can be regression-tested. Character: single director age 35, accumulation life-stage with director-domain unlock. Not a realistic persona — a QA artefact.",
   "fixture_anchor_archetype": "02",
-  "archetypes_exercised": ["01", "02", "03", "04", "05", "06", "07"],
+  "archetypes_exercised": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07"
+  ],
   "v2_0_changes": "Full Phase 2 Batch A rewrite. Shape switched to Bruce app schema with spec-array overlays so MyMoney row-builders render every domain. Added: BTL property, EIS/SEIS/VCT, onshore+offshore bonds, business_assets, share_schemes, alternatives, companies, directors_loan, family_obligations, general_insurance, business_insurance, full income object (5 types), full protection (4 types), willStatus current + both LPAs, plans[], scenarios[], trajectories.{netWorthHistory, scoreHistory, riskHistory}.",
-
   "id": "mrt",
-  "name": "Mr T Core",
   "displayName": "Mr T · 35 · all-domain canonical",
   "type": "individual",
   "isIFA": false,
@@ -20,13 +29,15 @@
   "hasTrust": true,
   "hasDBPension": true,
   "isHigherRateTaxpayer": true,
-  "age": 35,
   "targetIncome": 60000,
   "dataLastUpdated": "2026-05-12",
   "rulesVersion": "UK-2026.1",
   "drawdown": 0,
-  "persona": { "flags": ["director"] },
-
+  "persona": {
+    "flags": [
+      "director"
+    ]
+  },
   "jurisdiction": {
     "primary": "UK",
     "secondary": null,
@@ -34,12 +45,10 @@
     "domicile": "UK",
     "deemed_domicile": false
   },
-
   "jurisdictionContext": {
     "primary": "UK-2026.1",
     "secondary": null
   },
-
   "individual": {
     "id": "mrT-core-primary",
     "name": "Mr T Core",
@@ -55,7 +64,6 @@
     "state_pension_accrued_years": 13,
     "life_stage": "accumulation"
   },
-
   "assets": {
     "sipp": {
       "total": 167500,
@@ -268,12 +276,20 @@
         "last_valuation_date": "2026-03-31"
       }
     ],
-    "isa": { "value": 46600, "growth": 0.06 },
-    "portfolio": { "value": 24800, "growth": 0.055, "ret": 0.08, "bpr": false },
+    "isa": {
+      "value": 46600,
+      "growth": 0.06
+    },
+    "portfolio": {
+      "value": 24800,
+      "growth": 0.055,
+      "ret": 0.08,
+      "bpr": false
+    },
     "residence": {
       "value": 385000,
       "ownership": "sole",
-      "ownershipShare": 1.0,
+      "ownershipShare": 1,
       "address": "Flat 7 · 14 Pencaer Street · London E14",
       "purchase_price": 318000,
       "purchase_date": "2020-08-10"
@@ -289,7 +305,7 @@
         "purchase_price": 165000,
         "purchase_date": "2022-03-15",
         "ownership": "sole",
-        "beneficial_interest_this_individual": 1.0,
+        "beneficial_interest_this_individual": 1,
         "mortgage_id": "mortgage-btl",
         "monthly_rent": 1250,
         "annual_rent": 15000,
@@ -408,7 +424,6 @@
     },
     "other": []
   },
-
   "liabilities": {
     "mortgage": {
       "outstanding": 215000,
@@ -452,7 +467,6 @@
       }
     ]
   },
-
   "business_assets": [
     {
       "id": "synthetic-tech-equity",
@@ -462,12 +476,11 @@
       "qualifies_for_bpr": true,
       "qualifies_for_apr": false,
       "qualifies_for_badr": true,
-      "shareholding_pct": 1.0,
+      "shareholding_pct": 1,
       "trading_status": "trading",
       "incorporation_date": "2019-04-01"
     }
   ],
-
   "share_schemes": [
     {
       "id": "emi-options-2023",
@@ -481,13 +494,12 @@
       "unvested_count": 12000
     }
   ],
-
   "companies": [
     {
       "id": "synthetic-tech-ltd",
       "name": "Synthetic Tech Ltd",
       "role": "Sole director",
-      "shareholding_pct": 1.0,
+      "shareholding_pct": 1,
       "share_value_gbp": 145000,
       "value": 145000,
       "trading_status": "trading",
@@ -495,14 +507,12 @@
       "annual_profit_after_tax": 78000
     }
   ],
-
   "directors_loan": {
     "balance": 18500,
     "in_credit": true,
     "company_id": "synthetic-tech-ltd",
     "note": "Director has lent £18.5k to the company; counts as a credit on the balance sheet"
   },
-
   "alternatives": [
     {
       "id": "wine-collection",
@@ -513,7 +523,6 @@
       "last_valuation_date": "2025-12-01"
     }
   ],
-
   "general_insurance": [
     {
       "id": "home-insurance",
@@ -537,7 +546,6 @@
       "premium_annual": 85
     }
   ],
-
   "business_insurance": [
     {
       "id": "pi-insurance",
@@ -554,7 +562,6 @@
       "premium_annual": 240
     }
   ],
-
   "family_obligations": [
     {
       "id": "parent-care-contribution",
@@ -563,9 +570,7 @@
       "annual_cost": 6000
     }
   ],
-
   "benefits": [],
-
   "dependants": [
     {
       "id": "sister",
@@ -576,12 +581,10 @@
       "annual_cost": 0
     }
   ],
-
   "willStatus": "current",
   "lpaStatus": "both",
   "guardianNamed": false,
   "nominationsStatus": "all",
-
   "income": {
     "statePension": {
       "annual": 11502,
@@ -597,15 +600,14 @@
     "overseasIncome": 0,
     "total_annual_gross": 67420,
     "ani": 56800,
-    "marginal_rate": 0.40,
+    "marginal_rate": 0.4,
     "allowance_use": {
       "isa": 0.525,
       "pension_aa": 0.31,
-      "cgt_aea": 0.0,
-      "dividend_allowance": 1.0
+      "cgt_aea": 0,
+      "dividend_allowance": 1
     }
   },
-
   "riskQuestionnaire": {
     "q11_liquidity_months": "3-6",
     "q12_income_protection": "yes",
@@ -617,21 +619,54 @@
     "d6_guardian_status": "no_dependants",
     "confidenceLevel": "high"
   },
-
   "etfs": [
-    { "ticker": "VWRL", "name": "Vanguard FTSE All-World",        "val": "£24,800", "pct": "+12.4%", "up": true  },
-    { "ticker": "VUKE", "name": "Vanguard FTSE 100",              "val": "£8,200",  "pct": "+6.1%",  "up": true  },
-    { "ticker": "INRG", "name": "iShares Clean Energy",           "val": "£3,100",  "pct": "+7.1%",  "up": true  },
-    { "ticker": "SGLN", "name": "iShares Physical Gold",          "val": "£2,500",  "pct": "+18.4%", "up": true  },
-    { "ticker": "VMID", "name": "Vanguard FTSE 250",              "val": "£1,900",  "pct": "-2.8%",  "up": false }
+    {
+      "ticker": "VWRL",
+      "name": "Vanguard FTSE All-World",
+      "val": "£24,800",
+      "pct": "+12.4%",
+      "up": true
+    },
+    {
+      "ticker": "VUKE",
+      "name": "Vanguard FTSE 100",
+      "val": "£8,200",
+      "pct": "+6.1%",
+      "up": true
+    },
+    {
+      "ticker": "INRG",
+      "name": "iShares Clean Energy",
+      "val": "£3,100",
+      "pct": "+7.1%",
+      "up": true
+    },
+    {
+      "ticker": "SGLN",
+      "name": "iShares Physical Gold",
+      "val": "£2,500",
+      "pct": "+18.4%",
+      "up": true
+    },
+    {
+      "ticker": "VMID",
+      "name": "Vanguard FTSE 250",
+      "val": "£1,900",
+      "pct": "-2.8%",
+      "up": false
+    }
   ],
-
   "plans": [
     {
       "id": "plan-retirement",
       "type": "retirement",
       "label": "Retire at 60 with £2.5m net worth",
-      "target": { "date": "2051-04-01", "netWorth": 2500000, "monthlyIncome": 5000, "age": 60 },
+      "target": {
+        "date": "2051-04-01",
+        "netWorth": 2500000,
+        "monthlyIncome": 5000,
+        "age": 60
+      },
       "target_display": 2500000,
       "monthlyContribution": 1500,
       "lastReviewedAt": "2025-09-15",
@@ -642,7 +677,11 @@
       "id": "plan-estate",
       "type": "estate",
       "label": "Zero IHT exposure within 5 years",
-      "target": { "ihtCap": 0, "rnrbUsed": true, "bprPositioning": 145000 },
+      "target": {
+        "ihtCap": 0,
+        "rnrbUsed": true,
+        "bprPositioning": 145000
+      },
       "target_display": null,
       "lastReviewedAt": "2025-12-10",
       "status": "active",
@@ -652,7 +691,10 @@
       "id": "plan-gift",
       "type": "gift",
       "label": "Use £3k annual allowance + carry-forward",
-      "target": { "annualAllowance": 3000, "carryForwardUsed": true },
+      "target": {
+        "annualAllowance": 3000,
+        "carryForwardUsed": true
+      },
       "target_display": null,
       "lastReviewedAt": "2025-04-06",
       "status": "active",
@@ -662,7 +704,11 @@
       "id": "plan-tax",
       "type": "tax",
       "label": "Max ISA + use carry-forward AA",
-      "target": { "isaUsedPct": 1.0, "pensionAaUsedPct": 0.8, "carryForwardUsed": true },
+      "target": {
+        "isaUsedPct": 1,
+        "pensionAaUsedPct": 0.8,
+        "carryForwardUsed": true
+      },
       "target_display": null,
       "lastReviewedAt": "2025-11-20",
       "status": "active",
@@ -672,20 +718,24 @@
       "id": "plan-protection",
       "type": "protection",
       "label": "Close protection gap to under £50k",
-      "target": { "gapAmount": 50000 },
+      "target": {
+        "gapAmount": 50000
+      },
       "target_display": null,
       "lastReviewedAt": "2025-08-01",
       "status": "active",
       "createdAt": "2022-05-01"
     }
   ],
-
   "scenarios": [
     {
       "id": "scen-retire-50",
       "name": "Retire at 50 (earliest exit)",
       "createdAt": "2026-03-12",
-      "changedFields": { "retirementAge": 50, "monthlyContribution": 2400 },
+      "changedFields": {
+        "retirementAge": 50,
+        "monthlyContribution": 2400
+      },
       "deltaResults": {
         "netWorthAt75": -180000,
         "probabilityOfSuccess": 0.61,
@@ -698,7 +748,12 @@
       "id": "scen-sell-btl",
       "name": "Sell BTL in 2027",
       "createdAt": "2026-04-18",
-      "changedFields": { "btlDisposal": { "year": 2027, "proceeds_after_cgt": 71500 } },
+      "changedFields": {
+        "btlDisposal": {
+          "year": 2027,
+          "proceeds_after_cgt": 71500
+        }
+      },
       "deltaResults": {
         "netWorthAt75": -42000,
         "probabilityOfSuccess": 0.89,
@@ -711,7 +766,9 @@
       "id": "scen-sipp-max",
       "name": "Top up SIPP to MPAA limit",
       "createdAt": "2026-05-01",
-      "changedFields": { "annualSippContribution": 10000 },
+      "changedFields": {
+        "annualSippContribution": 10000
+      },
       "deltaResults": {
         "netWorthAt75": 165000,
         "probabilityOfSuccess": 0.93,
@@ -724,7 +781,10 @@
       "id": "scen-corporate-pension",
       "name": "Switch dividend take to corporate pension contribution",
       "createdAt": "2026-05-09",
-      "changedFields": { "directorDividends": 16000, "employerPensionContribution": 22000 },
+      "changedFields": {
+        "directorDividends": 16000,
+        "employerPensionContribution": 22000
+      },
       "deltaResults": {
         "netWorthAt75": 230000,
         "probabilityOfSuccess": 0.95,
@@ -734,68 +794,229 @@
       "status": "saved"
     }
   ],
-
   "trajectories": {
     "netWorthHistory": [
-      { "date": "2025-06-01", "value": 412000 },
-      { "date": "2025-07-01", "value": 421500 },
-      { "date": "2025-08-01", "value": 428400 },
-      { "date": "2025-09-01", "value": 433200 },
-      { "date": "2025-10-01", "value": 441800 },
-      { "date": "2025-11-01", "value": 447600 },
-      { "date": "2025-12-01", "value": 455100 },
-      { "date": "2026-01-01", "value": 459400 },
-      { "date": "2026-02-01", "value": 462800 },
-      { "date": "2026-03-01", "value": 471200 },
-      { "date": "2026-04-01", "value": 478500 },
-      { "date": "2026-05-01", "value": 484000 }
+      {
+        "date": "2025-06-01",
+        "value": 412000
+      },
+      {
+        "date": "2025-07-01",
+        "value": 421500
+      },
+      {
+        "date": "2025-08-01",
+        "value": 428400
+      },
+      {
+        "date": "2025-09-01",
+        "value": 433200
+      },
+      {
+        "date": "2025-10-01",
+        "value": 441800
+      },
+      {
+        "date": "2025-11-01",
+        "value": 447600
+      },
+      {
+        "date": "2025-12-01",
+        "value": 455100
+      },
+      {
+        "date": "2026-01-01",
+        "value": 459400
+      },
+      {
+        "date": "2026-02-01",
+        "value": 462800
+      },
+      {
+        "date": "2026-03-01",
+        "value": 471200
+      },
+      {
+        "date": "2026-04-01",
+        "value": 478500
+      },
+      {
+        "date": "2026-05-01",
+        "value": 484000
+      }
     ],
     "scoreHistory": [
-      { "date": "2025-06-01", "score": 54 },
-      { "date": "2025-07-01", "score": 55 },
-      { "date": "2025-08-01", "score": 56 },
-      { "date": "2025-09-01", "score": 57 },
-      { "date": "2025-10-01", "score": 58 },
-      { "date": "2025-11-01", "score": 59 },
-      { "date": "2025-12-01", "score": 60 },
-      { "date": "2026-01-01", "score": 60 },
-      { "date": "2026-02-01", "score": 61 },
-      { "date": "2026-03-01", "score": 62 },
-      { "date": "2026-04-01", "score": 63 },
-      { "date": "2026-05-01", "score": 64 }
+      {
+        "date": "2025-06-01",
+        "score": 54
+      },
+      {
+        "date": "2025-07-01",
+        "score": 55
+      },
+      {
+        "date": "2025-08-01",
+        "score": 56
+      },
+      {
+        "date": "2025-09-01",
+        "score": 57
+      },
+      {
+        "date": "2025-10-01",
+        "score": 58
+      },
+      {
+        "date": "2025-11-01",
+        "score": 59
+      },
+      {
+        "date": "2025-12-01",
+        "score": 60
+      },
+      {
+        "date": "2026-01-01",
+        "score": 60
+      },
+      {
+        "date": "2026-02-01",
+        "score": 61
+      },
+      {
+        "date": "2026-03-01",
+        "score": 62
+      },
+      {
+        "date": "2026-04-01",
+        "score": 63
+      },
+      {
+        "date": "2026-05-01",
+        "score": 64
+      }
     ],
     "riskHistory": [
-      { "date": "2025-06-01", "score": 52 },
-      { "date": "2025-07-01", "score": 53 },
-      { "date": "2025-08-01", "score": 55 },
-      { "date": "2025-09-01", "score": 57 },
-      { "date": "2025-10-01", "score": 58 },
-      { "date": "2025-11-01", "score": 59 },
-      { "date": "2025-12-01", "score": 60 },
-      { "date": "2026-01-01", "score": 61 },
-      { "date": "2026-02-01", "score": 62 },
-      { "date": "2026-03-01", "score": 63 },
-      { "date": "2026-04-01", "score": 64 },
-      { "date": "2026-05-01", "score": 65 }
+      {
+        "date": "2025-06-01",
+        "score": 52
+      },
+      {
+        "date": "2025-07-01",
+        "score": 53
+      },
+      {
+        "date": "2025-08-01",
+        "score": 55
+      },
+      {
+        "date": "2025-09-01",
+        "score": 57
+      },
+      {
+        "date": "2025-10-01",
+        "score": 58
+      },
+      {
+        "date": "2025-11-01",
+        "score": 59
+      },
+      {
+        "date": "2025-12-01",
+        "score": 60
+      },
+      {
+        "date": "2026-01-01",
+        "score": 61
+      },
+      {
+        "date": "2026-02-01",
+        "score": 62
+      },
+      {
+        "date": "2026-03-01",
+        "score": 63
+      },
+      {
+        "date": "2026-04-01",
+        "score": 64
+      },
+      {
+        "date": "2026-05-01",
+        "score": 65
+      }
     ]
   },
-
   "events": [
-    { "date": "2014-09-01", "type": "employment-start", "detail": "First Employer" },
-    { "date": "2019-04-01", "type": "company-incorporation", "company_id": "synthetic-tech-ltd" },
-    { "date": "2020-08-10", "type": "property-purchase", "asset_id": "main-residence", "amount": 318000 },
-    { "date": "2022-03-15", "type": "property-purchase", "asset_id": "btl-manchester", "amount": 165000 },
-    { "date": "2022-05-01", "type": "protection-start", "policy_id": "life-1" },
-    { "date": "2023-01-10", "type": "gift-given", "gift_id": "pet-1", "amount": 3000 },
-    { "date": "2023-11-14", "type": "pension-nomination-set", "pension_id": "sipp-aj-bell" },
-    { "date": "2024-09-15", "type": "gift-given", "gift_id": "pet-2", "amount": 25000 },
-    { "date": "2025-09-15", "type": "plan-reviewed", "plan_id": "plan-retirement" },
-    { "date": "2026-03-12", "type": "scenario-saved", "scenario_id": "scen-retire-50" },
-    { "date": "2026-04-18", "type": "scenario-saved", "scenario_id": "scen-sell-btl" },
-    { "date": "2026-05-01", "type": "scenario-saved", "scenario_id": "scen-sipp-max" },
-    { "date": "2026-05-09", "type": "scenario-saved", "scenario_id": "scen-corporate-pension" }
+    {
+      "date": "2014-09-01",
+      "type": "employment-start",
+      "detail": "First Employer"
+    },
+    {
+      "date": "2019-04-01",
+      "type": "company-incorporation",
+      "company_id": "synthetic-tech-ltd"
+    },
+    {
+      "date": "2020-08-10",
+      "type": "property-purchase",
+      "asset_id": "main-residence",
+      "amount": 318000
+    },
+    {
+      "date": "2022-03-15",
+      "type": "property-purchase",
+      "asset_id": "btl-manchester",
+      "amount": 165000
+    },
+    {
+      "date": "2022-05-01",
+      "type": "protection-start",
+      "policy_id": "life-1"
+    },
+    {
+      "date": "2023-01-10",
+      "type": "gift-given",
+      "gift_id": "pet-1",
+      "amount": 3000
+    },
+    {
+      "date": "2023-11-14",
+      "type": "pension-nomination-set",
+      "pension_id": "sipp-aj-bell"
+    },
+    {
+      "date": "2024-09-15",
+      "type": "gift-given",
+      "gift_id": "pet-2",
+      "amount": 25000
+    },
+    {
+      "date": "2025-09-15",
+      "type": "plan-reviewed",
+      "plan_id": "plan-retirement"
+    },
+    {
+      "date": "2026-03-12",
+      "type": "scenario-saved",
+      "scenario_id": "scen-retire-50"
+    },
+    {
+      "date": "2026-04-18",
+      "type": "scenario-saved",
+      "scenario_id": "scen-sell-btl"
+    },
+    {
+      "date": "2026-05-01",
+      "type": "scenario-saved",
+      "scenario_id": "scen-sipp-max"
+    },
+    {
+      "date": "2026-05-09",
+      "type": "scenario-saved",
+      "scenario_id": "scen-corporate-pension"
+    }
   ],
-
   "alerts": [
     {
       "level": "high",
@@ -842,22 +1063,61 @@
       "lifeStage": 2
     }
   ],
-
   "timeline": [
-    { "dot": "⏳", "bg": "#FFF3F3", "date": "6 April 2027",   "title": "SIPP enters estate",          "sub": "£167k SIPP subject to IHT if not addressed" },
-    { "dot": "🎁", "bg": "#FFF8E8", "date": "September 2031", "title": "Gift clock fully IHT-free",   "sub": "7-year clock completes on £25k gifted Sep 2024" },
-    { "dot": "🏦", "bg": "#E8F7EF", "date": "Age 67",         "title": "State pension begins",        "sub": "£11,502/yr forecast" },
-    { "dot": "🎯", "bg": "#EEF4FF", "date": "Age 60 · 2051",   "title": "Retirement plan target",      "sub": "£2.5m NW · £5k/mo income" }
+    {
+      "dot": "⏳",
+      "bg": "#FFF3F3",
+      "date": "6 April 2027",
+      "title": "SIPP enters estate",
+      "sub": "£167k SIPP subject to IHT if not addressed"
+    },
+    {
+      "dot": "🎁",
+      "bg": "#FFF8E8",
+      "date": "September 2031",
+      "title": "Gift clock fully IHT-free",
+      "sub": "7-year clock completes on £25k gifted Sep 2024"
+    },
+    {
+      "dot": "🏦",
+      "bg": "#E8F7EF",
+      "date": "Age 67",
+      "title": "State pension begins",
+      "sub": "£11,502/yr forecast"
+    },
+    {
+      "dot": "🎯",
+      "bg": "#EEF4FF",
+      "date": "Age 60 · 2051",
+      "title": "Retirement plan target",
+      "sub": "£2.5m NW · £5k/mo income"
+    }
   ],
-
   "estate": {
-    "will": { "exists": true, "date": "2024-03-10", "solicitor": "Taylor Wessing LLP" },
-    "lpa": { "exists": true, "property_and_affairs": true, "health_and_welfare": true, "registered_date": "2023-11-05" },
-    "trust": { "exists": true, "type": "Discretionary", "trustees": ["Mr T Core", "Sister"] },
-    "expression_of_wishes": { "exists": true },
+    "will": {
+      "exists": true,
+      "date": "2024-03-10",
+      "solicitor": "Taylor Wessing LLP"
+    },
+    "lpa": {
+      "exists": true,
+      "property_and_affairs": true,
+      "health_and_welfare": true,
+      "registered_date": "2023-11-05"
+    },
+    "trust": {
+      "exists": true,
+      "type": "Discretionary",
+      "trustees": [
+        "Mr T Core",
+        "Sister"
+      ]
+    },
+    "expression_of_wishes": {
+      "exists": true
+    },
     "nominations_complete": true
   },
-
   "documents": [
     {
       "id": "doc-will-001",
@@ -911,7 +1171,10 @@
       "date": "3 Jun 2022",
       "size_kb": 432,
       "size": "432 KB",
-      "trustees": ["Mr T Core", "Sister"],
+      "trustees": [
+        "Mr T Core",
+        "Sister"
+      ],
       "notes": "Life policy written into discretionary trust. Removes £350k from estate."
     },
     {
@@ -926,14 +1189,12 @@
       "notes": "Beneficiary: Sister 100%. Provider: Aviva. Review due on consolidation."
     }
   ],
-
   "aiSuggestions": [
     "How much could I save on tax by switching director dividends to corporate pension?",
     "Should I sell the BTL before the 2028 fixed rate ends?",
     "What's my probability of retiring at 50 with my current trajectory?",
     "How does my protection compare to my income obligations?"
   ],
-
   "dimensionNarrative": {
     "behaviour": {
       "risk": "Strong habits. Nominations current, both LPAs in place, life cover in trust.",
@@ -971,39 +1232,91 @@
       "future": "Combined RNRB + NRB + BPR positions estate well below IHT threshold at current NW."
     }
   },
-
   "archetype_specific": {
     "lifestage_snapshot": "accumulation",
-    "pension_consolidation_candidates": ["dc-pot-legacy-aviva", "dc-pot-legacy-nest"],
+    "pension_consolidation_candidates": [
+      "dc-pot-legacy-aviva",
+      "dc-pot-legacy-nest"
+    ],
     "lisa_state": null,
     "lisa_eligibility_reason": "Out-of-stage: past Foundation life stage",
     "single_estate_marker": true,
     "director_marker": true,
     "btl_landlord_marker": true
   },
-
   "expected_output_envelope": {
     "finio_score": {
-      "value_range": [60, 70],
+      "value_range": [
+        60,
+        70
+      ],
       "confidence": "high",
       "confidence_downgrade_reasons": [],
       "dimensions": {
-        "behaviour": { "range": [70, 80], "confidence": "high" },
-        "capital":   { "range": [62, 72], "confidence": "high" },
-        "tax":       { "range": [55, 68], "confidence": "high" },
-        "protection":{ "range": [75, 85], "confidence": "high" },
-        "cashflow":  { "range": [60, 72], "confidence": "high" },
-        "debt":      { "range": [55, 68], "confidence": "high" },
-        "estate":    { "range": [65, 75], "confidence": "high" }
+        "behaviour": {
+          "range": [
+            70,
+            80
+          ],
+          "confidence": "high"
+        },
+        "capital": {
+          "range": [
+            62,
+            72
+          ],
+          "confidence": "high"
+        },
+        "tax": {
+          "range": [
+            55,
+            68
+          ],
+          "confidence": "high"
+        },
+        "protection": {
+          "range": [
+            75,
+            85
+          ],
+          "confidence": "high"
+        },
+        "cashflow": {
+          "range": [
+            60,
+            72
+          ],
+          "confidence": "high"
+        },
+        "debt": {
+          "range": [
+            55,
+            68
+          ],
+          "confidence": "high"
+        },
+        "estate": {
+          "range": [
+            65,
+            75
+          ],
+          "confidence": "high"
+        }
       }
     },
     "risk_score": {
-      "value_range": [60, 72],
+      "value_range": [
+        60,
+        72
+      ],
       "confidence": "high",
       "dimensions_to_populate_in_session_3": "7 RISK-1.0 dimensions per s07 spec"
     },
     "net_worth": {
-      "value_range": [475000, 495000],
+      "value_range": [
+        475000,
+        495000
+      ],
       "point_estimate_explanation": "fixture-controlled — should compute to ~£484k",
       "confidence": "high",
       "staleness_flags": [],
@@ -1011,12 +1324,18 @@
       "excluded_asset_reasons": {}
     },
     "iht_projection": {
-      "value_range": [0, 8000],
+      "value_range": [
+        0,
+        8000
+      ],
       "confidence": "high",
       "explanation": "Estate ~£484k less BPR-qualifying £145k = £339k taxable, below NRB£325k + RNRB£175k = £500k allowance. Marginal exposure only."
     },
     "cost_of_inaction": {
-      "value_range": [3000, 8000],
+      "value_range": [
+        3000,
+        8000
+      ],
       "confidence": "high",
       "explanation": "CoI driven by unused AA carry-forward + partial ISA + protection gap review cycle"
     },

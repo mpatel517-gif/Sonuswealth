@@ -1,11 +1,12 @@
 {
+  "name": "Mr T Mental Capacity",
+  "dob": "1941-09-04",
+  "age": 85,
   "fixture_id": "mrT-mental-capacity",
   "fixture_version": "1.0",
   "fixture_date": "2026-05-28",
   "fixture_purpose": "L5-2 vulnerability edge case — late preservation/legacy age (85) with recorded capacity_loss event. Engine's derivedVulnerability should return status='elevated' or 'high' (multiple triggers: age 85+ + capacity event + possibly bereavement-adjacent), toneHint='gentle' or 'pause'. UI should defer to LPA-holder pattern where applicable.",
-
   "id": "mrt-mental-capacity",
-  "name": "Mr T Mental Capacity",
   "displayName": "Mr T · 85 · capacity concern + LPA active",
   "type": "individual",
   "isIFA": false,
@@ -19,14 +20,17 @@
   "hasTrust": true,
   "hasDBPension": true,
   "isHigherRateTaxpayer": false,
-  "age": 85,
   "targetIncome": 28000,
   "rulesVersion": "UK-2026.1",
   "drawdown": 18000,
-
-  "jurisdiction":         { "primary": "UK", "tax_bundle": "UK-2026.1", "domicile": "UK" },
-  "jurisdictionContext":  { "primary": "UK-2026.1" },
-
+  "jurisdiction": {
+    "primary": "UK",
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK"
+  },
+  "jurisdictionContext": {
+    "primary": "UK-2026.1"
+  },
   "individual": {
     "id": "mrT-mental-capacity-primary",
     "name": "Mr T Mental Capacity",
@@ -39,9 +43,7 @@
     "state_pension_accrued_years": 35,
     "life_stage": "legacy"
   },
-
   "maritalStatus": "married",
-
   "events": [
     {
       "type": "capacity_loss",
@@ -56,15 +58,25 @@
       "ongoing": true
     }
   ],
-
   "assets": {
-    "isa":     { "value": 65000 },
-    "cash":    { "value": 18000 },
-    "sipp":    {
+    "isa": {
+      "value": 65000
+    },
+    "cash": {
+      "value": 18000
+    },
+    "sipp": {
       "total": 220000,
       "crystalised": 180000,
       "tfcTaken": 55000,
-      "pensions": [{ "id": "drawdown", "name": "L&G drawdown", "value": 220000, "type": "SIPP" }]
+      "pensions": [
+        {
+          "id": "drawdown",
+          "name": "L&G drawdown",
+          "value": 220000,
+          "type": "SIPP"
+        }
+      ]
     },
     "property": {
       "residential": [
@@ -81,28 +93,44 @@
     },
     "protection": {}
   },
-
   "income": {
     "salary": 0,
     "drawdown_annual": 18000,
-    "statePension": { "annual": 12548 }
+    "statePension": {
+      "annual": 12548
+    }
   },
-
   "expenses": {
     "essentialsMonthly": 2100
   },
-
   "wills": [
-    { "status": "signed", "date_signed": "2023-02-14" }
+    {
+      "status": "signed",
+      "date_signed": "2023-02-14"
+    }
   ],
   "lpa": [
-    { "status": "registered", "type": "property-and-finance", "registered_date": "2024-06-10", "donor_capacity_at_signing": "had_capacity" },
-    { "status": "registered", "type": "health-and-welfare", "registered_date": "2024-06-10" }
+    {
+      "status": "registered",
+      "type": "property-and-finance",
+      "registered_date": "2024-06-10",
+      "donor_capacity_at_signing": "had_capacity"
+    },
+    {
+      "status": "registered",
+      "type": "health-and-welfare",
+      "registered_date": "2024-06-10"
+    }
   ],
-
   "_test_expectations": {
-    "derivedVulnerability_status_oneof": ["elevated", "high"],
-    "toneHint_oneof": ["gentle", "pause"],
+    "derivedVulnerability_status_oneof": [
+      "elevated",
+      "high"
+    ],
+    "toneHint_oneof": [
+      "gentle",
+      "pause"
+    ],
     "lpa_active": true
   }
 }

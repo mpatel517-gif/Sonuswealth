@@ -1,11 +1,12 @@
 {
+  "name": "Mr T Child Dependent",
+  "dob": "1988-06-22",
+  "age": 38,
   "fixture_id": "mrT-child-dependent",
   "fixture_version": "1.0",
   "fixture_date": "2026-05-28",
   "fixture_purpose": "L5-2 edge case — single parent with 3 dependent children, income inside HICBC zone (£60k-£80k). Engine should: (1) compute HICBC charge correctly; (2) surface child-benefit + RNRB-relevant signals; (3) NOT trigger derivedVulnerability on age alone. UI: dependents reader should return 3, HICBC chip should fire on Tax & Estate screen.",
-
   "id": "mrt-child-dependent",
-  "name": "Mr T Child Dependent",
   "displayName": "Mr T · 38 · single parent · HICBC zone",
   "type": "individual",
   "isIFA": false,
@@ -17,14 +18,17 @@
   "hasTrust": false,
   "hasDBPension": false,
   "isHigherRateTaxpayer": true,
-  "age": 38,
   "targetIncome": 50000,
   "rulesVersion": "UK-2026.1",
   "drawdown": 0,
-
-  "jurisdiction":         { "primary": "UK", "tax_bundle": "UK-2026.1", "domicile": "UK" },
-  "jurisdictionContext":  { "primary": "UK-2026.1" },
-
+  "jurisdiction": {
+    "primary": "UK",
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK"
+  },
+  "jurisdictionContext": {
+    "primary": "UK-2026.1"
+  },
   "individual": {
     "id": "mrT-child-dependent-primary",
     "name": "Mr T Child Dependent",
@@ -38,16 +42,31 @@
     "state_pension_accrued_years": 16,
     "life_stage": "accumulation"
   },
-
   "maritalStatus": "single",
   "previously_married": true,
-
   "dependents": [
-    { "id": "child-1", "name": "Child 1", "dob": "2014-04-10", "relationship": "child", "lives_with": true },
-    { "id": "child-2", "name": "Child 2", "dob": "2017-11-22", "relationship": "child", "lives_with": true },
-    { "id": "child-3", "name": "Child 3", "dob": "2020-02-05", "relationship": "child", "lives_with": true }
+    {
+      "id": "child-1",
+      "name": "Child 1",
+      "dob": "2014-04-10",
+      "relationship": "child",
+      "lives_with": true
+    },
+    {
+      "id": "child-2",
+      "name": "Child 2",
+      "dob": "2017-11-22",
+      "relationship": "child",
+      "lives_with": true
+    },
+    {
+      "id": "child-3",
+      "name": "Child 3",
+      "dob": "2020-02-05",
+      "relationship": "child",
+      "lives_with": true
+    }
   ],
-
   "events": [
     {
       "type": "divorce",
@@ -55,17 +74,29 @@
       "note": "Settled 20+ months ago — outside the 6-month vulnerability window, but flagged for context"
     }
   ],
-
   "child_benefit": {
     "claimed": true,
     "children_count": 3,
     "annual_received": 4108
   },
-
   "assets": {
-    "isa":     { "value": 14500 },
-    "cash":    { "value": 9000 },
-    "sipp":    { "total": 38000, "pensions": [{ "id": "main", "name": "Workplace DC", "value": 38000, "type": "SIPP" }] },
+    "isa": {
+      "value": 14500
+    },
+    "cash": {
+      "value": 9000
+    },
+    "sipp": {
+      "total": 38000,
+      "pensions": [
+        {
+          "id": "main",
+          "name": "Workplace DC",
+          "value": 38000,
+          "type": "SIPP"
+        }
+      ]
+    },
     "property": {
       "residential": [
         {
@@ -79,29 +110,40 @@
       ]
     },
     "protection": {
-      "life_cover": [{ "sum_assured": 250000, "monthly_premium": 22, "in_trust": false, "policy_type": "term", "ends": "2042-06-22" }]
+      "life_cover": [
+        {
+          "sum_assured": 250000,
+          "monthly_premium": 22,
+          "in_trust": false,
+          "policy_type": "term",
+          "ends": "2042-06-22"
+        }
+      ]
     }
   },
-
   "income": {
     "salary": 68000
   },
-
   "expenses": {
     "essentialsMonthly": 3650,
     "annual": 43800
   },
-
   "wills": [
-    { "status": "stale", "date_signed": "2019-03-04", "note": "Pre-divorce will — pending update; guardian appointment needs re-confirming" }
+    {
+      "status": "stale",
+      "date_signed": "2019-03-04",
+      "note": "Pre-divorce will — pending update; guardian appointment needs re-confirming"
+    }
   ],
   "lpa": [],
-
   "_test_expectations": {
     "dependents_count": 3,
     "hicbc_zone": true,
     "hicbc_floor_breached": true,
     "hicbc_ceiling_breached": false,
-    "derivedVulnerability_status_oneof": ["none", "watch"]
+    "derivedVulnerability_status_oneof": [
+      "none",
+      "watch"
+    ]
   }
 }

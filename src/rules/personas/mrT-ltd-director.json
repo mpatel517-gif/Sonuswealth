@@ -1,11 +1,19 @@
 {
+  "name": "Mr T Director",
+  "dob": "1975-11-15",
+  "age": 50,
   "fixture_id": "mrT-ltd-director",
   "fixture_version": "1.0",
   "fixture_date": "2026-04-23",
   "fixture_purpose": "UK Ltd Director / owner-operator at Consolidation life stage (age 50 — Stark-adjacent). 100pct shareholder of trading company. Exercises salary/dividend/pension split optimiser, tapered AA (threshold income >£260k drives AA down to £10k minimum), carry-forward utilisation, SSAS with commercial-property asset, BPR 100pct on trading-company shares, BADR eligibility for future share disposal, director loan account treatment.",
   "fixture_anchor_archetype": "33",
-  "archetypes_exercised": ["32", "33", "34", "35", "36"],
-
+  "archetypes_exercised": [
+    "32",
+    "33",
+    "34",
+    "35",
+    "36"
+  ],
   "jurisdiction": {
     "primary": "UK",
     "secondary": null,
@@ -13,7 +21,6 @@
     "domicile": "UK",
     "deemed_domicile": false
   },
-
   "individual": {
     "id": "mrT-director-primary",
     "name": "Mr T Director",
@@ -53,7 +60,6 @@
     "state_pension_accrued_years": 25,
     "life_stage": "consolidation"
   },
-
   "relationships": [
     {
       "id": "marriage-1",
@@ -65,7 +71,6 @@
       "children_from_relationship": 1
     }
   ],
-
   "partner": {
     "id": "mrT-director-partner",
     "name": "Mrs T Director",
@@ -77,18 +82,29 @@
     "income_band": "basic-rate",
     "state_pension_accrued_years": 18
   },
-
   "children": [
-    {"id": "child-1", "name": "Child A", "dob": "2010-02-18", "age": 16, "dependent": true}
+    {
+      "id": "child-1",
+      "name": "Child A",
+      "dob": "2010-02-18",
+      "age": 16,
+      "dependent": true
+    }
   ],
-
   "companies": [
     {
       "id": "mrT-holdings-ltd",
       "name": "Mr T Holdings Ltd",
       "entity_type": "UK-limited-company",
       "incorporation_date": "2014-03-01",
-      "shareholding": [{"shareholder": "mrT-director-primary", "pct": 100, "share_class": "ordinary", "share_count": 1000}],
+      "shareholding": [
+        {
+          "shareholder": "mrT-director-primary",
+          "pct": 100,
+          "share_class": "ordinary",
+          "share_count": 1000
+        }
+      ],
       "trading_company": true,
       "bpr_qualifying_trade": true,
       "bpr_qualifying_note": "Wholly or mainly trading (>50pct trading activity); passes HMRC BPR test",
@@ -101,7 +117,6 @@
       "directors_loan_in_credit_to_director": true
     }
   ],
-
   "assets": {
     "pensions": [
       {
@@ -117,7 +132,12 @@
         "charges_percent": 0.0045,
         "nomination": {
           "type": "expression-of-wish",
-          "beneficiaries": [{"name": "Mrs T Director", "pct": 100}],
+          "beneficiaries": [
+            {
+              "name": "Mrs T Director",
+              "pct": 100
+            }
+          ],
           "date_set": "2019-04-01",
           "stale": false
         },
@@ -130,11 +150,22 @@
         "scheme_name": "Mr T Holdings Ltd SSAS",
         "sponsoring_employer": "mrT-holdings-ltd",
         "balance": 485000,
-        "members": ["mrT-director-primary", "mrT-director-partner"],
+        "members": [
+          "mrT-director-primary",
+          "mrT-director-partner"
+        ],
         "employer_contribution_annual": 40000,
         "ssas_holdings": [
-          {"type": "commercial-property", "description": "Business premises leased back to Mr T Holdings Ltd", "value": 310000, "rental_income_to_ssas_annual": 24000},
-          {"type": "diversified-portfolio", "value": 175000}
+          {
+            "type": "commercial-property",
+            "description": "Business premises leased back to Mr T Holdings Ltd",
+            "value": 310000,
+            "rental_income_to_ssas_annual": 24000
+          },
+          {
+            "type": "diversified-portfolio",
+            "value": 175000
+          }
         ],
         "loanback_to_employer": {
           "active": false,
@@ -158,7 +189,6 @@
         "last_valuation_date": "2026-04-15"
       }
     ],
-
     "investments": [
       {
         "id": "company-shares",
@@ -208,7 +238,10 @@
       {
         "id": "gia-joint",
         "owner": "joint",
-        "ownership_split": {"mrT-director-primary": 0.5, "mrT-director-partner": 0.5},
+        "ownership_split": {
+          "mrT-director-primary": 0.5,
+          "mrT-director-partner": 0.5
+        },
         "type": "GIA",
         "provider": "II",
         "balance": 38000,
@@ -216,7 +249,6 @@
         "last_valuation_date": "2026-04-18"
       }
     ],
-
     "property": [
       {
         "id": "main-residence",
@@ -226,11 +258,13 @@
         "purchase_date": "2012-05-10",
         "mortgage_id": "mortgage-primary",
         "ownership": "joint",
-        "ownership_split": {"mrT-director-primary": 0.5, "mrT-director-partner": 0.5},
+        "ownership_split": {
+          "mrT-director-primary": 0.5,
+          "mrT-director-partner": 0.5
+        },
         "last_valuation_date": "2026-02-01"
       }
     ],
-
     "bank": [
       {
         "id": "joint-current",
@@ -251,7 +285,6 @@
       }
     ]
   },
-
   "liabilities": [
     {
       "id": "mortgage-primary",
@@ -267,7 +300,6 @@
       "jointly_held": true
     }
   ],
-
   "protection": [
     {
       "id": "relevant-life-policy",
@@ -277,7 +309,10 @@
       "cover_amount": 1000000,
       "premium_monthly_paid_by_company": 95,
       "trust_status": "in-trust-verified",
-      "trust_beneficiaries": ["Mrs T Director", "child-1"],
+      "trust_beneficiaries": [
+        "Mrs T Director",
+        "child-1"
+      ],
       "note": "Company-paid life cover — tax-efficient as no BIK on director, premiums deductible for company; outside IHT estate via trust"
     },
     {
@@ -298,7 +333,6 @@
       "premium_monthly": 82
     }
   ],
-
   "gifts_and_trusts": [
     {
       "id": "pet-1",
@@ -315,33 +349,102 @@
       "taper_band_note": "Under 3 yrs so 100pct chargeable if death within 7 yrs"
     }
   ],
-
   "events": [
-    {"date": "2003-06-14", "type": "relationship-start", "relationship": "married"},
-    {"date": "2010-02-18", "type": "child-birth", "child_id": "child-1"},
-    {"date": "2012-05-10", "type": "property-purchase", "asset_id": "main-residence", "amount": 540000},
-    {"date": "2014-03-01", "type": "company-incorporation", "company_id": "mrT-holdings-ltd"},
-    {"date": "2019-04-01", "type": "pension-nomination-set", "pension_id": "sipp-primary"},
-    {"date": "2021-09-20", "type": "ssas-establishment", "scheme_id": "ssas-1"},
-    {"date": "2022-11-15", "type": "ssas-property-purchase", "property_value": 310000, "leaseback_established": true},
-    {"date": "2023-12-05", "type": "gift-given", "gift_id": "pet-1", "amount": 25000},
-    {"date": "2025-04-06", "type": "tapered-aa-activation", "adjusted_income": 262000, "tapered_aa": 59000, "note": "First tax year in tapered-AA zone"},
-    {"date": "2026-04-06", "type": "tapered-aa-continues", "adjusted_income": 265070, "tapered_aa": 57465},
-    {"date": "2026-02-01", "type": "property-valuation", "asset_id": "main-residence", "amount": 780000, "verified_by_user": true},
-    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
-    {"date": "2026-04-18", "type": "company-valuation", "company_id": "mrT-holdings-ltd", "value": 2200000, "method": "director-estimate", "fp5_held": false}
+    {
+      "date": "2003-06-14",
+      "type": "relationship-start",
+      "relationship": "married"
+    },
+    {
+      "date": "2010-02-18",
+      "type": "child-birth",
+      "child_id": "child-1"
+    },
+    {
+      "date": "2012-05-10",
+      "type": "property-purchase",
+      "asset_id": "main-residence",
+      "amount": 540000
+    },
+    {
+      "date": "2014-03-01",
+      "type": "company-incorporation",
+      "company_id": "mrT-holdings-ltd"
+    },
+    {
+      "date": "2019-04-01",
+      "type": "pension-nomination-set",
+      "pension_id": "sipp-primary"
+    },
+    {
+      "date": "2021-09-20",
+      "type": "ssas-establishment",
+      "scheme_id": "ssas-1"
+    },
+    {
+      "date": "2022-11-15",
+      "type": "ssas-property-purchase",
+      "property_value": 310000,
+      "leaseback_established": true
+    },
+    {
+      "date": "2023-12-05",
+      "type": "gift-given",
+      "gift_id": "pet-1",
+      "amount": 25000
+    },
+    {
+      "date": "2025-04-06",
+      "type": "tapered-aa-activation",
+      "adjusted_income": 262000,
+      "tapered_aa": 59000,
+      "note": "First tax year in tapered-AA zone"
+    },
+    {
+      "date": "2026-04-06",
+      "type": "tapered-aa-continues",
+      "adjusted_income": 265070,
+      "tapered_aa": 57465
+    },
+    {
+      "date": "2026-02-01",
+      "type": "property-valuation",
+      "asset_id": "main-residence",
+      "amount": 780000,
+      "verified_by_user": true
+    },
+    {
+      "date": "2026-04-15",
+      "type": "pension-valuation-bulk",
+      "verified_by_user": true
+    },
+    {
+      "date": "2026-04-18",
+      "type": "company-valuation",
+      "company_id": "mrT-holdings-ltd",
+      "value": 2200000,
+      "method": "director-estimate",
+      "fp5_held": false
+    }
   ],
-
   "null_coverage": {
     "fp4": [
-      {"location": "companies[0].company_value_estimate", "expected_behaviour": "private-company valuation uncertain; engine projects range around director estimate; BPR IHT relief applies at 100pct regardless of value but net worth displays range"},
-      {"location": "investments.company-shares.estimated_value", "expected_behaviour": "mirrors companies.company_value_estimate; engine uses consistent value across IHT and net worth"}
+      {
+        "location": "companies[0].company_value_estimate",
+        "expected_behaviour": "private-company valuation uncertain; engine projects range around director estimate; BPR IHT relief applies at 100pct regardless of value but net worth displays range"
+      },
+      {
+        "location": "investments.company-shares.estimated_value",
+        "expected_behaviour": "mirrors companies.company_value_estimate; engine uses consistent value across IHT and net worth"
+      }
     ],
     "fp5": [
-      {"location": "events[12].method=director-estimate", "expected_behaviour": "self-reported valuation; engine shows confidence-medium on company-shares line until third-party valuation uploaded"}
+      {
+        "location": "events[12].method=director-estimate",
+        "expected_behaviour": "self-reported valuation; engine shows confidence-medium on company-shares line until third-party valuation uploaded"
+      }
     ]
   },
-
   "archetype_specific": {
     "owner_operator_profile": true,
     "shareholding_pct": 100,
@@ -388,19 +491,27 @@
       "exit_planning_relevance": "Future share sale; currently no exit planned"
     }
   },
-
   "expected_output_envelope": {
     "finio_score": {
-      "value_range": [76, 86],
+      "value_range": [
+        76,
+        86
+      ],
       "confidence": "high",
       "note": "Strong across all dimensions: active tax planning, diversified protection, clean debt, adequate emergency fund, disciplined extraction structure"
     },
     "risk_score": {
-      "value_range": [72, 82],
+      "value_range": [
+        72,
+        82
+      ],
       "confidence": "high"
     },
     "net_worth": {
-      "value_range": [4250000, 4500000],
+      "value_range": [
+        4250000,
+        4500000
+      ],
       "confidence": "medium",
       "staleness_flags": [],
       "excluded_assets": [],
@@ -408,13 +519,24 @@
       "note": "Includes company shares £2.2m, SSAS £485k (jointly with partner), SIPPs, ISAs, GIA, property equity, cash. Director loan £8k in credit adds to net worth."
     },
     "iht_projection": {
-      "value_range": [0, 15000],
+      "value_range": [
+        0,
+        15000
+      ],
       "confidence": "high",
       "explanation": "BPR 100pct on £2.2m company shares + RNRB + TNRB (spouse alive) keeps current exposure near-zero. Policies in trust excluded. Main residence within RNRB-eligible.",
-      "exemption_flags": ["bpr-100pct-trading-shares", "rnrb-available", "policies-in-trust", "spousal-exemption-available"]
+      "exemption_flags": [
+        "bpr-100pct-trading-shares",
+        "rnrb-available",
+        "policies-in-trust",
+        "spousal-exemption-available"
+      ]
     },
     "cost_of_inaction": {
-      "value_range": [0, 20000],
+      "value_range": [
+        0,
+        20000
+      ],
       "confidence": "high",
       "explanation": "Minimal at this stage; BPR qualifying trade status protects significant wealth"
     },

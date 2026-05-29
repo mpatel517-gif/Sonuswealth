@@ -1,11 +1,12 @@
 {
+  "name": "Mr T Bereavement",
+  "dob": "1968-03-12",
+  "age": 58,
   "fixture_id": "mrT-bereavement",
   "fixture_version": "1.0",
   "fixture_date": "2026-05-28",
   "fixture_purpose": "L5-2 vulnerability edge case — recent bereavement (within 12 months). Engine's derivedVulnerability selector should return status='watch' (1 trigger) or 'elevated' (2 triggers) and toneHint should NOT be 'standard'. UI: copy register should be gentle, no urgency banners.",
-
   "id": "mrt-bereavement",
-  "name": "Mr T Bereavement",
   "displayName": "Mr T · 58 · recent bereavement",
   "type": "individual",
   "isIFA": false,
@@ -17,14 +18,17 @@
   "hasTrust": false,
   "hasDBPension": true,
   "isHigherRateTaxpayer": false,
-  "age": 58,
   "targetIncome": 36000,
   "rulesVersion": "UK-2026.1",
   "drawdown": 0,
-
-  "jurisdiction":         { "primary": "UK", "tax_bundle": "UK-2026.1", "domicile": "UK" },
-  "jurisdictionContext":  { "primary": "UK-2026.1" },
-
+  "jurisdiction": {
+    "primary": "UK",
+    "tax_bundle": "UK-2026.1",
+    "domicile": "UK"
+  },
+  "jurisdictionContext": {
+    "primary": "UK-2026.1"
+  },
   "individual": {
     "id": "mrT-bereavement-primary",
     "name": "Mr T Bereavement",
@@ -38,10 +42,8 @@
     "state_pension_accrued_years": 35,
     "life_stage": "preservation"
   },
-
   "maritalStatus": "widowed",
   "previously_married": true,
-
   "events": [
     {
       "type": "spouse_died",
@@ -49,11 +51,24 @@
       "note": "Recent bereavement — within 12 months of as-of date 2026-05-28. Triggers derivedVulnerability."
     }
   ],
-
   "assets": {
-    "isa":     { "value": 18000 },
-    "cash":    { "value": 22000 },
-    "sipp":    { "total": 142000, "pensions": [{ "id": "main", "name": "Aviva DC", "value": 142000, "type": "SIPP" }] },
+    "isa": {
+      "value": 18000
+    },
+    "cash": {
+      "value": 22000
+    },
+    "sipp": {
+      "total": 142000,
+      "pensions": [
+        {
+          "id": "main",
+          "name": "Aviva DC",
+          "value": 142000,
+          "type": "SIPP"
+        }
+      ]
+    },
     "property": {
       "residential": [
         {
@@ -69,21 +84,21 @@
     },
     "protection": {}
   },
-
   "income": {
     "salary": 38000
   },
-
   "expenses": {
     "essentialsMonthly": 2400,
     "annual": 28800
   },
-
   "wills": [
-    { "status": "stale", "date_signed": "2018-05-01", "note": "Pre-bereavement will — review pending" }
+    {
+      "status": "stale",
+      "date_signed": "2018-05-01",
+      "note": "Pre-bereavement will — review pending"
+    }
   ],
   "lpa": [],
-
   "_test_expectations": {
     "derivedVulnerability_status": "watch",
     "derivedVulnerability_reason_pattern": "bereavement",

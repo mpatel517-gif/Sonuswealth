@@ -1,11 +1,17 @@
 {
+  "name": "Mr T Cohab",
+  "dob": "1976-01-15",
+  "age": 50,
   "fixture_id": "mrT-cohab-sep",
   "fixture_version": "1.0",
   "fixture_date": "2026-04-23",
   "fixture_purpose": "UK cohabiting couple separated 8 months ago, Consolidation life stage (age 50 — anchor archetype 26). Was cohabiting 12 years; NOT married. Exercises TOLATA property division in pending-dispute state, absence of spousal exemption on IHT, absence of transferable NRB/RNRB, no PSO rights (cohabitants cannot claim pension-sharing on separation), stale life-insurance nomination (ex-cohabiting partner still named), unprotected pension path on separation, and informal child custody arrangement. Highlights how cohabitants are significantly disadvantaged vs married couples in UK law — key engine output differentiator.",
   "fixture_anchor_archetype": "26",
-  "archetypes_exercised": ["25", "26", "27"],
-
+  "archetypes_exercised": [
+    "25",
+    "26",
+    "27"
+  ],
   "jurisdiction": {
     "primary": "UK",
     "secondary": null,
@@ -13,7 +19,6 @@
     "domicile": "UK",
     "deemed_domicile": false
   },
-
   "individual": {
     "id": "mrT-cohab-sep-primary",
     "name": "Mr T Cohab",
@@ -36,7 +41,6 @@
     "marital_status": "never-married",
     "legal_status_note": "Cohabitants have no automatic financial rights on separation under English law; no right to claim against partner's pension; no spousal IHT exemption; no transferable NRB"
   },
-
   "ex_partner_entity": {
     "id": "mrT-cohab-sep-ex-partner",
     "name": "Ms T Cohab (ex)",
@@ -47,7 +51,6 @@
     "link_status": "retained-non-resident",
     "reason_retained": "Joint property ownership (TOLATA); shared child custody; stale nomination reference"
   },
-
   "relationships": [
     {
       "id": "cohab-1",
@@ -61,7 +64,6 @@
       "children_from_relationship": 1
     }
   ],
-
   "children": [
     {
       "id": "child-1",
@@ -74,7 +76,6 @@
       "rnrb_direct_descendant": true
     }
   ],
-
   "property_disputes": [
     {
       "id": "tolata-1",
@@ -90,7 +91,6 @@
       "engine_note": "Property value uncertain pending TOLATA outcome; engine shows property at full market value with 50% share but flags TOLATA-pending; net worth range reflects possible outcomes 0-100% of 50% share after dispute costs"
     }
   ],
-
   "assets": {
     "pensions": [
       {
@@ -105,7 +105,12 @@
         "charges_percent": 0.004,
         "nomination": {
           "type": "expression-of-wish",
-          "beneficiaries": [{"name": "Ms T Cohab (ex)", "pct": 100}],
+          "beneficiaries": [
+            {
+              "name": "Ms T Cohab (ex)",
+              "pct": 100
+            }
+          ],
           "date_set": "2018-09-15",
           "stale": true,
           "stale_reason": "Ex-cohabiting partner named; relationship ended 8 months ago; engine flags: 'Pension nomination names ex-partner — update required'; no legal bar to keeping this but strong recommendation to update"
@@ -127,7 +132,6 @@
         "last_valuation_date": "2026-04-10"
       }
     ],
-
     "investments": [
       {
         "id": "isa-ss",
@@ -141,7 +145,6 @@
         "last_valuation_date": "2026-04-20"
       }
     ],
-
     "property": [
       {
         "id": "main-residence-joint",
@@ -161,7 +164,6 @@
         "engine_note": "Property counted at 50% of market value (£210k) for this individual's net worth; TOLATA outcome may reduce to 0% or increase up to 100% after costs; wide confidence range"
       }
     ],
-
     "bank": [
       {
         "id": "current-1",
@@ -180,7 +182,6 @@
       }
     ]
   },
-
   "liabilities": [
     {
       "id": "mortgage-joint",
@@ -224,7 +225,6 @@
       "note": "Accumulated post-separation; covering rental costs and legal retainer"
     }
   ],
-
   "protection": [
     {
       "id": "life-1",
@@ -251,34 +251,97 @@
       "start_date": "2019-06-01"
     }
   ],
-
   "gifts_and_trusts": [],
-
   "events": [
-    {"date": "2012-06-01", "type": "cohabitation-start", "partner_ref": "mrT-cohab-sep-ex-partner"},
-    {"date": "2014-11-20", "type": "property-purchase", "asset_id": "main-residence-joint", "amount": 285000, "ownership": "tenants-in-common-50-50", "jointly": true, "cohabitation_agreement": false},
-    {"date": "2016-03-08", "type": "child-birth", "child_id": "child-1"},
-    {"date": "2018-09-15", "type": "pension-nomination-set", "pension_id": "sipp-primary", "nominee": "ex-partner"},
-    {"date": "2025-08-10", "type": "cohabitation-separation", "reason": "relationship-breakdown", "months_ago": 8.4},
-    {"date": "2025-08-15", "type": "rental-start", "monthly_rent": 1650, "note": "Left shared property; ex-partner remains in occupation"},
-    {"date": "2026-01-20", "type": "tolata-claim-filed", "dispute_id": "tolata-1", "property_id": "main-residence-joint"},
-    {"date": "2026-03-01", "type": "property-valuation", "asset_id": "main-residence-joint", "amount": 420000, "verified_by_user": true},
-    {"date": "2026-04-15", "type": "pension-valuation-bulk", "verified_by_user": true},
-    {"date": "2026-04-23", "type": "tolata-status-check", "status": "pending", "expected_resolution": "Q4 2026 earliest", "engine_action": "APQ active: chase TOLATA outcome; update property net worth when resolved"}
+    {
+      "date": "2012-06-01",
+      "type": "cohabitation-start",
+      "partner_ref": "mrT-cohab-sep-ex-partner"
+    },
+    {
+      "date": "2014-11-20",
+      "type": "property-purchase",
+      "asset_id": "main-residence-joint",
+      "amount": 285000,
+      "ownership": "tenants-in-common-50-50",
+      "jointly": true,
+      "cohabitation_agreement": false
+    },
+    {
+      "date": "2016-03-08",
+      "type": "child-birth",
+      "child_id": "child-1"
+    },
+    {
+      "date": "2018-09-15",
+      "type": "pension-nomination-set",
+      "pension_id": "sipp-primary",
+      "nominee": "ex-partner"
+    },
+    {
+      "date": "2025-08-10",
+      "type": "cohabitation-separation",
+      "reason": "relationship-breakdown",
+      "months_ago": 8.4
+    },
+    {
+      "date": "2025-08-15",
+      "type": "rental-start",
+      "monthly_rent": 1650,
+      "note": "Left shared property; ex-partner remains in occupation"
+    },
+    {
+      "date": "2026-01-20",
+      "type": "tolata-claim-filed",
+      "dispute_id": "tolata-1",
+      "property_id": "main-residence-joint"
+    },
+    {
+      "date": "2026-03-01",
+      "type": "property-valuation",
+      "asset_id": "main-residence-joint",
+      "amount": 420000,
+      "verified_by_user": true
+    },
+    {
+      "date": "2026-04-15",
+      "type": "pension-valuation-bulk",
+      "verified_by_user": true
+    },
+    {
+      "date": "2026-04-23",
+      "type": "tolata-status-check",
+      "status": "pending",
+      "expected_resolution": "Q4 2026 earliest",
+      "engine_action": "APQ active: chase TOLATA outcome; update property net worth when resolved"
+    }
   ],
-
   "null_coverage": {
     "fp4": [
-      {"location": "property_disputes[0].status", "expected_behaviour": "TOLATA pending — property beneficial interest uncertain; engine shows 50% share as current value but flags wide range; net worth confidence = low for property component; scenario outputs: 0% share (loss), 50% (status quo), 100% (win)"},
-      {"location": "liabilities[2].estimated_amount", "expected_behaviour": "Legal costs uncertain; engine uses £15k mid-range estimate as committed liability in net worth calculation; flags as estimated; range in output"},
-      {"location": "children[0].custody_arrangement", "expected_behaviour": "Informal custody — no CMS assessment; engine flags: potential maintenance liability if ex-partner applies; cashflow engine adds sensitivity note not a committed outflow"}
+      {
+        "location": "property_disputes[0].status",
+        "expected_behaviour": "TOLATA pending — property beneficial interest uncertain; engine shows 50% share as current value but flags wide range; net worth confidence = low for property component; scenario outputs: 0% share (loss), 50% (status quo), 100% (win)"
+      },
+      {
+        "location": "liabilities[2].estimated_amount",
+        "expected_behaviour": "Legal costs uncertain; engine uses £15k mid-range estimate as committed liability in net worth calculation; flags as estimated; range in output"
+      },
+      {
+        "location": "children[0].custody_arrangement",
+        "expected_behaviour": "Informal custody — no CMS assessment; engine flags: potential maintenance liability if ex-partner applies; cashflow engine adds sensitivity note not a committed outflow"
+      }
     ],
     "fp5": [
-      {"location": "assets.pensions[0].nomination.stale", "expected_behaviour": "Stale pension nomination on ex-cohabiting partner; engine generates high-priority APQ; unlike divorce (automatic nomination invalidation not applicable for cohabitants); pension could pass to ex-partner on death if not updated"},
-      {"location": "protection[0].nomination.stale", "expected_behaviour": "Stale life policy nomination on ex-cohabiting partner; engine generates high-priority APQ; policy not in trust so proceeds could pass to estate or named ex-partner depending on policy terms"}
+      {
+        "location": "assets.pensions[0].nomination.stale",
+        "expected_behaviour": "Stale pension nomination on ex-cohabiting partner; engine generates high-priority APQ; unlike divorce (automatic nomination invalidation not applicable for cohabitants); pension could pass to ex-partner on death if not updated"
+      },
+      {
+        "location": "protection[0].nomination.stale",
+        "expected_behaviour": "Stale life policy nomination on ex-cohabiting partner; engine generates high-priority APQ; policy not in trust so proceeds could pass to estate or named ex-partner depending on policy terms"
+      }
     ]
   },
-
   "archetype_specific": {
     "cohab_duration_years": 13.2,
     "separation_months_ago": 8.4,
@@ -303,56 +366,142 @@
       "disadvantage_gbp": 325000,
       "note": "If dies before TOLATA resolves and before updating nominations, estate worse off vs married equivalent by potentially £325k transferable NRB"
     },
-    "stale_nominations": ["sipp-primary", "life-1"],
+    "stale_nominations": [
+      "sipp-primary",
+      "life-1"
+    ],
     "cohabitation_agreement_exists": false,
     "cohabitation_agreement_apq": "No cohabitation agreement was in place — lesson learned; APQ: consider deed of trust / cohabitation agreement if entering new relationship"
   },
-
   "expected_output_envelope": {
     "finio_score": {
-      "value_range": [50, 63],
+      "value_range": [
+        50,
+        63
+      ],
       "confidence": "low",
       "confidence_reason": "TOLATA property value uncertain; stale nominations on both pension and life policy; double housing costs compress cashflow score; IHT position structurally weaker than married equivalent",
       "dimensions": {
-        "behaviour": {"range": [55, 68], "confidence": "medium"},
-        "capital": {"range": [40, 60], "confidence": "low", "note": "TOLATA outcome drives wide range on property component"},
-        "tax": {"range": [55, 68], "confidence": "high"},
-        "protection": {"range": [25, 42], "confidence": "medium", "note": "Policies in place but both stale nominations; no trust structure"},
-        "cashflow": {"range": [35, 52], "confidence": "medium", "note": "Double housing costs; mortgage + rent; credit card building"},
-        "debt": {"range": [45, 60], "confidence": "medium", "note": "Joint mortgage liability continues; rental commitment; legal costs estimate pending"},
-        "estate": {"range": [28, 42], "confidence": "low", "note": "No spousal exemption; no transferable NRB; stale nominations — structurally weakest dimension"}
+        "behaviour": {
+          "range": [
+            55,
+            68
+          ],
+          "confidence": "medium"
+        },
+        "capital": {
+          "range": [
+            40,
+            60
+          ],
+          "confidence": "low",
+          "note": "TOLATA outcome drives wide range on property component"
+        },
+        "tax": {
+          "range": [
+            55,
+            68
+          ],
+          "confidence": "high"
+        },
+        "protection": {
+          "range": [
+            25,
+            42
+          ],
+          "confidence": "medium",
+          "note": "Policies in place but both stale nominations; no trust structure"
+        },
+        "cashflow": {
+          "range": [
+            35,
+            52
+          ],
+          "confidence": "medium",
+          "note": "Double housing costs; mortgage + rent; credit card building"
+        },
+        "debt": {
+          "range": [
+            45,
+            60
+          ],
+          "confidence": "medium",
+          "note": "Joint mortgage liability continues; rental commitment; legal costs estimate pending"
+        },
+        "estate": {
+          "range": [
+            28,
+            42
+          ],
+          "confidence": "low",
+          "note": "No spousal exemption; no transferable NRB; stale nominations — structurally weakest dimension"
+        }
       }
     },
     "risk_score": {
-      "value_range": [44, 58],
+      "value_range": [
+        44,
+        58
+      ],
       "confidence": "low"
     },
     "net_worth": {
-      "value_range": [165000, 380000],
+      "value_range": [
+        165000,
+        380000
+      ],
       "confidence": "low",
       "property_scenarios": {
-        "tolata_win_50pct_share": [330000, 380000],
-        "tolata_neutral_50pct": [245000, 280000],
-        "tolata_loss_0pct_after_costs": [165000, 195000]
+        "tolata_win_50pct_share": [
+          330000,
+          380000
+        ],
+        "tolata_neutral_50pct": [
+          245000,
+          280000
+        ],
+        "tolata_loss_0pct_after_costs": [
+          165000,
+          195000
+        ]
       },
       "staleness_flags": [],
       "excluded_assets": [],
       "note": "Wide range entirely driven by TOLATA property outcome"
     },
     "iht_projection": {
-      "value_range": [0, 55000],
+      "value_range": [
+        0,
+        55000
+      ],
       "confidence": "low",
       "confidence_reason": "Property outcome uncertain; no spousal exemption; no transferable NRB makes mid-scenario estate marginally exposed",
       "scenario_ranges": {
-        "tolata_win_estate_above_325k_nrb": [25000, 55000],
-        "tolata_neutral_below_nrb": [0, 5000],
-        "tolata_loss": [0, 0]
+        "tolata_win_estate_above_325k_nrb": [
+          25000,
+          55000
+        ],
+        "tolata_neutral_below_nrb": [
+          0,
+          5000
+        ],
+        "tolata_loss": [
+          0,
+          0
+        ]
       },
-      "exemption_flags": ["rnrb-direct-descendant-available", "no-spousal-exemption", "no-transferable-nrb"],
+      "exemption_flags": [
+        "rnrb-direct-descendant-available",
+        "no-spousal-exemption",
+        "no-transferable-nrb"
+      ],
       "structural_note": "Same wealth level as mrT-couple would have zero IHT exposure (£650k combined NRB); cohabiting status alone creates IHT disadvantage"
     },
     "cost_of_inaction": {
-      "value_range": [5000, 40000],
+      "value_range": [
+        5000,
+        40000
+      ],
       "confidence": "low",
       "explanation": "Primary: TOLATA delay — each month unresolved costs double housing costs (~£1,920/mo = £23k/yr). Secondary: stale nominations risk pension/life proceeds going to ex-partner. Tertiary: no spousal exemption means IHT planning gap."
     },

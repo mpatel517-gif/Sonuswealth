@@ -1,12 +1,19 @@
 {
+  "name": "Mr T Family",
+  "dob": "1983-10-22",
+  "age": 42,
   "fixture_id": "mrT-family",
   "fixture_version": "1.1",
   "fixture_date": "2026-04-23",
   "fixture_purpose": "UK family at Accumulation life stage. Primary adult with partner and 2 children (one minor, one adult). Exercises JISA, HICBC taper band, education funding projection, life cover in trust (both correct and claimed-but-unverified), PET to adult child, GROB trap, and family protection gap calc.",
   "fixture_anchor_archetype": "16",
-  "archetypes_exercised": ["15", "16", "17", "18"],
+  "archetypes_exercised": [
+    "15",
+    "16",
+    "17",
+    "18"
+  ],
   "v1_1_changes": "archetypes_exercised corrected 15-21 to 15-18 (Family Primary × 4 per archetype doc v1.0); inline FP markers removed from events[] and gifts_and_trusts[] (retained only in null_coverage); charges_percent added to all pensions",
-
   "jurisdiction": {
     "primary": "UK",
     "secondary": null,
@@ -14,7 +21,6 @@
     "domicile": "UK",
     "deemed_domicile": false
   },
-
   "individual": {
     "id": "mrT-family-primary",
     "name": "Mr T Family",
@@ -34,7 +40,6 @@
     "state_pension_accrued_years": 17,
     "life_stage": "accumulation"
   },
-
   "partner": {
     "id": "mrT-family-partner",
     "name": "Mrs T Family",
@@ -46,7 +51,6 @@
     "income_band": "basic-rate",
     "state_pension_accrued_years": 12
   },
-
   "relationships": [
     {
       "id": "marriage-1",
@@ -58,7 +62,6 @@
       "children_from_relationship": 2
     }
   ],
-
   "children": [
     {
       "id": "child-minor",
@@ -81,7 +84,6 @@
       "university_years_remaining": 3
     }
   ],
-
   "assets": {
     "pensions": [
       {
@@ -96,7 +98,12 @@
         "charges_percent": 0.0075,
         "nomination": {
           "type": "expression-of-wish",
-          "beneficiaries": [{"name": "Mrs T Family", "pct": 100}],
+          "beneficiaries": [
+            {
+              "name": "Mrs T Family",
+              "pct": 100
+            }
+          ],
           "date_set": "2020-05-08",
           "stale": false
         },
@@ -114,7 +121,6 @@
         "last_valuation_date": "2026-04-10"
       }
     ],
-
     "investments": [
       {
         "id": "isa-ss-primary",
@@ -156,7 +162,6 @@
         "last_valuation_date": "2026-04-18"
       }
     ],
-
     "property": [
       {
         "id": "main-residence",
@@ -169,7 +174,6 @@
         "last_valuation_date": "2026-02-15"
       }
     ],
-
     "bank": [
       {
         "id": "joint-current",
@@ -199,7 +203,6 @@
         "last_valuation_date": "2026-04-22"
       }
     ],
-
     "other": [
       {
         "id": "family-car",
@@ -211,7 +214,6 @@
       }
     ]
   },
-
   "liabilities": [
     {
       "id": "mortgage-primary",
@@ -236,7 +238,6 @@
       "term_remaining_months": 28
     }
   ],
-
   "protection": [
     {
       "id": "life-joint-ft-in-trust",
@@ -247,7 +248,10 @@
       "term_years": 20,
       "start_date": "2015-05-01",
       "trust_status": "in-trust-verified",
-      "trust_beneficiaries": ["child-minor", "child-adult"]
+      "trust_beneficiaries": [
+        "child-minor",
+        "child-adult"
+      ]
     },
     {
       "id": "life-primary-separate",
@@ -268,7 +272,6 @@
       "premium_monthly": 45
     }
   ],
-
   "gifts_and_trusts": [
     {
       "id": "pet-to-adult-child",
@@ -315,34 +318,110 @@
       "note": "Primary's parent estate not yet settled; placeholder for Preservation snapshot testing"
     }
   ],
-
   "events": [
-    {"date": "2006-08-15", "type": "child-birth", "child_id": "child-adult"},
-    {"date": "2011-07-02", "type": "relationship-start", "relationship": "married"},
-    {"date": "2012-04-18", "type": "child-birth", "child_id": "child-minor"},
-    {"date": "2015-04-12", "type": "property-purchase", "asset_id": "main-residence", "amount": 385000},
-    {"date": "2015-05-01", "type": "protection-start", "policy_id": "life-joint-ft-in-trust", "in-trust-verified": true},
-    {"date": "2020-05-08", "type": "pension-nomination-set", "pension_id": "sipp-primary"},
-    {"date": "2022-09-10", "type": "protection-start", "policy_id": "life-primary-separate", "trust_status_claimed": "in-trust", "trust_docs_received": false},
-    {"date": "2023-06-01", "type": "gift-given", "gift_id": "grob-family-car", "classification_at_entry": "PET-claimed", "engine_reclassification": "GROB-on-review"},
-    {"date": "2024-09-15", "type": "gift-given", "gift_id": "pet-to-adult-child", "amount": 12000},
-    {"date": "2025-12-01", "type": "gift-given", "gift_id": "pet-regular-from-surplus-income", "amount": 2400, "exempt": true},
-    {"date": "2026-02-15", "type": "property-valuation", "asset_id": "main-residence", "amount": 485000, "verified_by_user": true},
-    {"date": "2026-03-20", "type": "document-upload", "document_ref": "nutmeg-sipp-statement-q1-2026.pdf", "verified_by_user": true, "ai_parse_confidence": 0.94},
-    {"date": "2026-04-05", "type": "document-upload", "document_ref": "hargreaves-jisa-statement.pdf", "ai_parse_confidence": 0.60, "engine_action": "held-pending-user-confirmation"}
+    {
+      "date": "2006-08-15",
+      "type": "child-birth",
+      "child_id": "child-adult"
+    },
+    {
+      "date": "2011-07-02",
+      "type": "relationship-start",
+      "relationship": "married"
+    },
+    {
+      "date": "2012-04-18",
+      "type": "child-birth",
+      "child_id": "child-minor"
+    },
+    {
+      "date": "2015-04-12",
+      "type": "property-purchase",
+      "asset_id": "main-residence",
+      "amount": 385000
+    },
+    {
+      "date": "2015-05-01",
+      "type": "protection-start",
+      "policy_id": "life-joint-ft-in-trust",
+      "in-trust-verified": true
+    },
+    {
+      "date": "2020-05-08",
+      "type": "pension-nomination-set",
+      "pension_id": "sipp-primary"
+    },
+    {
+      "date": "2022-09-10",
+      "type": "protection-start",
+      "policy_id": "life-primary-separate",
+      "trust_status_claimed": "in-trust",
+      "trust_docs_received": false
+    },
+    {
+      "date": "2023-06-01",
+      "type": "gift-given",
+      "gift_id": "grob-family-car",
+      "classification_at_entry": "PET-claimed",
+      "engine_reclassification": "GROB-on-review"
+    },
+    {
+      "date": "2024-09-15",
+      "type": "gift-given",
+      "gift_id": "pet-to-adult-child",
+      "amount": 12000
+    },
+    {
+      "date": "2025-12-01",
+      "type": "gift-given",
+      "gift_id": "pet-regular-from-surplus-income",
+      "amount": 2400,
+      "exempt": true
+    },
+    {
+      "date": "2026-02-15",
+      "type": "property-valuation",
+      "asset_id": "main-residence",
+      "amount": 485000,
+      "verified_by_user": true
+    },
+    {
+      "date": "2026-03-20",
+      "type": "document-upload",
+      "document_ref": "nutmeg-sipp-statement-q1-2026.pdf",
+      "verified_by_user": true,
+      "ai_parse_confidence": 0.94
+    },
+    {
+      "date": "2026-04-05",
+      "type": "document-upload",
+      "document_ref": "hargreaves-jisa-statement.pdf",
+      "ai_parse_confidence": 0.6,
+      "engine_action": "held-pending-user-confirmation"
+    }
   ],
-
   "null_coverage": {
     "fp4": [
-      {"location": "assets.investments[2].growth_rate_assumption", "expected_behaviour": "JISA projection returns range bounded by conservative/optimistic scenarios for education funding"},
-      {"location": "gifts_and_trusts[2].engine_detection_required", "expected_behaviour": "GROB detection must flag reservation-of-benefit; gift remains in-estate for IHT; APQ item generated"}
+      {
+        "location": "assets.investments[2].growth_rate_assumption",
+        "expected_behaviour": "JISA projection returns range bounded by conservative/optimistic scenarios for education funding"
+      },
+      {
+        "location": "gifts_and_trusts[2].engine_detection_required",
+        "expected_behaviour": "GROB detection must flag reservation-of-benefit; gift remains in-estate for IHT; APQ item generated"
+      }
     ],
     "fp5": [
-      {"location": "protection[1].trust_status", "expected_behaviour": "Engine treats life-primary-separate as in-estate until trust docs provided; APQ trust-verification item generated"},
-      {"location": "events[12].ai_parse_confidence", "expected_behaviour": "JISA statement held in ingest-pending state; engine uses last verified value; APQ reconciliation item"}
+      {
+        "location": "protection[1].trust_status",
+        "expected_behaviour": "Engine treats life-primary-separate as in-estate until trust docs provided; APQ trust-verification item generated"
+      },
+      {
+        "location": "events[12].ai_parse_confidence",
+        "expected_behaviour": "JISA statement held in ingest-pending state; engine uses last verified value; APQ reconciliation item"
+      }
     ]
   },
-
   "archetype_specific": {
     "children_count": 2,
     "minor_children_count": 1,
@@ -356,13 +435,27 @@
       "effective_hicbc_charge": 1739
     },
     "education_funding_goal": {
-      "child-adult": {"annual_cost": 15500, "years_remaining": 3, "total_remaining": 46500, "shortfall_vs_pot": 28500},
-      "child-minor": {"target_start_year": 2030, "projected_annual_cost": 19000, "years_until_start": 4, "funding_vehicle": "jisa-child-minor"}
+      "child-adult": {
+        "annual_cost": 15500,
+        "years_remaining": 3,
+        "total_remaining": 46500,
+        "shortfall_vs_pot": 28500
+      },
+      "child-minor": {
+        "target_start_year": 2030,
+        "projected_annual_cost": 19000,
+        "years_until_start": 4,
+        "funding_vehicle": "jisa-child-minor"
+      }
     },
     "grob_case_active": true,
     "life_cover_in_trust_states": {
-      "correct": ["life-joint-ft-in-trust"],
-      "claimed_but_unverified": ["life-primary-separate"]
+      "correct": [
+        "life-joint-ft-in-trust"
+      ],
+      "claimed_but_unverified": [
+        "life-primary-separate"
+      ]
     },
     "family_protection_gap": {
       "cover_in_place": 550000,
@@ -373,41 +466,71 @@
       "note": "Gap includes the £200k life-primary-separate being treated as in-estate until trust verified"
     }
   },
-
   "expected_output_envelope": {
     "finio_score": {
-      "value_range": [62, 72],
+      "value_range": [
+        62,
+        72
+      ],
       "confidence": "medium",
-      "confidence_downgrade_reasons": ["jisa-null-growth", "life-trust-unverified", "grob-complexity"],
+      "confidence_downgrade_reasons": [
+        "jisa-null-growth",
+        "life-trust-unverified",
+        "grob-complexity"
+      ],
       "dimensions_to_populate_in_session_3": "7 FINIO-1.0 dimensions per Part 3 spec"
     },
     "risk_score": {
-      "value_range": [55, 68],
+      "value_range": [
+        55,
+        68
+      ],
       "confidence": "medium",
       "confidence_reason": "Family protection gap present; trust status unverified on key policy"
     },
     "net_worth": {
-      "value_range": [420000, 450000],
+      "value_range": [
+        420000,
+        450000
+      ],
       "confidence": "high",
       "joint_net_worth_calc": "(individual + joint assets) - (joint + individual liabilities)",
       "staleness_flags": []
     },
     "iht_projection": {
-      "value_range": [8000, 45000],
+      "value_range": [
+        8000,
+        45000
+      ],
       "confidence": "low",
       "confidence_reason": "GROB classification uncertain; trust status on £200k cover unverified; treats cover as in-estate conservatively",
       "scenario_ranges": {
-        "if_grob_confirmed_and_life_in_trust_verified": [0, 5000],
-        "if_grob_confirmed_and_life_not_in_trust": [15000, 25000],
-        "if_no_grob_and_life_in_trust": [0, 5000],
-        "if_no_grob_and_life_not_in_trust": [10000, 20000]
+        "if_grob_confirmed_and_life_in_trust_verified": [
+          0,
+          5000
+        ],
+        "if_grob_confirmed_and_life_not_in_trust": [
+          15000,
+          25000
+        ],
+        "if_no_grob_and_life_in_trust": [
+          0,
+          5000
+        ],
+        "if_no_grob_and_life_not_in_trust": [
+          10000,
+          20000
+        ]
       },
       "spousal_exemption_first_death": true,
       "rnrb_direct_descendant_check": true,
       "rnrb_both_transferable": true
     },
     "cost_of_inaction": {
-      "value_range": [8000, 45000],
+      "value_range": [
+        8000,
+        45000
+      ],
       "confidence": "low",
       "explanation": "Matches IHT projection range; action = verify life-insurance trust status + clarify GROB with adviser"
     },

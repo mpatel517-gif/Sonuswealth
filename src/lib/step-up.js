@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/lib/step-up.js
+ * Sonuswealth · src/lib/step-up.js
  *
  * Step-up authentication primitive (D-AUTH-1 / Phase 1.5 AU3).
  *

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA / FINIO — ENGINE BUNDLE INDIRECTION LAYER
+// SONUSWEALTH / FINIO — ENGINE BUNDLE INDIRECTION LAYER
 //
 // Single point where the engine reads its UK rules bundle and macro variables.
 // Other engine modules import from here instead of from the JSON file directly,

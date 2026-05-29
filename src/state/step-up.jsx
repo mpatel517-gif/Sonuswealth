@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/state/step-up.jsx
+ * Sonuswealth · src/state/step-up.jsx
  *
  * <StepUpProvider> — installs the modal that handles step-up challenges
  * requested via `requireStepUp()` from `src/lib/step-up.js`.

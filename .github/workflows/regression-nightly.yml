@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# L4-4 — Nightly persona regression
+#
+# Runs every night at 03:17 UTC. Captures fresh snapshots for every
+# (persona × tax-year) pair in tests/regression-baseline.json, diffs against
+# the baseline, fails the workflow + posts to Slack on drift.
+#
+# Workflow is DISABLED until you seed the baseline:
+#   npm run regression:capture
+#   git add tests/regression-baseline.json && git commit && git push
+#
+# Once the baseline exists in the repo and the schedule trigger is uncommented
+# (see "when ready" comment below), every push to main + the nightly cron
+# will run this check.
+#
+# Required secrets (Settings → Secrets → Actions):
+#   CRON_SLACK_WEBHOOK   — Slack incoming webhook URL (same one used by
+#                          cron-health-check; can be shared)
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: regression-nightly
+
+on:
+  # When ready, uncomment the schedule trigger and the push trigger.
+  # Leave workflow_dispatch always enabled so you can re-run on demand.
+  #
+  # schedule:
+  #   - cron: '17 3 * * *'   # 03:17 UTC every day
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'src/engine/**'
+  #     - 'src/rules/**'
+  #     - 'tests/regression-baseline.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify baseline file exists
+        run: |
+          if [ ! -f tests/regression-baseline.json ]; then
+            echo "::error::tests/regression-baseline.json missing. Run \`npm run regression:capture\` locally then commit."
+            exit 1
+          fi
+          echo "Baseline: $(jq '._meta.cellCount' tests/regression-baseline.json) cells"
+
+      - name: Run regression diff
+        id: diff
+        run: npm run regression:check
+        continue-on-error: true
+
+      - name: Upload result report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-result
+          path: tests/reports/regression-result-*.json
+          retention-days: 30
+
+      - name: Slack alert on drift
+        if: steps.diff.outcome == 'failure' && env.CRON_SLACK_WEBHOOK != ''
+        env:
+          CRON_SLACK_WEBHOOK: ${{ secrets.CRON_SLACK_WEBHOOK }}
+        run: |
+          REPORT=$(ls -t tests/reports/regression-result-*.json | head -1)
+          DRIFT=$(jq '.summary.drifted' "$REPORT")
+          MISSING=$(jq '.summary.missingInFresh' "$REPORT")
+          MATCHED=$(jq '.summary.matched' "$REPORT")
+          TOTAL=$(jq '.summary.baselineCount' "$REPORT")
+          curl -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"*Sonuswealth nightly regression* — ${DRIFT} drifted / ${MISSING} missing / ${MATCHED} of ${TOTAL} matched. Report: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$CRON_SLACK_WEBHOOK"
+
+      - name: Fail the workflow if drift detected
+        if: steps.diff.outcome == 'failure'
+        run: |
+          echo "::error::Regression drift detected — see uploaded artifact for details."
+          exit 1

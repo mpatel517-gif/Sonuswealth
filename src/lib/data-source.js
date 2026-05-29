@@ -1,5 +1,5 @@
 /**
- * Caelixa Data Source — Unified read/write layer
+ * Sonuswealth Data Source — Unified read/write layer
  *
  * Resolves data from Supabase (primary) with JSON fallback (dev offline).
  *

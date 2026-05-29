@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/state/auth.jsx
+ * Sonuswealth · src/state/auth.jsx
  *
  * React context wrapping the auth client. Exposes:
  *   - user, session, loading, isAuthenticated, isEmailVerified

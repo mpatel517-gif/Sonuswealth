@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/lib/auth.js
+ * Sonuswealth · src/lib/auth.js
  *
  * Thin wrapper over supabase.auth so screens can call signUp / signIn / signOut
  * without knowing about the Supabase client shape. Also exposes

@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/lib/boot-rules.js
+ * Sonuswealth · src/lib/boot-rules.js
  *
  * Browser-side boot hook: fetches the active UK rules bundle + live macro
  * variables from Supabase and injects them into the engine via _bundle.js.

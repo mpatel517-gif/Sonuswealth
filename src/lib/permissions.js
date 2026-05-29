@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/lib/permissions.js
+ * Sonuswealth · src/lib/permissions.js
  *
  * X27 permission matrix (Phase 1.5 AU5).
  *

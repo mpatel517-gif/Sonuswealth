@@ -31,6 +31,7 @@ export function DrillableNumber({
   source,
   confidence = 'high',
   breakdown,
+  editable,
   onDrill,
   children,
 }) {
@@ -38,7 +39,9 @@ export function DrillableNumber({
 
   const handleActivate = () => {
     if (typeof onDrill === 'function') {
-      onDrill({ metric, value, formula, source, confidence, breakdown })
+      // `editable` forwards the leaf's correction descriptor so the pushed
+      // L panel can render the "correct this value" form.
+      onDrill({ metric, value, formula, source, confidence, breakdown, editable })
     }
   }
 

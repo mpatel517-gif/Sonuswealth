@@ -29,7 +29,7 @@ const pct = (n, dp = 2) => `${(n * 100).toFixed(dp)}%`
 //   { metric, formula, source, confidence, breakdown }
 // Returned object is consumed by BreakdownList → DrillableNumber → next L.
 
-export function pensionSchemeL5(p, parentSource) {
+export function pensionSchemeL5(p, parentSource, editable) {
   if (!p) return null
   const balance = +(p.value ?? p.balance_gbp ?? p.balance ?? 0) || 0
   const rows = []
@@ -50,10 +50,11 @@ export function pensionSchemeL5(p, parentSource) {
     source: `${parentSource} — single row drilled into its full record.`,
     confidence: 'high',
     breakdown: rows.length > 0 ? rows : placeholder('Scheme detail'),
+    editable: editable || undefined,
   }
 }
 
-export function propertyL5(prop, parentSource, parentLabel = 'Property') {
+export function propertyL5(prop, parentSource, parentLabel = 'Property', editable) {
   if (!prop) return null
   const rows = []
   if (prop.address) rows.push({ label: 'Address', value: prop.address })
@@ -86,10 +87,11 @@ export function propertyL5(prop, parentSource, parentLabel = 'Property') {
     source: `${parentSource} — single row drilled into its full record.`,
     confidence: 'high',
     breakdown: rows.length > 0 ? rows : placeholder('Property detail'),
+    editable: editable || undefined,
   }
 }
 
-export function investmentHoldingL5(inv, parentSource, parentLabel = 'Holding') {
+export function investmentHoldingL5(inv, parentSource, parentLabel = 'Holding', editable) {
   if (!inv) return null
   const rows = []
   if (inv.provider) rows.push({ label: 'Provider', value: inv.provider })
@@ -109,6 +111,7 @@ export function investmentHoldingL5(inv, parentSource, parentLabel = 'Holding') 
     source: `${parentSource} — single row drilled into its full record.`,
     confidence: inv.verified_by_user ? 'high' : 'medium',
     breakdown: rows.length > 0 ? rows : placeholder('Holding detail'),
+    editable: editable || undefined,
   }
 }
 
@@ -196,13 +199,21 @@ export function incomePayload(entity, sourceKey, total) {
 
     case 'dividends': {
       const v = +inc.dividends || 0
+      // Iterate the REAL array with index so the L5 edit path targets the
+      // correct assets.investments[i] record (not a filtered-array index).
       const fromInv = Array.isArray(a.investments)
         ? a.investments
-            .filter((x) => x?.annual_dividend > 0)
-            .map((x) => ({
+            .map((x, idx) => ({ x, idx }))
+            .filter(({ x }) => x?.annual_dividend > 0)
+            .map(({ x, idx }) => ({
               label: x.name || x.type || 'Holding',
               value: fmt(+x.annual_dividend || 0),
-              drill: investmentHoldingL5(x, 'assets.investments[]', 'Dividend-paying holding'),
+              drill: investmentHoldingL5(x, 'assets.investments[]', 'Dividend-paying holding', {
+                path: `assets.investments[${idx}].annual_dividend`,
+                label: `${x.name || 'Holding'} annual dividend`,
+                currentValue: +x.annual_dividend || 0,
+                unit: '£',
+              }),
             }))
         : []
       return {
@@ -223,16 +234,29 @@ export function incomePayload(entity, sourceKey, total) {
       // Rental: aliases — show the source path that was non-zero
       const rA = +inc.rental || 0
       const rB = +inc.rentalIncome || 0
-      // Walk assets.property[] for let units. Each row carries a `drill`
-      // payload so tapping the gross-rent value pushes the per-property L5.
-      const letProps = Array.isArray(a.property)
-        ? a.property.filter((p) => p?.isRental || p?.rentalGrossAnnual > 0 || p?.rental_income > 0 || p?.rentalIncome > 0)
-        : []
-      const fromProperties = letProps.map((p) => ({
-        label: p.address || p.name || 'Let property',
-        value: fmt(+(p.rentalGrossAnnual ?? p.rental_income ?? p.rentalIncome ?? 0)),
-        drill: propertyL5(p, 'assets.property[]', 'Rental property'),
-      }))
+      // Walk assets.property[] for let units. Iterate the REAL array with
+      // index so the L5 edit path targets assets.property[i] correctly.
+      // Each row carries a `drill` payload so tapping the gross-rent value
+      // pushes the per-property L5 (which is itself editable).
+      const fromProperties = (Array.isArray(a.property) ? a.property : [])
+        .map((p, idx) => ({ p, idx }))
+        .filter(({ p }) => p?.isRental || p?.rentalGrossAnnual > 0 || p?.rental_income > 0 || p?.rentalIncome > 0)
+        .map(({ p, idx }) => {
+          const grossField = p.rentalGrossAnnual != null ? 'rentalGrossAnnual'
+                           : p.rental_income != null ? 'rental_income'
+                           : 'rentalIncome'
+          const grossVal = +(p.rentalGrossAnnual ?? p.rental_income ?? p.rentalIncome ?? 0)
+          return {
+            label: p.address || p.name || 'Let property',
+            value: fmt(grossVal),
+            drill: propertyL5(p, 'assets.property[]', 'Rental property', {
+              path: `assets.property[${idx}].${grossField}`,
+              label: `${p.address || p.name || 'Property'} — gross annual rent`,
+              currentValue: grossVal,
+              unit: '£',
+            }),
+          }
+        })
       return {
         formula: 'Sum of gross rental income across all let properties, before allowable expenses (S24 mortgage-interest restriction applied separately).',
         source: fromProperties.length > 0
@@ -327,18 +351,25 @@ export function wrapperPayload(entity, bucketKey, total) {
   switch (bucketKey) {
     case 'isa': {
       const fromFlat   = +(a.isa?.value || 0)
-      const fromNested = Array.isArray(a.investments)
-        ? a.investments.filter((x) => /isa/i.test(x?.type || ''))
-        : []
       const breakdown = []
       if (fromFlat > 0) breakdown.push({ label: 'Legacy assets.isa.value', value: fmt(fromFlat) })
-      for (const inv of fromNested) {
-        breakdown.push({
-          label: inv.name || inv.provider || (inv.type || 'ISA holding'),
-          value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)),
-          drill: investmentHoldingL5(inv, 'assets.investments[] (ISA)', 'ISA holding'),
+      // Real-index iteration so the L5 edit path targets assets.investments[i].
+      ;(Array.isArray(a.investments) ? a.investments : [])
+        .map((x, idx) => ({ x, idx }))
+        .filter(({ x }) => /isa/i.test(x?.type || ''))
+        .forEach(({ x: inv, idx }) => {
+          const val = +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)
+          breakdown.push({
+            label: inv.name || inv.provider || (inv.type || 'ISA holding'),
+            value: fmt(val),
+            drill: investmentHoldingL5(inv, 'assets.investments[] (ISA)', 'ISA holding', {
+              path: `assets.investments[${idx}].value`,
+              label: `${inv.name || inv.provider || 'ISA holding'} value`,
+              currentValue: val,
+              unit: '£',
+            }),
+          })
         })
-      }
       return {
         formula: 'Sum of all ISA-typed holdings on assets.investments[] plus legacy assets.isa.value.',
         source: 'engine.isaTotal(entity) — preferred reader; walks both schemas.',
@@ -353,23 +384,38 @@ export function wrapperPayload(entity, bucketKey, total) {
         : []
       const standalone = Array.isArray(a.pensions) ? a.pensions : []
       const breakdown = []
-      for (const p of sippFromArray) {
+      // Real-index iteration (forEach keeps the true array index even when
+      // DB rows are skipped) so the L5 edit path targets the right record.
+      sippFromArray.forEach((p, idx) => {
         // Skip DB with zero value (CETV-informational only)
-        if ((p.type === 'occupational-DB' || p.type === 'Occupational DB') && (p.value == null || +p.value === 0)) continue
+        if ((p.type === 'occupational-DB' || p.type === 'Occupational DB') && (p.value == null || +p.value === 0)) return
+        const val = +(p.value ?? p.balance_gbp ?? p.balance ?? 0)
         breakdown.push({
           label: p.name || p.provider || (p.type || 'SIPP holding'),
-          value: fmt(+(p.value ?? p.balance_gbp ?? p.balance ?? 0)),
-          drill: pensionSchemeL5(p, 'assets.sipp.pensions[]'),
+          value: fmt(val),
+          drill: pensionSchemeL5(p, 'assets.sipp.pensions[]', {
+            path: `assets.sipp.pensions[${idx}].value`,
+            label: `${p.name || p.provider || 'Pension'} value`,
+            currentValue: val,
+            unit: '£',
+          }),
         })
-      }
-      for (const p of standalone) {
-        if (p.type === 'occupational-DB' && p.cetv == null) continue
+      })
+      standalone.forEach((p, idx) => {
+        if (p.type === 'occupational-DB' && p.cetv == null) return
+        const cetvField = p.cetv != null ? 'cetv' : p.balance_gbp != null ? 'balance_gbp' : p.balance != null ? 'balance' : 'value'
+        const val = +(p.cetv ?? p.balance_gbp ?? p.balance ?? p.value ?? 0)
         breakdown.push({
           label: p.name || p.provider || (p.type || 'Pension'),
-          value: fmt(+(p.cetv ?? p.balance_gbp ?? p.balance ?? p.value ?? 0)),
-          drill: pensionSchemeL5(p, 'assets.pensions[]'),
+          value: fmt(val),
+          drill: pensionSchemeL5(p, 'assets.pensions[]', {
+            path: `assets.pensions[${idx}].${cetvField}`,
+            label: `${p.name || p.provider || 'Pension'} value`,
+            currentValue: val,
+            unit: '£',
+          }),
         })
-      }
+      })
       // Legacy flat: only show if we found nothing nested
       if (breakdown.length === 0 && a.sipp?.total > 0) {
         breakdown.push({ label: 'Legacy assets.sipp.total', value: fmt(+a.sipp.total) })
@@ -384,23 +430,29 @@ export function wrapperPayload(entity, bucketKey, total) {
 
     case 'gia': {
       const fromFlat   = +(a.portfolio?.value || 0)
-      const fromNested = Array.isArray(a.investments)
-        ? a.investments.filter((x) => {
-            const t = String(x?.type || '').toLowerCase()
-            return t === 'gia' || t.includes('general-investment')
-          })
-        : []
+      const giaRows = (Array.isArray(a.investments) ? a.investments : [])
+        .map((x, idx) => ({ x, idx }))
+        .filter(({ x }) => {
+          const t = String(x?.type || '').toLowerCase()
+          return t === 'gia' || t.includes('general-investment')
+        })
       const breakdown = []
-      if (fromFlat > 0 && fromNested.length === 0) {
+      if (fromFlat > 0 && giaRows.length === 0) {
         breakdown.push({ label: 'Legacy assets.portfolio.value', value: fmt(fromFlat) })
       }
-      for (const inv of fromNested) {
+      giaRows.forEach(({ x: inv, idx }) => {
+        const val = +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)
         breakdown.push({
           label: inv.name || inv.provider || 'GIA holding',
-          value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)),
-          drill: investmentHoldingL5(inv, 'assets.investments[] (GIA)', 'GIA holding'),
+          value: fmt(val),
+          drill: investmentHoldingL5(inv, 'assets.investments[] (GIA)', 'GIA holding', {
+            path: `assets.investments[${idx}].value`,
+            label: `${inv.name || inv.provider || 'GIA holding'} value`,
+            currentValue: val,
+            unit: '£',
+          }),
         })
-      }
+      })
       return {
         formula: 'Sum of GIA-typed holdings on assets.investments[] plus legacy assets.portfolio.value (only used when no nested array present).',
         source: 'engine.giaTotal(entity) preferred; per-row breakdown when investments[] available.',
@@ -410,17 +462,25 @@ export function wrapperPayload(entity, bucketKey, total) {
     }
 
     case 'taxAdvAlt': {
-      const matched = Array.isArray(a.investments)
-        ? a.investments.filter((x) => {
-            const t = String(x?.type || '').toLowerCase()
-            return t === 'eis' || t === 'seis' || t === 'vct' || t.includes('bond-')
-          })
-        : []
-      const breakdown = matched.map((inv) => ({
-        label: `${inv.type || 'Holding'} — ${inv.name || inv.provider || 'Unnamed'}`,
-        value: fmt(+(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)),
-        drill: investmentHoldingL5(inv, 'assets.investments[] (tax-advantaged alt.)', 'Tax-advantaged holding'),
-      }))
+      const breakdown = (Array.isArray(a.investments) ? a.investments : [])
+        .map((x, idx) => ({ x, idx }))
+        .filter(({ x }) => {
+          const t = String(x?.type || '').toLowerCase()
+          return t === 'eis' || t === 'seis' || t === 'vct' || t.includes('bond-')
+        })
+        .map(({ x: inv, idx }) => {
+          const val = +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0)
+          return {
+            label: `${inv.type || 'Holding'} — ${inv.name || inv.provider || 'Unnamed'}`,
+            value: fmt(val),
+            drill: investmentHoldingL5(inv, 'assets.investments[] (tax-advantaged alt.)', 'Tax-advantaged holding', {
+              path: `assets.investments[${idx}].value`,
+              label: `${inv.name || inv.provider || inv.type || 'Holding'} value`,
+              currentValue: val,
+              unit: '£',
+            }),
+          }
+        })
       return {
         formula: 'Sum of EIS + SEIS + VCT + onshore/offshore bond holdings on assets.investments[].',
         source: 'Per-holding walk on assets.investments[] keyed by type.',

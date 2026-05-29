@@ -172,10 +172,15 @@ export function DrillStack({ stack, children }) {
 // ── Context API — preferred for deep trees ─────────────────────────────────
 const DrillStackContext = createContext(null)
 
-export function DrillStackProvider({ children }) {
+// onEdit (optional): a commit handler invoked by L4NumberPanel's leaf edit
+// form with an ASSET_FIELD_CORRECTED payload { path, value, source,
+// confidence, label, document? }. When absent, leaves render read-only (no
+// edit control), so the stack is safe to mount anywhere.
+export function DrillStackProvider({ children, onEdit }) {
   const stack = useDrillStack()
+  const value = { ...stack, onEdit }
   return (
-    <DrillStackContext.Provider value={stack}>
+    <DrillStackContext.Provider value={value}>
       <DrillStack stack={stack}>{children}</DrillStack>
     </DrillStackContext.Provider>
   )
@@ -195,6 +200,7 @@ export function useDrillStackContext() {
       pop: () => {},
       clear: () => {},
       depth: 0,
+      onEdit: undefined,
     }
   }
   return ctx

@@ -31,7 +31,13 @@ import { createContext, useContext, useReducer, useCallback, useMemo } from 'rea
 // (./events-validator.js) so they can be unit-tested under Node without a
 // JSX loader. The re-exports below keep every existing call site working.
 export { EV, validateEvent } from './events-validator.js'
-import { validateEvent as _validateEvent } from './events-validator.js'
+// NOTE: the `export … from` above re-exports for the public surface but does
+// NOT create a local binding. applyEvents() references `EV` in its switch
+// cases, so it must also be IMPORTED locally — without this, folding ANY
+// committed event throws "EV is not defined". (Latent since the fold path was
+// never exercised end-to-end until the L3-2 leaf-edit shipped.)
+import { EV, validateEvent as _validateEvent } from './events-validator.js'
+import { resolveExistingId, applyFieldCorrection } from './events-fold-helpers.js'
 
 // ─── Pure reducer ───────────────────────────────────────────────────────────
 // events[personaId] = [{ type, ts, payload }, ...]
@@ -134,6 +140,19 @@ export function applyEvents(baseEntity, events = []) {
         break
       }
 
+      case EV.ASSET_FIELD_CORRECTED: {
+        // L3-2 leaf edit — surgical single-field correction with full
+        // provenance + audit trail. Payload:
+        //   { path, value, source, confidence, document?, label?, previousValue? }
+        // `path` is a dot/bracket path into the effective entity
+        // (e.g. 'assets.sipp.pensions[0].value'). Only that field is set;
+        // sibling fields are untouched (unlike the full ASSET_VALUE_UPDATED
+        // upsert). Every correction is appended to e._corrections[] so the
+        // change history is inspectable (full-provenance requirement).
+        applyFieldCorrection(e, ev.payload)
+        break
+      }
+
       case EV.DOCUMENT_CAPTURED: {
         // Payload: { assetId, category, itemType, document: { name, size, mime,
         // dataUrl|url, capturedAt }, parsed?: { ... fields ... } }
@@ -169,8 +188,11 @@ function applyAssetEvent(e, payload) {
   if (!category || !itemType) return
   if (!e.assets) e.assets = {}
 
-  // Generate a stable id if the payload didn't supply one
-  const newId = id || `${itemType.toLowerCase()}-${Date.now().toString(36)}`
+  // Resolve edits to existing items by matchKey (update-in-place) before
+  // falling back to a generated id (insert). This is what makes a leaf
+  // "correct this value" edit update the record instead of duplicating it.
+  const resolvedId = id || resolveExistingId(e, category, itemType, payload.matchKey)
+  const newId = resolvedId || `${itemType.toLowerCase()}-${Date.now().toString(36)}`
 
   // Provenance envelope attached to every item created/updated this way
   const provenance = {

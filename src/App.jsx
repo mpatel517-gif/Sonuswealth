@@ -521,6 +521,7 @@ function AppInner() {
         <PanelPreviewGallery
           entity={entity}
           panel={urlParams.panel}
+          personaId={persona}
           onBack={() => {
             if (typeof window !== 'undefined') {
               const url = new URL(window.location.href)

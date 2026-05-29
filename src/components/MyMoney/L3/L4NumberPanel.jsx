@@ -24,6 +24,7 @@
 //   - onBack      : callback invoked when user dismisses the panel (e.g. back button)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
 import { DrillableNumber } from './DrillableNumber.jsx'
 import { useDrillStackContext } from './DrillStack.jsx'
 
@@ -36,11 +37,14 @@ export function L4NumberPanel({
   breakdown,
   actions,
   whatIf,
+  editable,
   onBack,
 }) {
   // L5+ recursive drill: any breakdown row carrying a `drill` payload
   // pushes the next-level L panel onto the stack when tapped.
-  const { pushNumber } = useDrillStackContext()
+  // onEdit (from DrillStack context) commits an ASSET_FIELD_CORRECTED event
+  // when the leaf is `editable` — this is the "correct this value" path.
+  const { pushNumber, onEdit } = useDrillStackContext()
   return (
     <div
       className="sw-l4-number-panel"
@@ -113,13 +117,28 @@ export function L4NumberPanel({
             </div>}
       </L4Section>
 
-      {/* Section 5 — Action chips (X24 mode 2) */}
+      {/* Section 5 — Edit / correct this value (full edit + provenance) +
+          action chips. When the leaf is editable and a commit handler is
+          wired, the user can correct the value right here — the founder's
+          "how do I change this when it's wrong" path. */}
       <L4Section label="WHAT YOU CAN DO">
-        {actions && actions.length > 0
-          ? <ActionChips actions={actions} />
-          : <div style={{ fontSize: 9, opacity: 0.65 }}>
-              Action chips populated per metric in Wave 1+
-            </div>}
+        {editable && typeof onEdit === 'function' && (
+          <LeafEditForm
+            editable={editable}
+            onCommit={(payload) => {
+              onEdit(payload)
+              // Pop back to the live panel so the corrected value is visible
+              // (the L3 panel re-reads from the now-updated effective entity).
+              if (typeof onBack === 'function') onBack()
+            }}
+          />
+        )}
+        {actions && actions.length > 0 && <ActionChips actions={actions} />}
+        {!editable && (!actions || actions.length === 0) && (
+          <div style={{ fontSize: 9, opacity: 0.65 }}>
+            Action chips populated per metric in Wave 1+
+          </div>
+        )}
       </L4Section>
 
       {/* Section 6 — X24 "What if this were different?" affordance */}
@@ -191,6 +210,7 @@ function BreakdownList({ items, pushNumber }) {
                 source={item.drill.source}
                 confidence={item.drill.confidence}
                 breakdown={item.drill.breakdown}
+                editable={item.drill.editable}
                 onDrill={pushNumber}
               >
                 {item.value}
@@ -228,6 +248,176 @@ function ActionChips({ actions }) {
           {action.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+// ── Leaf edit form — "correct this value" with full provenance ─────────────
+// editable: { path, label, currentValue, unit?, isCurrency? }
+// onCommit(payload) receives the ASSET_FIELD_CORRECTED payload shape:
+//   { path, value, source, confidence, label, document? }
+// Source picker drives the default confidence (manual 1.0 / statement 0.95 /
+// estimate 0.6); user can still see the implied confidence. Optional document
+// attach captures a filename for the audit trail (full blob handling is a
+// later concern — we record name/size/mime now).
+function LeafEditForm({ editable, onCommit }) {
+  const [open, setOpen]   = useState(false)
+  const [raw, setRaw]     = useState(
+    editable?.currentValue != null ? String(editable.currentValue) : ''
+  )
+  const [source, setSource] = useState('manual')
+  const [docName, setDocName] = useState(null)
+
+  const confidenceForSource = (s) =>
+    s === 'statement' ? 0.95 : s === 'estimate' ? 0.6 : 1.0
+
+  const handleFile = (e) => {
+    const f = e.target.files && e.target.files[0]
+    if (f) setDocName({ name: f.name, size: f.size, mime: f.type })
+  }
+
+  const submit = () => {
+    const num = Number(String(raw).replace(/[^0-9.\-]/g, ''))
+    if (!Number.isFinite(num)) return
+    onCommit({
+      path: editable.path,
+      value: num,
+      source,
+      confidence: confidenceForSource(source),
+      label: editable.label,
+      ...(docName ? { document: docName } : {}),
+    })
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-leaf-edit-open=""
+        style={{
+          background: 'rgba(93,219,194,0.10)',
+          border: '1px solid rgba(93,219,194,0.3)',
+          color: 'var(--c-acc, #5ddbc2)',
+          borderRadius: 12,
+          padding: '5px 12px',
+          fontSize: 10,
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        ✎ Update / correct this value
+      </button>
+    )
+  }
+
+  const inputStyle = {
+    background: 'var(--c-surface2, rgba(255,255,255,0.05))',
+    border: '1px solid var(--c-border, rgba(255,255,255,0.15))',
+    borderRadius: 6,
+    padding: '6px 8px',
+    fontSize: 12,
+    color: 'var(--c-text, #fff)',
+    width: '100%',
+  }
+
+  return (
+    <div data-leaf-edit-form="" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div>
+        <label style={{ fontSize: 9, opacity: 0.65, display: 'block', marginBottom: 3 }}>
+          New value{editable.unit ? ` (${editable.unit})` : ''}
+        </label>
+        <input
+          type="text"
+          inputMode="decimal"
+          value={raw}
+          onChange={(e) => setRaw(e.target.value)}
+          data-leaf-edit-input=""
+          style={inputStyle}
+        />
+      </div>
+
+      <div>
+        <label style={{ fontSize: 9, opacity: 0.65, display: 'block', marginBottom: 3 }}>
+          Where is this figure from?
+        </label>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[
+            { k: 'manual',    t: 'I know it' },
+            { k: 'statement', t: 'Statement' },
+            { k: 'estimate',  t: 'Estimate' },
+          ].map((opt) => (
+            <button
+              key={opt.k}
+              type="button"
+              onClick={() => setSource(opt.k)}
+              data-leaf-edit-source={opt.k}
+              style={{
+                flex: 1,
+                background: source === opt.k ? 'rgba(93,219,194,0.18)' : 'transparent',
+                border: `1px solid ${source === opt.k ? 'var(--c-acc, #5ddbc2)' : 'var(--c-border, rgba(255,255,255,0.15))'}`,
+                color: source === opt.k ? 'var(--c-acc, #5ddbc2)' : 'var(--c-text2)',
+                borderRadius: 6,
+                padding: '5px 4px',
+                fontSize: 10,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {opt.t}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 9, opacity: 0.55, marginTop: 4 }}>
+          Recorded confidence: {Math.round(confidenceForSource(source) * 100)}%
+        </div>
+      </div>
+
+      <div>
+        <label style={{ fontSize: 9, opacity: 0.65, display: 'block', marginBottom: 3 }}>
+          Attach supporting document (optional)
+        </label>
+        <input type="file" onChange={handleFile} style={{ fontSize: 10, color: 'var(--c-text3)' }} />
+        {docName && (
+          <div style={{ fontSize: 9, opacity: 0.7, marginTop: 2 }}>Attached: {docName.name}</div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+        <button
+          type="button"
+          onClick={submit}
+          data-leaf-edit-save=""
+          style={{
+            flex: 1,
+            background: 'var(--c-acc, #5ddbc2)',
+            color: '#06231d',
+            border: 'none',
+            borderRadius: 8,
+            padding: '8px 10px',
+            fontSize: 11,
+            fontWeight: 800,
+            cursor: 'pointer',
+          }}
+        >
+          Save correction
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          style={{
+            background: 'transparent',
+            color: 'var(--c-text2)',
+            border: '1px solid var(--c-border, rgba(255,255,255,0.15))',
+            borderRadius: 8,
+            padding: '8px 12px',
+            fontSize: 11,
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }

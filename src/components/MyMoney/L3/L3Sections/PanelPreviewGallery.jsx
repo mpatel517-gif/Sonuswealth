@@ -22,6 +22,7 @@ import { IncomeSourcesPanel } from './IncomeSourcesPanel.jsx'
 import { WrappersPanel } from './WrappersPanel.jsx'
 import { StatePensionPanel } from './StatePensionPanel.jsx'
 import { DrillStackProvider } from '../DrillStack.jsx'
+import { useEvents, EV } from '../../../../state/events.jsx'
 
 const PANELS = {
   income:           { component: IncomeSourcesPanel, label: 'Income sources' },
@@ -58,10 +59,20 @@ function PanelHeader({ label, persona }) {
  * Top-level gallery shell. Reads ?panel= and mounts the right panel
  * with the effective entity passed by App.jsx.
  *
- * @param {{ entity: object, panel: string, onBack?: () => void }} props
+ * @param {{ entity: object, panel: string, personaId?: string, onBack?: () => void }} props
  */
-export function PanelPreviewGallery({ entity, panel, onBack }) {
+export function PanelPreviewGallery({ entity, panel, personaId, onBack }) {
   const personaName = entity?.name || entity?.individual?.name || '(unknown)'
+  const { commit } = useEvents()
+
+  // Leaf-edit commit handler — turns the L4 edit form's payload into an
+  // ASSET_FIELD_CORRECTED event against the current persona. App.jsx folds
+  // committed events back into the effective entity, so the corrected value
+  // is reflected when the user pops back to the L3 panel.
+  const handleEdit = (payload) => {
+    if (!personaId) return
+    commit(personaId, { type: EV.ASSET_FIELD_CORRECTED, payload })
+  }
 
   // Single-panel mode
   if (PANELS[panel]) {
@@ -99,7 +110,7 @@ export function PanelPreviewGallery({ entity, panel, onBack }) {
         )}
         {/* DrillStackProvider so any DrillableNumber inside the panel opens an
             L4 panel on top via the shared stack. */}
-        <DrillStackProvider>
+        <DrillStackProvider onEdit={handleEdit}>
           <div style={{ padding: 12 }}>
             <Panel entity={entity} />
           </div>
@@ -143,7 +154,7 @@ export function PanelPreviewGallery({ entity, panel, onBack }) {
             ← Back
           </button>
         )}
-        <DrillStackProvider>
+        <DrillStackProvider onEdit={handleEdit}>
           <div style={{ padding: '0 12px' }}>
             <div data-tier-section="income"        style={{ marginBottom: 24 }}>
               <PanelHeader label="Income sources" persona={null} />

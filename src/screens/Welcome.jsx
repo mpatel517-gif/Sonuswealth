@@ -1,6 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
 import { BRAND } from '../config/brand.js'
 import { fqBand } from '../engine/fq-calculator.js'
+// L3-4b (2026-05-28): externalised marketing copy (subhead, CTA labels,
+// pre-launch banner) — editable in Supabase without a code deploy.
+import { getContent } from '../hooks/useContent.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIX-19 — Welcome screen (pre-launch honest)
@@ -146,7 +149,7 @@ export default function Welcome({ onStart, onDemo }) {
           {BRAND.tagline}
         </div>
         <div style={{ fontSize:15, color:'var(--c-text2)', lineHeight:1.6, marginBottom:28, maxWidth:340 }}>
-          See, score, and grow your financial world — one place for every part of your money life.
+          {getContent('welcome.subhead', 'See, score, and grow your financial world — one place for every part of your money life.')}
         </div>
 
         {/* Example-bands preview card — FIX R1: no more fake-precision counter.
@@ -161,7 +164,7 @@ export default function Welcome({ onStart, onDemo }) {
             fontSize:11, fontWeight:700, color:'var(--c-text3)',
             textTransform:'uppercase', letterSpacing:1.2, marginBottom:10,
           }}>
-            What you’ll see
+            {getContent('welcome.previewEyebrow', "What you'll see")}
           </div>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
             {[43, 71, 85].map(n => {
@@ -185,7 +188,7 @@ export default function Welcome({ onStart, onDemo }) {
             })}
           </div>
           <div style={{ fontSize:11, color:'var(--c-text3)', marginTop:10, lineHeight:1.5 }}>
-            Example scores. Yours is calculated from your real money picture.
+            {getContent('welcome.previewFootnote', 'Example scores. Yours is calculated from your real money picture.')}
           </div>
         </div>
 
@@ -196,8 +199,8 @@ export default function Welcome({ onStart, onDemo }) {
           borderRadius:12, padding:'10px 14px', marginBottom:14,
           fontSize:12, color:'var(--c-text2)', lineHeight:1.5,
         }}>
-          <strong style={{ color:'var(--c-text)' }}>Pre-launch.</strong>{' '}
-          Onboarding ships Phase 2.
+          <strong style={{ color:'var(--c-text)' }}>{getContent('welcome.preLaunchHeading', 'Pre-launch.')}</strong>{' '}
+          {getContent('welcome.preLaunchBody', 'Onboarding ships Phase 2.')}
         </div>
 
         {/* CTAs — AU6 (Phase 1.5): label now matches reality. Account creation
@@ -209,7 +212,7 @@ export default function Welcome({ onStart, onDemo }) {
           borderRadius:100, fontSize:16, fontWeight:700, letterSpacing:-.3,
           boxShadow:'var(--sh-acc)', marginBottom:10, border:'none', cursor:'pointer',
         }}>
-          Get started →
+          {getContent('welcome.primaryCta', 'Get started →')}
         </button>
         <button onClick={onDemo} style={{
           width:'100%', padding:14,
@@ -217,7 +220,7 @@ export default function Welcome({ onStart, onDemo }) {
           color:'var(--c-text2)', borderRadius:100, fontSize:15, fontWeight:500,
           marginBottom:18, cursor:'pointer',
         }}>
-          See a demo →
+          {getContent('welcome.secondaryCta', 'See a demo →')}
         </button>
 
         {/* FCA boundary — first FCA-relevant surface gets the line. */}

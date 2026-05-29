@@ -2344,7 +2344,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                         border: '1px solid rgba(255,111,125,0.35)',
                         color: 'var(--c-text)',
                       }}>
-                        DB transfers of £30,000 or more legally require regulated financial advice (FCA COBS 19.1A). Caelixa stores transfer values for information only.
+                        DB transfers of £30,000 or more legally require regulated financial advice (FCA COBS 19.1A). Sonuswealth stores transfer values for information only.
                       </div>
                     )}
                   </div>

@@ -13,6 +13,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 import ExplainerChip from '../shared/Explainer.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
 import DrillContextStub, { BusinessActivityStub } from './DrillContextStub.jsx'
@@ -86,7 +88,17 @@ function Section({ title, sub, children }) {
   )
 }
 
-export default function BusinessDrillDown({ entity, personaId, onBack, onHome }) {
+// L3-1b (2026-05-28): DrillStack wrapper per README pattern.
+export default function BusinessDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <BusinessDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function BusinessDrillDownInner({ entity, personaId, onBack, onHome }) {
+  const drillStack = useDrillStackContext()
   const [selected, setSelected] = useState(null)
   const a = entity.assets || {}
   const companies = entity.companies || []
@@ -111,7 +123,23 @@ export default function BusinessDrillDown({ entity, personaId, onBack, onHome })
 
   return (
     <OverlayShell title="Business assets · drill-down"
-      subtitle={`${fmt(total)} · ${companies.length} compan${companies.length === 1 ? 'y' : 'ies'} · ${shareSchemes.length} scheme${shareSchemes.length === 1 ? '' : 's'}`}
+      subtitle={
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+          <DrillableNumber
+            metric="Total business value"
+            value={fmt(total)}
+            formula={`Sum of every private-company holding + share-scheme position. ${companies.length} compan${companies.length === 1 ? 'y' : 'ies'} + ${shareSchemes.length} share scheme${shareSchemes.length === 1 ? '' : 's'}.`}
+            source={`${companies.length + shareSchemes.length} holding${companies.length + shareSchemes.length === 1 ? '' : 's'} on file`}
+            confidence="high"
+            breakdown={[
+              ...companies.map((c, i) => ({ label: c.name || `Company #${i + 1}`, value: fmt(+(c.value ?? c.value_gbp ?? 0)) })),
+              ...shareSchemes.map((s, i) => ({ label: s.name || `Share scheme #${i + 1}`, value: fmt(+(s.value ?? s.value_gbp ?? 0)) })),
+            ]}
+            onDrill={drillStack.pushNumber}
+          />
+          <span style={{ fontSize: 13, color: 'var(--c-text3)' }}>· {companies.length} compan{companies.length === 1 ? 'y' : 'ies'} · {shareSchemes.length} scheme{shareSchemes.length === 1 ? '' : 's'}</span>
+        </span>
+      }
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

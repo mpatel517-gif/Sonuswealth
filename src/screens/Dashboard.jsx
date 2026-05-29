@@ -35,6 +35,57 @@ import MagicShowcase   from './MagicShowcase.jsx'
 // each chip is a full-page route, not a scroll anchor. These render in the
 // money/* tab id namespace alongside the existing single-letter tabs.
 import MoneyIncome     from './MoneyIncome.jsx'
+import ErrorBoundary   from '../components/shared/ErrorBoundary.jsx'
+
+// L1-3: per-route fallback that preserves outer chrome (TopBar, Sidebar,
+// FCA footer) when a single tab crashes. The user can switch tabs and
+// continue rather than seeing the full-page boundary.
+function inlineTabFallback({ error, scope, onRetry, onReload }) {
+  return (
+    <div role="alert" aria-live="assertive" style={{
+      padding: '32px 20px', textAlign: 'center', color: 'var(--c-text)',
+    }}>
+      <div style={{
+        display: 'inline-block', maxWidth: 480, padding: 24, borderRadius: 16,
+        background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+        boxShadow: 'var(--sh1)', textAlign: 'left',
+      }}>
+        <div style={{
+          fontSize: 11, fontWeight: 800, letterSpacing: '0.12em',
+          textTransform: 'uppercase', color: 'var(--c-coral, #FF6F7D)', marginBottom: 8,
+        }}>
+          {scope || 'View'} crashed
+        </div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>
+          We hit an error rendering this view.
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--c-text2)', margin: '0 0 16px', lineHeight: 1.5 }}>
+          Other tabs still work. Try again, or switch to another view.
+        </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" onClick={onRetry} style={{
+            padding: '8px 14px', borderRadius: 100, background: 'var(--c-acc)',
+            color: '#000', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}>
+            Try again
+          </button>
+          <button type="button" onClick={onReload} style={{
+            padding: '8px 14px', borderRadius: 100, background: 'var(--c-surface2)',
+            color: 'var(--c-text)', border: '1px solid var(--c-border)',
+            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>
+            Reload
+          </button>
+        </div>
+        {(typeof import.meta !== 'undefined' && import.meta.env?.DEV) && error?.message && (
+          <div style={{ marginTop: 12, fontSize: 11, color: 'var(--c-text3)', fontFamily: 'ui-monospace, monospace' }}>
+            {String(error.message).slice(0, 200)}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 import MoneyProtection from './MoneyProtection.jsx'
 import MoneyBusiness   from './MoneyBusiness.jsx'
 import MoneyTrusts     from './MoneyTrusts.jsx'
@@ -671,8 +722,13 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
 
       {/* ── Screen area ──────────────────────────────────────────────────── */}
       {/* P12-3 (2026-05-28): id + role main for skip-link target + landmark. */}
+      {/* L1-3 (2026-05-28): per-tab ErrorBoundary keyed on `tab`. A render
+          crash in one tab shows the inline fallback while preserving the
+          surrounding chrome (TopBar, Sidebar, FCA footer). Switching to a
+          different tab unmounts the boundary (key change) and re-renders. */}
       <main id="main-content" role="main" tabIndex={-1} style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex',
         flexDirection:'column', WebkitOverflowScrolling:'touch' }}>
+        <ErrorBoundary key={tab} scope={`Tab:${tab}`} fallback={inlineTabFallback}>
         {tab === 'home'  && (
           <HomeScreen
             entity={wireEntity}
@@ -755,6 +811,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} />}
         {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
         {tab === 'timeline'  && <Timeline     entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
+        </ErrorBoundary>
         {/* P12-1 (2026-05-28) — canonical FCA disclaimer footer per AppShell
             slot contract. Rendered at Dashboard scope so every screen inherits
             without per-file duplication. Per-screen inline compliance notes

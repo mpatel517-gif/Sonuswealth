@@ -18,6 +18,8 @@
 import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 import { SharedBullet, LiquidityLadder } from '../charts/index.js'
 // S1 selector migration (Phase 2)
 import {
@@ -200,7 +202,17 @@ function readAccounts(entity) {
   return out
 }
 
-export default function CashDrillDown({ entity, personaId, onBack, onHome }) {
+// L3-1b (2026-05-28): DrillStack wrapper per README pattern.
+export default function CashDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <CashDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
+  const drillStack = useDrillStackContext()
   const accounts = readAccounts(entity)
   const totalCash = cashTotal(entity) || accounts.reduce((s, x) => s + x.balance, 0)
 
@@ -249,7 +261,23 @@ export default function CashDrillDown({ entity, personaId, onBack, onHome }) {
 
   return (
     <OverlayShell title="Cash · drill-down"
-      subtitle={`${fmt(totalCash)} · ${accounts.length} account${accounts.length === 1 ? '' : 's'}`}
+      subtitle={
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+          <DrillableNumber
+            metric="Total cash"
+            value={fmt(totalCash)}
+            formula={`Sum of every cash account on file. ${accounts.length} account${accounts.length === 1 ? '' : 's'} totalling ${fmt(totalCash)}.`}
+            source={accounts.length === 0 ? 'No cash accounts recorded' : `${accounts.length} account${accounts.length === 1 ? '' : 's'} on file`}
+            confidence={accounts.length > 0 ? 'high' : 'low'}
+            breakdown={accounts.map((a, i) => ({
+              label: a.provider || a.name || `Account #${i + 1}`,
+              value: fmt(+(a.balance ?? 0)),
+            }))}
+            onDrill={drillStack.pushNumber}
+          />
+          <span style={{ fontSize: 13, color: 'var(--c-text3)' }}>· {accounts.length} account{accounts.length === 1 ? '' : 's'}</span>
+        </span>
+      }
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

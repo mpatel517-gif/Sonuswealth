@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA / FINIO — PersonaGapTiles
+// SONUSWEALTH / FINIO — PersonaGapTiles
 // Information-only tiles surfacing UK-tax + estate facts relevant to a persona.
 // FCA boundary: information / guidance / storage only. No advice, no "should".
 // ─────────────────────────────────────────────────────────────────────────────

@@ -24,6 +24,9 @@
 import { useMemo } from 'react'
 import useTaxYear from '../hooks/useTaxYear.jsx'
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
+// L3-4b (2026-05-28): externalised copy lookup. Fallback = the existing
+// literal so behaviour is identical if the bundle ever fails to load.
+import { getContent } from '../hooks/useContent.js'
 import {
   calcAllIncome,
   calcIncomeTax,
@@ -619,18 +622,18 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
             display: 'flex', alignItems: 'center', gap: 6,
             color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
           }}>
-            <span style={{ fontSize: 16 }}>←</span> My Money
+            <span style={{ fontSize: 16 }}>←</span> {getContent('income.backLabel', 'My Money')}
           </button>
-          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>UK · 2026/27 rules</div>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{getContent('income.yearChip', 'UK · 2026/27 rules')}</div>
         </div>
         <div style={{ fontSize: 22, fontWeight: 870, color: 'var(--c-text)', marginBottom: 16 }}>
-          Income Statement
+          {getContent('income.screenTitle', 'Income Statement')}
         </div>
         <Card>
           <div style={{ textAlign: 'center', padding: 24 }}>
             <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.3 }}>💧</div>
             <div style={{ fontSize: 14, color: 'var(--c-text)', fontWeight: 700, marginBottom: 8 }}>
-              Add an income source to see your tax stack.
+              {getContent('income.emptyHeadline', 'Add an income source to see your tax stack.')}
             </div>
             <button
               type="button"
@@ -641,12 +644,12 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
                 color: 'var(--c-surface)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
               }}
             >
-              Add income →
+              {getContent('income.emptyCta', 'Add income →')}
             </button>
           </div>
         </Card>
         <div style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'center', marginTop: 16 }}>
-          Information based on UK 2026/27 rules. Not personal advice.
+          {getContent('income.footerNote', 'Information based on UK 2026/27 rules. Not personal advice.')}
         </div>
       </div>
     )
@@ -662,7 +665,7 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
           display: 'flex', alignItems: 'center', gap: 6,
           color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
         }}>
-          <span style={{ fontSize: 16 }}>←</span> My Money
+          <span style={{ fontSize: 16 }}>←</span> {getContent('income.backLabel', 'My Money')}
         </button>
         <div
           title={`Tax year selected: ${ty.taxYear} · rule bundle ${ty.ruleBundle}. Change via the top bar.`}
@@ -675,10 +678,10 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
         </div>
       </div>
       <div style={{ fontSize: 22, fontWeight: 870, color: 'var(--c-text)', marginBottom: 4, letterSpacing: -0.4 }}>
-        Income Statement
+        {getContent('income.screenTitle', 'Income Statement')}
       </div>
       <div style={{ fontSize: 12, color: 'var(--c-text3)', marginBottom: 16 }}>
-        What comes in, what HMRC takes, what you keep.
+        {getContent('income.subtitle', 'What comes in, what HMRC takes, what you keep.')}
       </div>
 
       {/* MoneyX 8-chip drawer — every screen organised the same way (2026-05-28). */}

@@ -49,6 +49,18 @@ import {
 
 import CMA_BUNDLE from '../rules/cma-2026.json' with { type: 'json' }
 
+// L3-3 (2026-05-28): tax-band + NI breakdown for L4 drills inside cashflow drill panels.
+import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
+
+// L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
+// to L4 row-level breakdowns (gross income → per-source; tax & NI → per-band).
+import { DrillStackProvider, useDrillStackContext } from '../components/MyMoney/L3/DrillStack.jsx'
+import { DrillableNumber } from '../components/MyMoney/L3/DrillableNumber.jsx'
+
+// L3-4 (2026-05-28): externalised copy lookup. See src/content/uk-en.json
+// and src/hooks/useContent.js for the bundle + hook.
+import { getContent } from '../hooks/useContent.js'
+
 import { BRAND } from '../config/brand.js'
 import TripleAnchor from '../components/shared/TripleAnchor.jsx'
 // v0.3 R3 SIGNATURE — calendar heatmap of monthly surplus/deficit.
@@ -85,6 +97,24 @@ import Sankey from '../components/charts/Sankey.jsx'
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
+
+// L3-3 (2026-05-28): plain-English labels for income type keys (matches the
+// taxonomy.incomeTypes labels — kept local because Cashflow doesn't otherwise
+// import taxonomy and we want the drill to stay zero-dep).
+const _INCOME_TYPE_LABELS = {
+  'employment':       'Employment',
+  'self-employment':  'Self-employment',
+  'dividends':        'Dividends',
+  'rental':           'Rental',
+  'savings-interest': 'Savings interest',
+  'overseas':         'Overseas income',
+  'state-pension':    'State pension',
+  'drawdown':         'Pension drawdown',
+  'other':            'Other',
+}
+function _incomeTypeLabel(key) {
+  return _INCOME_TYPE_LABELS[key] || String(key || 'Income').replace(/[_-]/g, ' ').replace(/^./, c => c.toUpperCase())
+}
 
 function fmtSeedNum(v) {
   const n = +v || 0
@@ -151,9 +181,22 @@ function ScenarioSeedBanner({ seed, onDismiss }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function SurplusDrillPanel({ entity, onClose }) {
+  // L3-3 (2026-05-28): wrap in DrillStackProvider so child rows can chain to
+  // L4 row-level breakdowns (gross income → per-source, tax & NI → per-band).
+  return (
+    <DrillStackProvider>
+      <SurplusDrillPanelInner entity={entity} onClose={onClose} />
+    </DrillStackProvider>
+  )
+}
+
+function SurplusDrillPanelInner({ entity, onClose }) {
+  const drillStack   = useDrillStackContext()
   const incomeAll  = useMemo(() => { try { return calcAllIncome(entity, CMA_BUNDLE) } catch { return null } }, [entity])
   const ms         = useMemo(() => { try { return monthlySurplus(entity, CMA_BUNDLE) } catch { return null } }, [entity])
   const lb         = useMemo(() => { try { return liquidityBuffer(entity) } catch { return null } }, [entity])
+  const taxDetail  = useMemo(() => { try { return incomeTaxDetail(entity) } catch { return null } }, [entity])
+  const nicDetail  = useMemo(() => { try { return nicsDetail(entity) } catch { return null } }, [entity])
   const surplusAlloc = useMemo(() => {
     const s = ms?.surplus
     if (s == null) return null
@@ -169,9 +212,54 @@ function SurplusDrillPanel({ entity, onClose }) {
   const surplusAnn  = gross > 0 ? (gross - taxAnn - pensionAnn - essAnn - debtAnn) : +(ms?.surplus != null ? ms.surplus * 12 : 0)
   const surplusMo   = surplusAnn / 12
 
+  // L3-3 row-level L4 drill payloads — engine-derived, no fabrication.
+  const incomeSourceBreakdown = useMemo(() => {
+    const items = Array.isArray(incomeAll?.items) ? incomeAll.items : []
+    const map = new Map()
+    for (const it of items) {
+      const t = it.type || 'other'
+      map.set(t, (map.get(t) || 0) + (+it.amount || 0))
+    }
+    return Array.from(map.entries())
+      .map(([k, v]) => ({ label: _incomeTypeLabel(k), value: v, formatted: fmt(v) }))
+      .sort((a, b) => b.value - a.value)
+  }, [incomeAll])
+
+  const taxBandBreakdown = useMemo(() => {
+    const out = []
+    const bands = Array.isArray(taxDetail?.bands) ? taxDetail.bands : []
+    for (const b of bands) {
+      if (!b || (+b.tax || 0) === 0) continue
+      out.push({ label: b.band || b.label || `Income tax — ${Math.round((+b.rate || 0) * 100)}%`, value: +b.tax || 0, formatted: fmt(+b.tax || 0) })
+    }
+    if ((+nicDetail?.class1 || 0) > 0) out.push({ label: 'NI — Class 1 (employee)',      value: +nicDetail.class1, formatted: fmt(+nicDetail.class1) })
+    if ((+nicDetail?.class4 || 0) > 0) out.push({ label: 'NI — Class 4 (self-employed)', value: +nicDetail.class4, formatted: fmt(+nicDetail.class4) })
+    return out
+  }, [taxDetail, nicDetail])
+
   const steps = [
-    { label: 'Gross income',         value: gross,       colour: 'var(--c-success)', kind: 'income',    note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null },
-    { label: 'Tax & NI',             value: -taxAnn,     colour: 'var(--c-danger)',  kind: 'deduction', note: null },
+    {
+      label: 'Gross income',         value: gross,       colour: 'var(--c-success)', kind: 'income',    note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null,
+      drill: incomeSourceBreakdown.length > 0 ? {
+        metric: 'Gross income',
+        value: fmt(gross) + '/yr',
+        formula: `Sum of ${incomeSourceBreakdown.length} income source${incomeSourceBreakdown.length === 1 ? '' : 's'} from your entity record.`,
+        source: 'calcAllIncome(entity) · src/engine/fq-calculator.js',
+        confidence: 'high',
+        breakdown: incomeSourceBreakdown,
+      } : null,
+    },
+    {
+      label: 'Tax & NI',             value: -taxAnn,     colour: 'var(--c-danger)',  kind: 'deduction', note: null,
+      drill: taxBandBreakdown.length > 0 ? {
+        metric: 'Tax & NI',
+        value: fmt(taxAnn) + '/yr',
+        formula: `Income tax across ${taxBandBreakdown.filter(r => !/^NI/.test(r.label)).length} band${taxBandBreakdown.length === 1 ? '' : 's'} plus National Insurance contributions.`,
+        source: 'incomeTaxDetail + nicsDetail · src/engine/tax-estate-engine.js',
+        confidence: 'high',
+        breakdown: taxBandBreakdown,
+      } : null,
+    },
     { label: 'Pension contributions',value: -pensionAnn, colour: 'var(--c-acc)',     kind: 'deduction', note: pensionAnn > 0 ? 'Pre-tax via salary sacrifice' : null },
     { label: 'Essentials',           value: -essAnn,     colour: 'var(--c-warning)', kind: 'deduction', note: 'Housing, bills, transport' },
     { label: 'Debt service',         value: -debtAnn,    colour: 'var(--c-acc3)',    kind: 'deduction', note: 'Loans and cards' },
@@ -253,14 +341,28 @@ function SurplusDrillPanel({ entity, onClose }) {
               No income data yet — add income to see the waterfall.
             </div>
           )}
-          {steps.map(({ label, value, colour, note }) => {
+          {steps.map(({ label, value, colour, note, drill }) => {
             const w = (Math.abs(value) / maxAbs) * 100
             const isDeduction = value < 0
             return (
               <div key={label} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <div>
-                    <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>{label}</span>
+                    {drill ? (
+                      <DrillableNumber
+                        metric={drill.metric}
+                        value={drill.value}
+                        formula={drill.formula}
+                        source={drill.source}
+                        confidence={drill.confidence}
+                        breakdown={drill.breakdown}
+                        onDrill={drillStack.pushNumber}
+                      >
+                        <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>{label}</span>
+                      </DrillableNumber>
+                    ) : (
+                      <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>{label}</span>
+                    )}
                     {note && <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>{note}</div>}
                   </div>
                   <span style={{
@@ -318,7 +420,7 @@ function SurplusDrillPanel({ entity, onClose }) {
         )}
 
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '4px 0 12px' }}>
-          Information only · Derived from your data · Not regulated advice
+          {getContent('common.fcaFooter', 'Information only · Derived from your data · Not regulated advice')}
         </div>
       </div>
     </div>
@@ -330,8 +432,28 @@ function SurplusDrillPanel({ entity, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function IncomeBreakdownDrillPanel({ entity, onClose }) {
+  return (
+    <DrillStackProvider>
+      <IncomeBreakdownDrillPanelInner entity={entity} onClose={onClose} />
+    </DrillStackProvider>
+  )
+}
+
+function IncomeBreakdownDrillPanelInner({ entity, onClose }) {
+  const drillStack = useDrillStackContext()
   const incomeAll = useMemo(() => { try { return calcAllIncome(entity, CMA_BUNDLE) } catch { return null } }, [entity])
   const inc = entity?.income || {}
+
+  // L3-3: byType drill payload (non-savings / savings / dividends / cgt)
+  const byTypeBreakdown = useMemo(() => {
+    const t = incomeAll?.byType || {}
+    const rows = []
+    if ((+t.non_savings || 0) > 0) rows.push({ label: 'Non-savings (employment, self-employed, rental, pension)', value: +t.non_savings, formatted: fmt(+t.non_savings) })
+    if ((+t.savings || 0)     > 0) rows.push({ label: 'Savings interest', value: +t.savings,     formatted: fmt(+t.savings) })
+    if ((+t.dividends || 0)   > 0) rows.push({ label: 'Dividends',        value: +t.dividends,   formatted: fmt(+t.dividends) })
+    if ((+t.cgt || 0)         > 0) rows.push({ label: 'Capital gains',    value: +t.cgt,         formatted: fmt(+t.cgt) })
+    return rows
+  }, [incomeAll])
 
   const sources = [
     { label: 'Salary', monthly: +(inc.salary ?? 0) / 12, annual: +(inc.salary ?? 0) },
@@ -410,14 +532,28 @@ function IncomeBreakdownDrillPanel({ entity, onClose }) {
             marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--c-sep)',
             display: 'flex', justifyContent: 'space-between',
           }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Total</span>
+            {byTypeBreakdown.length > 0 ? (
+              <DrillableNumber
+                metric="Income by tax category"
+                value={fmt(totalAnnual) + '/yr'}
+                formula="Income reclassified into non-savings, savings, dividends and capital-gains categories — the band order HMRC uses when applying tax."
+                source="calcAllIncome(entity).byType · src/engine/fq-calculator.js"
+                confidence="high"
+                breakdown={byTypeBreakdown}
+                onDrill={drillStack.pushNumber}
+              >
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Total · by tax band</span>
+              </DrillableNumber>
+            ) : (
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Total</span>
+            )}
             <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-success)', fontVariantNumeric: 'tabular-nums' }}>
               {fmt(totalAnnual / 12)}/mo · {fmt(totalAnnual)}/yr
             </span>
           </div>
         </div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '4px 0 12px' }}>
-          Information only · Derived from your data · Not regulated advice
+          {getContent('common.fcaFooter', 'Information only · Derived from your data · Not regulated advice')}
         </div>
       </div>
     </div>
@@ -429,6 +565,15 @@ function IncomeBreakdownDrillPanel({ entity, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function HealthScoreDrillPanel({ entity, onClose }) {
+  return (
+    <DrillStackProvider>
+      <HealthScoreDrillPanelInner entity={entity} onClose={onClose} />
+    </DrillStackProvider>
+  )
+}
+
+function HealthScoreDrillPanelInner({ entity, onClose }) {
+  const drillStack = useDrillStackContext()
   const health = useMemo(() => { try { return cashflowHealth(entity, CMA_BUNDLE) } catch { return null } }, [entity])
 
   const BAND_COLOUR = { Critical: 'var(--c-danger)', Stressed: 'var(--c-warning)', Steady: 'var(--c-acc)', Healthy: 'var(--c-success)', Thriving: 'var(--c-success)' }
@@ -504,10 +649,25 @@ function HealthScoreDrillPanel({ entity, onClose }) {
             const score = raw != null ? Math.max(0, Math.min(100, Math.round(+raw))) : null
             const contribution = score != null ? Math.round(score * weight / 100) : null
             const colour = score == null ? 'var(--c-text3)' : score >= 70 ? 'var(--c-success)' : score >= 40 ? 'var(--c-warning)' : 'var(--c-danger)'
+            const breakdown = [
+              { label: 'Sub-score (0-100)', value: score ?? 0, formatted: score != null ? `${score}/100` : '—' },
+              { label: 'Weight in total',   value: weight,     formatted: `${weight}%` },
+              { label: 'Contribution',      value: contribution ?? 0, formatted: contribution != null ? `${contribution} pts` : '—' },
+            ]
             return (
               <div key={key} style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{label}</span>
+                  <DrillableNumber
+                    metric={label}
+                    value={score != null ? `${score}/100` : '—'}
+                    formula={desc}
+                    source="cashflowHealth(entity, CMA_BUNDLE) · src/engine/fq-calculator.js"
+                    confidence={score != null ? 'high' : 'low'}
+                    breakdown={breakdown}
+                    onDrill={drillStack.pushNumber}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{label}</span>
+                  </DrillableNumber>
                   <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
                     {score != null ? `${score}/100` : '—'}
                     {contribution != null && <span style={{ fontSize: 11, color: 'var(--c-text3)', marginLeft: 4 }}>({weight}% weight → {contribution}pts)</span>}
@@ -528,7 +688,7 @@ function HealthScoreDrillPanel({ entity, onClose }) {
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '4px 0 12px' }}>
-          Information only · Derived from your data · Not regulated advice
+          {getContent('common.fcaFooter', 'Information only · Derived from your data · Not regulated advice')}
         </div>
       </div>
     </div>
@@ -1883,7 +2043,7 @@ function BillCalendar({ entity }) {
       }}>
         {hasReal
           ? `${bills.length} bill${bills.length > 1 ? 's' : ''} scheduled · ${fmt(totalAmount)}/mo total.`
-          : 'No bills detected yet. Bill calendar populates once you add fixed bills (+ Bill) or connect Open Banking.'}
+          : getContent('cashflow.noBillsState', 'No bills detected yet. Bill calendar populates once you add fixed bills (+ Bill) or connect Open Banking.')}
       </div>
       {hasReal && (
         <div style={S.calendarGrid}>
@@ -1941,9 +2101,8 @@ function SubscriptionTracker({ entity }) {
           </>
         ) : (
           <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-            Recurring-charge detection arrives with Open Banking
-            (Phase 1.2). Until then, add subscriptions manually so they
-            appear in your essentials total.
+            {getContent('cashflow.noSubsState',
+              'Recurring-charge detection arrives with Open Banking (Phase 1.2). Until then, add subscriptions manually so they appear in your essentials total.')}
           </div>
         )}
         <button

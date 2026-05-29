@@ -12,6 +12,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 import ExplainerChip from '../shared/Explainer.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { BRAND } from '../../config/brand.js'
@@ -107,7 +109,17 @@ function isEstateDeductible(loan) {
   return true
 }
 
-export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome }) {
+// L3-1b (2026-05-28): DrillStack wrapper per README pattern.
+export default function LiabilitiesDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <LiabilitiesDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function LiabilitiesDrillDownInner({ entity, personaId, onBack, onHome }) {
+  const drillStack = useDrillStackContext()
   const [selected, setSelected] = useState(null)
   const liabilities = entity.liabilities || {}
   const mortgage = liabilities.mortgage
@@ -169,7 +181,23 @@ export default function LiabilitiesDrillDown({ entity, personaId, onBack, onHome
 
   return (
     <OverlayShell title="What you owe · drill-down"
-      subtitle={`${fmt(totalDebt)} total · ${allLoans.length} loan${allLoans.length === 1 ? '' : 's'}`}
+      subtitle={
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+          <DrillableNumber
+            metric="Total debt"
+            value={fmt(totalDebt)}
+            formula={`Sum of every outstanding balance. ${allLoans.length} loan${allLoans.length === 1 ? '' : 's'}.`}
+            source={`${allLoans.length} loan${allLoans.length === 1 ? '' : 's'} on file`}
+            confidence="high"
+            breakdown={allLoans.map((l, i) => ({
+              label: l.label || l.type || `Loan #${i + 1}`,
+              value: fmt(+(l.outstanding ?? l.outstanding_balance ?? 0)),
+            }))}
+            onDrill={drillStack.pushNumber}
+          />
+          <span style={{ fontSize: 13, color: 'var(--c-text3)' }}>total · {allLoans.length} loan{allLoans.length === 1 ? '' : 's'}</span>
+        </span>
+      }
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

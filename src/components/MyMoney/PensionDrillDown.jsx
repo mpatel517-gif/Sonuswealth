@@ -14,6 +14,10 @@ import { BRAND } from '../../config/brand.js'
 import { LiquidityLadder } from '../charts/index.js'
 import { pensions as pensionTotal } from '../../engine/selectors/index.js'
 import { monteCarloPOS } from '../../engine/scenarios.js'
+// L3-1 (2026-05-28): wire L4 depth. Pilot drill — pattern documented at
+// src/components/MyMoney/L3/DrillStack.jsx for the other 7 drills.
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -88,7 +92,18 @@ function carryForwardByYear(entity) {
   return [+y3 || 0, +y2 || 0, +y1 || 0]
 }
 
-export default function PensionDrillDown({ entity, onBack, onHome }) {
+// L3-1 (2026-05-28): wrapper that mounts the DrillStackProvider so descendants
+// can push L4 panels via useDrillStackContext(). Existing OverlayShell handles
+// the outer L3 chrome; DrillStack overlays L4 panels on top when invoked.
+export default function PensionDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <PensionDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function PensionDrillDownInner({ entity, onBack, onHome }) {
   const a = entity.assets || {}
   const sippTot = (+(a.sipp?.total || 0))
     + (a.pensions || []).reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
@@ -100,9 +115,58 @@ export default function PensionDrillDown({ entity, onBack, onHome }) {
   const age = +(entity.individual?.age ?? entity.age ?? 0)
   const showDecumulation = age >= 55 || entity.flexibleDrawdownTriggered || entity.mpaaTriggered
 
+  // ── L4 drill stack — push payloads via pushNumber({...}) ──────────────────
+  const drillStack = useDrillStackContext()
+
+  // Build the breakdown payload for the headline "total pension wealth" tap.
+  const sippBreakdown = (() => {
+    const items = []
+    if ((+a.sipp?.total || 0) > 0) {
+      items.push({
+        label: a.sipp?.provider ? `SIPP — ${a.sipp.provider}` : 'SIPP (top-level)',
+        value: fmt(+a.sipp.total),
+      })
+    }
+    ;(a.sipp?.pensions || []).forEach((p, i) => {
+      const v = +(p.value ?? p.balance_gbp ?? p.balance ?? p.cetv ?? 0)
+      if (v > 0) {
+        items.push({
+          label: `${p.provider || p.scheme || `Pension #${i + 1}`} — ${p.type || 'DC'}`,
+          value: fmt(v),
+        })
+      }
+    })
+    ;(a.pensions || []).forEach((p, i) => {
+      const v = +(p.balance_gbp ?? p.balance ?? p.cetv ?? p.value ?? 0)
+      if (v > 0) {
+        items.push({
+          label: `${p.provider || p.scheme || `Legacy pension #${i + 1}`} — ${p.type || 'DC'}`,
+          value: fmt(v),
+        })
+      }
+    })
+    return items
+  })()
+
   return (
     <OverlayShell title="Pensions · drill-down"
-      subtitle={fmt(sippTot)}
+      subtitle={
+        // L3-1 pilot: the headline £ becomes drillable. Tapping opens an L4
+        // panel showing per-account breakdown + formula + provenance.
+        <DrillableNumber
+          metric="Total pension wealth"
+          value={fmt(sippTot)}
+          formula={`Sum of every DC + DB CETV across all pension schemes on file. ${sippBreakdown.length} scheme${sippBreakdown.length === 1 ? '' : 's'} totalling ${fmt(sippTot)}.`}
+          source={
+            sippBreakdown.length === 0
+              ? 'No schemes recorded'
+              : `Latest valuation per scheme · ${sippBreakdown.length} source${sippBreakdown.length === 1 ? '' : 's'}`
+          }
+          confidence={sippBreakdown.length > 0 ? 'high' : 'low'}
+          breakdown={sippBreakdown}
+          onDrill={drillStack.pushNumber}
+        />
+      }
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

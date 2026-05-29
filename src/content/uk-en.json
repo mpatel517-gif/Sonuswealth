@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "locale": "uk-en",
+    "lastUpdated": "2026-05-28",
+    "_doc": "Externalised user-facing copy strings. Edit this file (or replace via Supabase content-pull in Phase 2) to change copy without a code deploy. Keys are dot-separated by surface + slot. Missing keys fall back to the second argument passed to useContent(key, fallback) — so inline removals here degrade safely. Phase-1 scope: heros + empty states (~40 keys). Phase 2 expands to long-form panels."
+  },
+
+  "common": {
+    "fcaFooter": "Information only · Derived from your data · Not regulated advice",
+    "comingSoon": "Coming next",
+    "dataPending": "data pending",
+    "emptyGeneric": "No data yet — add details to populate this view.",
+    "loading": "Loading your figures…",
+    "errorFallback": "Something went wrong loading this view. Refresh to try again."
+  },
+
+  "home": {
+    "heroEyebrow": "Your wealth, today",
+    "heroAddIncomeCta": "Add an income source",
+    "emptyState": "Add a salary, savings or property to see your full picture."
+  },
+
+  "welcome": {
+    "subhead": "See, score, and grow your financial world — one place for every part of your money life.",
+    "previewEyebrow": "What you'll see",
+    "previewFootnote": "Example scores. Yours is calculated from your real money picture.",
+    "preLaunchHeading": "Pre-launch.",
+    "preLaunchBody": "Onboarding ships Phase 2.",
+    "primaryCta": "Get started →",
+    "secondaryCta": "See a demo →"
+  },
+
+  "money": {
+    "balanceSheetTitle": "What you own and owe",
+    "balanceSheetEyebrow": "Balance sheet · today",
+    "emptyAssets": "Add an asset to start your balance sheet — a salary or savings account works.",
+    "emptyLiabilities": "No debts on file. Add a mortgage or loan if you have one.",
+    "businessEmpty": "No business interests on file. Add a director shareholding to see retained-profit, dividend and BPR analysis.",
+    "trustsEmpty": "No trusts on file. Add a settlor or beneficiary role to see IHT positioning.",
+    "protectionEmpty": "No protection cover on file. Life, critical illness and income protection sit here once added."
+  },
+
+  "income": {
+    "screenTitle": "Income Statement",
+    "subtitle": "What comes in, what HMRC takes, what you keep.",
+    "yearChip": "UK · 2026/27 rules",
+    "backLabel": "My Money",
+    "emptyHeadline": "Add an income source to see your tax stack.",
+    "emptyCta": "Add income →",
+    "footerNote": "Information based on UK 2026/27 rules. Not personal advice."
+  },
+
+  "cashflow": {
+    "heroEyebrow": "This year's flow",
+    "deficitHeadline": "Spending currently exceeds income.",
+    "emptyState": "Add income and essentials to see your cashflow story.",
+    "noBillsState": "No bills detected yet. Bill calendar populates once you add fixed bills (+ Bill) or connect Open Banking.",
+    "noSubsState": "Recurring-charge detection arrives with Open Banking (Phase 1.2). Until then, add subscriptions manually so they appear in your essentials total."
+  },
+
+  "tax": {
+    "heroEyebrow": "Tax & estate",
+    "noTaxData": "Add income and assets to see your tax position.",
+    "noEstateData": "Add property and pension to see your IHT exposure.",
+    "ihtProjectionNote": "Projections use frozen nil-rate bands and current rules. Budget changes update overnight."
+  },
+
+  "risk": {
+    "heroEyebrow": "Risk dimensions",
+    "noRiskData": "Add at least one investment or pension to see your risk profile.",
+    "concentrationLabel": "Concentration"
+  },
+
+  "timeline": {
+    "heroEyebrow": "What's next",
+    "noEvents": "No scheduled tax or pension events for the next 12 months."
+  },
+
+  "ask": {
+    "placeholder": "Ask Sonu about your money…",
+    "disclaimer": "Sonu is information-only and never makes regulated recommendations. Verify decisions with a qualified UK financial adviser.",
+    "emptyState": "Start a conversation — ask about ISAs, pensions, IHT, drawdown rates, or anything in your dashboard."
+  },
+
+  "onboarding": {
+    "welcomeTitle": "Welcome",
+    "welcomeSub": "We'll walk through your money in 4 steps. Skip anything you don't have yet — you can add it later.",
+    "savedHint": "Saved — pick up where you left off any time.",
+    "completionHeadline": "You're set. Open your dashboard.",
+    "incompleteHint": "We've saved what you entered. Come back any time to finish."
+  },
+
+  "legal": {
+    "fcaBoundary": "Sonuswealth provides information and guidance, not regulated financial advice. We don't recommend specific products, brokers, or platforms.",
+    "privacyShort": "We store your figures so we can show them back to you — nothing is sold or shared. Read the full privacy policy."
+  }
+}

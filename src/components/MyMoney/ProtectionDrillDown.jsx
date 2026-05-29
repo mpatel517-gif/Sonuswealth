@@ -12,6 +12,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 import DrillContextStub, { ClaimsPaidStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { BRAND } from '../../config/brand.js'
@@ -118,7 +120,17 @@ function PolicyRow({ title, exists, amount, premium, provider, inTrust, extras =
   return <div style={{ padding: '14px' }}>{body}</div>
 }
 
-export default function ProtectionDrillDown({ entity, personaId, onBack, onHome }) {
+// L3-1b (2026-05-28): DrillStack wrapper per README pattern.
+export default function ProtectionDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <ProtectionDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
+  const drillStack = useDrillStackContext()
   const [selected, setSelected] = useState(null)
   const p = entity.assets?.protection || {}
   const generalInsurance = entity.general_insurance || entity.assets?.general_insurance || []
@@ -196,7 +208,20 @@ export default function ProtectionDrillDown({ entity, personaId, onBack, onHome 
 
   return (
     <OverlayShell title="Protection · drill-down"
-      subtitle={coreCount === 0 ? 'No protection on file' : `${coreCount}/4 core · ${fmt(totalLifeCover)} life cover`}
+      subtitle={coreCount === 0 ? 'No protection on file' : (
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+          <DrillableNumber
+            metric="Total life cover"
+            value={fmt(totalLifeCover)}
+            formula={`Sum of life-insurance sums-assured across all in-force policies. ${coreCount} of 4 core layers in place (life / critical illness / income protection / PMI).`}
+            source={`${coreCount}/4 core policies on file`}
+            confidence="high"
+            breakdown={[{ label: `${coreCount}/4 core layers`, value: fmt(totalLifeCover) }]}
+            onDrill={drillStack.pushNumber}
+          />
+          <span style={{ fontSize: 13, color: 'var(--c-text3)' }}>· {coreCount}/4 core</span>
+        </span>
+      )}
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

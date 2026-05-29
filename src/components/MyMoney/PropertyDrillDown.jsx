@@ -14,6 +14,9 @@ import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import ExplainerChip from '../shared/Explainer.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
+// L3-1 (2026-05-28): drill-stack pattern (see PensionDrillDown for canonical example).
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 import DrillContextStub, { PropertyMapStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { BRAND } from '../../config/brand.js'
@@ -94,7 +97,15 @@ function Section({ title, sub, children }) {
   )
 }
 
-export default function PropertyDrillDown({ entity, personaId, onBack, onHome }) {
+export default function PropertyDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <PropertyDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
   const [selected, setSelected] = useState(null)
   const a = entity.assets || {}
   const residence = a.residence
@@ -152,9 +163,34 @@ export default function PropertyDrillDown({ entity, personaId, onBack, onHome })
     return Math.round((dt.getTime() - Date.now()) / 86400000)
   }
 
+  // L3-1: drill stack
+  const drillStack = useDrillStackContext()
+  const propertyBreakdown = [
+    ...(residenceValue > 0
+      ? [{ label: `Main residence · ${fmt(residenceValue)} GMV`, value: fmt(residenceEquity) + ' equity' }]
+      : []),
+    ...btls.map((b, i) => ({
+      label: `BTL #${i + 1}${b.address ? ' · ' + b.address.slice(0, 20) : ''}`,
+      value: fmt(+b.value || +b.value_gbp || 0),
+    })),
+  ]
+
   return (
     <OverlayShell title="Property · drill-down"
-      subtitle={`${fmt(totalPropertyValue)} GMV · ${fmt(totalPropertyEquity)} equity`}
+      subtitle={
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+          <DrillableNumber
+            metric="Total property value"
+            value={fmt(totalPropertyValue)}
+            formula={`Sum of main residence (${fmt(residenceValue)}) + ${btls.length} BTL${btls.length === 1 ? '' : 's'} (${fmt(btlValue)}). Gross — not net of mortgages.`}
+            source={`${propertyBreakdown.length} propert${propertyBreakdown.length === 1 ? 'y' : 'ies'} on file`}
+            confidence="high"
+            breakdown={propertyBreakdown}
+            onDrill={drillStack.pushNumber}
+          />
+          <span style={{ fontSize: 13, color: 'var(--c-text3)' }}>· {fmt(totalPropertyEquity)} equity</span>
+        </span>
+      }
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

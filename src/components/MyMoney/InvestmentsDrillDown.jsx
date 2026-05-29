@@ -18,6 +18,8 @@
 import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
+import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
+import { DrillableNumber } from './L3/DrillableNumber.jsx'
 import DrillContextStub, { SectorMixStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 // S1 selector migration (Phase 2)
@@ -187,7 +189,16 @@ function Chip({ children, tone = 'neutral' }) {
   )
 }
 
-export default function InvestmentsDrillDown({ entity, personaId, onBack, onHome }) {
+// L3-1 (2026-05-28): DrillStack wrapper. Follow same pattern as PensionDrillDown.
+export default function InvestmentsDrillDown(props) {
+  return (
+    <DrillStackProvider>
+      <InvestmentsDrillDownInner {...props} />
+    </DrillStackProvider>
+  )
+}
+
+function InvestmentsDrillDownInner({ entity, personaId, onBack, onHome }) {
   const [selected, setSelected] = useState(null)
   const a = entity.assets || {}
   // CRIT-3 fix: fold legacy a.isa / a.portfolio slots into items[] so iterators
@@ -250,9 +261,32 @@ export default function InvestmentsDrillDown({ entity, personaId, onBack, onHome
   // Holding count — folded list is already complete (includes legacy slots).
   const holdingCount = items.length
 
+  // L3-1: drill stack + breakdown payload for the headline tap.
+  const drillStack = useDrillStackContext()
+  const investmentsBreakdown = [
+    ...Object.entries(byWrapper).map(([w, v]) => ({
+      label: `${w} wrapper`,
+      value: fmt(v),
+    })),
+    ...(altTotal > 0 ? [{ label: 'Alternatives (crypto / wine / PE)', value: fmt(altTotal) }] : []),
+  ]
+
   return (
     <OverlayShell title="Savings & investments · drill-down"
-      subtitle={`${fmt(total)} · ${holdingCount} holding${holdingCount === 1 ? '' : 's'}`}
+      subtitle={
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
+          <DrillableNumber
+            metric="Total invested assets"
+            value={fmt(total)}
+            formula={`${holdingCount} holding${holdingCount === 1 ? '' : 's'} across ${Object.keys(byWrapper).length} wrapper type${Object.keys(byWrapper).length === 1 ? '' : 's'}${altTotal > 0 ? ' plus alternatives' : ''}.`}
+            source={`${holdingCount} holding${holdingCount === 1 ? '' : 's'} on file — latest valuation per asset`}
+            confidence="high"
+            breakdown={investmentsBreakdown}
+            onDrill={drillStack.pushNumber}
+          />
+          <span style={{ fontSize: 13, color: 'var(--c-text3)' }}>· {holdingCount} holding{holdingCount === 1 ? '' : 's'}</span>
+        </span>
+      }
       onBack={onBack} onHome={onHome}>
       <div style={{ padding: '16px 16px 40px' }}>
 

@@ -1,6 +1,6 @@
 # Lane 3 — Outstanding work
 
-**Status (2026-05-29):** 8 of 8 main items closed at engine/foundation layer. Drilldown depth fully wired (founder's #1 pushback). Content externalisation client-side shipped (founder's #4 pushback). Real goal-seek + scenarios now under contract test (founder's #5 pushback). Sole remaining UI deliverable is L3-2 — the 11 missing L3 panels — which needs founder priority order before per-panel build can start, then ~2-3 hours per panel under DoD §B.
+**Status (2026-05-29 — end of session):** 8 of 8 main items closed at engine/foundation layer. L3-2 Tier A complete code-only (Income-sources, Wrappers, State-pension) — all three sitting behind the DoD §C two-checkbox wire+snap gate. Tier B and Tier C panels not started.
 
 ---
 
@@ -21,7 +21,7 @@
 
 | ID    | What                                          | Effort | Notes |
 |-------|-----------------------------------------------|--------|-------|
-| L3-2  | Build the 11 missing L3 panels                | L | Spec asserts 19; we have 8. Each panel ~2-3 hours under DoD §B (snap evidence at 3 viewports × 2 themes). Needs founder priority order. **See §1 below.** |
+| L3-2  | Build the 11 missing L3 panels (3 code-complete, 8 pending) | L | **Tier A 3 panels code-complete (commits 7c6cac3, baedf8a, 0434e19) — wire+snap pending per DoD §C.** Tier B + Tier C pending. **See §1 below.** |
 | L3-4b | Per-screen `useContent` sweep                 | M | Pattern proven in Cashflow.jsx. Mechanical wrap of ~40 inline strings across 8 screens. |
 | L3-6b | Per-screen jargon sweep                       | M | Helper exists; ~20 min per file × 8 screens. Recommend first-occurrence-per-section only. |
 
@@ -41,9 +41,9 @@ Panel candidates from spec inventory. Each row notes the engine selector(s) the 
 
 | # | Panel domain | Reads from (engine) | Spec § (2-Product) | Tier | Notes |
 |---|---|---|---|---|---|
-| 1 | **Income-sources** | `incomeByCategory`, `taxableIncome`, `_pensionTotal` | mymoney §3A + cashflow §2.1 | **A** | Existing IncomeBreakdown drill already wired — this fills the L3 mid-layer (per-employer / per-rental / per-dividend) between L2 total and L4 transaction list. Highest founder visibility. |
-| 2 | **Wrappers** | `wrapperBreakdown`, `taxonomy.wrapperTypes`, ISA/SIPP/GIA/LISA totals | mymoney §3B + tax-estate §1.2 | **A** | Cross-cuts every investment row. Leans on `src/engine/taxonomy.js` (committed L2). |
-| 3 | **State-pension** | `statePensionForecast`, `niYearsRemaining`, `niGapCost` | mymoney §3C + tax-estate §2.4 | **A** | Smallest data shape. Clean build. Founder pushback "calcs may not be dynamic" applies directly here. |
+| 1 | **Income-sources** ✓ CODE | `annualIncome`, per-source breakdown (employment/dividends/rental/etc) | mymoney §3A + cashflow §2.1 | **A** | **commit 7c6cac3 + test:l3-2-income 28/28 PASS. Pending wire+snap.** |
+| 2 | **Wrappers** ✓ CODE | `isaTotal`, `pensionTotal`, `giaTotal`, taxAdvAlt walk of investments[] | mymoney §3B + tax-estate §1.2 | **A** | **commit baedf8a + test:l3-2-wrappers 27/27 PASS. Pending wire+snap.** |
+| 3 | **State-pension** ✓ CODE | `statePensionAnnual`, TAX.spa + TAX.statePensionFull + TAX.statePensionQualYears | mymoney §3C + tax-estate §2.4 | **A** | **commit 0434e19 + test:l3-2-state 33/33 PASS. Pending wire+snap.** |
 | 4 | Tax-obligations | `taxByCategory`, `bandUtilisation`, `marginalRate` | tax-estate §1.1 | B | Sits next to existing TaxTreatmentSection. |
 | 5 | IHT-estate | `ihtDeltaPrePost2027`, `nrbUtilisation`, `bprQualifying` | tax-estate §2 | B | Heavy spec; need to verify the spec hasn't drifted post-Finance-Act-2026. |
 | 6 | Trusts | `trustList`, `trustType`, `trustAnniversary` | tax-estate §3 | B | Reads `assets.trusts[]` from nested shape; depends on L2-9 schema collapse landed (yes). |
@@ -55,9 +55,10 @@ Panel candidates from spec inventory. Each row notes the engine selector(s) the 
 
 ### Recommended order (founder may override)
 
-1. Tier A first: **Income-sources → Wrappers → State-pension** (3 panels, ~6-9 hours total). Each is foundational and unlocks Tier B.
-2. Tier B next: Tax-obligations → IHT-estate → Trusts.
-3. Tier C last: Director-comp → BTL-portfolio → Flexi-drawdown → DC-vs-DB → Decumulation.
+1. ~~Tier A: Income-sources → Wrappers → State-pension~~ — **all three CODE-COMPLETE 2026-05-29**. Wire+snap pending per DoD §C.
+2. **Next session opening: wire + snap-verify the 3 Tier-A panels.** One wire commit per panel + MCP snap evidence per DoD §B Gate 1. Then close L3-2-INCOME / L3-2-WRAPPERS / L3-2-STATEPENSION tickets fully.
+3. Tier B (after Tier A snap-verified): Tax-obligations → IHT-estate → Trusts.
+4. Tier C last: Director-comp → BTL-portfolio → Flexi-drawdown → DC-vs-DB → Decumulation.
 
 ### Per-panel DoD checklist (DoD §B)
 

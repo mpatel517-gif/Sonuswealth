@@ -28,6 +28,8 @@ installGlobalErrorListeners()
 installBundleAutoSync()
 import { StepUpProvider } from './state/step-up.jsx'
 import { bootRules } from './lib/boot-rules.js'
+// L3-2 preview gallery — mounts Tier-A panels via ?panel= URL param for snap verification.
+import { PanelPreviewGallery } from './components/MyMoney/L3/L3Sections/PanelPreviewGallery.jsx'
 
 import personaA from './rules/personas/persona-a.json'
 import personaB from './rules/personas/persona-b.json'
@@ -130,6 +132,7 @@ function readUrlParams() {
     tab: p.get('tab'),
     theme: p.get('theme'),
     legal: p.get('legal'),     // L1-2: ?legal=privacy|terms|cookies
+    panel: p.get('panel'),     // L3-2: ?panel=income|wrappers|state-pension|tier-a (preview gallery)
   }
 }
 
@@ -503,6 +506,26 @@ function AppInner() {
               url.searchParams.delete('legal')
               window.history.replaceState({}, '', url.toString())
               // Force re-read — simplest is reload because urlParams is module-load only.
+              window.location.reload()
+            }
+          }}
+        />
+      )}
+
+      {/* L3-2 (2026-05-29): ?panel=income|wrappers|state-pension|tier-a — mount
+          Tier-A panel preview gallery above all else. Lets MCP snap-verify each
+          panel against a real persona before production drill wiring lands.
+          Requires ?demo= to also be set so an entity is available; otherwise
+          we fall through and show the welcome flow. */}
+      {urlParams.panel && entity && (
+        <PanelPreviewGallery
+          entity={entity}
+          panel={urlParams.panel}
+          onBack={() => {
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.delete('panel')
+              window.history.replaceState({}, '', url.toString())
               window.location.reload()
             }
           }}

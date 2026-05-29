@@ -46,7 +46,12 @@ let _posthog = null
 async function tryInitSentry() {
   if (!SENTRY_DSN) return null
   try {
-    const Sentry = await import(/* @vite-ignore */ '@sentry/react')
+    // Module name lives in a variable so Vite's dev import-analysis can't
+    // resolve it ahead of execution. Without this, dev-server fails to start
+    // when @sentry/react isn't yet installed. Production rolldown respects
+    // /* @vite-ignore */ as well.
+    const sentryPkg = '@sentry/react'
+    const Sentry = await import(/* @vite-ignore */ sentryPkg)
     Sentry.init({
       dsn: SENTRY_DSN,
       environment: APP_ENV,
@@ -82,7 +87,10 @@ async function tryInitSentry() {
 async function tryInitPostHog() {
   if (!POSTHOG_KEY) return null
   try {
-    const { default: posthog } = await import(/* @vite-ignore */ 'posthog-js')
+    // Same indirection as Sentry — defeats Vite dev import-analysis when the
+    // optional package isn't installed.
+    const posthogPkg = 'posthog-js'
+    const { default: posthog } = await import(/* @vite-ignore */ posthogPkg)
     posthog.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       // Privacy-preserving defaults — see file header.

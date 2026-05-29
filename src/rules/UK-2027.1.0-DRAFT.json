@@ -1,0 +1,97 @@
+{
+  "_meta": {
+    "version": "UK-2027.1.0-DRAFT",
+    "taxYear": "2027/28",
+    "effectiveFrom": "2027-04-06",
+    "effectiveTo": "2028-04-05",
+    "verifiedBy": "DRAFT — not for engine use until verified post-Budget",
+    "verificationDate": null,
+    "jurisdiction": "United Kingdom",
+    "supersedes": "UK-2026.1.1",
+    "status": "DRAFT",
+    "notes": "L4-8 skeleton. Do NOT import this bundle into the engine until status flips to 'verified'. The _pending_changes block below lists every rate change announced for 2027/28 that the verified bundle will need to reflect.",
+    "_pending_changes": [
+      {
+        "ref": "UK-PEN-IHT-2027",
+        "topic": "Pensions enter the estate for IHT",
+        "effectiveFrom": "2027-04-06",
+        "source": "Royal Assent March 2026 (originally announced Autumn Budget 2024)",
+        "engineImpact": "Materially changes ihtDynamic / ihtProjection / ihtDeltaPrePost2027. Already partially reflected in 2026 bundle as a forward-warning; full activation here.",
+        "action": "Set inheritanceTax.pensionsInEstate.active = true in the verified 2027 bundle."
+      },
+      {
+        "ref": "UK-BPR-2027-CARRYOVER",
+        "topic": "BPR £1m cap carries over (already live from April 2026)",
+        "effectiveFrom": "2027-04-06",
+        "source": "Autumn Budget 2024 / Finance Act 2026 s65 sch12",
+        "engineImpact": "Already in UK-2026.1.1. Carries over unchanged.",
+        "action": "Copy bprCap structure from UK-2026.1.1."
+      },
+      {
+        "ref": "UK-IT-FREEZE-2027",
+        "topic": "Income tax thresholds frozen to 2030",
+        "effectiveFrom": "2027-04-06",
+        "source": "Autumn Budget 2025 (UK-IT-06)",
+        "engineImpact": "Personal Allowance, basic-rate band, higher-rate band all remain at 2026/27 nominal values. Real-terms erosion via CPI.",
+        "action": "Copy income block from UK-2026.1.1 verbatim. Add personalAllowanceFrozenTo: 2030 in the new bundle's _meta."
+      },
+      {
+        "ref": "UK-ISA-CASH-CAP-2027",
+        "topic": "Cash ISA cap under-65s",
+        "effectiveFrom": "2027-04-06",
+        "source": "Autumn Budget 2025",
+        "engineImpact": "Reduces cash-ISA contribution headroom for users under 65. Already in UK-2026.1.1 as a forward-warning under allowancesAndReliefs.cashISACapUnder65From2027.",
+        "action": "Activate the cap in the verified bundle: set isaAllowance.cashCapUnder65.active = true."
+      },
+      {
+        "ref": "UK-PENDING-AUTUMN-2026",
+        "topic": "Autumn Budget 2026 changes",
+        "effectiveFrom": "TBD",
+        "source": "Not yet announced",
+        "engineImpact": "Unknown until October/November 2026.",
+        "action": "Re-verify the entire bundle against the Budget statement using BUDGET-DAY-RUNBOOK.md. Update _correctionLog with every changed value."
+      }
+    ]
+  },
+
+  "income": {
+    "_DRAFT_NOTE": "Do not fill in until post-Autumn-Budget-2026. Copy from UK-2026.1.1 then apply any announced changes.",
+    "_pending_action": "verify"
+  },
+
+  "inheritanceTax": {
+    "_DRAFT_NOTE": "Activate pensionsInEstate from April 2027. Carry over BPR £1m cap. Carry over RNRB taper.",
+    "pensionsInEstate": {
+      "active": true,
+      "effectiveFrom": "2027-04-06",
+      "note": "Pensions enter the estate for IHT calculation under Finance Act 2026 changes — Royal Assent March 2026.",
+      "_pending_action": "verify"
+    },
+    "_pending_action": "verify"
+  },
+
+  "pension": {
+    "_DRAFT_NOTE": "Carry over Annual Allowance, MPAA, LSA, LSDBA from UK-2026.1.1. State Pension rate updates per DWP September announcement.",
+    "_pending_action": "verify"
+  },
+
+  "capitalGainsTax": {
+    "_DRAFT_NOTE": "Rates frozen at 18% / 24% per Oct 2024 changes — carry over.",
+    "_pending_action": "verify"
+  },
+
+  "nationalInsurance": {
+    "_DRAFT_NOTE": "Carry employerRate 0.15 / secondaryThreshold £5,000 / employmentAllowance £10,500. Class 1/2/4 employee rates per Budget.",
+    "_pending_action": "verify"
+  },
+
+  "isaAllowance": {
+    "_DRAFT_NOTE": "Standard £20k limit assumed unchanged. Activate cashCapUnder65 from this bundle (announced Autumn Budget 2025).",
+    "cashCapUnder65": {
+      "active": true,
+      "effectiveFrom": "2027-04-06",
+      "_pending_action": "verify"
+    },
+    "_pending_action": "verify"
+  }
+}

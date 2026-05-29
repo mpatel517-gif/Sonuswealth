@@ -1,0 +1,92 @@
+{
+  "fixture_id": "mrT-bereavement",
+  "fixture_version": "1.0",
+  "fixture_date": "2026-05-28",
+  "fixture_purpose": "L5-2 vulnerability edge case — recent bereavement (within 12 months). Engine's derivedVulnerability selector should return status='watch' (1 trigger) or 'elevated' (2 triggers) and toneHint should NOT be 'standard'. UI: copy register should be gentle, no urgency banners.",
+
+  "id": "mrt-bereavement",
+  "name": "Mr T Bereavement",
+  "displayName": "Mr T · 58 · recent bereavement",
+  "type": "individual",
+  "isIFA": false,
+  "lifeStage": 4,
+  "lifeStageName": "Preservation",
+  "lifeStageAge": "55–67",
+  "hasBusiness": false,
+  "isCouple": false,
+  "hasTrust": false,
+  "hasDBPension": true,
+  "isHigherRateTaxpayer": false,
+  "age": 58,
+  "targetIncome": 36000,
+  "rulesVersion": "UK-2026.1",
+  "drawdown": 0,
+
+  "jurisdiction":         { "primary": "UK", "tax_bundle": "UK-2026.1", "domicile": "UK" },
+  "jurisdictionContext":  { "primary": "UK-2026.1" },
+
+  "individual": {
+    "id": "mrT-bereavement-primary",
+    "name": "Mr T Bereavement",
+    "dob": "1968-03-12",
+    "gender": "F",
+    "residency_status": "UK-resident",
+    "employment_status": "employed",
+    "gross_salary": 38000,
+    "income_band": "basic-rate",
+    "state_pension_start_age": 67,
+    "state_pension_accrued_years": 35,
+    "life_stage": "preservation"
+  },
+
+  "maritalStatus": "widowed",
+  "previously_married": true,
+
+  "events": [
+    {
+      "type": "spouse_died",
+      "date": "2026-01-15",
+      "note": "Recent bereavement — within 12 months of as-of date 2026-05-28. Triggers derivedVulnerability."
+    }
+  ],
+
+  "assets": {
+    "isa":     { "value": 18000 },
+    "cash":    { "value": 22000 },
+    "sipp":    { "total": 142000, "pensions": [{ "id": "main", "name": "Aviva DC", "value": 142000, "type": "SIPP" }] },
+    "property": {
+      "residential": [
+        {
+          "id": "main-home",
+          "address": "Inherited family home",
+          "value": 385000,
+          "mortgage": 0,
+          "ownership_share": 1,
+          "is_main_residence": true,
+          "ppr_eligible": true
+        }
+      ]
+    },
+    "protection": {}
+  },
+
+  "income": {
+    "salary": 38000
+  },
+
+  "expenses": {
+    "essentialsMonthly": 2400,
+    "annual": 28800
+  },
+
+  "wills": [
+    { "status": "stale", "date_signed": "2018-05-01", "note": "Pre-bereavement will — review pending" }
+  ],
+  "lpa": [],
+
+  "_test_expectations": {
+    "derivedVulnerability_status": "watch",
+    "derivedVulnerability_reason_pattern": "bereavement",
+    "toneHint_not": "standard"
+  }
+}

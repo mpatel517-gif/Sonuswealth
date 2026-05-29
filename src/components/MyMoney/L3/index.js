@@ -18,3 +18,4 @@ export { L4ChartPanel }   from './L4ChartPanel.jsx'
 // L3-2 domain panels — first real consumers of L3Panel.
 export { IncomeSourcesPanel } from './L3Sections/IncomeSourcesPanel.jsx'
 export { WrappersPanel }      from './L3Sections/WrappersPanel.jsx'
+export { StatePensionPanel }  from './L3Sections/StatePensionPanel.jsx'

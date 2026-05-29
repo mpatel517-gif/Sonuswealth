@@ -27,6 +27,7 @@
     "test:l2-8-uirenderable": "node tests/l2-8-mrt-uirenderable.mjs",
     "test:l3-2-income": "node tests/l3-2-income-sources.mjs",
     "test:l3-2-wrappers": "node tests/l3-2-wrappers.mjs",
+    "test:l3-2-state": "node tests/l3-2-state-pension.mjs",
     "test:coverage": "c8 --reporter=text --reporter=lcov --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --check-coverage=false node tests/dynamic-onboarding.mjs",
     "test:coverage:gate": "c8 --reporter=text --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --lines=40 --statements=40 node tests/dynamic-onboarding.mjs",
     "regression:capture": "node tests/harness/regression-capture.mjs",

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA · src/engine/ripple.js  (Phase 2c — PP-5)
+// SONUSWEALTH · src/engine/ripple.js  (Phase 2c — PP-5)
 //
 // Single ripple path. One call returns every derived computation that depends
 // on the entity, partitioned into scopes so callers can request only what

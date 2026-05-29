@@ -96,7 +96,7 @@
 | **S-12 (Wealth Score reconcile)** | **CONFIRMED FAIL** | Value reconciles. Label drift: "Health score" (Risk full) vs "Wealth" (overlay) vs "Wealth Score" (Home). Format drift: bare int (Risk SecondaryTile + overlay) vs `N/100` (Home). RK-CHR-09 topbar version missing entirely (no topbar in Dashboard). |
 | S-13 (Net Worth reconcile) | **PASS** | Both call `fmt(netWorth(e))`. Risk does not reproduce the Home £3.63m/£3.63M case-drift. |
 | S-14 (orphan components) | **CONFIRMED** | `CrossMap.jsx`, `DimensionRadar.jsx`, `ScoreHistoryChart.jsx`, `ShockScenarios.jsx` — zero importers under `src/screens/Risk*.jsx` or anywhere reachable; `_ComponentLab.jsx` imports the *replacement* `CrossMap5x5` only. POLISH. |
-| S-15 (Caelixa/Finio brand drift) | PASS spot-check | Grep on `Risk.jsx`/`RiskOverlay.jsx`/`ProtectionGap.jsx` finds no `Caelixa` or `Finio` user-facing strings. |
+| S-15 (Sonuswealth/Finio brand drift) | PASS spot-check | Grep on `Risk.jsx`/`RiskOverlay.jsx`/`ProtectionGap.jsx` finds no `Sonuswealth` or `Finio` user-facing strings. |
 | S-16 ("engine returned empty") | CONFIRMED A5 | `Risk.jsx:1409–1411`. POLISH. |
 | S-17 (Z12 hash to non-existent `tab=plan`) | CONFIRMED FAIL | `Risk.jsx:1149–1163` — dispatches `sonus:navigate` + sets `#tab=plan&planType=protection`. Codebase grep finds no listener for `tab=plan` in Dashboard. A2/A4 functional. |
 | S-18 (two close affordances in overlay) | CONFIRMED | `RiskOverlay.jsx:62–70` (×) + `:110–117` (← breadcrumb). POLISH. |

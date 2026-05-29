@@ -6,7 +6,7 @@
 | # | Finding | Status | Evidence |
 |---|---------|--------|---------|
 | DB-01 | BRAND.disclaimer added | FIXED | `import { BRAND } from '../config/brand.js'` at line 20; `{BRAND.disclaimer}` rendered at line 202 |
-| DB-02 | Brand-leak gate | MONITORING | No Caelixa/Finio/FQ in user-facing strings. `D-RPT-EXPORT-1` appears only in a developer comment (line 11) — not rendered. `finioScore` alias exists in brand.js but resolves to 'Sonuswealth Wealth Score'; not referenced in Reports.jsx. |
+| DB-02 | Brand-leak gate | MONITORING | No Sonuswealth/Finio/FQ in user-facing strings. `D-RPT-EXPORT-1` appears only in a developer comment (line 11) — not rendered. `finioScore` alias exists in brand.js but resolves to 'Sonuswealth Wealth Score'; not referenced in Reports.jsx. |
 
 ## BRAND.disclaimer content
 

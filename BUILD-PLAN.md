@@ -1,4 +1,4 @@
-# CAELIXA — BUILD PLAN
+# SONUSWEALTH — BUILD PLAN
 
 > This file tells GSD what to build, in what order, and how to verify each piece.
 > Use with `/gsd:execute` or feed to Agent Teams as the task list.
@@ -240,7 +240,7 @@ export function estateReadinessIndex(entity) { return 0; }
 - Each question maps to archetype classification
 - Smooth transitions between questions
 - "Skip" option available (FP-4: works with what it has)
-- Final screen shows initial Caelixa Wealth Score + Risk Score
+- Final screen shows initial Sonuswealth Wealth Score + Risk Score
 - Routes to Home screen on completion
 - Mobile-optimised (full-screen cards, large tap targets)
 - No back-end yet — store responses in React state

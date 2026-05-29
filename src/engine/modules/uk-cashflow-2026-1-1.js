@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/uk-cashflow-2026-1-1.js
+// SONUSWEALTH — parts/3-Engine/uk-cashflow-2026-1-1.js
 // =====================================================================
 // UK Cashflow Engine — Track A · Code · Opus · s17b-1c-eng · 8 May 2026
 //

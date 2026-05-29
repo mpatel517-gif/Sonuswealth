@@ -34,7 +34,7 @@ where Home's "Start pension drawdown" action should land (PensionDrillDown overl
 
 | FD | Decision |
 |----|----------|
-| FD-NAME-1 | Product name is **Sonuswealth** (D-NAME-2, locked 9 May 2026, `src/config/brand.js` is SoT). Casing: logo lowercase, body sentence-case, slogans all-caps allowed. Caelixa / Finio in user-facing strings = FAIL. See `home-inventory-v1.md` for full rule. |
+| FD-NAME-1 | Product name is **Sonuswealth** (D-NAME-2, locked 9 May 2026, `src/config/brand.js` is SoT). Casing: logo lowercase, body sentence-case, slogans all-caps allowed. Sonuswealth / Finio in user-facing strings = FAIL. See `home-inventory-v1.md` for full rule. |
 | FD-CROSS-1 | Every critical action is a **surface-instance**, not a pointer — each surface owns its own angle/layout/data. **My Money owns the doing** for pension/SIPP/drawdown (the canonical surface — `PensionDrillDown` overlay with editable schedule, presets, projection, commit). Other surfaces (Home/T&E/Timeline/Cashflow/Risk) each present their own angle of the same action with their own data. See `home-inventory-v1.md` for the angles table. Supersedes prior FD-MM-2 wording. |
 | FD-LOGO-1 | Brand assets at `Codex UI/deliverables/sonuswealth-site/assets/`. See home-inventory FD-LOGO-1. |
 | FD-MASCOT-1 | Sonnu (owl), 6 life-stage forms. Placement = Wave 7. See home-inventory FD-MASCOT-1. |

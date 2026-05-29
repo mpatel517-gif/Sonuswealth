@@ -12,7 +12,7 @@
 
 Founder stated: *"the current cashflow doesnt even have the 4 industry standards plus my take on cashflow."*
 
-**Actual state:** 4 of 4 industry-standard methods are wired engine + UI. The "founder's own method" (PRC-anchored / Caelixa-original) is a **deliberate stub** because the founder hasn't closed open item **O-CF-RULES-07** (PRC/PCC methodology pending founder IP definition). The spec itself documents this as stub-by-design at §6.4 (line 693).
+**Actual state:** 4 of 4 industry-standard methods are wired engine + UI. The "founder's own method" (PRC-anchored / Sonuswealth-original) is a **deliberate stub** because the founder hasn't closed open item **O-CF-RULES-07** (PRC/PCC methodology pending founder IP definition). The spec itself documents this as stub-by-design at §6.4 (line 693).
 
 So the gap is **founder-side, not Claude-side**. Closing O-CF-RULES-07 unlocks the 5th regime.
 

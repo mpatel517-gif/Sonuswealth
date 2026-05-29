@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA TIMELINE ENGINE — A5
+// SONUSWEALTH TIMELINE ENGINE — A5
 // Five Timeline suite function groups (TL v1.0 §10): calcAPQTimeline ·
 // calcMilestones · calcGoalProgress · calcScoreHistory · calcRiskHistory ·
 // Scenario CRUD (in-memory stub — Supabase persistence at Phase 2).

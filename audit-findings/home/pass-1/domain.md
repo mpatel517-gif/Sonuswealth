@@ -119,6 +119,6 @@ Scan for PRC/PCC, Reality Engine, DER, EBR in HomeScreen.jsx user-facing copy.
 | DOM-05 | FUNCTIONAL | ActionsCard severity badges (CRIT/HIGH/MED/LOW) | No legend or tooltip explaining severity tiers |
 | DOM-06 | FUNCTIONAL | AnchorRow donut gold arc | Gold reference ring at 68% has no label — user cannot know what it represents without a tooltip |
 
-No DEMO-BLOCKING domain findings. No UK tax fact errors. No Caelixa/Finio brand drift in user-facing copy. FCA framing correct throughout. Founder IP not misused.
+No DEMO-BLOCKING domain findings. No UK tax fact errors. No Sonuswealth/Finio brand drift in user-facing copy. FCA framing correct throughout. Founder IP not misused.
 
 Total domain findings: 0 DEMO-BLOCKING, 6 FUNCTIONAL, 0 POLISH

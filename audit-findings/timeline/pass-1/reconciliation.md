@@ -89,7 +89,7 @@ For every metric that appears on Timeline AND another screen, this maps the func
 | TL-OVL-02c | **FAIL** | FUNCTIONAL | Local `activeRange` state never propagates back; sparkline draws prop `hist.points` regardless. Picking `all-time` does nothing. See F-RECON-08. Locked inventory TL-S-05. | Timeline.jsx:1879–1886, 1977 | `calcScoreHistory` |
 | TL-OVL-02f | **FAIL** | FUNCTIONAL | Eyebrow `"8 dimensions — weakest first"` hardcoded; `fq.dims` returns 7 keys (fq-calculator.js:785 — behaviour, capital, tax, protection, cashflow, debt, estate). Risk v1.6 spec is 7. Number-in-label disagrees with number-of-bars. **F-RECON-07.** Locked finding from brief. | Timeline.jsx:2023 ; fq-calculator.js:785 | `calcFQ` |
 | TL-OVL-03* | UNVERIFIED | — | MilestoneDrillPanel: numeric fields read from milestone obj; no independent calc. | Timeline.jsx:2083+ | n/a |
-| TL-DISC-01 | PASS | — | Hardcoded copy; brand string `Sonuswealth` correct (no `Caelixa`/`Finio` leakage on this screen — verified by grep returning zero user-visible matches). Aligns with FD-NAME-1. | Timeline.jsx:2504–2506 | none |
+| TL-DISC-01 | PASS | — | Hardcoded copy; brand string `Sonuswealth` correct (no `Sonuswealth`/`Finio` leakage on this screen — verified by grep returning zero user-visible matches). Aligns with FD-NAME-1. | Timeline.jsx:2504–2506 | none |
 | TL-DISC-02 | **FAIL** | POLISH | `{TAX.ver} · Last verified: {entity?.dataLastUpdated \|\| 'UK-2026.1'}` — same fallback-type bug as TL-X28-04 (rules-version string in data-date slot). Plus 7th occurrence of the literal `'UK-2026.1'`. **F-RECON-04 / F-RECON-05.** | Timeline.jsx:2507 | `BRAND.dataDate` |
 
 ---

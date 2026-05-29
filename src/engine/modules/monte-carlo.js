@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/monte-carlo.js
+// SONUSWEALTH — parts/3-Engine/lib/monte-carlo.js
 // =====================================================================
 // Shared Monte Carlo / stochastic simulation utilities.
 // PURE FUNCTIONS. NO BUNDLE DEPENDENCY. SEEDABLE FOR REPRODUCIBILITY.

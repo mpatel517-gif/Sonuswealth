@@ -177,7 +177,7 @@ Seed findings status (all confirmed):
 - S-08 (label divergence hero vs drill) routed to reconciler (A6).
 - S-09 (UI-derived proxy components) routed to reconciler (A6).
 - S-10 confirmed → CF-SUB-02, CF-ALLOC-03.
-- S-11 brand-string check — no `Caelixa` or `Finio` in `Cashflow.jsx`. PASS.
+- S-11 brand-string check — no `Sonuswealth` or `Finio` in `Cashflow.jsx`. PASS.
 - S-12 confirmed → CF-WAT-09 + CF-U-03 (extends to "+ Bill" empty-state).
 - S-13 confirmed → CF-PRC-01, CF-SUB-01.
 - S-14 routed to plain-English auditor (A5).

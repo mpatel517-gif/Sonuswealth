@@ -1,4 +1,4 @@
-# CAELIXA CODE TRACKER
+# SONUSWEALTH CODE TRACKER
 **Generated:** 1 May 2026
 **Last validated:** R08 PASS · 0 failures · 33 stubs pending
 
@@ -187,7 +187,7 @@
 
 ### P2.10 — Supabase Setup
 **Status:** ✅ COMPLETE (1 May 2026)
-**Project:** caelixa-dev (`yknnfglfbpcyxcllrvmd`)
+**Project:** sonuswealth-dev (`yknnfglfbpcyxcllrvmd`)
 
 | Item | Status |
 |------|--------|

@@ -12,7 +12,7 @@
 |---|---|---|
 | `src/rules/UK-2026.1.1.json` | `_meta` (with `_correctionLog`), `_disclaimer`, `income`, `capitalGains`, `inheritanceTax`, `pension`, `isa`, `taxEfficientInvestments`, `property`, `nationalInsurance`, `trusts`, `overseas`, `welshIT`, `businessOwnerPersonal`, `corporationTax`, `allowancesAndReliefs`, `safeWithdrawalRate`, `bengenNote`, `milestones`, `_lastUpdated`, `_nextReviewDue` | v1.1.1 |
 | `src/rules/tax-2026.json` | Same as above MINUS `welshIT`, MINUS `_correctionLog`, PLUS legacy flat aliases `personal_allowance`, `additional_rate_threshold`, `dividend_ordinary_rate`, `dividend_upper_rate`, `vct_income_relief` | v1.0 (older) |
-| `src/engine/modules/UK-2026.1.1.json` | Identical to `src/rules/UK-2026.1.1.json` (Caelixa-branded text, otherwise byte-for-byte same values) | v1.1.1 |
+| `src/engine/modules/UK-2026.1.1.json` | Identical to `src/rules/UK-2026.1.1.json` (Sonuswealth-branded text, otherwise byte-for-byte same values) | v1.1.1 |
 | `src/engine/modules/UK-master-2026.1.1.json` | Same as `src/engine/modules/UK-2026.1.1.json` PLUS structured `overseas.statutoryResidenceTest` (full SRT matrix) PLUS structured `overseas.splitYearTreatment` (8 cases) PLUS extra `_meta._correctionLog.s17a3_2026-05-07_srt_splityear_addition` entry | v1.1.1 + SRT/SYT |
 
 **Subset/superset chain:** `tax-2026.json (v1.0)` ⊂ `src/rules/UK-2026.1.1.json ≡ src/engine/modules/UK-2026.1.1.json` ⊂ `src/engine/modules/UK-master-2026.1.1.json`.

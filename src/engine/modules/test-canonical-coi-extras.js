@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/test-canonical-coi-extras.js
+// SONUSWEALTH — parts/3-Engine/lib/test-canonical-coi-extras.js
 // =====================================================================
 // Supplementary smoke test for canonical-coi.js extras patch.
 // Patched at s17b-1c-eng (Phase A · Option A · F-PHASE0-3 resolution).

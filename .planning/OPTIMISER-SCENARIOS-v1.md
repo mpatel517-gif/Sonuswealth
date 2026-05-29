@@ -1,4 +1,4 @@
-# Caelixa Optimiser — 22 Scenarios (UK 2025/26)
+# Sonuswealth Optimiser — 22 Scenarios (UK 2025/26)
 
 **Purpose:** Beyond the £70k SIPP drawdown case (already mapped to 38 strategies), here are 22 OTHER recurring UK personal finance situations where the app delivers measurable savings. Each is computable from the persona JSON.
 

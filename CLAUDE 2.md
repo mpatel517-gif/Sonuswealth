@@ -1,4 +1,4 @@
-# CLAUDE CODE INSTRUCTIONS — CAELIXA PROJECT
+# CLAUDE CODE INSTRUCTIONS — SONUSWEALTH PROJECT
 
 You are operating in Track A (Claude Code · terminal) per finio-skill-v1_2.md §13.
 
@@ -36,7 +36,7 @@ You are operating in Track A (Claude Code · terminal) per finio-skill-v1_2.md �
 | **A5 State-tiles** | **4 state-tile engine functions** | `src/engine/state-tiles-engine.js` · `safetyNetState` · `debtFreeState` · `fiState` · `beneficiaryState` · D-MM-7 decided per foundation v1.3 · Q-F PLSA fix is PROD-blocker not demo-blocker |
 | **A5.5** | **Visual QA — all 13 Mr T fixtures** | `tests/visual-qa.js` · commit f9c95fb · R08 0 failures · visual-qa 56 checks 0 hard failures · 2 known gaps (aged-out floor · beneficiary inherited pension) flagged for Track B |
 | **A6** | **Bruce Home wired** | commit 9892f57 · `calcAPQ → liveAlerts → wireEntity` · `costOfInaction` alias fixed · build 0 errors · 474KB |
-| **A7** | **Supabase setup complete** | 7 tables · 17 indexes · 4 views · 3 RLS policies · `src/lib/supabase.js` · caelixa-dev project |
+| **A7** | **Supabase setup complete** | 7 tables · 17 indexes · 4 views · 3 RLS policies · `src/lib/supabase.js` · sonuswealth-dev project |
 | **A-homeV2-1** | **HomeV2 + TaxEstate fixes** | Radar NODE_R fix · DimensionSheet z-stack fix · IHT multi-drawdown · back nav all screens · typography cleanup · 491KB |
 
 ### P3 cashflow functions built (29 April 2026)
@@ -100,7 +100,7 @@ You are operating in Track A (Claude Code · terminal) per finio-skill-v1_2.md �
 - Visual verify: pending (Chrome extension unavailable at session close) — navigate to `localhost:5175` to confirm
 
 ### A7 Supabase setup (1 May 2026)
-- **Project:** caelixa-dev (`yknnfglfbpcyxcllrvmd.supabase.co`)
+- **Project:** sonuswealth-dev (`yknnfglfbpcyxcllrvmd.supabase.co`)
 - **Schema deployed:** 7 tables · 17 indexes · 4 views · 3 RLS policies
 - **Tables:** `finio_entities` · `finio_entity_relationships` · `finio_events` · `finio_bundle_snapshots` · `finio_scheduled_activations` · `finio_user_connections` · `finio_cma_bundle`
 - **Client:** `@supabase/supabase-js` installed · `src/lib/supabase.js` configured
@@ -146,7 +146,7 @@ Critical path to IFA demo (20 May 2026): **Design review → UI primitives → s
 | ~~**P3.1 Design review**~~ | ~~Flag 3 weakest decisions~~ | ✅ Done (A-homeV2-1) |
 | **NEXT: A-polish-1** | Visual polish pass · remaining typography · light theme component refactor | After user testing |
 | **P3.2 UI primitives** | `<Number />` · `<DepthCard />` · `<TripleAnchor />` | After P3.1 · gates all screens |
-| **P4.1 HomeV2 review pass** | Fix "Finio Score" label → "Caelixa Wealth Score" · spec drift corrections | After P3.2 |
+| **P4.1 HomeV2 review pass** | Fix "Finio Score" label → "Sonuswealth Wealth Score" · spec drift corrections | After P3.2 |
 | **P4.2 MyMoney screen** | Static first · founder visual sign-off · then wire to engine | After P4.1 |
 | **P4.3 Cashflow screen** | Static → wire | After P4.2 |
 | **P4.4 Tax & Estate screen** | Static → wire | After P4.3 |
@@ -203,8 +203,8 @@ Critical path to IFA demo (20 May 2026): **Design review → UI primitives → s
 
 ## PRODUCT NAME
 
-**Caelixa** — formerly "finio" during development. Never use "finio" in user-facing output, UI strings, or code comments.
-Score product: **Caelixa Wealth Score** · Consumer phrase: **My Wealth Score**
+**Sonuswealth** — formerly "finio" during development. Never use "finio" in user-facing output, UI strings, or code comments.
+Score product: **Sonuswealth Wealth Score** · Consumer phrase: **My Wealth Score**
 Punchline: *Know your wealth. Raise your score.*
 Strapline: *A calmer way to see, score, and grow your financial world.*
 
@@ -216,7 +216,7 @@ Strapline: *A calmer way to see, score, and grow your financial world.*
 2. `C:\Users\Mihir Patel.Mihir\My Drive\All Work\6.Finio\1-Clusters\finio-skill-v1_2.md` — current skill · HOW
 3. `C:\Users\Mihir Patel.Mihir\My Drive\All Work\6.Finio\1-Clusters\finiotracker-v5_22.md` — current tracker · sequencing
 4. The relevant per-tab spec for the current task (see REFERENCE: SPEC FILES table below)
-5. `design-references/INDEX.md` then the relevant Caelixa design file(s)
+5. `design-references/INDEX.md` then the relevant Sonuswealth design file(s)
 
 These five sources are authoritative. Foundation + skill + tracker are loaded automatically into Claude.ai chat sessions; you must read them yourself at session start in Claude Code.
 
@@ -283,10 +283,10 @@ Branch-and-PR workflow when uncertain.
 ## VISUAL ANALYSIS HABIT (skill §14)
 
 After every component render or material edit: screenshot at 480px viewport.
-Founder posts screenshot to chat: *"Verify against [spec section] and Caelixa design [filename]. Flag any drift on layout · spacing · colour · typography · interaction."*
+Founder posts screenshot to chat: *"Verify against [spec section] and Sonuswealth design [filename]. Flag any drift on layout · spacing · colour · typography · interaction."*
 Fix all drift before next commit.
 
-**DESIGN SELF-CRITICISM (applies from A2 onwards):** At the start of each screen-build session, apply best-judgement self-criticism to the Caelixa design files in `design-references/`. Identify the 3 weakest design decisions, state why, and propose improvements. Surface to Opus chat for review before committing to any screen code.
+**DESIGN SELF-CRITICISM (applies from A2 onwards):** At the start of each screen-build session, apply best-judgement self-criticism to the Sonuswealth design files in `design-references/`. Identify the 3 weakest design decisions, state why, and propose improvements. Surface to Opus chat for review before committing to any screen code.
 
 ---
 
@@ -304,10 +304,10 @@ After substantive first-pass output (engine function · component code · contes
 - Engine is source of truth · screens are presentation only
 - 5-tab navigation locked: **Home · MyMoney · Cashflow · Tax & Estate · Timeline**
 - Risk-as-layer (overlay · not a tab)
-- Triple-anchor: Net Worth + Caelixa Wealth Score + Risk Score · equal weight
+- Triple-anchor: Net Worth + Sonuswealth Wealth Score + Risk Score · equal weight
 - Six jurisdictions: UK · India · Thailand · Canada · Ireland · Australia · **NO USA**
 - Dark mode default · Apple-style light mode (deep graphite / soft blue / white · mist / slate / calm blue)
-- No hardcoded product name in code — use `{{PRODUCT_NAME}}` token (resolves to "Caelixa" / "Caelixa Wealth Score" at render time)
+- No hardcoded product name in code — use `{{PRODUCT_NAME}}` token (resolves to "Sonuswealth" / "Sonuswealth Wealth Score" at render time)
 - No hardcoded tax rules · jurisdictions · language assumptions
 - Every entity is a first-class object · event-sourced state · effective dates · never overwrite
 - Storage: Supabase Postgres — schema spec at `C:\Users\Mihir Patel.Mihir\My Drive\All Work\6.Finio\1-Clusters\3-Engine\3-Engine-supabase-event-store-schema-v1_0.md`

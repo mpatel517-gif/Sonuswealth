@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/financial-math.js
+// SONUSWEALTH — parts/3-Engine/lib/financial-math.js
 // =====================================================================
 // Shared financial-math utilities. PURE FUNCTIONS. NO BUNDLE DEPENDENCY.
 //

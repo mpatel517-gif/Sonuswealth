@@ -232,9 +232,9 @@ Acceptable scaffolding text (honest, non-coded):
 ## Brand-string drift
 
 - `BRAND.name` = `Sonuswealth` (correct, locked D-NAME-2)
-- `BRAND.disclaimer` references no `Caelixa` / `Finio` string
+- `BRAND.disclaimer` references no `Sonuswealth` / `Finio` string
 - Cashflow.jsx top comment says "Sonuswealth Cashflow tab · v3 POLISHED" — correct
-- No `Caelixa` or `Finio` string found in Cashflow.jsx user-facing copy
+- No `Sonuswealth` or `Finio` string found in Cashflow.jsx user-facing copy
 - However: `rulesVersion: 'UK-2026.1'` (brand.js:26) lags rules-file version `UK-2026.1.1` — minor version-string drift (rolled into POLISH bucket)
 
 ---

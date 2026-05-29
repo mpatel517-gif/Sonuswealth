@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/state/ripple.jsx
+ * Sonuswealth · src/state/ripple.jsx
  *
  * React hook for the single ripple path. Memoizes rippleEffect output keyed
  * on (entity reference, bundle version, scopes). Use this hook on any screen

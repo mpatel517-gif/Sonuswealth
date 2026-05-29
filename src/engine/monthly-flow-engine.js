@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA MONTHLY FLOW ENGINE — A3 · s02a
+// SONUSWEALTH MONTHLY FLOW ENGINE — A3 · s02a
 // Pure functions only. No side effects. No global state.
 // entity.drawdown is annual. entity.targetIncome is annual spending proxy.
 // ─────────────────────────────────────────────────────────────────────────────

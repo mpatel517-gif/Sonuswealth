@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA TAX & ESTATE ENGINE  —  P4 · s02a
+// SONUSWEALTH TAX & ESTATE ENGINE  —  P4 · s02a
 // Spec: 2-Product-tax-estate-v1_0.md §8 + v1_1.md patches
 // Pure functions only. No side effects. No global state.
 // All monetary values GBP. All rates as decimals.

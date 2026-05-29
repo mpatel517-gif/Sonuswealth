@@ -14,7 +14,7 @@
 | # | Element ID | Finding | File:line |
 |---|-----------|---------|-----------|
 | DB-01 | RP-FOOT-02 / RP-CHR-05 | FCA disclaimer absent — `BRAND.disclaimer` not rendered anywhere; no `BRAND` import. Screen previews 4 tax-touching report types. FD-RP-3: "Absence = DEMO-BLOCKING." | Reports.jsx (no BRAND import) |
-| DB-02 | S-08 / RP-G-01 | Brand-leak gate — no Caelixa/Finio in stub today but Phase 2 PDF renderer must pull from brand.js. Becomes DEMO-BLOCKING if any Phase 2 template hardcodes "Caelixa"/"FQ Score". | Phase 2 pre-ship grep gate needed |
+| DB-02 | S-08 / RP-G-01 | Brand-leak gate — no Sonuswealth/Finio in stub today but Phase 2 PDF renderer must pull from brand.js. Becomes DEMO-BLOCKING if any Phase 2 template hardcodes "Sonuswealth"/"FQ Score". | Phase 2 pre-ship grep gate needed |
 
 ## Top 3 fix priorities
 

@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/test-financial-math.js
+// SONUSWEALTH — parts/3-Engine/lib/test-financial-math.js
 // =====================================================================
 // Smoke tests for shared financial-math lib.
 //

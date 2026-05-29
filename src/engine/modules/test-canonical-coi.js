@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/test-canonical-coi.js
+// SONUSWEALTH — parts/3-Engine/lib/test-canonical-coi.js
 // =====================================================================
 // Smoke tests for canonical CoI module.
 //

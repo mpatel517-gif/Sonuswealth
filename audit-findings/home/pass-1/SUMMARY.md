@@ -80,7 +80,7 @@ S-05 UNVERIFIED — CoI 2031 projection figure requires runtime
 S-06 FUNCTIONAL confirmed — REC-01
 S-07 RESOLVED — no stray 0% bar in v2.1
 S-08 RESOLVED — copy says Timeline tab; onNav('timeline') correct
-S-09 PASS — no Caelixa/Finio in user-facing copy
+S-09 PASS — no Sonuswealth/Finio in user-facing copy
 S-10 PASS — See all 12 confirmed; FD-1 satisfied
 S-11 PASS conditional — DE delivers time projection
 

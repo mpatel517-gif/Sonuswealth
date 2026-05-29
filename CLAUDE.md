@@ -18,7 +18,7 @@
    - `mymoney-checklist.md` — MyMoney requirements ledger (tick state)
    - `dynamic-crunching-wall.md` — historical founder direction
    - `sonuswealth-handover-2026-05-11.md` — operating discipline rules
-5. The canonical spec file for the screen — `g:/My Drive/All Work/6.Finio/1-Clusters/2-Product/2-Product-<screen>-v<latest>.md`
+5. The canonical spec file for the screen — `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/2-Product/2-Product-<screen>-v<latest>.md`
 6. **Cite at least 3 of these files in your first substantive response** so the founder knows you read.
 
 ### §0.2 — Audit-before-fix protocol:
@@ -87,7 +87,7 @@ If a screen doesn't render its purpose, fix it. If the canonical purpose isn't i
 
 ## §1 — WHAT SONUSWEALTH IS
 
-Sonsuwealth is a lifetime financial intelligence platform. It shows users their complete financial picture — assets, liabilities, scores, projections, tax exposure, estate planning — across their entire life. Trading entity: MBKR Limited.
+Sonuswealth is a lifetime financial intelligence platform. It shows users their complete financial picture — assets, liabilities, scores, projections, tax exposure, estate planning — across their entire life. Trading entity: MBKR Limited.
 
 **May 20 directive (binding):** Full first-version build by **30 June 2026**. No scope cuts. No deferral. No "ships later" tables. Every spec section in every v1.3 (or higher) per-tab spec is in scope. Time is a constraint, not a suggestion.
 
@@ -96,21 +96,11 @@ Sonsuwealth is a lifetime financial intelligence platform. It shows users their 
 ## §2 — REPO LAYOUT
 
 ```
-/Users/MP/Desktop/finio/
+C:/Users/Powernet/Desktop/finio/
 ├── CLAUDE.md                    ← you are here
 ├── BUILD-PLAN.md                ← RETIRED. Historical record of Waves 0–2.
 │                                  Do not execute from it. Use per-tab specs +
 │                                  AUTHORITY-MAP.md instead.
-├── parts/                       ← SYMLINK to Google Drive finio folder
-│   ├── 0 Project/               founder skill, tracker
-│   ├── 1-Foundation/            foundation, X28 design, AUTHORITY-MAP.md
-│   ├── 2-Product/               per-tab specs (cashflow, home, mymoney, etc.)
-│   ├── 3-Engine/                engine architecture, fixtures, schema
-│   ├── 4-Operations/            tracker, batch plan, master remaining work
-│   ├── 10-All Clusters/         architecture master, master backlog
-│   ├── 5 - Goto Maerket
-    |__ 100-Chat transfers/      session handovers, dated
-│   └── 200 Project Updates/     SSR, folder-refresh changelogs
 ├── src/
 │   ├── App.jsx
 │   ├── index.css                design tokens — CSS variables
@@ -125,13 +115,18 @@ Sonsuwealth is a lifetime financial intelligence platform. It shows users their 
 └── package.json                 Vite + React, plain JavaScript (NOT TypeScript)
 ```
 
+**Vault (specs, authority docs, handovers):** `G:/My Drive/All Work/6.Finio/1-Clusters/`
+- Wiki (specs): `0 Knowledge Base/Wiki/`
+- Outputs (ops docs): `0 Knowledge Base/Outputs/`
+- Raw (sources, handovers): `0 Knowledge Base/Raw/`
+
 ---
 
 ## §3 — SPEC AUTHORITY
 
-Every spec frontmatter cites one or more authority documents (Foundation v1.8, Skill v1.3, Tracker v5.42, etc.). All of those files **exist** in this repo, but they live in `parts/200 Project Updates/` — not in the cluster folder their content family suggests. The cross-cutting content the specs depend on (X24 / X28 / X29 etc.) is canonical in foundation v1.8 §3.5; deeper engineering detail lives in the Architecture Master v1.3 and the X28 standalone design v1.1.
+Every spec frontmatter cites one or more authority documents (Foundation v1.8, Skill v1.3, Tracker v5.48, etc.). All of those files live in `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/200 Project Updates/` — not in the cluster folder their content family suggests. The cross-cutting content the specs depend on (X24 / X28 / X29 etc.) is canonical in foundation v1.8 §3.5; deeper engineering detail lives in the Architecture Master v1.3 and the X28 standalone design v1.1.
 
-**The resolver is `parts/1-Foundation/AUTHORITY-MAP.md`.** Read it before acting on any authority citation. If a spec says "Foundation v1.8 §3.5.X24", AUTHORITY-MAP.md tells you to read `parts/200 Project Updates/finio-foundation-v1_8.md` §3.5.X24 (primary) plus arch master §32 (supplementary). If a citation is not covered by AUTHORITY-MAP.md, stop and flag — do not fabricate.
+**The resolver is `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/1-Foundation/AUTHORITY-MAP.md`.** Read it before acting on any authority citation. If a spec says "Foundation v1.8 §3.5.X24", AUTHORITY-MAP.md tells you to read `Outputs/200 Project Updates/finio-foundation-v1_8.md` §3.5.X24 (primary) plus arch master §32 (supplementary). If a citation is not covered by AUTHORITY-MAP.md, stop and flag — do not fabricate.
 
 **Order of precedence when sources conflict:**
 1. Per-tab spec at its current version (v1_3 or higher) — the construction contract for that tab
@@ -143,18 +138,19 @@ Every spec frontmatter cites one or more authority documents (Foundation v1.8, S
 
 ---
 
-## §4 — NAMING (D-NAME-1)
+## §4 — NAMING (D-NAME-2, locked 9 May 2026)
 
-The product is **Sonuswealth**. The score is **Sonu Wealth Score**. The risk score is **Sonu Risk Score**.
+The product is **Sonuswealth**. The companion/mascot is **Sonu**. The score is **Sonuswealth Wealth Score**. The risk score is **Sonuswealth Risk Score**.
 
 | Banned in user-facing strings | Use instead |
 |---|---|
-| "Finio" (anywhere a user can see it) | "Sonu" |
-| "Finio Score" / "FQ Score" | "Sonu Wealth Score" |
-| "Risk Score" alone (ambiguous) | "Sonu Risk Score" |
-| `{{PRODUCT_NAME}}` placeholder | "Sonu" (D-NAME-1 closed at v1.2) |
+| "Caelixa" (anywhere) | "Sonuswealth" |
+| "Finio" (anywhere a user can see it) | "Sonuswealth" or "Sonu" (mascot context) |
+| "Finio Score" / "FQ Score" | "Sonuswealth Wealth Score" |
+| "Risk Score" alone (ambiguous) | "Sonuswealth Risk Score" |
+| `{{PRODUCT_NAME}}` placeholder | "Sonuswealth" (D-NAME-2 closed) |
 
-Filenames keep the historical `finio-` prefix where it already exists (`fq-calculator.js`, `finio-foundation-v1_2.md`). **Do not rename files** to "caelixa-". This is a deliberate split between filename history and user-facing brand.
+Filenames keep the historical `finio-` prefix where it already exists (`fq-calculator.js`, `finio-foundation-v1_2.md`). `package.json name: caelixa` stays — it is a technical npm name, not product branding. **Do not rename files** or npm package to match the brand. This is a deliberate split between filename history and user-facing brand.
 
 ---
 
@@ -169,7 +165,7 @@ Every spec, plan, agent report, and commit message uses exactly one of these six
 | **INTEGRATED** | CODED + connected to its dependencies (engine, sibling tabs, event store, auth). End-to-end paths work. | Cross-tab flows, end-to-end journeys |
 | **PRODUCTION** | INTEGRATED + deployed + live with real data + observed in use. | Vercel deploy, post-launch |
 | **DECIDED** | A design or scope question is closed. Carries a D-tag. | Decisions log entries |
-| **OPEN** | A design or scope question is unresolved. Carries an O-tag. | Open items log |
+| **OPEN** | A design or scope question is unresolved. Carries an O-tag. | Open items log entries |
 
 **Examples of correct usage:**
 - "Cashflow §A waterfall is DOCUMENTED in v1.3, not yet CODED."
@@ -195,7 +191,7 @@ These are non-negotiable. Every line of code must comply.
 8. **Do not write inline financial calculations.** All math goes through engine functions. If the function doesn't exist, add a stub in `fq-calculator.js` with `// STUB: needs implementation` and import it.
 9. **Do not use `eval()`, `Function()`, or `dangerouslySetInnerHTML` without explicit founder approval.**
 10. **Do not log PII or financial values to the console in production builds.**
-11. **Do not use `localStorage`, `sessionStorage`, `IndexedDB`, or any browser-local persistence as an event store, plan store, or financial-data store (D-EVENTSTORE-1, 4 May 2026).** The event store is **Supabase from Wave 1A onwards**. All `PLAN_COMMITMENT`, `LIFE_EVENT`, `DIFF_ACKNOWLEDGED`, `FORECAST_SNAPSHOT`, `BUNDLE_ACTIVATED`, and other event reads/writes go through `src/engine/eventStore.js` which wraps the Supabase events table per schema at `parts/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md`. UI ephemera (collapsed/expanded card state, last-viewed-tab) may use sessionStorage; financial state may not.
+11. **Do not use `localStorage`, `sessionStorage`, `IndexedDB`, or any browser-local persistence as an event store, plan store, or financial-data store (D-EVENTSTORE-1, 4 May 2026).** The event store is **Supabase from Wave 1A onwards**. All `PLAN_COMMITMENT`, `LIFE_EVENT`, `DIFF_ACKNOWLEDGED`, `FORECAST_SNAPSHOT`, `BUNDLE_ACTIVATED`, and other event reads/writes go through `src/engine/eventStore.js` which wraps the Supabase events table per schema at `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md`. UI ephemera (collapsed/expanded card state, last-viewed-tab) may use sessionStorage; financial state may not.
 
 ---
 
@@ -206,8 +202,8 @@ Before writing a single line of code, every agent assigned to a per-tab screen m
 ### Reading checklist (in this order)
 
 1. Read `CLAUDE.md` (this file) in full.
-2. Read `parts/1-Foundation/AUTHORITY-MAP.md` in full.
-3. Read the per-tab spec at its current version (v1_3 or higher) **in full**, end to end.
+2. Read `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/1-Foundation/AUTHORITY-MAP.md` in full.
+3. Read the per-tab spec at its current version (v1_3 or higher) **in full**, end to end. Specs live at `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/2-Product/2-Product-<screen>-v<latest>.md`.
 4. For every authority cited in the spec frontmatter, resolve it via AUTHORITY-MAP.md and read the resolved file/section.
 5. Read `src/engine/fq-calculator.js` to know which engine functions already exist. Note which the spec needs that don't yet exist.
 
@@ -236,9 +232,9 @@ Output the checklist as a markdown table before writing code. Founder reviews an
 
 ---
 
-## §8 — June 230 DIRECTIVE (BINDING)
+## §8 — JUNE 30 DIRECTIVE (BINDING)
 
-Demo on **30 May 2026**. Full first-version build of every per-tab v1.3 spec. No scope cuts. No "Phase 2" deferrals. No "ships later" tables in agent reports.
+Full first-version build by **30 June 2026**. Every per-tab v1.3 spec. No scope cuts. No "Phase 2" deferrals. No "ships later" tables in agent reports.
 
 **What this means in practice:**
 - The 95%+ of Cashflow v1.3 not yet CODED is in scope for this run.
@@ -247,7 +243,7 @@ Demo on **30 May 2026**. Full first-version build of every per-tab v1.3 spec. No
 - The Risk overlay reaches CODED (currently untracked in git).
 - All five primary tabs reach INTEGRATED (cross-tab flows working) before June 30.
 
-**What is not in scope for June 20:**
+**What is not in scope for June 30:**
 - PRODUCTION (live deploy with real users) — that is post-demo.
 - Open Banking integration beyond manual entry — Phase 1.1/1.2 phasing in spec stands.
 - Jurisdictions other than UK — UK-2026.1 only at demo.
@@ -256,11 +252,11 @@ Demo on **30 May 2026**. Full first-version build of every per-tab v1.3 spec. No
 
 If a tradeoff arises between depth-of-feature and surface-coverage, founder decides — never the agent.
 
-**Sequencing note (build order to June 20):**
-1. **Cross-cuttings first.** X24 (goal-seek + "I want this different" affordance), X28 (4-mode view toggle, variance overlays, plan staleness card, plan commit flow), and X29 (six-layer diff layer + `--c-diff` token + DeltaChip / CausalityStripe / PulseRing components) land before per-tab depth pull-through. Every primary tab consumes them; building tabs first and bolting cross-cuttings on second produces rework.
+**Sequencing note (build order to June 30):**
+1. **Cross-cuttings first.** X24 (goal-seek + "I want this different" affordance), X28 (4-mode view toggle, variance overlays, plan staleness card, plan commit flow), and X29 (six-layer diff layer + `--c-diff` token + DeltaChip / CausalityStripe / PulseRing components) land before per-tab depth pull-through.
 2. **Engine real-impl in parallel.** The Wave-0 stubs (`goalSeek`, `commitPlan`, `planStaleness`, `varianceFor`, `diffSet`, `causalityChain`, `cashflowHealth`, `fundedRatio`, `probabilityOfSuccess`, etc.) get real implementations on a parallel track to the cross-cutting UI work. Engine and UI converge before any per-tab depth wave starts. **Event store is Supabase from Wave 1A onwards (D-EVENTSTORE-1) — no localStorage stub at any tier.**
-3. **Per-tab depth pull-through after cross-cuttings + engine are stable.** Cashflow §A waterfall / bill calendar / surplus allocator, §B funded-ratio gauge / PoS / MC fan / G-K corridor / 5 scenarios, §C PRC/PCC / Reality Engine / efficient frontier; MyMoney L1/L2/L3 drill-downs; Tax & Estate full IHT + CoI + gift clock; Timeline trajectory + plan-builder; Risk overlay 5×5 cross-map + radar + protection-gap. Per-tab agents follow §7 reading + walk-through checklist before starting.
-4. **INTEGRATION wave last.** Cross-tab event flows, correlation_id tracing, plan-vs-actual variance overlays end-to-end, persona walkthroughs (Bruce / Hermione / Tony / Fred & Wilma / Wonka). Reach INTEGRATED on all five primary tabs before May 20.
+3. **Per-tab depth pull-through after cross-cuttings + engine are stable.** Cashflow §A waterfall / bill calendar / surplus allocator, §B funded-ratio gauge / PoS / MC fan / G-K corridor / 5 scenarios, §C PRC/PCC / Reality Engine / efficient frontier; MyMoney L1/L2/L3 drill-downs; Tax & Estate full IHT + CoI + gift clock; Timeline trajectory + plan-builder; Risk overlay 5×5 cross-map + radar + protection-gap.
+4. **INTEGRATION wave last.** Cross-tab event flows, correlation_id tracing, plan-vs-actual variance overlays end-to-end, persona walkthroughs (Bruce / Hermione / Tony / Fred & Wilma / Wonka). Reach INTEGRATED on all five primary tabs before June 30.
 
 If steps 1–2 slip, freeze new per-tab work — depth without cross-cuttings is rework. Founder is the only one who can re-sequence.
 
@@ -270,15 +266,15 @@ If steps 1–2 slip, freeze new per-tab work — depth without cross-cuttings is
 
 | Artefact | Location |
 |---|---|
-| Daily / session tracker entries | `parts/200 Project Updates/finiotracker-v5_42.md` (current; check 200 Project Updates/ for newer versions before writing) |
-| Operating discipline / session protocol | `parts/200 Project Updates/finio-skill-v1_3.md` |
-| Folder-refresh changelogs | `parts/200 Project Updates/finio-folder-refresh-changelog-v50.md` (current) |
-| Session handovers (chat transfers, end-of-session notes) | `parts/100-Chat transfers/<MMDD>/` |
-| Status snapshot reports (SSR) | `parts/200 Project Updates/` (alongside latest tracker) |
-| Master remaining work | `parts/4-Operations/4-Operations-master-remaining-work-view-v1_0.md` |
-| Decisions / open items log | inside the relevant per-tab spec, plus `parts/10-All Clusters/10-AllClusters-master-backlog-v1_8.md` (+ `v1_8-to-v1_9-patch.md`) |
+| Daily / session tracker entries | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/200 Project Updates/finiotracker-v5_48.md` (check for newer versions before writing) |
+| Operating discipline / session protocol | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/200 Project Updates/finio-skill-v1_3.md` |
+| Folder-refresh changelogs | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/200 Project Updates/finio-folder-refresh-changelog-v56.md` (current) |
+| Session handovers (chat transfers, end-of-session notes) | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Raw/100-Chat transfers/<MMDD>/` |
+| Status snapshot reports (SSR) | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/200 Project Updates/` (alongside latest tracker) |
+| Master remaining work | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/4-Operations/4-Operations-master-remaining-work-view-v1_0.md` |
+| Decisions / open items log | inside the relevant per-tab spec, plus `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/10-All Clusters/10-AllClusters-master-backlog-v1_8.md` |
 
-**File location rule:** foundation, skill, tracker, and changelog files all live in `parts/200 Project Updates/` — not in `parts/1-Foundation/` or `parts/4-Operations/`, even though their content family suggests those folders. Always check `parts/200 Project Updates/` first when looking for the latest authority or operational file. See AUTHORITY-MAP.md §5.
+**File location rule:** foundation, skill, tracker, and changelog files all live in `Outputs/200 Project Updates/` — not in `Wiki/1-Foundation/` or `Outputs/4-Operations/`, even though their content family suggests those folders. Always check `200 Project Updates/` first when looking for the latest authority or operational file. See AUTHORITY-MAP.md §5.
 
 ---
 
@@ -288,14 +284,14 @@ If steps 1–2 slip, freeze new per-tab work — depth without cross-cuttings is
 |---|---|
 | Engine functions registry | `src/engine/fq-calculator.js` (current) + arch master v1.3 §30 (canonical queue) |
 | Event store adapter | `src/engine/eventStore.js` (Supabase wrapper · D-EVENTSTORE-1) |
-| Event store schema | `parts/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md` |
+| Event store schema | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md` |
 | Design tokens | `src/index.css` |
 | Tax rules bundle | `src/rules/UK-2026.1.1.json` (UK-2026.1.1 — canonical, single source of truth as of Phase 1 consolidation 2026-05-21) |
 | Persona test data | `src/rules/personas/persona-{a..g}.json` |
-| Authority resolver | `parts/1-Foundation/AUTHORITY-MAP.md` |
-| Per-tab specs | `parts/2-Product/2-Product-{cashflow|home|mymoney|tax-estate|timeline|risk-layer|settings-master|onboarding}-v1_X.md` (use highest version) |
-| Architecture master | `parts/10-All Clusters/10-AllClusters-architecture-master-v1_3.md` |
-| X28 build plan | `parts/4-Operations/X28-build-plan-v1_1.md` (current; v1.0 audit-retained) |
+| Authority resolver | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/1-Foundation/AUTHORITY-MAP.md` |
+| Per-tab specs | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Wiki/2-Product/2-Product-{cashflow\|home\|mymoney\|tax-estate\|timeline\|risk-layer\|settings-master\|onboarding}-v1_X.md` (use highest version) |
+| Architecture master | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/10-All Clusters/10-AllClusters-architecture-master-v1_3.md` |
+| X28 build plan | `G:/My Drive/All Work/6.Finio/1-Clusters/0 Knowledge Base/Outputs/4-Operations/X28-build-plan-v1_1.md` (current; v1.0 audit-retained) |
 
 ---
 
@@ -305,12 +301,12 @@ Decisions that affect this file directly. Spec-level decisions live in their per
 
 | ID | Date | Decision | Affects |
 |---|---|---|---|
-| D-NAME-1 | 2 May 2026 | Caelixa is the user-facing name. Filenames keep `finio-` prefix. | §4 |
+| D-NAME-2 | 9 May 2026 | Sonuswealth is the user-facing product name. Sonu is the companion/mascot. Filenames keep `finio-` prefix. `package.json name: caelixa` stays (technical npm name). Caelixa or Finio in user-facing strings = regression. Supersedes D-NAME-1. | §4 |
 | D-HOMEV2-1 | 4 May 2026 | HomeV2.jsx superseded by radar component on HomeScreen.jsx. Home agents proceed normally on HomeScreen.jsx; radar internals remain Jit's domain. | §6 bullet 4 |
-| D-EVENTSTORE-1 | 4 May 2026 | Supabase event store from Wave 1A. No localStorage shortcuts at any tier. Schema at `parts/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md`. | §6 bullet 11 · §10 quick reference |
+| D-EVENTSTORE-1 | 4 May 2026 | Supabase event store from Wave 1A. No localStorage shortcuts at any tier. Schema at `Wiki/3-Engine/3-Engine-supabase-event-store-schema-v1_0.md`. | §6 bullet 11 · §10 quick reference |
 | D-QUALITY-BAR-1 | 4 May 2026 | First-round build target 85–90% ready. Atomic refactors over shims. Time pressure does not lower the bar. TimeWindowSelector window-ID refactor is atomic in-place. fq-calculator.js Wave 1A stub-replacement is one-time founder-approved exception to the EXTEND-ONLY rule. | §6 bullets 1, 3 · §8 quality bar |
 
 ---
 
 **Status:** CLAUDE.md is DOCUMENTED · maintained alongside AUTHORITY-MAP.md
-**Last updated:** 2026-05-04 (D-HOMEV2-1 · D-EVENTSTORE-1 · D-QUALITY-BAR-1 patches applied)
+**Last updated:** 2026-05-29 (D-NAME-2 Sonuswealth; all parts/ paths → full GDrive paths; parts/ was not a working symlink)

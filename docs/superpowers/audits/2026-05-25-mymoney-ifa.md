@@ -90,7 +90,7 @@ Bruce is 62. The single most important question for him from a senior adviser's 
 
 Things an IFA would expect to see on this screen, or signposted from it:
 
-- **Order-of-withdrawal plan.** Cash → GIA (within CGT AEA / dividend allowance) → ISA → Pension (pre-April 2027) → Pension (post-April 2027, when in estate for IHT). The Caelixa spec §4.8 explicitly defers Drawdown Efficiency Ratio as OPEN, and §8 (Domain B) covers FAD/UFPLS, but **none of it surfaces on MyMoney as a "your decumulation plan" preview**, which is the inter-tab tease Cashflow is meant to do.
+- **Order-of-withdrawal plan.** Cash → GIA (within CGT AEA / dividend allowance) → ISA → Pension (pre-April 2027) → Pension (post-April 2027, when in estate for IHT). The Sonuswealth spec §4.8 explicitly defers Drawdown Efficiency Ratio as OPEN, and §8 (Domain B) covers FAD/UFPLS, but **none of it surfaces on MyMoney as a "your decumulation plan" preview**, which is the inter-tab tease Cashflow is meant to do.
 - **State pension countdown.** Bruce reaches SPA at 67 (~5 yr away). Tile should show "State Pension £X/wk from 2031." Domain A01/A02 per spec §4.3/393 covers this. Not visible.
 - **DB pension(s).** If any, capitalised value and projected income, with the IHT/transfer-warning gate per spec §4.5/508 ("transfers from DB £30k+ require regulated advice"). Not visible.
 - **SIPP-IHT countdown.** Finance Act 2026 (Royal Assent 18 March 2026) brings DC pensions inside the estate from 6 April 2027. Bruce has £850k of DC pension. Spec §4.3/395–396 mandates a countdown chip "£X enters estate April 2027" for DC value > £500k. **Not visible on the pension tile.** This is the single most important planning fact for this persona this year and it's missing.
@@ -125,7 +125,7 @@ Spec §4.3/395–396 says this card MUST render the SIPP-IHT signal. It doesn't.
 | 5 | "Optimised" on Wealth/Risk scores | **MED on FCA, BLOCK on accuracy** (see §1). Same issue: subjective label, no rubric, sounds regulated, applied to a persona for whom it isn't true. |
 | 6 | "Net worth grew £7k this month, despite a £8k deficit." | **LOW.** Factual, non-recommendation. Defensible. |
 
-The first two are the ones that would not pass a Phase-1 compliance pass under Caelixa's own §16.3.3 "FCA rewrite filter." That filter is meant to deterministically rewrite prohibited language before delivery. Either it didn't run, or it doesn't catch these patterns. **Either way it's a failure mode the launch posture depends on.**
+The first two are the ones that would not pass a Phase-1 compliance pass under Sonuswealth's own §16.3.3 "FCA rewrite filter." That filter is meant to deterministically rewrite prohibited language before delivery. Either it didn't run, or it doesn't catch these patterns. **Either way it's a failure mode the launch posture depends on.**
 
 ---
 

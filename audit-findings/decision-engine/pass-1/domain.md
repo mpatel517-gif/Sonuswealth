@@ -42,7 +42,7 @@ Purpose: Domain checks — figures traceable, options financially sound, FCA fra
 - "For" / "Against" / "Risks" / "Sequence" bullet text
 - `tree.recommendation.rationale`
 
-**Risk:** LLM may output "Caelixa recommends…" or "your Finio score…" in any of these fields. Not caught.
+**Risk:** LLM may output "Sonuswealth recommends…" or "your Finio score…" in any of these fields. Not caught.
 
 **Verdict: FAIL — DEMO-BLOCKING** (Seed S-14)
 

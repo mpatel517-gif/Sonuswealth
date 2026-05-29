@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA — TYPOGRAPHY TOKENS
+// SONUSWEALTH — TYPOGRAPHY TOKENS
 // JS-accessible type scale. Matches CSS custom properties in index.css.
 // Use these in component styles instead of arbitrary values.
 //

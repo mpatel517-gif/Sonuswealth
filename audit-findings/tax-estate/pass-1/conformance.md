@@ -5,7 +5,7 @@
 **Inventory:** `tax-estate-inventory-v1.md` (227 rows across 34 regions)
 **Baseline:** React component (no HTML mockup) — `src/screens/TaxEstate.jsx` (2550 lines) + `src/components/TaxEstate/InheritanceStory.jsx` + `src/components/Estate/BeneficiarySankey.jsx`
 **Brand SoT:** `src/config/brand.js` (`BRAND.name='Sonuswealth'`, `BRAND.rulesVersion='UK-2026.1'`)
-**Locked founder decisions checked:** FD-NAME-1 (no Caelixa/Finio strings — PASS), FD-LOGO-1 (NA: T&E uses BRAND only), FD-MASCOT-1 (NA), FD-CROSS-1 (CoI cross-screen — outside A1 scope; flagged in inventory S-16/S-17), FD-TE-1 (SIPP IHT ENACTED — chip wording verified, no "PROPOSED" strings exist).
+**Locked founder decisions checked:** FD-NAME-1 (no Sonuswealth/Finio strings — PASS), FD-LOGO-1 (NA: T&E uses BRAND only), FD-MASCOT-1 (NA), FD-CROSS-1 (CoI cross-screen — outside A1 scope; flagged in inventory S-16/S-17), FD-TE-1 (SIPP IHT ENACTED — chip wording verified, no "PROPOSED" strings exist).
 
 **Scope:** A1 only — every inventory row tested for *element present in build, in the right region, with matching type/content*. A2 (drillability), A3/A4 (destination), A5 (plain English), A6 (reconciliation) belong to other auditors. Where the inventory note already pre-flags an A2/A6 concern but the element itself is present, A1 = PASS.
 
@@ -287,9 +287,9 @@ No rogue cards, no orphan strings, no untracked components. Every imported compo
 
 ## Brand-drift sweep (FD-NAME-1)
 
-- `grep -i "Caelixa|Finio|finio"` over TaxEstate.jsx → **0 matches**. PASS.
+- `grep -i "Sonuswealth|Finio|finio"` over TaxEstate.jsx → **0 matches**. PASS.
 - `grep -i "PROPOSED|Proposed|proposed"` over TaxEstate.jsx → **0 matches**. **FD-TE-1 honored** — no "PROPOSED" wording for SIPP IHT anywhere on T&E. The chip wording at TE-SUB-E3a reads `Enacted · FA 2026` with title `Royal Assent 18 Mar 2026 — effective 6 Apr 2027`, exactly as FD-TE-1 prescribes.
-- All product-name references resolve through `BRAND.*` imports from `src/config/brand.js`. No hardcoded "Sonuswealth" / "Caelixa" / "Finio" string literals in TaxEstate.jsx. PASS.
+- All product-name references resolve through `BRAND.*` imports from `src/config/brand.js`. No hardcoded "Sonuswealth" / "Sonuswealth" / "Finio" string literals in TaxEstate.jsx. PASS.
 - Note: ExplainerChip TE-1 content lives in a shared component (not in TaxEstate.jsx). Auditor cannot verify TE-1's body copy here — seed S-23 flags this for the auditor with explainer-overlay scope, but in TaxEstate.jsx itself the chip's host context already says "Enacted · FA 2026", so the on-screen framing is correct.
 
 ---

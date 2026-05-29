@@ -77,7 +77,7 @@ const JURISDICTIONS = [
 
 // ─── 4. Render the manifest ──────────────────────────────────────────────────
 const lines = [];
-lines.push(`# Caelixa coverage manifest`);
+lines.push(`# Sonuswealth coverage manifest`);
 lines.push('');
 lines.push(`**Generated:** ${new Date().toISOString().slice(0, 19).replace('T', ' ')} UTC`);
 lines.push(`**Purpose:** Every cell explicit. Empty = not tested. No hidden gaps.`);

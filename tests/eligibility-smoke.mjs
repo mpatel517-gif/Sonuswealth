@@ -82,7 +82,7 @@ const cases = [
 ];
 
 console.log('═══════════════════════════════════════════════════════════════');
-console.log('  CAELIXA ELIGIBILITY RULES — SMOKE TEST');
+console.log('  SONUSWEALTH ELIGIBILITY RULES — SMOKE TEST');
 console.log(`  Total rules registered: ${listRules().length}`);
 console.log(`  Total test cases: ${cases.length}`);
 console.log('═══════════════════════════════════════════════════════════════\n');

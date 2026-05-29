@@ -1,4 +1,4 @@
-# Caelixa Architecture v0 — Synthesised Professional Brain
+# Sonuswealth Architecture v0 — Synthesised Professional Brain
 
 **Status:** DRAFT for founder review
 **Date:** 2026-05-21
@@ -8,7 +8,7 @@
 
 ## 1. Vision in one paragraph
 
-Caelixa runs the same persona data through **11 professional lenses** (tax accountant, pension specialist, trust lawyer, IFA, mortgage adviser, protection adviser, investment adviser, cross-border specialist, family-law specialist, later-life specialist, philanthropy adviser). Each lens produces its own observations, recommendations, red flags, and follow-up prompts. Where lenses **disagree**, the app shows the disagreement and the underlying assumption that drives it — letting the user decide which assumption holds for them. This is **information at advisor depth without being advice** — the user does the deciding, the app does the thinking.
+Sonuswealth runs the same persona data through **11 professional lenses** (tax accountant, pension specialist, trust lawyer, IFA, mortgage adviser, protection adviser, investment adviser, cross-border specialist, family-law specialist, later-life specialist, philanthropy adviser). Each lens produces its own observations, recommendations, red flags, and follow-up prompts. Where lenses **disagree**, the app shows the disagreement and the underlying assumption that drives it — letting the user decide which assumption holds for them. This is **information at advisor depth without being advice** — the user does the deciding, the app does the thinking.
 
 ---
 

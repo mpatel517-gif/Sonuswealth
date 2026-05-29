@@ -49,7 +49,7 @@ If a drillable element resolves to *none* of these, A4 = FAIL.
 
 | FD | Decision |
 |----|----------|
-| FD-NAME-1 | **Product name is `Sonuswealth` (D-NAME-2, locked 9 May 2026 — supersedes Caelixa and Finio).** Source of truth: `src/config/brand.js` (`BRAND.name`). Casing: logo / wordmark = `sonuswealth` (lowercase); body text, titles, aria-labels, score strings = `Sonuswealth` (sentence case). Every `Caelixa` or `Finio` in user-facing strings = FUNCTIONAL FAIL (A5/A6). |
+| FD-NAME-1 | **Product name is `Sonuswealth` (D-NAME-2, locked 9 May 2026 — supersedes Sonuswealth and Finio).** Source of truth: `src/config/brand.js` (`BRAND.name`). Casing: logo / wordmark = `sonuswealth` (lowercase); body text, titles, aria-labels, score strings = `Sonuswealth` (sentence case). Every `Sonuswealth` or `Finio` in user-facing strings = FUNCTIONAL FAIL (A5/A6). |
 | FD-LOGO-1 | Brand assets live at `G:\My Drive\All Work\6.Finio\1-Clusters\Codex UI\deliverables\sonuswealth-site\assets\{favicons,logo,mascot,videos}`. Conformance-auditor checks that every surface uses the right logo variant per theme. |
 | FD-MASCOT-1 | Mascot is **Sonnu (owl)**, 6 life-stage forms. Placement on screens is **Wave 7 enhancement scope**, not in-audit; audit treats absence of Sonnu as not-a-finding. |
 | FD-CROSS-1 | **Tax & Estate owns the *consequence* for pension/SIPP/drawdown** — IHT £ stacking over time, 6 Apr 2027 SIPP-IHT effective date, year-by-year estate-tax projection. Canonical drawdown "doing" surface is My Money; T&E shows the if-you-don't view. Each surface owns its angle; cross-surface links are explicit. CoI on T&E must equal the CoI number on Home (H-ANCH-04) and the CoI number on MyMoney — same value, same format. |

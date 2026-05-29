@@ -193,7 +193,7 @@ None material. Every element rendered by `Risk.jsx` + `RiskOverlay.jsx` + `Prote
 
 ## Brand-drift sweep (FD-NAME-1 / seed S-15)
 
-- `Risk.jsx`: 0 hits for `Caelixa` / `Finio` / `FQ Score`.
+- `Risk.jsx`: 0 hits for `Sonuswealth` / `Finio` / `FQ Score`.
 - `RiskOverlay.jsx`: 0 hits.
 - `components/Risk/*.jsx`: 0 hits.
 - `brand.js`: legacy aliases preserved only in deprecated section (`finioScore` resolves to "Sonuswealth Wealth Score") — internal field name only, not user-facing.

@@ -48,7 +48,7 @@ If a drillable element resolves to *none* of these, A4 = FAIL.
 
 | FD | Decision |
 |----|----------|
-| FD-NAME-1 | **Product name is `Sonuswealth` (D-NAME-2, locked 9 May 2026 — supersedes Caelixa and Finio).** Source of truth: `src/config/brand.js` (`BRAND.name`). Casing: logo / wordmark = `sonuswealth` (lowercase, see `BRAND.nameDisplay`); body text, titles, aria-labels, page `<title>`, score strings = `Sonuswealth` (sentence case); marketing slogans (footer-tier only) may use ALL CAPS. Every `Caelixa` or `Finio` in user-facing strings = FUNCTIONAL FAIL (A5/A6). Engine-module disclaimers + comments are queued for Wave 4 Morph sweep. |
+| FD-NAME-1 | **Product name is `Sonuswealth` (D-NAME-2, locked 9 May 2026 — supersedes Sonuswealth and Finio).** Source of truth: `src/config/brand.js` (`BRAND.name`). Casing: logo / wordmark = `sonuswealth` (lowercase, see `BRAND.nameDisplay`); body text, titles, aria-labels, page `<title>`, score strings = `Sonuswealth` (sentence case); marketing slogans (footer-tier only) may use ALL CAPS. Every `Sonuswealth` or `Finio` in user-facing strings = FUNCTIONAL FAIL (A5/A6). Engine-module disclaimers + comments are queued for Wave 4 Morph sweep. |
 | FD-CROSS-1 | **Every critical action is a surface-instance, not a pointer.** Each surface presents the *angle it owns* with its own layout and its own data evidence; cross-surface links are explicit. One canonical surface owns *the doing*; the others own attention / consequence / time / cash-effect / shock-test. The drill-rule (A3) is satisfied when each instance drills to *its own* angle's detail; only the canonical surface must be reachable in one tap from anywhere. Supersedes the "drill here only" wording in FD-MM-2. |
 | FD-LOGO-1 | Brand assets live at `G:\My Drive\All Work\6.Finio\1-Clusters\Codex UI\deliverables\sonuswealth-site\assets\{favicons,logo,mascot,videos}`. Conformance-auditor checks that every surface uses the right logo variant per theme (light/dark) and flags the faded-purple dark variant as DEMO-BLOCKING wherever it appears below WCAG AA contrast. |
 | FD-MASCOT-1 | Mascot is **Sonnu (owl)**, 6 life-stage forms: Starting Out · Growing Wealth · Planning Ahead · Peak Complexity · Securing Tomorrow · Leaving a Legacy. Placement on screens is **Wave 7 enhancement scope**, not in-audit; audit treats absence of Sonnu as not-a-finding. |
@@ -202,7 +202,7 @@ confirm each, assign severity, and find the rest.
 | S-06 | H-ANCH-01 ↔ H-RAD-09 | Net Worth formatted £3.63m vs £3.63M — `fmt()` not applied uniformly | POLISH→FUNCTIONAL |
 | S-07 | H-PLAN-01 | Build shows a stray unlabelled "0%" progress bar with no active plan | FUNCTIONAL |
 | S-08 | H-PLAN-02 | Copy references a "Plan tab" that does not exist in nav | FUNCTIONAL |
-| S-09 | global | Brand string drift (Sonuswealth vs Caelixa) — CLI task T6 confirms it exists | FUNCTIONAL |
+| S-09 | global | Brand string drift (Sonuswealth vs Sonuswealth) — CLI task T6 confirms it exists | FUNCTIONAL |
 | S-10 | H-WI-06 | "See all 12" scenarios affordance — verify it exists and expands (FD-1) | FUNCTIONAL |
 | S-11 | H-OVL-02 | What-If options must be time-projected (relocate-in-3-years projects the path), not static | DEMO-BLOCKING |
 

@@ -30,6 +30,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react'
+import FCADisclaimerFooter from '../components/Shell/FCADisclaimerFooter.jsx'
 // S1 selector migration (Phase 2)
 import { netWorth, fq as calcFQ } from '../engine/selectors/index.js'
 import { calcRisk, costOfInaction } from '../engine/fq-calculator.js'
@@ -282,6 +283,11 @@ export default function IFAPractice({ onBack, onOpenClient, onCommit }) {
           onCommit={onCommit}
         />
       )}
+
+      {/* L1-6: FCA disclaimer footer — IFAPractice renders practice-level
+          numbers (AUM, urgent counts, client KPIs) and is not inside the
+          Dashboard tab container where the default footer lives. */}
+      <FCADisclaimerFooter variant="footer" />
     </div>
   )
 }

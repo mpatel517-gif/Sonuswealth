@@ -38,11 +38,11 @@ This is the **fixed target** the whole audit measures against. Every interactive
 
 | FD | Decision |
 |----|----------|
-| FD-NAME-1 | **Product name is `Sonuswealth` (D-NAME-2, locked 9 May 2026 — supersedes Caelixa, Finio).** SoT: `src/config/brand.js` (`BRAND.name`). Casing: logo = `sonuswealth` lowercase; body/titles/aria = `Sonuswealth` sentence case. Every `Caelixa` or `Finio` in user-facing strings = FUNCTIONAL FAIL. |
+| FD-NAME-1 | **Product name is `Sonuswealth` (D-NAME-2, locked 9 May 2026 — supersedes Sonuswealth, Finio).** SoT: `src/config/brand.js` (`BRAND.name`). Casing: logo = `sonuswealth` lowercase; body/titles/aria = `Sonuswealth` sentence case. Every `Sonuswealth` or `Finio` in user-facing strings = FUNCTIONAL FAIL. |
 | FD-LOGO-1 | Brand assets at `G:\My Drive\All Work\6.Finio\1-Clusters\Codex UI\deliverables\sonuswealth-site\assets\{favicons,logo,mascot,videos}`. Wrong-theme logo variant = DEMO-BLOCKING if below WCAG AA. |
 | FD-MASCOT-1 | Mascot is **Sonnu (owl)**, 6 life-stage forms. Wave 7 scope — absence not-a-finding. |
 | FD-CROSS-1 | **Reports owns the artifact** — exportable / shareable representations of state at a point in time. Wealth statement, IHT-readiness report, drawdown plan, tax-allowance summary. Every report is a frozen view of one or more other surfaces. Reports never *originates* a number, it *renders* one. |
-| FD-RP-1 | **Report branding uses `BRAND.scoreFull` ('Sonuswealth Wealth Score') and `BRAND.disclaimer`.** Caelixa-branded report headers = DEMO-BLOCKING (highest-risk leak surface). Phase 2 PDF renderer MUST pull from `brand.js`, never hardcode. |
+| FD-RP-1 | **Report branding uses `BRAND.scoreFull` ('Sonuswealth Wealth Score') and `BRAND.disclaimer`.** Sonuswealth-branded report headers = DEMO-BLOCKING (highest-risk leak surface). Phase 2 PDF renderer MUST pull from `brand.js`, never hardcode. |
 | FD-RP-2 | **Stub phase is CTA-honest.** All Generate/Schedule buttons disabled, labelled "Coming next — Phase 2". Per founder rule, any button looking clickable but doing nothing = DEMO-BLOCKING. Confirm disabled state is real, not visual fake. |
 | FD-RP-3 | **Tax-touching reports must carry FCA disclaimer.** `BRAND.disclaimer` MUST appear on Estate plan, Tax summary, Cashflow projection, and any Custom containing tax sections. Absence = DEMO-BLOCKING. Net Worth snapshot borderline — flag for founder ruling. |
 
@@ -94,7 +94,7 @@ This is the **fixed target** the whole audit measures against. Every interactive
 | RP-EST-04 | Body copy "SIPP enters estate from April 2027 (enacted)…" | DATA | NA | UNVERIFIED | A6 — RECONCILE: rules-uk SIPP-IHT; per memory `project_sipp_iht_enacted_2026` Royal Assent 18 Mar 2026, effective April 2027; verify `BRAND.nextRulesDate`='2027-04-06' |
 | RP-EST-05 | "Coming next — Phase 2" generate button | ACTION | ACTION — generate Estate report → vault | BLOCKED | `disabled`; aria-label correct; FD-RP-2 |
 | RP-EST-06 | "Schedule — Phase 2" button | ACTION | ACTION — schedule weekly/monthly | BLOCKED | `disabled`; FD-RP-2 |
-| RP-EST-07 | (Phase 2) Report header brand string | DATA | NA | UNVERIFIED | FD-RP-1 — must use `BRAND.scoreFull`, no Caelixa/Finio |
+| RP-EST-07 | (Phase 2) Report header brand string | DATA | NA | UNVERIFIED | FD-RP-1 — must use `BRAND.scoreFull`, no Sonuswealth/Finio |
 | RP-EST-08 | (Phase 2) Body figures (IHT, gifts, nominations, will/LPA) | DATA | SOURCE — Tax & Estate | UNVERIFIED | A6; RECONCILE: T&E `ihtDynamic`, `costOfInaction` |
 | RP-EST-09 | (Phase 2) FCA disclaimer on Estate report | DATA | NA | UNVERIFIED | FD-RP-3; A5 — `BRAND.disclaimer` verbatim |
 
@@ -169,7 +169,7 @@ This is the **fixed target** the whole audit measures against. Every interactive
 
 | ID | Element | Type | Owns-subject destination | Verdict | Notes |
 |----|---------|------|--------------------------|---------|-------|
-| RP-G-01 | Screen-wide brand audit — every visible string vs `BRAND.*` | DATA | NA | UNVERIFIED | FD-NAME-1; grep "Caelixa"/"Finio"/"FQ Score" in stub + Phase 2 templates |
+| RP-G-01 | Screen-wide brand audit — every visible string vs `BRAND.*` | DATA | NA | UNVERIFIED | FD-NAME-1; grep "Sonuswealth"/"Finio"/"FQ Score" in stub + Phase 2 templates |
 | RP-G-02 | Screen-wide theme audit (light+dark × mobile+iPad+laptop) | DATA | NA | UNVERIFIED | §9 audit gate; amber banner legibility in dark |
 | RP-G-03 | (Phase 2) PDF renderer brand variant per theme | DATA | NA | UNVERIFIED | FD-LOGO-1; PDFs typically light-on-white — confirm renderer variant choice |
 | RP-G-04 | (Phase 2) `onGenerate(reportId, mode)` contract | ACTION | ACTION — Dashboard handler | UNVERIFIED | contract documented in source header; verify Dashboard exposes matching prop |
@@ -190,7 +190,7 @@ This is the **fixed target** the whole audit measures against. Every interactive
 | S-05 | RP-NW-04 / RP-CF-04 | "wrapper" and "funded-ratio" used without inline plain-English definition on a surface that targets non-experts + accountants — needs one-line gloss | POLISH |
 | S-06 | RP-G-04 | Source destructures `onGenerate` then immediately `void onGenerate` — Dashboard contract documented but unwired. Verify Dashboard actually passes `onGenerate` so Phase 2 flip is one-line as claimed | FUNCTIONAL |
 | S-07 | RP-PER-02 | Period radio `defaultChecked` on 'Tax year' but `disabled` — when Phase 2 wires, confirm `defaultChecked` survives the disabled→enabled flip (React `defaultChecked` only applies at mount) | FUNCTIONAL |
-| S-08 | RP-G-01 | Brand audit not run on this surface — Reports is highest-risk leak surface per FD-RP-1 (exports/PDFs); grep Caelixa/Finio/FQ Score across stub + Phase 2 templates when they land | DEMO-BLOCKING (if any leak found) |
+| S-08 | RP-G-01 | Brand audit not run on this surface — Reports is highest-risk leak surface per FD-RP-1 (exports/PDFs); grep Sonuswealth/Finio/FQ Score across stub + Phase 2 templates when they land | DEMO-BLOCKING (if any leak found) |
 | S-09 | RP-G-07 | No "vault" / "your past reports" empty state — intro says "Saved to your vault with a timestamp" but no list of past reports, no entry point. Either remove the promise (CTA-honesty) or stub the vault list | FUNCTIONAL |
 | S-10 | RP-BAN-01 | Banner uses `var(--c-tint-amber, rgba(255,179,71,.10))` with `var(--c-border)` outline — amber-on-dark may fail WCAG AA contrast; verify in dark theme snap | POLISH |
 | S-11 | RP-CHR-01 | Back button renders only if `onBack` prop present — if Dashboard ever forgets to pass it, user has no in-screen escape (relies on sidebar nav). Defensive default would be safer | POLISH |

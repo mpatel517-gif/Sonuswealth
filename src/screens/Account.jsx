@@ -10,7 +10,7 @@ import { fq as calcFQ } from '../engine/selectors/index.js'
 import { fqBand, lifeStageFor } from '../engine/fq-calculator.js'
 import { useAuth } from '../state/auth.jsx'
 
-export default function Account({ obData, onEnter }) {
+export default function Account({ obData, onEnter, validationErrors = null }) {
   const { signUp, signIn, signInWithProvider, resendVerification } = useAuth()
   // FIX-3.D — destructure ALL fields collected by Onboarding (not just 3 of 11).
   // Anything missing here was being silently dropped before reaching App.jsx.
@@ -237,6 +237,32 @@ export default function Account({ obData, onEnter }) {
                 display:'block',
               }}
             />
+
+            {/* L2-3 — entity validation banner. Shown when App.jsx's
+                validateEntity gate rejects the built persona. The user stays
+                on this screen; the listed fields are what's missing or
+                inconsistent. */}
+            {Array.isArray(validationErrors) && validationErrors.length > 0 && (
+              <div role="alert" style={{
+                background:'var(--c-coral, #FCE4E4)', color:'var(--c-coral-text, #8B1F1F)',
+                border:'1px solid var(--c-coral-border, #F2B8B8)',
+                borderRadius:10, padding:'10px 12px', marginBottom:12,
+                fontSize:12, lineHeight:1.4,
+              }}>
+                <div style={{ fontWeight:700, marginBottom:4 }}>
+                  We couldn't open your dashboard yet — please review:
+                </div>
+                <ul style={{ margin:0, paddingLeft:18 }}>
+                  {validationErrors.slice(0, 4).map((e, i) => (
+                    <li key={i}>{
+                      typeof e === 'string'
+                        ? e
+                        : (e && (e.message || e.field || e.code)) || 'Invalid field'
+                    }</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* AU1 — error / verification status banner */}
             {error && (

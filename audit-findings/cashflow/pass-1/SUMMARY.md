@@ -103,7 +103,7 @@ Coverage: A1 = 102/102 rows (100%); A5 Domain = 97/102 rows (100% of domain-bear
 ## 5. Orchestrator notes
 
 - **FD-CF-1 HELD:** Funded-ratio label fix (commit `533a8c0`) confirmed intact. Status derives from `fr.ratio` not `fr.confidence`. ✅
-- **FD-NAME-1 HELD:** No `Caelixa` or `Finio` in user-facing JSX. Engine module comment (`// CAELIXA CASHFLOW ENGINE`) is in `cashflow-engine.js` — Wave 4 Morph sweep per FD-NAME-1. ✅
+- **FD-NAME-1 HELD:** No `Sonuswealth` or `Finio` in user-facing JSX. Engine module comment (`// SONUSWEALTH CASHFLOW ENGINE`) is in `cashflow-engine.js` — Wave 4 Morph sweep per FD-NAME-1. ✅
 - **BRAND.disclaimer PASS:** `{BRAND.disclaimer}` at L866; rules version + data date use `BRAND.rulesVersion` / `BRAND.dataDate` from brand.js SoT. ✅
 - **Dead code (S-05):** ~1,200 lines of V1 component definitions (lines ~1207–2629) never rendered. POLISH but diverge-risk. Recommend purge next cleanup pass.
 - **`goalSeek` ignores `targetWindow`:** `fq-calculator.js:1766` — `targetWindow` in signature but never used. Goal-Seek time-window awareness is fiction. FUNCTIONAL.

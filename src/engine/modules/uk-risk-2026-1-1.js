@@ -1,7 +1,7 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/uk-risk-2026-1-1.js
+// SONUSWEALTH — parts/3-Engine/uk-risk-2026-1-1.js
 // =====================================================================
-// UK Caelixa Risk Score engine — 7 dimensions · 5 shock scenarios ·
+// UK Sonuswealth Risk Score engine — 7 dimensions · 5 shock scenarios ·
 // life-event reopen matrix · 2 canonical CoI handlers · cashflow consumer
 // wires · Cholesky multi-asset risk metrics.
 //

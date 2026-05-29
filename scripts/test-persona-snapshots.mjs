@@ -26,7 +26,7 @@ const C = {
 };
 
 console.log(`${C.bold}═══════════════════════════════════════════════════════════════════════════${C.reset}`);
-console.log(`${C.bold}  Caelixa Industrial Multi-Period Matrix Validation Engine${C.reset}`);
+console.log(`${C.bold}  Sonuswealth Industrial Multi-Period Matrix Validation Engine${C.reset}`);
 console.log(`  Snapshots: 2026-05-19 (UK-2026.1) + 2021-05-19 (UK-2021.1)`);
 console.log(`  Scope: Human Narrative Fixtures + Dynamic Production Archetypes Matrix`);
 console.log(`${C.bold}═══════════════════════════════════════════════════════════════════════════${C.reset}`);

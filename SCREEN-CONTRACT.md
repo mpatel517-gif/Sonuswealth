@@ -1,4 +1,4 @@
-# CAELIXA SCREEN CONTRACTS — DESIGN LOCK DOCUMENT
+# SONUSWEALTH SCREEN CONTRACTS — DESIGN LOCK DOCUMENT
 
 **Generated:** 2 May 2026
 **Purpose:** Define every screen's cards, graphs, data sources, and user journeys BEFORE build
@@ -42,7 +42,7 @@ Answer in 60 seconds:
 
 | Zone | Name | Cards | Data Source |
 |------|------|-------|-------------|
-| 1 | Triple-Anchor | Net Worth tile, Caelixa Wealth Score tile, Risk Score tile | `calcNetWorth()`, `calcFQ()`, `calcRisk()` |
+| 1 | Triple-Anchor | Net Worth tile, Sonuswealth Wealth Score tile, Risk Score tile | `calcNetWorth()`, `calcFQ()`, `calcRisk()` |
 | 2 | Daily Delta Strip | Biggest mover card, Biggest event card, Most urgent change card | `computeSinceLastVisit()` |
 | 3 | CoI Odometer | Live ticking £/day + 4 action path mini-cards | `costOfInaction()` |
 | 4 | State Tiles | Safety Net, Debt Free, FI, Beneficiary (horizontal strip) | `safetyNetState()`, `debtFreeState()`, `fiState()`, `beneficiaryState()` |

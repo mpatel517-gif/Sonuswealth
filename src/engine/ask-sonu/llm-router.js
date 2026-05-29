@@ -23,8 +23,11 @@
 import { PLAYS } from './knowledge-graph.js'
 import { ADVISORS_BY_CATEGORY } from './play-actions.js'
 import { summariseTaxYearState } from './tax-year-state.js'
+import { supabase } from '../../lib/supabase.js'
 
-const API_URL = 'https://api.anthropic.com/v1/messages'
+// L1-1: route through Supabase Edge Function `ask-sonu-proxy` (no client-side key)
+const SUPABASE_URL = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_SUPABASE_URL || '') : ''
+const PROXY_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/ask-sonu-proxy` : ''
 const MODEL   = 'claude-sonnet-4-6'
 const TIMEOUT_MS = 45000  // 45s — the prompt is ~5KB (lens outputs) so Sonnet needs ~10-25s
 
@@ -376,12 +379,15 @@ function extractJSON(text) {
 export async function routeWithLLM(query, persona, opts = {}, signal = null) {
   const { knownFacts = {}, taxYearState = null, lensSummary = '' } = opts
 
-  const apiKey = typeof import.meta !== 'undefined'
-    ? (import.meta.env?.VITE_ANTHROPIC_KEY || import.meta.env?.VITE_ANTHROPIC_API_KEY)
-    : null
-
-  if (!apiKey) {
-    return { ok: false, reason: 'no_api_key', fallback: true }
+  // L1-1: proxy gate. Unauth sessions fall through to deterministic-engine
+  // fallback (`fallback: true` triggers same path the missing-key branch used).
+  if (!PROXY_URL) {
+    return { ok: false, reason: 'no_proxy', fallback: true }
+  }
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData?.session?.access_token
+  if (!accessToken) {
+    return { ok: false, reason: 'no_session', fallback: true }
   }
 
   const prompt = buildPrompt(query, persona, knownFacts, taxYearState, lensSummary)
@@ -393,14 +399,12 @@ export async function routeWithLLM(query, persona, opts = {}, signal = null) {
 
   const t0 = Date.now()
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(PROXY_URL, {
       method: 'POST',
       signal: ctrl.signal,
       headers: {
-        'x-api-key':                                  apiKey,
-        'anthropic-version':                          '2023-06-01',
-        'anthropic-dangerous-direct-browser-access':  'true',
-        'content-type':                               'application/json',
+        'Authorization':  `Bearer ${accessToken}`,
+        'content-type':   'application/json',
       },
       body: JSON.stringify({
         model:       MODEL,

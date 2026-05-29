@@ -16,7 +16,7 @@ Purpose: One sequenced plan covering audit, fix, reconcile, and enhancement wave
 
 ## §0 Governing rules (locked this gate)
 
-- **FD-NAME-1:** product name is **Sonuswealth**. Caelixa is the regression target — every occurrence is a FUNCTIONAL FAIL on A5/A6.
+- **FD-NAME-1:** product name is **Sonuswealth**. Sonuswealth is the regression target — every occurrence is a FUNCTIONAL FAIL on A5/A6.
 - **FD-CROSS-1 (NEW — supersedes FD-MM-2's "drill here only" wording):** every critical action is a **surface-instance**, not a pointer. Each surface presents the *angle it owns* with its own layout and its own data evidence; cross-surface links are explicit. One canonical surface owns *the doing*; the others own attention / consequence / time / cash-effect. Angles below.
 - **FD-2 / FD-MM-1:** screen layouts frozen for the audit. "More info on Home" + "What-If per bucket" are post-audit build waves, not in-audit fixes.
 - **No hardcoding:** every £/% figure traces to an engine fn or `rules-uk.js`. Hardcoded numbers = A6 FAIL = DEMO-BLOCKING.
@@ -51,7 +51,7 @@ The kit's 4-stage method scales per surface (each gets its own inventory + ledge
 ### WAVE 0 — Foundation flush (today, ~15 min)
 
 - Commit uncommitted: `tree-generator.js` + `DecisionEngineV2.jsx` + screenshot drift.
-- **Revert the Caelixa rename** in `HomeScreen.jsx` `DimExplainerStub` (commit `796e7a3`). Add to fix queue: codebase-wide Caelixa→Sonuswealth sweep via Morph in Wave 4.
+- **Revert the Sonuswealth rename** in `HomeScreen.jsx` `DimExplainerStub` (commit `796e7a3`). Add to fix queue: codebase-wide Sonuswealth→Sonuswealth sweep via Morph in Wave 4.
 - Update `home-inventory-v1.md` + `mymoney-inventory-v1.md` headers: add FD-CROSS-1, replace FD-MM-2 wording.
 - Single commit.
 
@@ -91,7 +91,7 @@ Fixer (Morph for fan-out, main thread or `general-purpose` subagent for surgical
 
 Every fix cites the element ID it closes. Engine smoke tests + interaction smoke run after each batch. A fix that breaks a green test is reverted, not kept.
 
-Morph usage: Caelixa→Sonuswealth sweep, `fmt()` normalisation, hardcoded-number replacements, signed-zero handling.
+Morph usage: Sonuswealth→Sonuswealth sweep, `fmt()` normalisation, hardcoded-number replacements, signed-zero handling.
 Exa/Firecrawl usage: verifying live FCA wording, current tax thresholds — `domain-auditor` invokes these inside its checks, not blanket.
 
 Realistic clock: days 3–4.

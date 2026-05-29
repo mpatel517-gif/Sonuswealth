@@ -195,11 +195,11 @@ No UNLISTED elements found in `Timeline.jsx`. Every rendered interactive/data-be
 | Location | String | Status |
 |----------|--------|--------|
 | Timeline.jsx:986 | `d.impact?.finioScore` | OK in scope — internal engine field name, NOT user-visible. Display label adjacent (line 1014) reads "Wealth Score impact". Confirms inventory seed TL-S-15. Defer to Wave 4 Morph engine-comment sweep. |
-| Timeline.jsx (user-visible strings) | `Caelixa` / `Finio` (capitalised) | ZERO matches — clean. |
+| Timeline.jsx (user-visible strings) | `Sonuswealth` / `Finio` (capitalised) | ZERO matches — clean. |
 | Timeline.jsx:2504 | "Not regulated financial advice. Sonuswealth models scenarios…" | PASS — brand name correct per FD-NAME-1 sentence case. |
 | `src/config/brand.js` | `BRAND.name = 'Sonuswealth'` + locked tagline | Source-of-truth honoured. Note: `BRAND.finioScore` deprecated alias still in brand.js (resolves to `Sonuswealth Wealth Score`); not consumed by Timeline.jsx. |
 
-**Verdict:** no user-visible `Caelixa` / `Finio` strings on Timeline. One engine-field reference (`finioScore`) is acceptable per FD-NAME-1 Wave 4 deferral.
+**Verdict:** no user-visible `Sonuswealth` / `Finio` strings on Timeline. One engine-field reference (`finioScore`) is acceptable per FD-NAME-1 Wave 4 deferral.
 
 ---
 

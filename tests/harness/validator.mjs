@@ -84,8 +84,8 @@ IHT rules reminder (the engine applies these; do not flag as wrong if engine RNR
 
 Engine output:
 - Net worth: ${fmt(engineOutput.net_worth)}
-- Caelixa Wealth Score: ${engineOutput.fq_score ?? 'n/a'}/100 (band: ${engineOutput.fq_band ?? 'n/a'})
-- Caelixa Risk Score: ${engineOutput.risk_score ?? 'n/a'}/100 (band: ${engineOutput.risk_band ?? 'n/a'})
+- Sonuswealth Wealth Score: ${engineOutput.fq_score ?? 'n/a'}/100 (band: ${engineOutput.fq_band ?? 'n/a'})
+- Sonuswealth Risk Score: ${engineOutput.risk_score ?? 'n/a'}/100 (band: ${engineOutput.risk_band ?? 'n/a'})
 - Gross taxable income: ${fmt(pl.gross_income)} (drawdown ${fmt(pl.effective_drawdown)} + employment ${fmt(pl.employment_income)} + state pension ${fmt(pl.state_pension)})
 - Income tax (engine): ${fmt(pl.income_tax)}
 - NI contributions: ${fmt(pl.ni)}

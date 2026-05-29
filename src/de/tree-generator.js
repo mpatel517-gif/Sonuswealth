@@ -1,29 +1,34 @@
 /**
  * src/de/tree-generator.js — Claude API call + response parsing
  *
- * Calls claude-opus-4-7 with the assembled prompt, parses the JSON response,
+ * Calls Opus via the ask-sonu-proxy Edge Function, parses the JSON response,
  * validates consequences via the engine registry, applies FCA rewrite.
  *
- * SECURITY NOTE (D-ASK-SEC-1): API key lives client-side at v1.0.
- * Replace with Cloudflare Worker proxy before public access.
+ * L1-1 (D-ASK-SEC-1 RESOLVED 2026-05-28): API key no longer client-side.
+ * All calls now route through Supabase Edge Function `ask-sonu-proxy`,
+ * which validates a Supabase JWT and holds ANTHROPIC_API_KEY server-side.
  */
 
 import { processClaudeResponse } from './validator.js';
 import { fcaRewriteTree } from './fca-rewrite.js';
 import { logGeneration } from './learning-log.js';
 import { getFallbackTree } from './demo-fallback-trees.js';
+import { supabase } from '../lib/supabase.js';
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL   = 'claude-opus-4-7';
+const SUPABASE_URL = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_SUPABASE_URL || '') : '';
+const PROXY_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/ask-sonu-proxy` : '';
+const MODEL    = 'claude-opus-4-7';
 
-// ── Claude call ───────────────────────────────────────────────────────────────
+// ── Claude call (proxied) ─────────────────────────────────────────────────────
 
 async function callClaude(prompt, signal = null) {
-  const apiKey = typeof import.meta !== 'undefined'
-    ? (import.meta.env?.VITE_ANTHROPIC_API_KEY || import.meta.env?.VITE_ANTHROPIC_KEY)
-    : null;
+  if (!PROXY_URL) throw new Error('service_unavailable');
 
-  if (!apiKey) throw new Error('service_unavailable');
+  // Proxy requires authenticated Supabase session. Without one, the
+  // deterministic fallback tree is used (see caller).
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) throw new Error('service_unavailable');
 
   // Hard timeout — Opus can hang on long prompts. 60s max, then abort.
   const timeoutCtrl = new AbortController();
@@ -33,14 +38,12 @@ async function callClaude(prompt, signal = null) {
   const t0 = Date.now();
   let res;
   try {
-    res = await fetch(API_URL, {
+    res = await fetch(PROXY_URL, {
       method: 'POST',
       signal: timeoutCtrl.signal,
       headers: {
-        'x-api-key':                              apiKey,
-        'anthropic-version':                       '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-        'content-type':                            'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'content-type': 'application/json',
       },
       body: JSON.stringify({
         model:      MODEL,

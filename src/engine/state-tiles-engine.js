@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA STATE-TILES ENGINE — A5
+// SONUSWEALTH STATE-TILES ENGINE — A5
 // Four milestone state functions: Safety Net · Debt Free · FI · Beneficiary
 // D-MM-7 DECIDED (foundation v1.3). Q-F PLSA fix is PROD-blocker; not demo-blocker.
 // Pure functions. No side effects. No global state.

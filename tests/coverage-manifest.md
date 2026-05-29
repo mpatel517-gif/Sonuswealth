@@ -1,4 +1,4 @@
-# Caelixa coverage manifest
+# Sonuswealth coverage manifest
 
 **Generated:** 2026-05-25 21:56:18 UTC
 **Purpose:** Every cell explicit. Empty = not tested. No hidden gaps.

@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/test-canonical-handlers.js
+// SONUSWEALTH — parts/3-Engine/lib/test-canonical-handlers.js
 // =====================================================================
 // Smoke tests for canonical CoI handlers retrofitted into UK engines:
 //   - pensionTimingHandler (uk-pension-2026-1-1.js)

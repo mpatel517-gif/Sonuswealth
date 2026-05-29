@@ -2,7 +2,7 @@
 // SONUSWEALTH — BRAND CONFIGURATION
 // Single source of truth for product name, tagline, and all brand strings.
 // Every screen imports from here. Change this file → whole product updates.
-// (Locked: D-NAME-2, 9 May 2026 — supersedes Caelixa, Finio.)
+// (Locked: D-NAME-2, 9 May 2026 — supersedes Sonuswealth, Finio.)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const BRAND = {

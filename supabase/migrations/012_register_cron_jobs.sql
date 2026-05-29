@@ -1,5 +1,5 @@
 -- ============================================================================
--- CAELIXA — PHASE 4 CRON JOBS REGISTRATION
+-- SONUSWEALTH — PHASE 4 CRON JOBS REGISTRATION
 -- Date: 2026-05-21
 -- Uses pg_cron extension (available on Supabase by default) to schedule
 -- Supabase Edge Functions invocations.

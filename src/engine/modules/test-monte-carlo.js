@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/test-monte-carlo.js
+// SONUSWEALTH — parts/3-Engine/lib/test-monte-carlo.js
 // =====================================================================
 // Smoke tests for shared monte-carlo lib.
 //

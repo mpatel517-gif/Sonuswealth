@@ -20,7 +20,7 @@ Purpose: Walk every inventory row (67 rows). Record PASS / FAIL / UNLISTED / DEC
 | DE-CHR-02 | "Decision Engine" title text | PASS | — | Present |
 | DE-CHR-03 | Subtitle "60 life events · engine-pure · FCA-compliant" | FAIL | FUNCTIONAL | "engine-pure" is builder jargon not user copy. Seed S-01. |
 | DE-CHR-04 | Session/prompt counter badge | PASS | — | Present |
-| DE-CHR-05 | Sonuswealth wordmark | PASS | — | No Caelixa/Finio in header |
+| DE-CHR-05 | Sonuswealth wordmark | PASS | — | No Sonuswealth/Finio in header |
 
 Region 1: 4 PASS · 1 FUNCTIONAL
 
@@ -116,7 +116,7 @@ Region 7.1: 1 PASS · 1 FUNCTIONAL
 |----|---------|---------|----------|-------|
 | DE-TREE-01 | tree.statement displayed | PASS | — | Rendered as H2 |
 | DE-TREE-02 | Statement finance-bound | FAIL | FUNCTIONAL | tree.statement is raw LLM prose; no engine variable substitution verified in tree-generator prompt. Seed S-18. |
-| DE-TREE-03 | Brand drift check on statement | FAIL | DEMO-BLOCKING | fca-rewrite.js brand filter applied only to consequence text, not to tree.statement, option names, or rationale. Caelixa/Finio could appear in these fields. Seed S-14. |
+| DE-TREE-03 | Brand drift check on statement | FAIL | DEMO-BLOCKING | fca-rewrite.js brand filter applied only to consequence text, not to tree.statement, option names, or rationale. Sonuswealth/Finio could appear in these fields. Seed S-14. |
 
 Region 7.2: 1 PASS · 1 DEMO-BLOCKING · 1 FUNCTIONAL
 
@@ -182,7 +182,7 @@ Region 7.6: 4 PASS · 2 DEMO-BLOCKING · 1 FUNCTIONAL
 | DE-OPT-CARD-02 | RECOMMENDED pill | PASS | — | Conditional on recommendation.pathId |
 | DE-OPT-CARD-03 | UNCONSIDERED PATH pill | PASS | — | Conditional on isUnconsidered |
 | DE-OPT-CARD-04 | Irreversibility pin colours | PASS | — | teal/gold/coral consistent |
-| DE-OPT-CARD-05 | Option name | FAIL | DEMO-BLOCKING | Not passed through fca-rewrite brand filter. Caelixa/Finio drift risk. Seed S-14. |
+| DE-OPT-CARD-05 | Option name | FAIL | DEMO-BLOCKING | Not passed through fca-rewrite brand filter. Sonuswealth/Finio drift risk. Seed S-14. |
 | DE-OPT-CARD-06 | Option summary | PASS | — | Present |
 | DE-OPT-CARD-07 | Expand chevron ▾ | PASS | — | Rotates on toggle |
 | DE-OPT-CARD-08 | Consequence chip label | PASS | — | Rendered |

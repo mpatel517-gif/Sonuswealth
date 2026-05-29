@@ -691,12 +691,12 @@ git commit -m "feat: ScenarioIntake — append structured 4-option response inst
 
 ---
 
-## Task 6: Brand fix — "Sonuswealth" → "Caelixa" in DimExplainerStub
+## Task 6: Brand fix — "Sonuswealth" → "Sonuswealth" in DimExplainerStub
 
 **Files:**
 - Modify: `src/screens/HomeScreen.jsx` line 841
 
-**Context:** DimExplainerStub eyebrow reads "Sonuswealth Wealth Score". Per §4 / D-NAME-1, the user-facing product name is **Caelixa**. "Sonuswealth" must not appear in any user-visible string.
+**Context:** DimExplainerStub eyebrow reads "Sonuswealth Wealth Score". Per §4 / D-NAME-1, the user-facing product name is **Sonuswealth**. "Sonuswealth" must not appear in any user-visible string.
 
 - [ ] **Step 1: Fix the label**
 
@@ -706,7 +706,7 @@ Sonuswealth Wealth Score — {label}
 ```
 Change to:
 ```jsx
-Caelixa Wealth Score — {label}
+Sonuswealth Wealth Score — {label}
 ```
 
 - [ ] **Step 2: Scan for any other "Sonuswealth" in HomeScreen.jsx**
@@ -720,7 +720,7 @@ Fix any additional occurrences found.
 - [ ] **Step 3: Commit**
 ```bash
 git add src/screens/HomeScreen.jsx
-git commit -m "fix: replace Sonuswealth with Caelixa in DimExplainerStub (D-NAME-1)"
+git commit -m "fix: replace Sonuswealth with Sonuswealth in DimExplainerStub (D-NAME-1)"
 ```
 
 ---

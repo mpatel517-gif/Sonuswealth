@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA ELIGIBILITY ENGINE
+// SONUSWEALTH ELIGIBILITY ENGINE
 //
 // Registry of UK conditional/eligibility rules that gate access to allowances,
 // reliefs and pension/benefit amounts. Each rule:

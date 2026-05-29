@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA RISK ENGINE — Shock Scenarios + BTR Projection
+// SONUSWEALTH RISK ENGINE — Shock Scenarios + BTR Projection
 // Per RL v1.1 §7 (5 shocks) · §6.9 (D7 BTR simulate path)
 // Functions: runShock · riskShockSuite · whatWouldHelpMost · projectBTR
 // All pure. No side effects. No hardcoded values.

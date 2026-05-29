@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA HOME ENGINE  —  A5 Home suite · s02a
+// SONUSWEALTH HOME ENGINE  —  A5 Home suite · s02a
 // Spec: 2-Product-home-v1_0.md §16 + v1.1 patch
 // C97 computeSinceLastVisit · C98 stateTileJourney · C99 whatActionWouldItTake ·
 // C100 compositeTrajectory · C101 cohortRankHistory ·

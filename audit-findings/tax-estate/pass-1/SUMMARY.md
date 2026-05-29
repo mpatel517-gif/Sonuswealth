@@ -53,7 +53,7 @@ Seed findings confirmed: 21 / 21 (100%)
 New findings beyond seeds: 3 (DB-6 BPR £1m error; DB-8 no year-by-year trajectory; BPRDrillPanel wrong rate taxonomy)
 
 FD-TE-1 (SIPP IHT ENACTED): PASS — "Enacted · FA 2026" chip + TE-1 explainer correct
-FD-NAME-1 (no Caelixa/Finio): PASS — 0 matches in TaxEstate.jsx
+FD-NAME-1 (no Sonuswealth/Finio): PASS — 0 matches in TaxEstate.jsx
 ```
 
 ---

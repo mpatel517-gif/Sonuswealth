@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/test-monte-carlo-cholesky.js
+// SONUSWEALTH — parts/3-Engine/lib/test-monte-carlo-cholesky.js
 // =====================================================================
 // Smoke tests for monte-carlo.js v1.1 §G — Cholesky extension.
 // Closes O-MC-CHOLESKY-1.

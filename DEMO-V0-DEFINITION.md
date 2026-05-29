@@ -1,4 +1,4 @@
-# Caelixa v0 Demo Definition
+# Sonuswealth v0 Demo Definition
 
 **Purpose:** Define exactly what "done" means for the first showable version. Everything else is post-demo backlog.
 
@@ -10,7 +10,7 @@
 ## The 90-second demo
 
 ### Scene 1 — Open the app (10 sec)
-Founder loads Caelixa on **mobile** (the most demanding form factor). Persona selector shows 3 personas: **Bruce Wayne**, **Catherine**, **Hugo**. Click Bruce.
+Founder loads Sonuswealth on **mobile** (the most demanding form factor). Persona selector shows 3 personas: **Bruce Wayne**, **Catherine**, **Hugo**. Click Bruce.
 
 ### Scene 2 — Home screen (15 sec)
 Mobile-optimised Home renders in <1.5 sec:
@@ -63,7 +63,7 @@ Demonstrates the personalisation.
 When the screen reads:
 > **"You could save £150k in IHT + £10k/yr in income tax with 4 changes."**
 
-That single sentence does what every other UK financial planning app fails to do: tell the user, in their own numbers, how much avoidable tax they're paying. The fact that we then SHOW THEM HOW separates Caelixa from compliance/budgeting tools.
+That single sentence does what every other UK financial planning app fails to do: tell the user, in their own numbers, how much avoidable tax they're paying. The fact that we then SHOW THEM HOW separates Sonuswealth from compliance/budgeting tools.
 
 ---
 

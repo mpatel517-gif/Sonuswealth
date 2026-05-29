@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA / FINIO — UNIVERSAL ENGINE HELPERS  (CANONICAL)
+// SONUSWEALTH / FINIO — UNIVERSAL ENGINE HELPERS  (CANONICAL)
 // Schema-agnostic readers that return consistent values from EITHER persona shape:
 
 import { getBundle } from './_bundle.js';
@@ -171,6 +171,34 @@ export function alternativesTotal(entity) {
       if (alt?.status === 'disposed') continue;
       const raw  = +(alt.value_gbp ?? alt.value ?? alt.estimated_value ?? 0) || 0;
       const frac = +(alt.beneficial_interest_this_individual ?? alt.ownershipShare ?? 1) || 1;
+      total += raw * frac;
+    }
+  }
+  return total;
+}
+
+/**
+ * Total private-business equity.
+ * CANONICAL. TO-7 (L2-4, 2026-05-28). Surfaced by the dynamic-onboarding
+ * contract test — `assets.businesses[]` was previously ignored by the
+ * engine even though onboarding-shape entities populate it. Walks the
+ * array, applies ownership share where present, skips disposed entries.
+ *
+ * Note: BPR-qualifying tradeable investments (AIM, EIS, SEIS) live inside
+ * `assets.investments[]` with a `bpr_qualifying: true` flag and stay there
+ * — they are NOT included here, to avoid double-counting.
+ *
+ * @param {object} entity
+ * @returns {number}
+ */
+export function businessTotal(entity) {
+  const a = entity?.assets || {};
+  let total = 0;
+  if (Array.isArray(a.businesses)) {
+    for (const b of a.businesses) {
+      if (b?.status === 'disposed') continue;
+      const raw  = +(b.value_gbp ?? b.value ?? b.estimated_value ?? 0) || 0;
+      const frac = +(b.beneficial_interest_this_individual ?? b.ownershipShare ?? 1) || 1;
       total += raw * frac;
     }
   }

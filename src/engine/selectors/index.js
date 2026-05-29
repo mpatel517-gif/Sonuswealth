@@ -39,6 +39,7 @@ import {
   propertyTotal as _propertyTotal,
   cashTotal as _cashTotal,
   alternativesTotal as _alternativesTotal,
+  businessTotal as _businessTotal,
   liabilitiesTotal as _liabilitiesTotal,
   annualIncome as _annualIncome,
   personAge as _personAge,
@@ -105,6 +106,13 @@ export const cash = (entity) => _cashTotal(entity);
  * deliberately excluded because alternatives are illiquid.
  */
 export const alternatives = (entity) => _alternativesTotal(entity);
+
+/**
+ * Total private-business equity (assets.businesses[]). TO-7 (2026-05-28):
+ * previously invisible to NW. Tradeable BPR-qualifying instruments
+ * (AIM/EIS/SEIS) stay inside `investments` to avoid double-counting.
+ */
+export const businesses = (entity) => _businessTotal(entity);
 
 /**
  * Total liabilities — mortgage(s), loans, credit cards, otherLoans[], otherDebt.

@@ -27,7 +27,7 @@ Purpose: Merged summary across all 5 auditors. Counts, DEMO-BLOCKING table, cove
 | DB-01 | DE-ERR-01 | VITE_ANTHROPIC_API_KEY not set surfaced as end-user error message | S-02 |
 | DB-02 | DE-ERR-04 / DE-OPT-04 | Options count not enforced — 2 or 5 options render silently, FD-DE-1 violated | S-03/S-05 |
 | DB-03 | DE-IDLE-04/06 / DE-OPT-07 / DE-TREE-11 | tree.horizon not required in schema — starter chips produce trees with no time-projection | S-12 |
-| DB-04 | DE-TREE-03 / DE-OPT-CARD-05 | FCA-rewrite brand filter covers consequence text only — tree.statement, option names, rationale, recommendation NOT filtered. Caelixa/Finio drift undetected. FD-NAME-1. | S-14 |
+| DB-04 | DE-TREE-03 / DE-OPT-CARD-05 | FCA-rewrite brand filter covers consequence text only — tree.statement, option names, rationale, recommendation NOT filtered. Sonuswealth/Finio drift undetected. FD-NAME-1. | S-14 |
 | DB-05 | DE-OPT-CARD-09 | LLM-invented metric keys bypass engine registry — values render as apparent facts | S-07 |
 | DB-06 | DE-ENT-01 | HomeScreen has no entry to DecisionEngineV2 — Ask panel only | S-15 |
 | DB-07 | DE-ENT-02 | Ask.jsx intent=act sets showActionChips, NOT setDecisionEngine. DE tree never opened. Silent FD-CROSS-1 bypass. | S-13 |
@@ -53,7 +53,7 @@ PASS: 44. FAIL (any severity): 23. Pass rate: 66%.
 
 ### Priority 1 — Extend brand filter to ALL user-visible string fields (DB-04 / DB-13)
 
-FD-NAME-1 is DEMO-BLOCKING locked. One LLM run outputting "Caelixa Score" in tree.statement kills a demo.
+FD-NAME-1 is DEMO-BLOCKING locked. One LLM run outputting "Sonuswealth Score" in tree.statement kills a demo.
 Fix: in fca-rewrite.js, apply fcaRewriteTree() to tree.statement, option name/summary/rationale, and tree.recommendation.rationale before returning from tree-generator.js.
 Effort: Low.
 

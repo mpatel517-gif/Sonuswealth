@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { BRAND } from '../config/brand.js'
+import FCADisclaimerFooter from '../components/Shell/FCADisclaimerFooter.jsx'
 
 // Imports for Phase 2 implementation. Currently unused — uncomment when generation wires.
 // import { netWorth, ihtDynamic, costOfInaction, incomeTax, cashflowHealth, trajectoryData, calcFQ, calcRisk } from '../engine/fq-calculator.js'
@@ -197,9 +198,8 @@ export default function Reports({ onBack, onGenerate }) {
         PDF/CSV export coming in Phase 2.
       </div>
 
-      <p className="text-xs text-gray-400 text-center px-4 pb-4" style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', padding: '12px 16px 4px', lineHeight: 1.55 }}>
-        {BRAND.disclaimer}
-      </p>
+      {/* L1-6: canonical footer component (was inline BRAND.disclaimer). */}
+      <FCADisclaimerFooter variant="footer" />
       <p style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', padding: '0 16px 16px', lineHeight: 1.55 }}>
         {BRAND.rulesLabel()}
       </p>

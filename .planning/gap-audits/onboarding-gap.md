@@ -69,7 +69,7 @@ Onboarding is **the thinnest core flow** relative to spec ambition. Spec v1.1 de
 
 | Feature | Spec § | Code | Verdict |
 |---|---|---|---|
-| Language picker (English / Hindi / Gujarati per Caelixa context) | §5 | not present | ❌ MISSING |
+| Language picker (English / Hindi / Gujarati per Sonuswealth context) | §5 | not present | ❌ MISSING |
 
 ---
 

@@ -16,7 +16,7 @@ The product must work for a *novice* on the surface (macOS principle, PP-2) and 
 
 ## Brand
 
-- **Name:** Sonuswealth (D-NAME-2, 9 May 2026 — supersedes Caelixa, Finio)
+- **Name:** Sonuswealth (D-NAME-2, 9 May 2026 — supersedes Sonuswealth, Finio)
 - **Mascot:** Sonu (owl, friendly AI persona)
 - **Tagline:** *"Intelligence without the noise."*
 - **Score names:** Sonuswealth Wealth Score (0–100, 8 weighted dimensions), Sonuswealth Risk Score (0–100, 7 weighted dimensions; higher = more protected)

@@ -152,7 +152,7 @@
 
 | ID | Element | Verdict | Evidence |
 |----|---------|---------|----------|
-| RP-G-01 | Screen-wide brand audit (no Caelixa/Finio/FQ Score) | **PASS** | Grep of Reports.jsx: zero occurrences of "Caelixa", "Finio", "FQ Score". No `BRAND` import in stub — safe for now. Highest-risk surface at Phase 2 when PDF renderer ships. |
+| RP-G-01 | Screen-wide brand audit (no Sonuswealth/Finio/FQ Score) | **PASS** | Grep of Reports.jsx: zero occurrences of "Sonuswealth", "Finio", "FQ Score". No `BRAND` import in stub — safe for now. Highest-risk surface at Phase 2 when PDF renderer ships. |
 | RP-G-02 | Screen-wide theme audit (light+dark × 3 viewports) | **UNVERIFIED** | Runtime-only. Amber banner dark-mode contrast especially requires snap. |
 | RP-G-03 | (Phase 2) PDF renderer brand variant per theme | **BLOCKED** | Phase 2 per FD-LOGO-1 |
 | RP-G-04 | `onGenerate(reportId, mode)` contract | **PASS** | Dashboard.jsx line 699 passes `onGenerate={(id, mode) => console.log('TODO Generate', id, mode)}`. Reports.jsx line 66 `void onGenerate`. Phase 2 wire is one-line as claimed. |

@@ -1,4 +1,4 @@
-# Caelixa Ideas Backlog
+# Sonuswealth Ideas Backlog
 
 **Purpose:** Append-only capture of ideas, requests, and "we missed X" moments as they emerge. Read at start of every session.
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- CAELIXA SUPABASE SCHEMA — ALL MIGRATIONS COMBINED
+-- SONUSWEALTH SUPABASE SCHEMA — ALL MIGRATIONS COMBINED
 -- ============================================================================
 -- Source: 3-Engine-supabase-event-store-schema-v1_0.md
 -- Generated: 1 May 2026

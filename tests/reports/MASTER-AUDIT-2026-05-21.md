@@ -1,4 +1,4 @@
-# Caelixa Master Audit Report — 2026-05-21 (FINAL)
+# Sonuswealth Master Audit Report — 2026-05-21 (FINAL)
 
 **Engine version:** Sonuswealth-1.0
 **Rules version:** UK-2026.1.1 (canonical, post-Phase-1 consolidation)

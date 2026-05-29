@@ -1,4 +1,4 @@
-# CAELIXA DESIGN REFERENCES — INDEX
+# SONUSWEALTH DESIGN REFERENCES — INDEX
 
 All design files are READ-ONLY for Claude Code. Track B chat (Claude.ai) owns updates.
 Visual analysis flow: render component → screenshot at 480px → post to Opus chat with spec section + design filename → fix drift → commit.
@@ -11,23 +11,23 @@ Visual analysis flow: render component → screenshot at 480px → post to Opus 
 
 | Design file | Implements (spec section) | Status | Notes |
 |-------------|---------------------------|--------|-------|
-| `caelixa-design-deliverables/previews/caelixa-home-dark-375.png` | `2-Product-home-v1_1.md` — full home layout · dark theme | ACTIVE | 375px · primary mobile breakpoint |
-| `caelixa-design-deliverables/previews/caelixa-home-dark-390.png` | `2-Product-home-v1_1.md` — full home layout · dark theme | ACTIVE | 390px · iPhone 14/15 Pro |
-| `caelixa-design-deliverables/previews/caelixa-home-dark-430.png` | `2-Product-home-v1_1.md` — full home layout · dark theme | ACTIVE | 430px · iPhone 14/15 Plus |
-| `caelixa-design-deliverables/previews/caelixa-home-light-375.png` | `2-Product-home-v1_1.md` — full home layout · light theme | ACTIVE | 375px |
-| `caelixa-design-deliverables/previews/caelixa-home-light-390.png` | `2-Product-home-v1_1.md` — full home layout · light theme | ACTIVE | 390px |
-| `caelixa-design-deliverables/previews/caelixa-home-light-430.png` | `2-Product-home-v1_1.md` — full home layout · light theme | ACTIVE | 430px |
-| `caelixa-design-deliverables/previews/caelixa-home-375.png` | `2-Product-home-v1_1.md` — full home layout | ACTIVE | Default (dark assumed) |
-| `caelixa-design-deliverables/previews/caelixa-home-390.png` | `2-Product-home-v1_1.md` — full home layout | ACTIVE | Default |
-| `caelixa-design-deliverables/previews/caelixa-home-430.png` | `2-Product-home-v1_1.md` — full home layout | ACTIVE | Default |
-| `caelixa-design-deliverables/pages/preview.html` | `2-Product-home-v1_1.md` — interactive home prototype | ACTIVE | Open in browser for full interactive reference |
-| `caelixa-design-deliverables/logo/caelixa-logo-horizontal-dark.svg` | All screens — dark mode nav + splash | ACTIVE | Primary dark logo |
-| `caelixa-design-deliverables/logo/caelixa-logo-horizontal-light.svg` | All screens — light mode nav + splash | ACTIVE | Primary light logo |
-| `caelixa-design-deliverables/logo/caelixa-app-icon.svg` | App icon · PWA manifest | ACTIVE | Vector source |
-| `caelixa-design-deliverables/logo/caelixa-app-icon-1024.png` | App store · splash | ACTIVE | 1024px |
-| `caelixa-design-deliverables/logo/caelixa-mark-transparent.svg` | Standalone mark · loading states | ACTIVE | Transparent bg |
-| `caelixa-design-deliverables/logo/caelixa-mark-mono.svg` | Monochrome usage | ACTIVE | Single colour contexts |
-| `caelixa-design-deliverables/docs/caelixa-brand-notes.md` | All screens — colour · motion · typography | ACTIVE | Dark: deep graphite + soft blue. Light: white/mist + slate + calm blue. Motion: C arc first → bars → pulse → wordmark. |
+| `sonuswealth-design-deliverables/previews/caelixa-home-dark-375.png` | `2-Product-home-v1_1.md` — full home layout · dark theme | ACTIVE | 375px · primary mobile breakpoint |
+| `sonuswealth-design-deliverables/previews/caelixa-home-dark-390.png` | `2-Product-home-v1_1.md` — full home layout · dark theme | ACTIVE | 390px · iPhone 14/15 Pro |
+| `sonuswealth-design-deliverables/previews/caelixa-home-dark-430.png` | `2-Product-home-v1_1.md` — full home layout · dark theme | ACTIVE | 430px · iPhone 14/15 Plus |
+| `sonuswealth-design-deliverables/previews/caelixa-home-light-375.png` | `2-Product-home-v1_1.md` — full home layout · light theme | ACTIVE | 375px |
+| `sonuswealth-design-deliverables/previews/caelixa-home-light-390.png` | `2-Product-home-v1_1.md` — full home layout · light theme | ACTIVE | 390px |
+| `sonuswealth-design-deliverables/previews/caelixa-home-light-430.png` | `2-Product-home-v1_1.md` — full home layout · light theme | ACTIVE | 430px |
+| `sonuswealth-design-deliverables/previews/caelixa-home-375.png` | `2-Product-home-v1_1.md` — full home layout | ACTIVE | Default (dark assumed) |
+| `sonuswealth-design-deliverables/previews/caelixa-home-390.png` | `2-Product-home-v1_1.md` — full home layout | ACTIVE | Default |
+| `sonuswealth-design-deliverables/previews/caelixa-home-430.png` | `2-Product-home-v1_1.md` — full home layout | ACTIVE | Default |
+| `sonuswealth-design-deliverables/pages/preview.html` | `2-Product-home-v1_1.md` — interactive home prototype | ACTIVE | Open in browser for full interactive reference |
+| `sonuswealth-design-deliverables/logo/caelixa-logo-horizontal-dark.svg` | All screens — dark mode nav + splash | ACTIVE | Primary dark logo |
+| `sonuswealth-design-deliverables/logo/caelixa-logo-horizontal-light.svg` | All screens — light mode nav + splash | ACTIVE | Primary light logo |
+| `sonuswealth-design-deliverables/logo/caelixa-app-icon.svg` | App icon · PWA manifest | ACTIVE | Vector source |
+| `sonuswealth-design-deliverables/logo/caelixa-app-icon-1024.png` | App store · splash | ACTIVE | 1024px |
+| `sonuswealth-design-deliverables/logo/caelixa-mark-transparent.svg` | Standalone mark · loading states | ACTIVE | Transparent bg |
+| `sonuswealth-design-deliverables/logo/caelixa-mark-mono.svg` | Monochrome usage | ACTIVE | Single colour contexts |
+| `sonuswealth-design-deliverables/docs/caelixa-brand-notes.md` | All screens — colour · motion · typography | ACTIVE | Dark: deep graphite + soft blue. Light: white/mist + slate + calm blue. Motion: C arc first → bars → pulse → wordmark. |
 
 ---
 
@@ -35,11 +35,11 @@ Visual analysis flow: render component → screenshot at 480px → post to Opus 
 
 | File | Notes |
 |------|-------|
-| `caelixa-design-deliverables/brand-exploration/caelixa-logo-comparison.png` | Three logo route comparison |
-| `caelixa-design-deliverables/brand-exploration/caelixa-v1-arc-motion.gif` | Arc route motion study |
-| `caelixa-design-deliverables/brand-exploration/caelixa-v2-lift-motion.gif` | Lift route motion study |
-| `caelixa-design-deliverables/brand-exploration/caelixa-v3-tile-motion.gif` | Tile route motion study |
-| `caelixa-design-deliverables/brand-exploration/caelixa-brand-preview.html` | Full brand preview page |
+| `sonuswealth-design-deliverables/brand-exploration/caelixa-logo-comparison.png` | Three logo route comparison |
+| `sonuswealth-design-deliverables/brand-exploration/caelixa-v1-arc-motion.gif` | Arc route motion study |
+| `sonuswealth-design-deliverables/brand-exploration/caelixa-v2-lift-motion.gif` | Lift route motion study |
+| `sonuswealth-design-deliverables/brand-exploration/caelixa-v3-tile-motion.gif` | Tile route motion study |
+| `sonuswealth-design-deliverables/brand-exploration/caelixa-brand-preview.html` | Full brand preview page |
 
 ---
 

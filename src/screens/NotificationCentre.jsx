@@ -90,7 +90,7 @@ function deriveNotifications(entity, { now = Date.now() } = {}) {
     })
   }
 
-  // X27 estate-discovery (Caelixa differentiator):
+  // X27 estate-discovery (Sonuswealth differentiator):
   // business assets present + no will → NC-RA "confirm will covers BPR succession".
   const hasBusinessAssets = Array.isArray(e.assets?.business_assets)
     ? e.assets.business_assets.length > 0

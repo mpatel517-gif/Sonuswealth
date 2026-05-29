@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Caelixa regression harness — runner
+// Sonuswealth regression harness — runner
 // Usage:
 //   node tests/harness/runner.mjs --smoke
 //   node tests/harness/runner.mjs --persona persona-a --year 2025/26
@@ -114,7 +114,7 @@ const RUN_ID = randomUUID();
 const totalWork = Math.min(workPersonas.length * workYears.length, args.max);
 
 console.log('═══════════════════════════════════════════════════════════════');
-console.log('  CAELIXA REGRESSION HARNESS');
+console.log('  SONUSWEALTH REGRESSION HARNESS');
 console.log('  Run ID:', RUN_ID);
 console.log('  Personas:', workPersonas.length, '(' + workPersonas.slice(0,5).join(',') + (workPersonas.length>5?'...':'') + ')');
 console.log('  Years:', workYears.join(','));

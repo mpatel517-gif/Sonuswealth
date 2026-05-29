@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA LENS REGISTRY
+// SONUSWEALTH LENS REGISTRY
 //
 // 11 professional lenses. Each implements the Lens interface from
 // ARCHITECTURE-V0.md §3. v0 ships Tax Accountant fully built; other 10

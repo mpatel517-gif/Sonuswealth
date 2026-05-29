@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA / FINIO — FOUNDATION ENGINE SMOKE TEST
+// SONUSWEALTH / FINIO — FOUNDATION ENGINE SMOKE TEST
 // Runs every Wave 1A foundation function on persona-a (Bruce, legacy flat) and
 // mrT-core (nested) and reports PASS/FAIL.
 //

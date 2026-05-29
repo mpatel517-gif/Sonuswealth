@@ -1,5 +1,5 @@
 /**
- * Caelixa · src/engine/uk-tax-2026-1-1.js
+ * Sonuswealth · src/engine/uk-tax-2026-1-1.js
  *
  * UK Income Tax · NIC · CGT · SDLT · SDRT · HICBC · Dividend · Savings · Salary Sacrifice
  *

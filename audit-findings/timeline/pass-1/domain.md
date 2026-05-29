@@ -148,7 +148,7 @@ No "you should" / "we recommend" / "you must" found in Timeline.jsx.
 
 ### 11. Brand drift (FD-NAME-1)
 
-- `Caelixa` / `Finio` user-visible strings: **ZERO** occurrences in Timeline.jsx.
+- `Sonuswealth` / `Finio` user-visible strings: **ZERO** occurrences in Timeline.jsx.
 - `Sonuswealth` (sentence case) used correctly in disclaimer (Timeline.jsx:2504).
 - Internal field `d.impact.finioScore` (legacy prefix) — *data field*, not user-visible; deferred to Wave 4 Morph sweep.
 - **PASS** on visible-UI brand discipline.

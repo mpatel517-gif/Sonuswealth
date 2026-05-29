@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA CALCULATION ENGINE
+// SONUSWEALTH CALCULATION ENGINE
 // Scoring engine:  FINIO-1.0   Risk engine: RISK-1.0   Tax rules: UK-2026.1
 // Pure functions only. No side effects. No global state. No hardcoded values.
 // Every output carries rulesVersion + scoringVersion stamps.
@@ -15,6 +15,7 @@ import {
   propertyTotal     as _propertyTotal,
   cashTotal         as _cashTotal,
   alternativesTotal as _alternativesTotal,
+  businessTotal    as _businessTotal,
   liabilitiesTotal as _liabilitiesTotal,
   monthlyDebtService as _monthlyDebtService,
   annualIncome     as _annualIncome,
@@ -117,10 +118,29 @@ export function lifeStageFor(age, type = 'individual') {
 export function netWorth(e) {
   if (!e) return 0;
   const a = e.assets || {};
-  // Legacy fast-path: any flat field present and no nested arrays
+  // Legacy fast-path: any flat field present and no nested arrays.
+  //
+  // TO-7 (L2-4, 2026-05-28): The fast-path is wrong for any persona that
+  //   (a) carries `assets.sipp.pensions[]` (nested-inside-sipp), or
+  //   (b) carries `assets.businesses[]` / `assets.alternatives[]` / `assets.properties[]` (plural), or
+  //   (c) has fractional `residence.ownershipShare`.
+  // because it returns `a.residence.value` raw (no share applied) and never
+  // sums businesses/alternatives. Caught by tests/dynamic-onboarding.mjs
+  // on Devon Patel (director, half-residence + business) and Kira Olusegun
+  // (cohabitee, half-residence). hasNested now detects any of these signals
+  // so the canonical walker (which applies ownershipShare + sums all classes)
+  // takes over.
   const hasFlat   = !!(a.sipp || a.isa || a.residence || a.portfolio || a.cash);
-  const hasNested = Array.isArray(a.pensions) || Array.isArray(a.investments) ||
-                    Array.isArray(a.property) || Array.isArray(a.bank);
+  const hasNested =
+    Array.isArray(a.pensions)       ||
+    Array.isArray(a.investments)    ||
+    Array.isArray(a.property)       ||
+    Array.isArray(a.properties)     ||   // plural shape — onboarding-produced
+    Array.isArray(a.bank)           ||
+    Array.isArray(a.sipp?.pensions) ||   // nested inside sipp
+    Array.isArray(a.businesses)     ||
+    Array.isArray(a.alternatives)   ||
+    (+a.residence?.ownershipShare > 0 && +a.residence?.ownershipShare < 1);
   if (hasFlat && !hasNested) {
     const liab = _liabilitiesTotal(e);
     return (a.sipp?.total || 0) + (a.isa?.value || 0) +
@@ -131,11 +151,12 @@ export function netWorth(e) {
   // only; flat-side values (a.isa.value etc.) are intentionally NOT added,
   // because in mixed personas they duplicate items already inside the nested
   // arrays (ISA in a.investments[], cash in a.bank[], SIPP in a.pensions[]).
-  // TO-1 fix (2026-05-28): alternatives (crypto/gold/P2P/art) were missing
-  // entirely. Display walker at MyMoney heroTotalAssets included them; engine
-  // didn't. See 0-Active/audit/B-TIEOUT-FINDINGS-2026-05-28.md.
+  // TO-1 (2026-05-28): alternatives were missing entirely.
+  // TO-7 (2026-05-28): businesses[] now summed via _businessTotal — private
+  //   company shares, partnership interests, business equity. Tradeable
+  //   BPR-qualifying items inside investments[] stay there (no double-count).
   return _pensionTotal(e) + _investmentsTotal(e) + _propertyTotal(e) +
-         _cashTotal(e) + _alternativesTotal(e) - _liabilitiesTotal(e);
+         _cashTotal(e) + _alternativesTotal(e) + _businessTotal(e) - _liabilitiesTotal(e);
 }
 
 /**
@@ -1167,7 +1188,7 @@ export function financialProfile(e) {
     'exceptional_vulnerable': { name: 'Exceptional finances / structurally fragile',  implication: 'Exceptional financial health with meaningful gaps in your resilience structure.' },
     'exceptional_managed':    { name: 'Exceptional finances / risk managed',          implication: 'Exceptional finances with core risks addressed — close the remaining gaps.' },
     'exceptional_protected':  { name: 'Exceptional finances / well protected',        implication: 'Exceptional finances and strong resilience — minor refinements remain.' },
-    'exceptional_resilient':  { name: 'Exceptional / and resilient',                  implication: 'The Caelixa ideal — exceptional financial health and complete resilience.' },
+    'exceptional_resilient':  { name: 'Exceptional / and resilient',                  implication: 'The Sonuswealth ideal — exceptional financial health and complete resilience.' },
 
     'optimised_exposed':      { name: 'Solid progress / seriously exposed',           implication: 'Strong finances but serious structural vulnerabilities that need urgent attention.' },
     'optimised_vulnerable':   { name: 'Solid progress / structurally at risk',        implication: 'Strong financial position with meaningful protection gaps to address.' },
@@ -1418,26 +1439,22 @@ export function solverIterate(stateFn, initialState, maxIter = 50, tolerance = 1
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TRADING 212 INTEGRATION — Finio Lab only
-// Gated by VITE_TRADING212_API_KEY. Never available to other users.
-// Maps T212 positions into Finio portfolio format for engine consumption.
+// TRADING 212 INTEGRATION — REMOVED (L1-1b, 2026-05-28)
+//
+// The fetchT212Portfolio() and mapT212ToPortfolio() helpers used to live here.
+// They were:
+//   1. Gated on VITE_TRADING212_API_KEY, which Vite bundles into the client →
+//      same key-in-bundle leak the Anthropic proxy fixed in L1-1.
+//   2. Called direct from the browser to live.trading212.com/api/v0/* with
+//      the key in the Authorization header → impossible to ship without
+//      either rotating the key per build or accepting the leak.
+//   3. Dead code — `fetchT212Portfolio` / `mapT212ToPortfolio` had no
+//      callers anywhere in src/.
+//
+// If T212 sync returns as a product feature, route it through a Supabase
+// Edge Function (pattern: supabase/functions/ask-sonu-proxy/) holding the
+// key server-side and validating a Supabase JWT.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const T212_KEY  = import.meta.env?.VITE_TRADING212_API_KEY;
-const T212_BASE = 'https://live.trading212.com/api/v0';
-
-export async function fetchT212Portfolio() {
-  if (!T212_KEY) return null;
-  try {
-    const [pos, cash] = await Promise.all([
-      fetch(`${T212_BASE}/equity/portfolio`,       { headers: { Authorization: T212_KEY } })
-        .then(r => r.ok ? r.json() : null),
-      fetch(`${T212_BASE}/equity/account/cash`,    { headers: { Authorization: T212_KEY } })
-        .then(r => r.ok ? r.json() : null),
-    ]);
-    return { positions: pos, cash };
-  } catch { return null; }
-}
 
 // ── calcFQCalibrated — kept for HomeScreen compatibility ──────────────────────
 // Applies a situational inaction penalty for personas with large undrawn SIPPs.
@@ -1455,29 +1472,6 @@ export function calcFQCalibrated(e) {
               base.dims.debt + base.dims.estate;
   const total = Math.min(100, Math.max(0, Math.round(raw * momentum_adj)));
   return { ...base, total, dims: { ...base.dims, capital: capital_capped }, momentum: momentum_adj };
-}
-
-export function mapT212ToPortfolio(t212Data) {
-  if (!t212Data?.positions) return null;
-  const positions = t212Data.positions;
-  const totalVal  = positions.reduce((s, p) => s + (p.currentValue || 0), 0);
-  return {
-    value:  Math.round(totalVal),
-    growth: 0.05,   // updated when YTD return is available
-    bpr:    false,
-    ret:    positions.length > 0
-              ? positions.reduce((s, p) => s + ((p.ppl || 0) / (p.value || 1)), 0) / positions.length
-              : 0,
-    holdings: positions.map(p => ({
-      ticker: p.ticker,
-      name:   p.fullName || p.ticker,
-      val:    fmt(p.currentValue || 0),
-      pct:    p.currentValue ? ((p.ppl / p.currentValue) * 100).toFixed(1) + '%' : '—',
-      up:     (p.ppl || 0) >= 0,
-    })),
-    source: 'trading212',
-    lastSync: new Date().toISOString(),
-  };
 }
 
 // ============================================================================

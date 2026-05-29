@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA / FINIO — PERSONA HELPERS  (pure, no UI, no copy)
+// SONUSWEALTH / FINIO — PERSONA HELPERS  (pure, no UI, no copy)
 //
 // Engine helpers added 2026-05-26 to close IFA + Tax audit gaps:
 //   · effectiveAA(entity)         — standard / MPAA / tapered AA resolution

@@ -1,5 +1,5 @@
 -- ============================================================================
--- CAELIXA — PHASE 2 DATA LAYER MIGRATION
+-- SONUSWEALTH — PHASE 2 DATA LAYER MIGRATION
 -- Purpose: Move rules, macro data, personas, snapshots, audit from JSON → DB
 -- Date: 2026-05-21
 -- Single source of truth for engine inputs and test outputs.
@@ -139,8 +139,8 @@ CREATE TABLE finio_persona_snapshots (
   pl                  JSONB,                    -- income, expenses, tax
   cashflow            JSONB,                    -- monthly flow, annual surplus
   risk                JSONB,                    -- 7-dim risk scores
-  fq_score            INTEGER,                  -- 0-100 Caelixa Wealth Score
-  risk_score          INTEGER,                  -- 0-100 Caelixa Risk Score
+  fq_score            INTEGER,                  -- 0-100 Sonuswealth Wealth Score
+  risk_score          INTEGER,                  -- 0-100 Sonuswealth Risk Score
   net_worth           NUMERIC,
   iht_exposure        NUMERIC,
   cost_of_inaction    NUMERIC,

@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/lib/canonical-coi.js
+// SONUSWEALTH — parts/3-Engine/lib/canonical-coi.js
 // =====================================================================
 // Canonical Cost of Inaction (CoI) per MM v2.6 §0.1.
 // PURE. HANDLER-INJECTED (no global registry). NO BUNDLE WRITES.

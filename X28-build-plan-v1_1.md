@@ -1,4 +1,4 @@
-# CAELIXA — X28 BUILD PLAN
+# SONUSWEALTH — X28 BUILD PLAN
 
 **File:** `X28-build-plan-v1_1.md`
 **Version:** v1.1

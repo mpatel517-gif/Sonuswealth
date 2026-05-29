@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/test-uk-cashflow.js
+// SONUSWEALTH — parts/3-Engine/test-uk-cashflow.js
 // =====================================================================
 // Smoke test for uk-cashflow-2026-1-1.js engine.
 // Built at s17b-1c-eng (8 May 2026 · Track A · Code · Opus).

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA LENS BASE — shared utilities for all professional lenses
+// SONUSWEALTH LENS BASE — shared utilities for all professional lenses
 //
 // Every lens implements the 5-method interface specified in ARCHITECTURE-V0.md §3:
 //   - is_relevant(persona, asOfDate)    → { score: 0..1, reason }

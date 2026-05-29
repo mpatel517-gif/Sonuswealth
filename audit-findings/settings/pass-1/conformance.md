@@ -181,7 +181,7 @@ No genuine UNLISTED DOM element found. Every visible row/section in the build ma
 | # | Topic | Build state | Spec / FD state | Why a decision is needed |
 |---|-------|-------------|-----------------|--------------------------|
 | D1 | **No HTML baseline for Settings.** | None on disk. | Inventory header explicitly notes the absence: "Telegram-style settings overlay pattern is the structural baseline (see component header comment). Conformance-auditor: flag missing HTML baseline as a finding." | Founder must either (a) commission a Stitch/HTML baseline for Settings, or (b) bless the current React render as the conformance baseline for future passes. Without one, Pass 2 has no design truth to walk against beyond this inventory. |
-| D2 | **Risk engine label "RISK-1.0".** | Hardcoded literal alongside the legacy "FINIO-1.0". | FD-NAME-1 covers "Caelixa" / "Finio" / "FQ" / "Financial Quotient". "RISK-1.0" is not a legacy *brand* — it's a cryptic version label. Inventory rates it A5 only. | Founder decides: hide engine version strings from the user entirely (macOS principle), rename to plain English ("Wealth Score engine v1.0" / "Risk Score engine v1.0"), or accept as developer-info displayed to all users. Auditor cannot pick. |
+| D2 | **Risk engine label "RISK-1.0".** | Hardcoded literal alongside the legacy "FINIO-1.0". | FD-NAME-1 covers "Sonuswealth" / "Finio" / "FQ" / "Financial Quotient". "RISK-1.0" is not a legacy *brand* — it's a cryptic version label. Inventory rates it A5 only. | Founder decides: hide engine version strings from the user entirely (macOS principle), rename to plain English ("Wealth Score engine v1.0" / "Risk Score engine v1.0"), or accept as developer-info displayed to all users. Auditor cannot pick. |
 | D3 | **Where does jurisdiction live?** | Settings shows jurisdiction read-only in Profile detail panel (ST-PROF-D05). No control. | FD-ST-1: configuration owned by Settings. But ST-X-10 marks "no jurisdiction picker" as hidden setting / FAIL. | Founder decides whether jurisdiction is (a) a Settings-owned preference that needs a picker (FD-ST-1 path), or (b) an Onboarding-only one-shot, in which case Profile detail should show it as locked + a re-link to Onboarding. Currently it's neither. |
 | D4 | **Where does withdrawal cadence live?** | Nowhere in Settings. | FD-ST-1 lists it as a Settings-owned preference. Inventory notes "or lives on Cashflow — verify ownership." | Founder decides ownership: Settings (add control) or Cashflow (add tease here pointing to Cashflow). Inventory cannot resolve this. |
 | D5 | **Document vault duality.** | Settings shows "Document vault" as Phase-2 stub (ST-DATA-02). But `src/screens/Vault.jsx` exists and is reachable from other surfaces. | FD-ST-2 (Phase-2 honesty) vs. cross-surface coherence. | Founder decides: promote the row to a real link into `Vault.jsx` (drop `phase2={true}`), or hide `Vault.jsx` from other entry points until Phase 2. The current state is incoherent — same feature, two different honesty postures. |
@@ -204,9 +204,9 @@ Account.jsx:
   - `"Create your free account to see your personalised Financial Quotient dashboard."` (Account.jsx:87 — ST-ACCT-04).
   - `"Your estimated FQ"` (Account.jsx:98 — ST-ACCT-06).
 - "Sonuswealth's Terms of Service" footer (Account.jsx:185) is FD-NAME-1 compliant. ✓
-- No "Caelixa" or "Finio" tokens found in either file.
+- No "Sonuswealth" or "Finio" tokens found in either file.
 
-No other Caelixa / Finio / FQ / Financial Quotient strings present in the two audited components.
+No other Sonuswealth / Finio / FQ / Financial Quotient strings present in the two audited components.
 
 ---
 

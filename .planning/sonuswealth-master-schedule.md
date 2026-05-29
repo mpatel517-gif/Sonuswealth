@@ -1,7 +1,7 @@
 # Sonuswealth — Master Schedule to Full Vision
 
 **Created:** 2026-05-23
-**Authoritative:** YES (supersedes both Jiggly Book v3 and the earlier Caelixa draft)
+**Authoritative:** YES (supersedes both Jiggly Book v3 and the earlier Sonuswealth draft)
 **Source of truth for audit results:** `.planning/gap-audits/{tab}-gap.md` × 6 (MyMoney, Cashflow, Tax & Estate, Risk, Timeline, Home)
 
 ---
@@ -34,7 +34,7 @@ Built reactively for months. Each session fixed something the founder caught, bu
 
 **Plus the icing: Ask Sonu + Decision Engine 40 events + What-If scenarios + UI polish + compliance + multi-jurisdiction. Additional 16–22 weeks.**
 
-**Total to Full Vision: 46–63 weeks (~11–14 months) for solo + Claude pair.** Higher than v1 estimate because Auth + Onboarding are bigger holes than first-pass scan suggested. Still in the founder's "Full Vision (Caelixa) — 6–12 months" ballpark if parallelised aggressively after Phase 1.5.
+**Total to Full Vision: 46–63 weeks (~11–14 months) for solo + Claude pair.** Higher than v1 estimate because Auth + Onboarding are bigger holes than first-pass scan suggested. Still in the founder's "Full Vision (Sonuswealth) — 6–12 months" ballpark if parallelised aggressively after Phase 1.5.
 
 ---
 
@@ -515,4 +515,4 @@ Captured in companion file: **`~/.claude/plans/sonuswealth-nice-to-haves.md`** �
 
 ---
 
-*Plan v2 · 2026-05-23 · Authored after 6-tab spec-vs-code gap audit. Supersedes Jiggly Book v3 + the Caelixa draft. Renamed to Sonuswealth per founder direction.*
+*Plan v2 · 2026-05-23 · Authored after 6-tab spec-vs-code gap audit. Supersedes Jiggly Book v3 + the Sonuswealth draft. Renamed to Sonuswealth per founder direction.*

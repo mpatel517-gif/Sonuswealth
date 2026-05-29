@@ -40,7 +40,7 @@
       }
     }
   },
-  "_disclaimer": "These rules are verified at the date shown above. Tax rules change at each Budget and tax year. Caelixa updates this file after each change following professional verification. Always verify planning decisions with a qualified tax adviser before acting. Source authority: HMRC published rates and Caelixa UK Tax+Estate Coverage v1.3 (May 2026).",
+  "_disclaimer": "These rules are verified at the date shown above. Tax rules change at each Budget and tax year. Sonuswealth updates this file after each change following professional verification. Always verify planning decisions with a qualified tax adviser before acting. Source authority: HMRC published rates and Sonuswealth UK Tax+Estate Coverage v1.3 (May 2026).",
   "income": {
     "personalAllowance": 12570,
     "personalAllowanceFrozenTo": 2030,
@@ -601,7 +601,7 @@
     "doubleTaxationRelief": {
       "creditMethod": "Offset overseas tax paid against UK liability \u2014 most common.",
       "exemptionMethod": "Some treaty income exempt from UK tax entirely.",
-      "note": "UK has DTAs with 130+ countries. Treatment varies by treaty article. User declares jurisdiction \u2014 Caelixa shows UK tax treatment only."
+      "note": "UK has DTAs with 130+ countries. Treatment varies by treaty article. User declares jurisdiction \u2014 Sonuswealth shows UK tax treatment only."
     },
     "splitYearTreatment": {
       "_source": "HMRC RDR3 + Schedule 45 Finance Act 2013 Part 3",
@@ -767,7 +767,7 @@
   },
   "corporationTax": {
     "inScope": false,
-    "note": "Corporation tax filing and compliance is out of scope for Caelixa. Personal tax impact of business ownership is in scope.",
+    "note": "Corporation tax filing and compliance is out of scope for Sonuswealth. Personal tax impact of business ownership is in scope.",
     "smallProfitsRate": 0.19,
     "smallProfitsLimit": 50000,
     "mainRate": 0.25,
@@ -891,35 +891,35 @@
         "category": "score",
         "metric": "caelixaScore",
         "target": 50,
-        "label": "Caelixa Score reaches 50 (Building)"
+        "label": "Sonuswealth Score reaches 50 (Building)"
       },
       {
         "id": "score_60",
         "category": "score",
         "metric": "caelixaScore",
         "target": 60,
-        "label": "Caelixa Score reaches 60 (Established)"
+        "label": "Sonuswealth Score reaches 60 (Established)"
       },
       {
         "id": "score_70",
         "category": "score",
         "metric": "caelixaScore",
         "target": 70,
-        "label": "Caelixa Score reaches 70 (Optimised)"
+        "label": "Sonuswealth Score reaches 70 (Optimised)"
       },
       {
         "id": "score_80",
         "category": "score",
         "metric": "caelixaScore",
         "target": 80,
-        "label": "Caelixa Score reaches 80"
+        "label": "Sonuswealth Score reaches 80"
       },
       {
         "id": "score_90",
         "category": "score",
         "metric": "caelixaScore",
         "target": 90,
-        "label": "Caelixa Score reaches 90 (Exceptional)"
+        "label": "Sonuswealth Score reaches 90 (Exceptional)"
       },
       {
         "id": "risk_score_60",

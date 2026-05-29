@@ -1,7 +1,7 @@
 /**
  * uk-estate-2026-1-1.js
  *
- * Caelixa / Sonuswealth — UK estate engine.
+ * Sonuswealth / Sonuswealth — UK estate engine.
  * Bundle: UK-2026.1.1.
  *
  * Source authority:
@@ -31,7 +31,7 @@
  *
  * Open items honoured: O-PSA-SCOT-1 / O-MARRIAGE-ALLOW-SCOT-2 are tax-side; no estate impact.
  *
- * @author  Caelixa / Sonuswealth — Mihir Patel
+ * @author  Sonuswealth / Sonuswealth — Mihir Patel
  * @session s17a-2 (Opus · Track A · Code)
  *          s17b-2b retrofit: O-EST-RNRB-CAP-1 — residenceNilRateBand + cascade (IHTM46031)
  */
@@ -2139,7 +2139,7 @@ export function getWrapperEstate(asset) {
 /**
  * Estate valuation — total value, classified by IHT treatment.
  *
- * @param {object} entity — Caelixa entity with assets array
+ * @param {object} entity — Sonuswealth entity with assets array
  * @returns {{amount, breakdown, rules, explanation}}
  */
 export function estateValuation(entity, bundle) {
@@ -2196,7 +2196,7 @@ export function estateValuation(entity, bundle) {
  * IHT dynamic — full live IHT calculation (top-level orchestrator).
  * Used by T&E tab + ihtDynamic engine surface.
  *
- * @param {object} entity — full Caelixa entity
+ * @param {object} entity — full Sonuswealth entity
  * @param {object} opts
  *   includeSipp (override the date check), drawdownOverride, charitableLegacy, ...
  */

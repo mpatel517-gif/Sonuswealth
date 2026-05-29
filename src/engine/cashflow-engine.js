@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA CASHFLOW ENGINE  —  P3 · s02a
+// SONUSWEALTH CASHFLOW ENGINE  —  P3 · s02a
 // Spec: 2-Product-cashflow-v1_0.md §8 + v1.1 patch
 // Pure functions only. No side effects. No global state.
 // CMA = Capital Market Assumptions bundle (UK-CMA-2026.1).

@@ -1,5 +1,5 @@
 // =====================================================================
-// CAELIXA — parts/3-Engine/test-uk-risk.js
+// SONUSWEALTH — parts/3-Engine/test-uk-risk.js
 // =====================================================================
 // Smoke tests for uk-risk-2026-1-1.js v1.0
 // Target: ~120 assertions across §B–§N

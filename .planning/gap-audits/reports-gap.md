@@ -114,7 +114,7 @@ Spec: £500 or 0.5% NW. Code comment confirms. **Implementation pending.**
 4. **HMRC-friendly format** — Tax Summary in a format the user's accountant accepts directly
 5. **Voyant-style export** — for IFAs migrating from competing tools
 6. **Annotated PDF** — IFA can mark up before sending to client
-7. **Multi-language export** — Hindi / Gujarati for Caelixa cross-border personas
+7. **Multi-language export** — Hindi / Gujarati for Sonuswealth cross-border personas
 
 ---
 

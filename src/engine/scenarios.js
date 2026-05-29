@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CAELIXA / FINIO — SCENARIO ENGINE (Monte Carlo + projection helpers)
+// SONUSWEALTH / FINIO — SCENARIO ENGINE (Monte Carlo + projection helpers)
 //
 // NEW v0.3 — MASTER-SPEC §3.1 / route-8-drilldowns.md §2 + §2.1
 //

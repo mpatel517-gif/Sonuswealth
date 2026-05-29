@@ -29,7 +29,7 @@ None.
 
 ## New findings
 - **NF-1 (cosmetic):** Header comment at lines 106–107 describes nominations/life-in-trust routing to 'money' (stale, reflects old bug). Actual map is correct. No runtime impact.
-- **NF-4:** No Caelixa/Finio/FQ strings. FD-NAME-1 compliant.
+- **NF-4:** No Sonuswealth/Finio/FQ strings. FD-NAME-1 compliant.
 
 ## Verdict
 **PASS** — DB-1 fully resolved. No regressions.

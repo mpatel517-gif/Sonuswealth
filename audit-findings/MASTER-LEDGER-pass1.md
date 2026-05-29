@@ -116,10 +116,10 @@ Fix: standardise all CoI displays to `totalCoI(entity, bundle)` aggregate; fix d
 
 ## Passing verdicts worth noting
 
-- **Home**: No Caelixa/Finio anywhere. What-If shows 12 scenarios (FD-1 satisfied). PensionDrawdownPanel is a real ACTION surface.
+- **Home**: No Sonuswealth/Finio anywhere. What-If shows 12 scenarios (FD-1 satisfied). PensionDrawdownPanel is a real ACTION surface.
 - **Tax & Estate**: SIPP IHT correctly shows ENACTED (Finance Act 2026, Royal Assent 18 March 2026). No "PROPOSED" anywhere. All 7 NRB/RNRB/IHT rate figures correct.
 - **Data Capture**: No FD-NAME-1 violations in user-facing strings. Mock gate (`mockBlockedForRealUser`) works correctly.
-- **Reports**: No Caelixa/Finio in current stub. Phase-2 brand-leak gate needed before PDF renderer ships.
+- **Reports**: No Sonuswealth/Finio in current stub. Phase-2 brand-leak gate needed before PDF renderer ships.
 - **Risk**: All 7 risk dimensions present. Max scores sum to 100. Radar uses `bandColour` from engine. D7 zero-guard present.
 
 ---

@@ -21,6 +21,7 @@
 import { IncomeSourcesPanel } from './IncomeSourcesPanel.jsx'
 import { WrappersPanel } from './WrappersPanel.jsx'
 import { StatePensionPanel } from './StatePensionPanel.jsx'
+import { DrillStackProvider } from '../DrillStack.jsx'
 
 const PANELS = {
   income:           { component: IncomeSourcesPanel, label: 'Income sources' },
@@ -96,9 +97,13 @@ export function PanelPreviewGallery({ entity, panel, onBack }) {
             ← Back
           </button>
         )}
-        <div style={{ padding: 12 }}>
-          <Panel entity={entity} />
-        </div>
+        {/* DrillStackProvider so any DrillableNumber inside the panel opens an
+            L4 panel on top via the shared stack. */}
+        <DrillStackProvider>
+          <div style={{ padding: 12 }}>
+            <Panel entity={entity} />
+          </div>
+        </DrillStackProvider>
       </div>
     )
   }
@@ -138,20 +143,22 @@ export function PanelPreviewGallery({ entity, panel, onBack }) {
             ← Back
           </button>
         )}
-        <div style={{ padding: '0 12px' }}>
-          <div data-tier-section="income"        style={{ marginBottom: 24 }}>
-            <PanelHeader label="Income sources" persona={null} />
-            <IncomeSourcesPanel entity={entity} />
+        <DrillStackProvider>
+          <div style={{ padding: '0 12px' }}>
+            <div data-tier-section="income"        style={{ marginBottom: 24 }}>
+              <PanelHeader label="Income sources" persona={null} />
+              <IncomeSourcesPanel entity={entity} />
+            </div>
+            <div data-tier-section="wrappers"      style={{ marginBottom: 24 }}>
+              <PanelHeader label="Wrappers" persona={null} />
+              <WrappersPanel entity={entity} />
+            </div>
+            <div data-tier-section="state-pension">
+              <PanelHeader label="State pension" persona={null} />
+              <StatePensionPanel entity={entity} />
+            </div>
           </div>
-          <div data-tier-section="wrappers"      style={{ marginBottom: 24 }}>
-            <PanelHeader label="Wrappers" persona={null} />
-            <WrappersPanel entity={entity} />
-          </div>
-          <div data-tier-section="state-pension">
-            <PanelHeader label="State pension" persona={null} />
-            <StatePensionPanel entity={entity} />
-          </div>
-        </div>
+        </DrillStackProvider>
       </div>
     )
   }

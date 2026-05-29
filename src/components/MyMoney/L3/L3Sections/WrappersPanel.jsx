@@ -23,10 +23,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { L3Panel } from '../L3Panel.jsx'
+import { DrillableNumber } from '../DrillableNumber.jsx'
+import { useDrillStackContext } from '../DrillStack.jsx'
 import { fmt } from '../../../../engine/fq-calculator.js'
 import { buildWrapperBuckets } from './WrappersPanel.data.js'
+import { wrapperPayload, wrapperTotalPayload } from './TierA-DrillPayloads.js'
 
-function WrapperRow({ bucket }) {
+function WrapperRow({ bucket, entity, pushNumber }) {
+  const payload = wrapperPayload(entity, bucket.key, bucket.value)
   return (
     <div
       data-bucket-key={bucket.key}
@@ -79,7 +83,15 @@ function WrapperRow({ bucket }) {
           minWidth: 80,
         }}
       >
-        {fmt(bucket.value)}
+        <DrillableNumber
+          metric={`Wrappers · ${bucket.label}`}
+          value={fmt(bucket.value)}
+          formula={payload.formula}
+          source={payload.source}
+          confidence={payload.confidence}
+          breakdown={payload.breakdown}
+          onDrill={pushNumber}
+        />
       </div>
     </div>
   )
@@ -87,6 +99,7 @@ function WrapperRow({ bucket }) {
 
 function WrappersMiddle({ entity }) {
   const { buckets, total, bucketCount } = buildWrapperBuckets(entity)
+  const { pushNumber } = useDrillStackContext()
   if (total === 0) {
     return (
       <div
@@ -114,7 +127,7 @@ function WrappersMiddle({ entity }) {
       >
         By wrapper ({bucketCount})
       </div>
-      {buckets.map(bucket => <WrapperRow key={bucket.key} bucket={bucket} />)}
+      {buckets.map(bucket => <WrapperRow key={bucket.key} bucket={bucket} entity={entity} pushNumber={pushNumber} />)}
     </div>
   )
 }
@@ -126,17 +139,31 @@ function WrappersMiddle({ entity }) {
  */
 export function WrappersPanel({ entity, ripple }) {
   const { total, bucketCount, buckets } = buildWrapperBuckets(entity)
+  const { pushNumber } = useDrillStackContext()
+  const heroPayload = wrapperTotalPayload(entity, total, bucketCount)
 
   const isaShare     = buckets.find(b => b.key === 'isa')?.share || 0
   const pensionShare = buckets.find(b => b.key === 'pension')?.share || 0
   const giaShare     = buckets.find(b => b.key === 'gia')?.share || 0
 
   const hero = {
-    metric: fmt(total),
+    metric: (
+      <DrillableNumber
+        metric="Wrappers · Total wealth"
+        value={fmt(total)}
+        formula={heroPayload.formula}
+        source={heroPayload.source}
+        confidence={heroPayload.confidence}
+        breakdown={heroPayload.breakdown}
+        onDrill={pushNumber}
+      >
+        {fmt(total)}
+      </DrillableNumber>
+    ),
     label: 'Wealth held in wrappers',
     sublabel: bucketCount === 0
       ? 'No wrappers in use'
-      : `${bucketCount} wrapper type${bucketCount === 1 ? '' : 's'}`,
+      : `${bucketCount} wrapper type${bucketCount === 1 ? '' : 's'} · tap any value to drill`,
   }
 
   // Tax treatment — derived from bucket weight, not hardcoded narrative.

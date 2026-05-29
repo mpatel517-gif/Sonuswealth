@@ -33,11 +33,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { L3Panel } from '../L3Panel.jsx'
+import { DrillableNumber } from '../DrillableNumber.jsx'
+import { useDrillStackContext } from '../DrillStack.jsx'
 import { fmt } from '../../../../engine/fq-calculator.js'
 import { annualIncome } from '../../../../engine/_helpers.js'
 import { buildSourceRows } from './IncomeSourcesPanel.data.js'
+import { incomePayload, incomeTotalPayload } from './TierA-DrillPayloads.js'
 
-function IncomeSourceRow({ row }) {
+function IncomeSourceRow({ row, entity, pushNumber }) {
+  const payload = incomePayload(entity, row.key, row.value)
   return (
     <div
       data-source-key={row.key}
@@ -78,7 +82,15 @@ function IncomeSourceRow({ row }) {
           minWidth: 80,
         }}
       >
-        {fmt(row.value)}
+        <DrillableNumber
+          metric={`Income · ${row.label}`}
+          value={fmt(row.value)}
+          formula={payload.formula}
+          source={payload.source}
+          confidence={payload.confidence}
+          breakdown={payload.breakdown}
+          onDrill={pushNumber}
+        />
       </div>
     </div>
   )
@@ -86,6 +98,7 @@ function IncomeSourceRow({ row }) {
 
 function IncomeMiddle({ entity }) {
   const { rows, total, sourceCount } = buildSourceRows(entity)
+  const { pushNumber } = useDrillStackContext()
   if (total === 0) {
     return (
       <div
@@ -113,7 +126,7 @@ function IncomeMiddle({ entity }) {
       >
         By source ({sourceCount})
       </div>
-      {rows.map(row => <IncomeSourceRow key={row.key} row={row} />)}
+      {rows.map(row => <IncomeSourceRow key={row.key} row={row} entity={entity} pushNumber={pushNumber} />)}
     </div>
   )
 }
@@ -128,14 +141,30 @@ function IncomeMiddle({ entity }) {
 export function IncomeSourcesPanel({ entity, ripple }) {
   const total = annualIncome(entity)
   const { rows, sourceCount } = buildSourceRows(entity)
+  const { pushNumber } = useDrillStackContext()
+  const heroPayload = incomeTotalPayload(entity, total, sourceCount)
 
-  // Hero — total annual income with source count sublabel.
+  // Hero — total annual income with source count sublabel. The metric itself
+  // is wrapped in DrillableNumber so the user can drill into the headline
+  // "where did this come from" view directly without having to find a row.
   const hero = {
-    metric: fmt(total),
+    metric: (
+      <DrillableNumber
+        metric="Income · Total annual"
+        value={fmt(total)}
+        formula={heroPayload.formula}
+        source={heroPayload.source}
+        confidence={heroPayload.confidence}
+        breakdown={heroPayload.breakdown}
+        onDrill={pushNumber}
+      >
+        {fmt(total)}
+      </DrillableNumber>
+    ),
     label: 'Total annual income',
     sublabel: sourceCount === 0
       ? 'No sources recorded'
-      : `${sourceCount} source${sourceCount === 1 ? '' : 's'} · last 12 months`,
+      : `${sourceCount} source${sourceCount === 1 ? '' : 's'} · last 12 months · tap any value to drill`,
   }
 
   // Tax treatment — plain-English headline, no inline rate computation

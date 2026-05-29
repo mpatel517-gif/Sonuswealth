@@ -27,8 +27,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { L3Panel } from '../L3Panel.jsx'
+import { DrillableNumber } from '../DrillableNumber.jsx'
+import { useDrillStackContext } from '../DrillStack.jsx'
 import { fmt } from '../../../../engine/fq-calculator.js'
 import { buildStatePensionSnapshot } from './StatePensionPanel.data.js'
+import { statePensionEntitlementPayload, statePensionGapPayload } from './TierA-DrillPayloads.js'
 
 function AccrualBar({ snap }) {
   const pct = Math.round(snap.pensionFraction * 100)
@@ -99,7 +102,8 @@ function AccrualBar({ snap }) {
   )
 }
 
-function GapSummary({ snap }) {
+function GapSummary({ snap, pushNumber }) {
+  const gapPayload = statePensionGapPayload(snap)
   if (snap.entitlementNow === 0 && snap.accruedYears === 0) {
     return (
       <div
@@ -145,7 +149,17 @@ function GapSummary({ snap }) {
       >
         Gap to the full amount:{' '}
         <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {fmt(snap.gapToFull)}/yr
+          <DrillableNumber
+            metric="State pension · Gap to full"
+            value={`${fmt(snap.gapToFull)}/yr`}
+            formula={gapPayload.formula}
+            source={gapPayload.source}
+            confidence={gapPayload.confidence}
+            breakdown={gapPayload.breakdown}
+            onDrill={pushNumber}
+          >
+            {fmt(snap.gapToFull)}/yr
+          </DrillableNumber>
         </strong>
         {' '}({snap.missingYears} missing qualifying year{snap.missingYears === 1 ? '' : 's'}).
         {snap.gapFillableBySpa > 0 ? (
@@ -169,15 +183,29 @@ function GapSummary({ snap }) {
  */
 export function StatePensionPanel({ entity, ripple }) {
   const snap = buildStatePensionSnapshot(entity)
+  const { pushNumber } = useDrillStackContext()
+  const heroPayload = statePensionEntitlementPayload(snap)
 
   const hero = {
-    metric: fmt(snap.entitlementNow),
+    metric: (
+      <DrillableNumber
+        metric="State pension · Entitlement"
+        value={fmt(snap.entitlementNow)}
+        formula={heroPayload.formula}
+        source={heroPayload.source}
+        confidence={heroPayload.confidence}
+        breakdown={heroPayload.breakdown}
+        onDrill={pushNumber}
+      >
+        {fmt(snap.entitlementNow)}
+      </DrillableNumber>
+    ),
     label: 'State pension at current accrual',
     sublabel: snap.entitlementNow === 0
       ? 'No accrual recorded'
       : snap.onTrackForFull
-        ? `Projected full ${fmt(snap.fullEntitlement)}/yr by age ${snap.spa}`
-        : `Currently ${Math.round(snap.pensionFraction * 100)}% of full amount`,
+        ? `Projected full ${fmt(snap.fullEntitlement)}/yr by age ${snap.spa} · tap to drill`
+        : `Currently ${Math.round(snap.pensionFraction * 100)}% of full amount · tap to drill`,
   }
 
   const taxTreatment = {
@@ -188,7 +216,7 @@ export function StatePensionPanel({ entity, ripple }) {
 
   const middle = [
     { key: 'accrual', render: () => <AccrualBar snap={snap} /> },
-    { key: 'gap',     render: () => <GapSummary snap={snap} /> },
+    { key: 'gap',     render: () => <GapSummary snap={snap} pushNumber={pushNumber} /> },
   ]
 
   const confidence = {

@@ -4,7 +4,7 @@
 // Final summary uses engine-side onboardingPreview() — no inline math.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   fmt, fqBand, riskBand, onboardingPreview,
 } from '../engine/fq-calculator.js'
@@ -368,24 +368,102 @@ function SinglePicker({ opts, selected, onSelect }) {
 }
 
 // ─── Main export ────────────────────────────────────────────────────────────
+//
+// L2-5a (2026-05-28): device-side save-and-continue. Onboarding state
+// (current step + answers) persists to localStorage so a tab close / reload
+// doesn't lose the user's progress. On reveal (complete) the key is cleared
+// so the next signup starts fresh. Cross-device resume = L2-5b (separate
+// ticket — needs an early email-collection step + Supabase magic link).
+const _ONBOARDING_LS_KEY = 'sw_onboarding_progress_v1'
+const _DEFAULT_ANSWERS = {
+  // FIX-3.C — added entryMode, jurisdiction, willStatus, lpaStatus to satisfy
+  // spec v1.1 always-asked set (§3 entry-mode, §0A JQ1, §10.6, §10.7).
+  entryMode: null,
+  jurisdiction: null,
+  age: 38,
+  income: 50000,
+  liquidWealth: 50000,
+  propertyValue: 0,
+  focus: [],
+  setup: [],
+  riskAppetite: null,
+  willStatus: null,
+  lpaStatus: null,
+}
+
+function _loadOnboardingProgress() {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(_ONBOARDING_LS_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    // Schema-version guard: ignore stored progress whose shape doesn't match
+    // the current default. This is the safe-by-design escape hatch for when
+    // QUESTIONS / answer fields change in a future release.
+    if (parsed.version !== 1) return null
+    if (!parsed.answers || typeof parsed.answers !== 'object') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function _saveOnboardingProgress(step, answers) {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(_ONBOARDING_LS_KEY, JSON.stringify({
+      version: 1,
+      step,
+      answers,
+      savedAt: Date.now(),
+    }))
+  } catch {
+    // localStorage full / disabled (private window) — silent skip. Resume is
+    // a nice-to-have, not a correctness requirement.
+  }
+}
+
+function _clearOnboardingProgress() {
+  if (typeof localStorage === 'undefined') return
+  try { localStorage.removeItem(_ONBOARDING_LS_KEY) } catch {}
+}
+
+// Exported for the L2-5a test harness so it can drive the persistence path
+// without mounting React.
+export const _onboardingPersistenceForTests = {
+  KEY: _ONBOARDING_LS_KEY,
+  load:  _loadOnboardingProgress,
+  save:  _saveOnboardingProgress,
+  clear: _clearOnboardingProgress,
+}
+
 export default function Onboarding({ onComplete, onBack }) {
-  const [step, setStep] = useState(0)
-  const [reveal, setReveal] = useState(false)
+  // L2-5a — restore prior progress eagerly so the first render shows the user
+  // where they left off, not the default state.
+  const _restored = _loadOnboardingProgress()
+  const [step,    setStep]    = useState(_restored?.step    ?? 0)
+  const [reveal,  setReveal]  = useState(false)
   const [answers, setAnswers] = useState({
-    // FIX-3.C — added entryMode, jurisdiction, willStatus, lpaStatus to satisfy
-    // spec v1.1 always-asked set (§3 entry-mode, §0A JQ1, §10.6, §10.7).
-    entryMode: null,
-    jurisdiction: null,
-    age: 38,
-    income: 50000,
-    liquidWealth: 50000,
-    propertyValue: 0,
-    focus: [],
-    setup: [],
-    riskAppetite: null,
-    willStatus: null,
-    lpaStatus: null,
+    ..._DEFAULT_ANSWERS,
+    ...(_restored?.answers || {}),
   })
+  // Show a brief "picked up where you left off" hint after a real restore
+  // (not on first-ever visit). Cleared after 4 seconds or on next interaction.
+  const [resumedHint, setResumedHint] = useState(!!_restored)
+  useEffect(() => {
+    if (!resumedHint) return
+    const t = setTimeout(() => setResumedHint(false), 4000)
+    return () => clearTimeout(t)
+  }, [resumedHint])
+
+  // Persist on every step / answer change. useEffect debounces by batching
+  // sync state updates, so the cost is one write per render — fine for this
+  // size of payload.
+  useEffect(() => {
+    if (reveal) return // don't keep saving after the user has completed
+    _saveOnboardingProgress(step, answers)
+  }, [step, answers, reveal])
 
   function update(id, value) { setAnswers(a => ({ ...a, [id]: value })) }
   function toggleMulti(id, idx) {
@@ -427,7 +505,7 @@ export default function Onboarding({ onComplete, onBack }) {
 
   function next() {
     if (step < TOTAL - 1) setStep(s => s + 1)
-    else setReveal(true)
+    else { _clearOnboardingProgress(); setReveal(true) }
   }
 
   function back() {
@@ -435,11 +513,40 @@ export default function Onboarding({ onComplete, onBack }) {
     else setStep(s => s - 1)
   }
 
-  function skip() { setReveal(true) }
+  function skip() { _clearOnboardingProgress(); setReveal(true) }
 
   return (
     <div style={{ position:'absolute', inset:0, background:'var(--c-bg)',
       display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+      {/* L2-5a resumed-hint banner — surfaces briefly after restoring from
+          localStorage so the user knows their previous answers were kept.
+          Auto-dismisses after 4 s (see effect above) or on any state change. */}
+      {resumedHint && (
+        <div
+          role="status"
+          onClick={() => setResumedHint(false)}
+          style={{
+            position: 'absolute',
+            top: 14,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 5,
+            padding: '8px 14px',
+            background: 'var(--c-acc, #2DF2C3)',
+            color: 'var(--c-acc-contrast, #0B1F3A)',
+            borderRadius: 100,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 0.3,
+            boxShadow: 'var(--sh1, 0 2px 6px rgba(0,0,0,0.18))',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          ↩ Picked up where you left off
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ padding:'56px 24px 16px', flexShrink:0 }}>

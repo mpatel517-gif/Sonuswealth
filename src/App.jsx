@@ -5,9 +5,22 @@ import Onboarding    from './screens/Onboarding.jsx'
 import Account       from './screens/Account.jsx'
 import Dashboard     from './screens/Dashboard.jsx'
 import PersonaSelect from './screens/PersonaSelect.jsx'
+import Legal         from './screens/Legal.jsx'
+import CookieBanner  from './components/shared/CookieBanner.jsx'
 import { EventsProvider, useEffectiveEntity } from './state/events.jsx'
 import { AuthProvider, useAuth } from './state/auth.jsx'
 import { installBundleAutoSync } from './engine/bundle-wiring.js'
+import ErrorBoundary, { installGlobalErrorListeners } from './components/shared/ErrorBoundary.jsx'
+
+// L2-3 (2026-05-28): validate the entity built from the user's onboarding +
+// account payload BEFORE handing it to the Dashboard. Catches missing-name,
+// missing-age-or-dob, and any unknown taxonomy keys that would otherwise
+// silently surface as NaNs deep inside an engine selector.
+import { validateEntity } from './engine/persona-normalizer.js'
+
+// L1-3: surface uncaught promise rejections + window errors to the same
+// reporter the React boundary uses. Idempotent.
+installGlobalErrorListeners()
 
 // A4 (2026-05-28): bridge the global TY chip to the engine's setBundle so
 // every consumer (PA, NRB, RNRB, dividend rates, NIC bands) live-updates
@@ -112,7 +125,12 @@ const PERSONA_LIST = [
 function readUrlParams() {
   if (typeof window === 'undefined') return {}
   const p = new URLSearchParams(window.location.search)
-  return { demo: p.get('demo'), tab: p.get('tab'), theme: p.get('theme') }
+  return {
+    demo: p.get('demo'),
+    tab: p.get('tab'),
+    theme: p.get('theme'),
+    legal: p.get('legal'),     // L1-2: ?legal=privacy|terms|cookies
+  }
 }
 
 // FIX-3.A — wire real user data from Onboarding through Account into
@@ -250,21 +268,70 @@ function AppInner() {
     } catch (_e) { /* fall through */ }
     return 'dark'
   })
-  const [persona,          setPersona]           = useState(isDemoMode ? urlParams.demo : 'a')
+  // L2-7 (2026-05-28): persona selection persists across reloads. Resolution
+  // order (first hit wins):
+  //   1. URL ?demo=X (founder snap scripts, deep links)
+  //   2. localStorage 'sw_persona' (last user choice)
+  //   3. 'a' (Bruce — default)
+  // This makes Mr T multi-persona variants survive a tab close + reopen
+  // instead of resetting to Bruce. Real-user persona is exempt from this
+  // path (it's auth-gated; only `id === 'real-user'` triggers via onboarding).
+  const [persona, setPersona] = useState(() => {
+    if (isDemoMode) return urlParams.demo
+    try {
+      const saved = typeof window !== 'undefined'
+        ? window.localStorage?.getItem('sw_persona')
+        : null
+      // Validate against the ENTITIES map so a renamed persona doesn't
+      // leave the app stranded on a non-existent key.
+      if (saved && ENTITIES[saved]) return saved
+    } catch (_e) { /* fall through */ }
+    return 'a'
+  })
+
+  // Persist persona changes (skip 'real-user' — that path is auth-driven
+  // and the persona id is synthetic for the session).
+  useEffect(() => {
+    if (persona === 'real-user') return
+    try {
+      window.localStorage?.setItem('sw_persona', persona)
+    } catch (_e) { /* noop */ }
+  }, [persona])
+
   const [obData,           setObData]            = useState({ age: 38, focus: [], setup: [] })
   const [showPersonaSelect, setShowPersonaSelect] = useState(false)
 
   // Sync auth state changes — if a returning user's session restores async,
   // jump to app. If they sign out from inside Dashboard, return to welcome.
+  //
+  // L1-8 (2026-05-28): tighter gate on the 'real-user' persona.
+  //  - Demo personas (a..g, mrT-*) may render unauth — they're synthetic
+  //    fixtures, no PII at risk.
+  //  - 'real-user' is the onboarded user's own data — MUST require auth even
+  //    inside isDemoMode. Without this, a stale 'real-user' from a prior
+  //    session could be visible to an unauthenticated viewer.
+  //  - Same rule applies once a user signs out from Dashboard: redirect to
+  //    welcome regardless of demo flag.
   useEffect(() => {
-    if (isDemoMode) return
     if (auth.loading) return
+    // Real-user data is always auth-gated.
+    if (persona === 'real-user' && !auth.isAuthenticated && screen === 'app') {
+      setScreen('welcome')
+      return
+    }
+    if (isDemoMode) return
     if (auth.isAuthenticated && screen === 'welcome') {
       setScreen('app')
     } else if (!auth.isAuthenticated && screen === 'app') {
       setScreen('welcome')
     }
-  }, [auth.isAuthenticated, auth.loading, isDemoMode, screen])
+  }, [auth.isAuthenticated, auth.loading, isDemoMode, screen, persona])
+
+  // L1-8: render a brief loading screen while auth session restores so we
+  // don't flash Dashboard content (with PII) before the auth state is known.
+  // Only relevant when there's a potential authenticated session — demos
+  // skip this since their entity is synthetic.
+  const _showAuthLoading = !isDemoMode && auth.loading && screen === 'app'
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -305,7 +372,7 @@ function AppInner() {
     bootRules().then((r) => {
       if (r.bundleLoaded || r.macroLoaded) {
         // eslint-disable-next-line no-console
-        console.info('[caelixa] engine booted', r)
+        console.info('[sonuswealth] engine booted', r)
       }
     }).catch(() => { /* silent — bundled JSON is fine */ })
   }, [])
@@ -315,10 +382,46 @@ function AppInner() {
   // FIX-3.A — Account's onEnter now ships the merged payload (email + every
   // obData field). Build a real-user persona, register it in ENTITIES, then
   // jump to Dashboard with persona='real-user'.
+  //
+  // L2-3 (2026-05-28): validateEntity gate. The built persona MUST pass the
+  // entity-schema contract before the Dashboard sees it. If validation hard-
+  // fails (missing required field, unknown taxonomy key on a strongly-typed
+  // path), surface the errors back to the user via `onboardingErrors` state
+  // and stay on the Account screen — DO NOT let a malformed entity reach
+  // any engine selector. Warnings are non-blocking but logged.
+  const [onboardingErrors, setOnboardingErrors] = useState(null)
   function handleAccountEnter(payload) {
     const merged = { ...obData, ...(payload || {}) }
+    const built  = buildUserPersona(merged)
+
+    // L2-3 validation gate — soft (collect + report), then hard (block on errors).
+    let validation
+    try {
+      validation = validateEntity(built)
+    } catch (e) {
+      // validateEntity itself should never throw on a malformed input — it
+      // returns { ok:false, errors[] }. If we land here, something is wrong
+      // with the validator. Fail closed and surface a generic error.
+      console.error('[L2-3] validateEntity unexpected throw:', e)
+      setOnboardingErrors([{ code: 'validator_crash', message: 'Could not verify your details. Please try again or contact support.' }])
+      return
+    }
+
+    if (!validation.ok) {
+      console.warn('[L2-3] Onboarding entity rejected:', validation.errors, 'warnings:', validation.warnings)
+      setOnboardingErrors(validation.errors)
+      return
+    }
+
+    if (Array.isArray(validation.warnings) && validation.warnings.length > 0) {
+      // Non-blocking — entity is fine for the engine, but we want a paper
+      // trail of "your data had X warnings" for future debugging.
+      console.info('[L2-3] Onboarding entity accepted with warnings:', validation.warnings)
+    }
+
+    setOnboardingErrors(null)
     setObData(merged)
-    ENTITIES['real-user'] = buildUserPersona(merged)
+    ENTITIES['real-user'] = built
     setPersona('real-user')
     setScreen('app')
   }
@@ -371,14 +474,49 @@ function AppInner() {
         />
       )}
 
-      {!showPersonaSelect && screen === 'welcome'  && (
+      {/* L1-8: auth loading state — prevents PII flash before session resolves */}
+      {_showAuthLoading && (
+        <div role="status" aria-live="polite" style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--c-bg)', color: 'var(--c-text2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 16, height: 16, border: '2px solid var(--c-border)',
+              borderTopColor: 'var(--c-acc)', borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span style={{ fontSize: 13 }}>Loading your session…</span>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      )}
+
+      {/* L1-2: ?legal=privacy|terms|cookies — render Legal screen above all
+          else. Clearing the param returns to whatever screen was previous. */}
+      {urlParams.legal && ['privacy', 'terms', 'cookies'].includes(urlParams.legal) && (
+        <Legal
+          doc={urlParams.legal}
+          onBack={() => {
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.delete('legal')
+              window.history.replaceState({}, '', url.toString())
+              // Force re-read — simplest is reload because urlParams is module-load only.
+              window.location.reload()
+            }
+          }}
+        />
+      )}
+
+      {!showPersonaSelect && !_showAuthLoading && !urlParams.legal && screen === 'welcome'  && (
         <Welcome
           onStart={() => setScreen('onboard')}
           onDemo={() => setShowPersonaSelect(true)}
         />
       )}
       {screen === 'onboard'  && <Onboarding onComplete={(d) => { setObData(d); setScreen('account') }} onBack={() => setScreen('welcome')} />}
-      {screen === 'account'  && <Account    obData={obData} onEnter={handleAccountEnter} />}
+      {screen === 'account'  && <Account    obData={obData} onEnter={handleAccountEnter} validationErrors={onboardingErrors} />}
       {screen === 'app' && !personaIsUi && (
         <PersonaNotRenderable
           persona={persona}
@@ -402,13 +540,32 @@ function AppInner() {
 }
 
 export default function App() {
+  // L1-3: top-level boundary catches anything below it — auth provider, events
+  // provider, screen render errors. The fallback is full-page; per-route
+  // boundaries inside Dashboard can use a custom `fallback` prop to preserve
+  // outer chrome when a single tab crashes.
+  // L1-2: CookieBanner sits at root so it appears on every screen including
+  // Welcome/Account before auth completes. Self-hides once consent is stored.
   return (
-    <AuthProvider>
-      <StepUpProvider>
-        <EventsProvider>
-          <AppInner />
-        </EventsProvider>
-      </StepUpProvider>
-    </AuthProvider>
+    <ErrorBoundary scope="App">
+      <AuthProvider>
+        <StepUpProvider>
+          <EventsProvider>
+            <ErrorBoundary scope="AppInner">
+              <AppInner />
+            </ErrorBoundary>
+            <CookieBanner
+              onOpenCookies={() => {
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('legal', 'cookies')
+                  window.location.assign(url.toString())
+                }
+              }}
+            />
+          </EventsProvider>
+        </StepUpProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

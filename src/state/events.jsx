@@ -21,19 +21,17 @@
 
 import { createContext, useContext, useReducer, useCallback, useMemo } from 'react'
 
-// ─── Event types ────────────────────────────────────────────────────────────
+// ─── Event types + validator ────────────────────────────────────────────────
 // Added 2026-05-12: ASSET_VALUE_UPDATED + ASSET_REMOVED + DOCUMENT_CAPTURED.
 // Pre-fix, the add flow was wholly non-functional — events fired by
 // AddItemSheet were appended to the log but `applyEvents` had no case for
 // them, so the entity never reflected new items. Founder audit caught this.
-export const EV = {
-  DRAWDOWN_SCHEDULE_SET: 'drawdown_schedule_set',
-  DRAWDOWN_COMMITTED:    'drawdown_committed',
-  NOMINATION_REVIEWED:   'nomination_reviewed',
-  ASSET_VALUE_UPDATED:   'ASSET_VALUE_UPDATED',
-  ASSET_REMOVED:         'ASSET_REMOVED',
-  DOCUMENT_CAPTURED:     'DOCUMENT_CAPTURED',
-}
+//
+// L2-6a (2026-05-28): EV + validateEvent live in a plain-JS sibling file
+// (./events-validator.js) so they can be unit-tested under Node without a
+// JSX loader. The re-exports below keep every existing call site working.
+export { EV, validateEvent } from './events-validator.js'
+import { validateEvent as _validateEvent } from './events-validator.js'
 
 // ─── Pure reducer ───────────────────────────────────────────────────────────
 // events[personaId] = [{ type, ts, payload }, ...]
@@ -41,6 +39,28 @@ function reducer(state, action) {
   switch (action.type) {
     case 'COMMIT': {
       const { personaId, event } = action
+      // L2-6a — reject malformed events at the reducer boundary so they can't
+      // corrupt applyEvents downstream. Hard errors are logged + dropped;
+      // warnings are logged but still committed. Keeping the rejection silent
+      // (no thrown error) because the caller is React state — throwing here
+      // would crash a screen rather than surface a useful diagnostic.
+      const validation = _validateEvent(event)
+      if (!validation.ok) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(
+            `[events] dropping malformed event for persona ${personaId}:`,
+            validation.errors,
+            'event:', event
+          )
+        }
+        return state
+      }
+      if (validation.warnings.length > 0 && typeof console !== 'undefined' && console.info) {
+        console.info(
+          `[events] committing event with warnings for persona ${personaId}:`,
+          validation.warnings
+        )
+      }
       const log = state[personaId] || []
       return {
         ...state,

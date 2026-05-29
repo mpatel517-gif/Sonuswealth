@@ -31,26 +31,44 @@ const PARSER_PROVIDER = IS_DEV
   : 'real'
 const REAL_PARSER_WIRED = false   // flip when /api/parse + anthropic-vision live
 
+// L1-7 (2026-05-28): Upload + Scan channels demote to status='phase2' when
+// running in production without a real parser wired. Previously these tiles
+// opened the OS file picker in production, where the mock-parser gate at
+// `mockBlockedForRealUser` would catch a real account *after* the file was
+// already selected — and silently discard it. Better: don't accept the file
+// at all until encryption + parser are real. Dev builds (IS_DEV) still see
+// live channels so manual QA works.
+const UPLOAD_LIVE = IS_DEV || REAL_PARSER_WIRED
+const _stubBadge = 'Coming soon'
+const _stubBody = (verb) =>
+  `${verb} will land when document parsing + encryption-at-rest are wired. ` +
+  `Until then, please use manual entry — anything you type is stored at confidence 1.0 ` +
+  `and is the safest path for sensitive figures.`
+
 const CHANNELS = [
   {
     id: 'upload',
     icon: '⇧',
     title: 'Upload a document',
-    body: 'PDF statements, contract notes, valuation reports, will or LPA scans. Native parser → AI parse → OCR fallback → manual edit.',
-    badge: 'Statements · Wills · LPA',
-    accept: '.pdf,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.heic',
+    body: UPLOAD_LIVE
+      ? 'PDF statements, contract notes, valuation reports, will or LPA scans. Native parser → AI parse → OCR fallback → manual edit.'
+      : _stubBody('Document upload'),
+    badge: UPLOAD_LIVE ? 'Statements · Wills · LPA' : _stubBadge,
+    accept: UPLOAD_LIVE ? '.pdf,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.heic' : null,
     capture: null,
-    status: 'live',
+    status: UPLOAD_LIVE ? 'live' : 'phase2',
   },
   {
     id: 'scan',
     icon: '◫',
     title: 'Scan with camera',
-    body: 'Snap a paper statement, policy, certificate, or deed. Phase 1 — single image upload. Phase 2 will add viewfinder, perspective correction, and multi-page scanning.',
-    badge: 'Paper · On-the-go',
-    accept: 'image/*',
-    capture: 'environment',
-    status: 'live',
+    body: UPLOAD_LIVE
+      ? 'Snap a paper statement, policy, certificate, or deed. Phase 1 — single image upload. Phase 2 will add viewfinder, perspective correction, and multi-page scanning.'
+      : _stubBody('Camera scan'),
+    badge: UPLOAD_LIVE ? 'Paper · On-the-go' : _stubBadge,
+    accept: UPLOAD_LIVE ? 'image/*' : null,
+    capture: UPLOAD_LIVE ? 'environment' : null,
+    status: UPLOAD_LIVE ? 'live' : 'phase2',
   },
   {
     id: 'manual',

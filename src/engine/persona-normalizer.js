@@ -301,6 +301,206 @@ export function normalisePersona(entity) {
   };
 }
 
+// ── §3a — taxonomy + entity-schema validation (L2-2, 2026-05-28) ───────────
+// validateEntity is the strict-mode contract: throw on hard schema breaches,
+// collect soft warnings for taxonomy-key drift. Onboarding completion and
+// DataCapture commits gate on the strict version.
+
+import {
+  pensionVehicleTypes,
+  wrapperTypes,
+  maritalStatuses,
+  employmentTypes,
+  residencyStatuses,
+  ownershipTypes,
+  trustTypes,
+  protectionTypes,
+  assetTypes,
+  TAXONOMY_VERSION,
+} from './taxonomy.js'
+
+// Required fields by entity shape. Anything in `required` must be resolvable
+// via the existing normalisePersona() helpers — we don't probe specific paths.
+const REQUIRED_FIELDS = ['name', 'age-or-dob']
+
+function probeTypedKey(enumObj, value) {
+  if (value == null || value === '') return { ok: true, skipped: true }
+  if (typeof value !== 'string') {
+    return { ok: false, error: `non-string-value:${typeof value}:${String(value).slice(0, 40)}` }
+  }
+  return enumObj.has(value)
+    ? { ok: true }
+    : { ok: false, error: `unknown_${enumObj.name}:${value}` }
+}
+
+function walkAssetTypes(entity, push) {
+  const a = entity?.assets || {}
+
+  // Pension arrays — assets.sipp.pensions[] and assets.pensions[]
+  const pensionArrays = []
+  if (Array.isArray(a.sipp?.pensions)) pensionArrays.push(['assets.sipp.pensions', a.sipp.pensions])
+  if (Array.isArray(a.pensions))       pensionArrays.push(['assets.pensions', a.pensions])
+  for (const [path, arr] of pensionArrays) {
+    arr.forEach((p, i) => {
+      const probe = probeTypedKey(pensionVehicleTypes, p?.type)
+      if (!probe.ok) push('warn', `${path}[${i}].type: ${probe.error}`)
+      if (p?.wrapper) {
+        const w = probeTypedKey(wrapperTypes, p.wrapper)
+        if (!w.ok) push('warn', `${path}[${i}].wrapper: ${w.error}`)
+      }
+    })
+  }
+
+  // Property + business + alts often carry a `type` field; check when present.
+  const typedAssetCollections = [
+    ['assets.properties',   a.properties],
+    ['assets.businesses',   a.businesses],
+    ['assets.alternatives', a.alternatives],
+  ]
+  for (const [path, arr] of typedAssetCollections) {
+    if (!Array.isArray(arr)) continue
+    arr.forEach((item, i) => {
+      if (item?.type) {
+        const probe = probeTypedKey(assetTypes, item.type)
+        if (!probe.ok) push('warn', `${path}[${i}].type: ${probe.error}`)
+      }
+      if (item?.ownership) {
+        const o = probeTypedKey(ownershipTypes, item.ownership)
+        if (!o.ok) push('warn', `${path}[${i}].ownership: ${o.error}`)
+      }
+    })
+  }
+
+  // Protection block — sub-keys map 1:1 with protectionTypes labels rather
+  // than carrying explicit type strings, so we just sanity-check the keys.
+  const prot = a.protection || {}
+  const knownProtKeys = new Set([
+    'lifeInsurance', 'criticalIllness', 'incomeProtection', 'pmi',
+    'relevantLifePlan', 'keyPerson', 'shareholderProtection',
+    'familyIncomeBenefit',
+  ])
+  Object.keys(prot).forEach(k => {
+    if (!knownProtKeys.has(k)) push('warn', `assets.protection.${k}: unknown protection sub-key`)
+  })
+
+  // Trusts
+  if (Array.isArray(a.trusts)) {
+    a.trusts.forEach((t, i) => {
+      if (t?.type) {
+        const probe = probeTypedKey(trustTypes, t.type)
+        if (!probe.ok) push('warn', `assets.trusts[${i}].type: ${probe.error}`)
+      }
+    })
+  }
+}
+
+/**
+ * Strict schema gate. Returns `{ ok, errors, warnings, canonical }` where
+ * `errors.length === 0` means the entity is safe to feed every selector.
+ *
+ * `errors` (hard):
+ *   - entity null / not object
+ *   - missing resolvable name
+ *   - missing resolvable age/dob
+ *   - declared `taxonomy_version` newer than current
+ *
+ * `warnings` (soft):
+ *   - unknown taxonomy keys anywhere we type-check
+ *   - missing spouse on couple-declared persona
+ *   - missing income shape
+ *   - dependants array present but empty after normalisation
+ *
+ * The companion `assertEntity(entity)` throws an Error built from the same
+ * payload — call it from Onboarding completion / DataCapture commit to
+ * block bad shapes before they reach the engine.
+ */
+export function validateEntity(entity) {
+  const canonical = normalisePersona(entity)
+  const errors = []
+  const warnings = []
+  const push = (kind, msg) => (kind === 'error' ? errors : warnings).push(msg)
+
+  if (!entity || typeof entity !== 'object') {
+    return { ok: false, errors: ['entity is null or not an object'], warnings, canonical, requiredFields: REQUIRED_FIELDS }
+  }
+
+  // Required: name + age-or-dob (resolvable through normalisePersona)
+  if (!canonical.name) push('error', 'required: name — no resolvable name (entity.name | individual.name | profile.name)')
+  if (!canonical.dob && canonical.age == null) {
+    push('error', 'required: age-or-dob — no resolvable age/dob (entity.dob | individual.dob | entity.age | individual.age)')
+  }
+
+  // Taxonomy version drift
+  const declaredTV = typeof entity.taxonomy_version === 'string' ? entity.taxonomy_version : null
+  if (declaredTV && declaredTV !== TAXONOMY_VERSION) {
+    if (declaredTV > TAXONOMY_VERSION) {
+      push('error', `taxonomy_version ${declaredTV} is newer than engine's ${TAXONOMY_VERSION} — refusing to render`)
+    } else {
+      push('warn', `taxonomy_version ${declaredTV} is older than engine's ${TAXONOMY_VERSION} — fields may need migration`)
+    }
+  }
+
+  // Marital status drift
+  if (canonical.maritalStatus && canonical.maritalStatus !== 'unknown') {
+    const probe = probeTypedKey(maritalStatuses, canonical.maritalStatus)
+    if (!probe.ok) push('warn', `marital: ${probe.error}`)
+  } else if (canonical.maritalStatus === 'unknown') {
+    push('warn', 'no resolvable marital status — defaults to single in spousal-NRB / inter-spouse paths')
+  }
+
+  // Employment / residency typed checks (best-effort — fixtures vary)
+  const empCandidate = entity?.individual?.employment_type ?? entity?.employmentType ?? entity?.work_status
+  if (empCandidate) {
+    const probe = probeTypedKey(employmentTypes, empCandidate)
+    if (!probe.ok) push('warn', `employment: ${probe.error}`)
+  }
+  const resCandidate = entity?.residencyStatus ?? entity?.individual?.residency_status ?? entity?.residency
+  if (resCandidate) {
+    const probe = probeTypedKey(residencyStatuses, resCandidate)
+    if (!probe.ok) push('warn', `residency: ${probe.error}`)
+  }
+
+  // Couple consistency
+  if (canonical.isCouple && !canonical.spouseName) {
+    push('warn', 'persona declared as couple but no spouse/partner name found')
+  }
+
+  // Income shape — soft check (engine helpers handle absence)
+  const hasIncome = entity?.income || entity?.individual?.gross_salary || entity?.individual?.adjusted_net_income
+  if (!hasIncome) push('warn', 'no resolvable income shape (checked: entity.income, entity.individual.gross_salary, entity.individual.adjusted_net_income)')
+
+  // Asset / wrapper / pension walks
+  walkAssetTypes(entity, push)
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    canonical,
+    requiredFields: REQUIRED_FIELDS,
+  }
+}
+
+/**
+ * Hard-fail variant of validateEntity. Throws a single Error whose message
+ * lists every hard error. Call at gates where a malformed entity would
+ * otherwise reach the engine (Onboarding completion, DataCapture commit).
+ *
+ *   import { assertEntity } from './engine/persona-normalizer.js'
+ *   try { assertEntity(payload) } catch (e) { showUserError(e.message) }
+ */
+export function assertEntity(entity) {
+  const r = validateEntity(entity)
+  if (!r.ok) {
+    const err = new Error(`Invalid entity: ${r.errors.join('; ')}`)
+    err.code = 'entity_invalid'
+    err.errors = r.errors
+    err.warnings = r.warnings
+    throw err
+  }
+  return r
+}
+
 // ── §3 — validatePersona(entity) — schema diagnostics ──────────────────────
 /**
  * Diagnostic walker: returns `{ ok, errors, warnings, canonical }` listing

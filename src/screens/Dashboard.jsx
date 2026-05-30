@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { TemporalModeProvider } from '../state/temporalMode.jsx'
 import HomeScreen    from './HomeScreen.jsx'
 import FQBreakdown   from './FQBreakdown.jsx'
 import MyMoney       from './MyMoney.jsx'
@@ -564,6 +565,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
     detailStack.length > 0 || showMoreMenu || moreScreen !== null
 
   return (
+    <TemporalModeProvider>
     <div className="sw-app-with-sidebar">
       {/* Phase 2 Batch B.5 — desktop sidebar (hidden at <1024px via CSS) */}
       <Sidebar
@@ -1069,5 +1071,6 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       )}
       </div>{/* /content column */}
     </div>
+    </TemporalModeProvider>
   )
 }

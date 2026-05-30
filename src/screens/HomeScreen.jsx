@@ -35,6 +35,7 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import { useMemo, useState } from 'react'
+import { useTemporalMode } from '../state/temporalMode.jsx'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
 // S1 selector migration (Phase 2): canonical readers come through the
@@ -1947,8 +1948,9 @@ export default function HomeScreen({
   onDrillMetric,            // PP-3 — push detail frame onto Dashboard's stack
   onShowMagic,              // Demo-day WOW showcase overlay
 }) {
-  // ── viewMode lives here as LOCAL state (Task 2) ────────────────────────
-  const [viewMode, setViewMode] = useState('actual')
+  // ── viewMode now reads the SHARED temporal mode (#18) so Today/Future/Plan/
+  // What-if is consistent across every tab, not just this screen. ──────────
+  const { mode: viewMode, setMode: setViewMode } = useTemporalMode()
 
   // ── Core engine values ─────────────────────────────────────────────────
   const nw   = useMemo(() => safe(() => netWorth(entity), 0), [entity])

@@ -19,12 +19,15 @@
 // FCA boundary — information / guidance / storage only. NO advice verbs.
 // All numeric copy reads from engine selectors or persona fields; no magic.
 // ─────────────────────────────────────────────────────────────────────────────
+import { useState } from 'react'
 import { EstateVault } from '../components/charts/index.js'
 import { lpaStatus } from '../engine/selectors/index.js'
 import { ihtDynamic, fmt } from '../engine/fq-calculator.js'
 import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import useTaxYear from '../hooks/useTaxYear.jsx'
+import { L3PanelHost } from '../components/MyMoney/L3/L3PanelHost.jsx'
+import { TrustsPanel } from '../components/MyMoney/L3/L3Sections/TrustsPanel.jsx'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const STATUS_LABEL = {
@@ -247,8 +250,9 @@ function TrustsSection({ entity }) {
 
 // ── Default export ──────────────────────────────────────────────────────────
 
-export default function MoneyTrusts({ entity, onBack, onHome, onNav, onCommit }) {
+export default function MoneyTrusts({ entity, personaId, onBack, onHome, onNav, onCommit }) {
   const ty = useTaxYear()
+  const [showTrustsDrill, setShowTrustsDrill] = useState(false)  // per-trust leaf drill
   // CX-6 (2026-05-28): unified LPA reader covering all 3 known shape variants.
   const lpa = lpaStatus(entity)
   const items = [
@@ -355,6 +359,23 @@ export default function MoneyTrusts({ entity, onBack, onHome, onNav, onCommit })
       {/* ── 6. Trusts ───────────────────────────────────────────────────── */}
       <TrustsSection entity={entity} />
 
+      {/* Per-trust leaf drill — the purpose-built Trusts panel (every trust →
+          its detail: type, tax treatment, 10-year charges, beneficiaries).
+          Closes the trusts node of the full-taxonomy drill (#16). */}
+      <button
+        type="button"
+        onClick={() => setShowTrustsDrill(true)}
+        className="sw-press"
+        style={{
+          width: '100%', marginTop: 10, padding: '12px 14px', borderRadius: 12,
+          background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+          color: 'var(--c-acc)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}
+      >
+        Drill into every trust →
+      </button>
+
       {/* ── 7. IHT cross-link to /tax ────────────────────────────────────── */}
       <button
         type="button"
@@ -390,6 +411,18 @@ export default function MoneyTrusts({ entity, onBack, onHome, onNav, onCommit })
         Not personal advice. Documents and nominations should be set up with a
         qualified professional.
       </div>
+
+      {showTrustsDrill && (
+        <L3PanelHost
+          title="Trusts"
+          subtitle="Every trust — tap a figure to see how it's worked out or correct it"
+          personaId={personaId}
+          onClose={() => setShowTrustsDrill(false)}
+          onHome={() => { setShowTrustsDrill(false); onHome?.() }}
+        >
+          <TrustsPanel entity={entity} />
+        </L3PanelHost>
+      )}
     </div>
   )
 }

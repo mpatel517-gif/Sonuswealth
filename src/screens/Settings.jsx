@@ -307,8 +307,8 @@ function writeLS(key, value) {
   try { window.localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore */ }
 }
 
-export default function Settings({ entity, theme='dark', onThemeChange, onClose, onHome, onNav }) {
-  const [detail, setDetail] = useState(null)   // null | 'profile' | 'financial' | ...
+export default function Settings({ entity, theme='dark', onThemeChange, onClose, onHome, onNav, initialDetail=null }) {
+  const [detail, setDetail] = useState(initialDetail)   // null | 'profile' | 'financial' | 'assumptions' | ...
   const [hideBalances, setHideBalances] = useState(() => readLS(LS_HIDE_BALANCES, false))
   const [longevity,    setLongevity]    = useState(() =>
     readLS(LS_LONGEVITY, entity?.longevityBand || 'median')

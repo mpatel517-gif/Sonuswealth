@@ -21,6 +21,7 @@ import { L3Panel }               from '../L3Panel.jsx'
 import { DrillableNumber }        from '../DrillableNumber.jsx'
 import { useDrillStackContext }    from '../DrillStack.jsx'
 import { fmt }                    from '../../../../engine/fq-calculator.js'
+import { AssumptionsChip }         from '../AssumptionsChip.jsx'
 import { buildDecumulationSnapshot } from './DecumulationPanel.data.js'
 import {
   decumulationHeroPayload,
@@ -289,6 +290,10 @@ export function DecumulationPanel({ entity, ripple }) {
     {
       key:    'sustainability',
       render: () => <SustainabilitySection snap={snap} view={view} setView={setView} pushNumber={pushNumber} />,
+    },
+    {
+      key:    'assumptions',
+      render: () => <AssumptionsChip />,
     },
   ]
 

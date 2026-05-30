@@ -14,6 +14,7 @@ import { useState }              from 'react'
 import { L3Panel }               from '../L3Panel.jsx'
 import { DrillableNumber }       from '../DrillableNumber.jsx'
 import { useDrillStackContext }  from '../DrillStack.jsx'
+import { AssumptionsChip }       from '../AssumptionsChip.jsx'
 import { fmt }                   from '../../../../engine/fq-calculator.js'
 import { buildDrawdownSnapshot } from './FlexiDrawdownPanel.data.js'
 import {
@@ -215,6 +216,10 @@ export function FlexiDrawdownPanel({ entity, ripple }) {
     {
       key: 'sustainability',
       render: () => <SustainabilitySection snap={snap} view={view} setView={setView} pushNumber={pushNumber} />,
+    },
+    {
+      key: 'assumptions',
+      render: () => <AssumptionsChip />,
     },
   ]
 

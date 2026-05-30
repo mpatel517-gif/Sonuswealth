@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { L3Panel } from '../L3Panel.jsx'
+import { AssumptionsChip } from '../AssumptionsChip.jsx'
 import { DrillableNumber } from '../DrillableNumber.jsx'
 import { useDrillStackContext } from '../DrillStack.jsx'
 import { fmt } from '../../../../engine/fq-calculator.js'
@@ -311,6 +312,7 @@ export function DCvsDBPanel({ entity, ripple }) {
 
   const middle = [
     { key: 'pension-mix', render: ({ entity: e }) => <PensionMixMiddle entity={e} /> },
+    { key: 'assumptions', render: () => <AssumptionsChip /> },
   ]
 
   const totalSchemes = mix.dcSchemes.length + mix.dbSchemes.length

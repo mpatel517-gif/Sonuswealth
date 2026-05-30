@@ -330,9 +330,20 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   const [fqActiveDim,  setFqActiveDim]  = useState(null)
   const [showSwitcher, setShowSwitcher] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  // Deep-link target for Settings (e.g. the "Based on…" assumptions chip in any
+  // drill opens Settings straight to the Market-assumptions editor).
+  const [settingsDetail, setSettingsDetail] = useState(null)
   const [showRiskOverlay, setShowRiskOverlay] = useState(false)
   const [askContext,   setAskContext]   = useState(null)
   const [showAsk,      setShowAsk]      = useState(false)
+
+  // Open Settings at a given detail panel from anywhere (decoupled deep-link).
+  // The assumptions chip in drill panels dispatches sonus:open-assumptions.
+  useEffect(() => {
+    const open = () => { setSettingsDetail('assumptions'); setShowSettings(true) }
+    window.addEventListener('sonus:open-assumptions', open)
+    return () => window.removeEventListener('sonus:open-assumptions', open)
+  }, [])
   // Scenario seed bus — TappableNumber's "Tweak in scenario mode" route lands
   // here, then propagates into <Cashflow> which opens its scenario sub-view
   // and applies the seed values. Cleared once consumed.
@@ -891,8 +902,9 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         <Settings
           entity={entity}
           theme={theme}
+          initialDetail={settingsDetail}
           onThemeChange={onThemeChange}
-          onClose={() => setShowSettings(false)}
+          onClose={() => { setShowSettings(false); setSettingsDetail(null) }}
           onHome={goHome}
           onNav={(tab) => { setShowSettings(false); setTabSafe(tab) }}
         />

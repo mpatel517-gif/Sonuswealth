@@ -36,6 +36,9 @@ import {
 } from '../engine/fq-calculator.js'
 import OverlayShell from '../components/shared/OverlayShell.jsx'
 import SecuritySettings from '../components/Settings/SecuritySettings.jsx'
+import { AssumptionsEditor } from '../components/Settings/AssumptionsEditor.jsx'
+import { TaxRulesTable } from '../components/Settings/TaxRulesTable.jsx'
+import { useActiveCMA } from '../state/useActiveCMA.js'
 
 // Longevity bands — conservative/median/optimistic. Sourced here so the
 // component reads consistent values; engine support comes in s02a.
@@ -318,6 +321,7 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
   const fq   = calcFQ(entity)
   const band = fqBand(fq.total)
 
+  const { modified: cmaModified } = useActiveCMA()
   const rulesVer = entity.rulesVersion || BRAND.rulesVersion
   const dataDate = entity.dataLastUpdated || BRAND.dataDate
 
@@ -495,6 +499,21 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
             label="Compliance & disclaimers" phase2={true} last={true}/>
         </Section>
 
+        {/* Assumptions & rules — the numbers behind every projection (editable
+            market assumptions + read-only tax thresholds). New home; the drill
+            chips across the app deep-link here. */}
+        <Section title="Assumptions & rules">
+          <Row colour="#5DDBC2" glyph="%"
+            label="Market assumptions"
+            value={cmaModified ? 'Adjusted' : 'Baseline'}
+            onClick={() => setDetail('assumptions')}/>
+          <Row colour="#4D8EFF" glyph="£"
+            label="Tax rules & allowances"
+            value={`v${TAX.ver}`}
+            onClick={() => setDetail('taxvalues')}
+            last={true}/>
+        </Section>
+
         {/* §S12 — About & Legal (tax rules detail hangs off here) */}
         <Section title="About & legal">
           <Row colour="#FFB347" glyph="§"
@@ -594,6 +613,18 @@ export default function Settings({ entity, theme='dark', onThemeChange, onClose,
       {detail === 'security' && (
         <DetailPanel title="Privacy & Security" onBack={() => setDetail(null)}>
           <SecuritySettings />
+        </DetailPanel>
+      )}
+
+      {detail === 'assumptions' && (
+        <DetailPanel title="Market assumptions" onBack={() => setDetail(null)}>
+          <AssumptionsEditor />
+        </DetailPanel>
+      )}
+
+      {detail === 'taxvalues' && (
+        <DetailPanel title="Tax rules & allowances" onBack={() => setDetail(null)}>
+          <TaxRulesTable />
         </DetailPanel>
       )}
 

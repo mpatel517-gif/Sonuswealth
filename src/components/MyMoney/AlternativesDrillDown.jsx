@@ -14,6 +14,7 @@ import { useState } from 'react'
 import OverlayShell from '../shared/OverlayShell.jsx'
 import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
 import { DrillableNumber } from './L3/DrillableNumber.jsx'
+import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { holdingClock } from '../../engine/persona-helpers.js'
 import { BRAND } from '../../config/brand.js'
 import { LiquidityLadder } from '../charts/index.js'
@@ -218,6 +219,7 @@ export default function AlternativesDrillDown(props) {
 
 function AlternativesDrillDownInner({ entity, personaId, onBack, onHome }) {
   const drillStack = useDrillStackContext()
+  const [selected, setSelected] = useState(null)  // per-holding leaf drill
   const items = readAlternatives(entity)
   const total = items.reduce((s, i) => s + i.value, 0)
 
@@ -396,17 +398,24 @@ function AlternativesDrillDownInner({ entity, personaId, onBack, onHome }) {
                   </div>
                   <div style={{ display: 'grid', gap: 4 }}>
                     {g.items.map((it, i) => (
-                      <div key={it.id || i} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                        fontSize: 11, color: 'var(--c-text2)',
-                      }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {it.name}
+                      <button key={it.id || i}
+                        type="button"
+                        onClick={() => setSelected(it)}
+                        className="sw-press"
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                          width: '100%', background: 'transparent', border: 'none', padding: '2px 0',
+                          cursor: 'pointer', textAlign: 'left',
+                          fontSize: 11, color: 'var(--c-text2)',
+                        }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {it.name} <span style={{ color: 'var(--c-text3)' }}>›</span>
                         </span>
                         <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--c-text)', fontWeight: 600 }}>
                           {fmt(it.value)}
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -656,6 +665,17 @@ function AlternativesDrillDownInner({ entity, personaId, onBack, onHome }) {
           {BRAND.disclaimer}
         </p>
       </div>
+      {selected && (
+        <AssetDetailOverlay
+          asset={selected}
+          domain="alternatives"
+          category="alternatives"
+          itemType={(selected.type || 'other').toUpperCase()}
+          personaId={personaId}
+          onBack={() => setSelected(null)}
+          onHome={onHome}
+        />
+      )}
     </OverlayShell>
   )
 }

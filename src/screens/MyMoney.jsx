@@ -112,6 +112,7 @@ import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx
 import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
 import AlternativesDrillDown from '../components/MyMoney/AlternativesDrillDown.jsx'
+import AssetDetailOverlay    from '../components/MyMoney/AssetDetailOverlay.jsx'
 import FinancesHeroCard      from '../components/MyMoney/FinancesHeroCard.jsx'
 import MoneyXDrawer          from '../components/shared/MoneyXDrawer.jsx'
 import AccountsList          from '../components/MyMoney/AccountsList.jsx'
@@ -1903,6 +1904,7 @@ function AssetCaptureSheet({ open, onClose, onCommit, entity }) {
 // ═════════════════════════════════════════════════════════════════════════════
 
 function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }) {
+  const [selectedScheme, setSelectedScheme] = useState(null)  // per-scheme leaf drill
   const a = entity.assets || {}
   // M-02: include both legacy sipp.total AND new-spec pensions[] array
   const sippTot = (+(a.sipp?.total || 0))
@@ -2274,7 +2276,16 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <WrapperBadge wrapper="PENSION" label={isDB ? 'DB' : undefined} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{p.name}</div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScheme(p)}
+                      className="sw-press"
+                      style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left',
+                        cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--c-text)',
+                        display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      {p.name} <span style={{ color: 'var(--c-text3)', fontWeight: 500 }}>›</span>
+                    </button>
                     <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
                       {fmt(p.value)} · <span style={{ color: colour, fontWeight: 600 }}>{label}</span>
                     </div>
@@ -2636,6 +2647,17 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           {BRAND.disclaimer}
         </p>
       </div>
+      {selectedScheme && (
+        <AssetDetailOverlay
+          asset={selectedScheme}
+          domain="pension"
+          category="pensions"
+          itemType={selectedScheme.schemeKind === 'DB' ? 'DB' : 'SIPP'}
+          personaId={personaId}
+          onBack={() => setSelectedScheme(null)}
+          onHome={onHome}
+        />
+      )}
     </OverlayShell>
   )
 }

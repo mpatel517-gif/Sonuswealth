@@ -20,6 +20,7 @@ import OverlayShell from '../shared/OverlayShell.jsx'
 import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
 import { DrillStackProvider, useDrillStackContext } from './L3/DrillStack.jsx'
 import { DrillableNumber } from './L3/DrillableNumber.jsx'
+import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { SharedBullet, LiquidityLadder } from '../charts/index.js'
 // S1 selector migration (Phase 2)
 import {
@@ -213,6 +214,7 @@ export default function CashDrillDown(props) {
 
 function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
   const drillStack = useDrillStackContext()
+  const [selected, setSelected] = useState(null)  // per-account leaf drill
   const accounts = readAccounts(entity)
   const totalCash = cashTotal(entity) || accounts.reduce((s, x) => s + x.balance, 0)
 
@@ -361,7 +363,16 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{a.name}</div>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(a)}
+                        className="sw-press"
+                        style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left',
+                          cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--c-text)',
+                          display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        {a.name} <span style={{ color: 'var(--c-text3)', fontWeight: 500 }}>›</span>
+                      </button>
                       <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
                         {a.bank} · {typeLabel}
                       </div>
@@ -512,6 +523,17 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
           {BRAND.disclaimer}
         </p>
       </div>
+      {selected && (
+        <AssetDetailOverlay
+          asset={selected}
+          domain="cash"
+          category="cash"
+          itemType={(selected.type || 'CURRENT').toUpperCase()}
+          personaId={personaId}
+          onBack={() => setSelected(null)}
+          onHome={onHome}
+        />
+      )}
     </OverlayShell>
   )
 }

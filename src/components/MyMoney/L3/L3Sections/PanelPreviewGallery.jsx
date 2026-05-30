@@ -24,6 +24,11 @@ import { StatePensionPanel } from './StatePensionPanel.jsx'
 import { TaxObligationsPanel } from './TaxObligationsPanel.jsx'
 import { IHTEstatePanel } from './IHTEstatePanel.jsx'
 import { TrustsPanel } from './TrustsPanel.jsx'
+import { DirectorCompPanel } from './DirectorCompPanel.jsx'
+import { BTLPortfolioPanel } from './BTLPortfolioPanel.jsx'
+import { FlexiDrawdownPanel } from './FlexiDrawdownPanel.jsx'
+import { DCvsDBPanel } from './DCvsDBPanel.jsx'
+import { DecumulationPanel } from './DecumulationPanel.jsx'
 import { DrillStackProvider } from '../DrillStack.jsx'
 import { useEvents, EV } from '../../../../state/events.jsx'
 
@@ -36,6 +41,12 @@ const PANELS = {
   'tax-obligations': { component: TaxObligationsPanel, label: 'Tax obligations' },
   'iht-estate':      { component: IHTEstatePanel,      label: 'IHT & estate' },
   trusts:            { component: TrustsPanel,         label: 'Trusts' },
+  // Tier C
+  'director-comp':   { component: DirectorCompPanel,   label: 'Director comp' },
+  'btl-portfolio':   { component: BTLPortfolioPanel,   label: 'BTL portfolio' },
+  'flexi-drawdown':  { component: FlexiDrawdownPanel,  label: 'Flexi-drawdown' },
+  'dc-vs-db':        { component: DCvsDBPanel,         label: 'DC vs DB' },
+  decumulation:      { component: DecumulationPanel,   label: 'Decumulation' },
 }
 
 function PanelHeader({ label, persona }) {

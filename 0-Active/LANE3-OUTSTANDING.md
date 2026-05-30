@@ -1,6 +1,25 @@
 # Lane 3 — Outstanding work
 
-**Status (2026-05-29 — end of session):** 8 of 8 main items closed at engine/foundation layer. L3-2 Tier A complete code-only (Income-sources, Wrappers, State-pension) — all three sitting behind the DoD §C two-checkbox wire+snap gate. Tier B and Tier C panels not started.
+**Status (2026-05-29 — end of session):** ALL Lane-3 main items closed. **L3-2 COMPLETE — all 11 L3 panels shipped** (Tier A ×3 + Tier B ×3 + Tier C ×5), each with recursive drill-to-leaf + provenance edit, real engine selectors, snap-verified. Remaining: 2 mechanical content/jargon sweeps (L3-4b, L3-6b) + founder deploys.
+
+### L3-2 — 11/11 panels DONE (recursive drill + leaf edit)
+| Panel | ?panel= | Engine source | Snap fixture | Test |
+|---|---|---|---|---|
+| Income-sources | income | annualIncome | persona-a | 28/28 |
+| Wrappers | wrappers | isa/pension/giaTotal | persona-a | 27/27 |
+| State-pension | state-pension | statePensionAnnual + TAX | persona-a | 33/33 |
+| Tax-obligations | tax-obligations | incomeTaxDetail+nicsDetail+dividendTaxDetail | persona-a | 44/44 |
+| IHT & estate | iht-estate | ihtExposure | persona-a | 42/42 |
+| Trusts | trusts | entity.trusts[]+trustPeriodicCharge | mrt-decum-complex | 41/41 |
+| Director-comp | director-comp | calcDividendTax+companies[] | mrt-ltd-director | 33/33 |
+| BTL-portfolio | btl-portfolio | property[]+netWorth | mrt-landlord | 27/27 |
+| Flexi-drawdown | flexi-drawdown | scenarios.monteCarloPOS | persona-a | 49/49 |
+| DC-vs-DB | dc-vs-db | pensionTotal+pvAnnuity | mrt-decum-complex | 45/45 |
+| Decumulation | decumulation | fundedRatio+swrFromRegime | persona-a | 46/46 |
+
+Infrastructure (commits 7c6cac3…004f7d8 + Tier-C): L3Panel host, recursive DrillStack (L3→L4→L5+), DrillableNumber, L4NumberPanel leaf-edit form with source/confidence/document, ASSET_FIELD_CORRECTED event + provenance + `_corrections[]` audit trail, `events-fold-helpers.js`. Founder's "drilldowns stay one level" + "every taxonomy" + "how do I correct a value" — all closed.
+
+**Wiring note:** panels currently mount via the `?panel=` preview gallery (`PanelPreviewGallery.jsx`). Production wiring — replacing the gallery with real drill-routes inside MyMoney/Cashflow/T&E tiles — is the next integration step.
 
 ---
 
@@ -21,7 +40,7 @@
 
 | ID    | What                                          | Effort | Notes |
 |-------|-----------------------------------------------|--------|-------|
-| L3-2  | Build the 11 missing L3 panels (3 code-complete, 8 pending) | L | **Tier A 3 panels code-complete (commits 7c6cac3, baedf8a, 0434e19) — wire+snap pending per DoD §C.** Tier B + Tier C pending. **See §1 below.** |
+| L3-2  | Build the 11 missing L3 panels | ✓ DONE | **ALL 11 shipped + snap-verified — see table above. 442 contract assertions across 11 tests, all green.** Production drill-route wiring (replacing preview gallery) is the remaining integration step. |
 | L3-4b | Per-screen `useContent` sweep                 | M | Pattern proven in Cashflow.jsx. Mechanical wrap of ~40 inline strings across 8 screens. |
 | L3-6b | Per-screen jargon sweep                       | M | Helper exists; ~20 min per file × 8 screens. Recommend first-occurrence-per-section only. |
 

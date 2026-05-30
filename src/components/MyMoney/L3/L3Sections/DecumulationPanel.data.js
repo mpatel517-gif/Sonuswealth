@@ -10,7 +10,7 @@
 
 import { investable, fundedRatio, swrFromRegime } from '../../../../engine/fq-calculator.js'
 import { targetIncome, runwayWithDrawdown } from '../../../../engine/_helpers.js'
-import CMA_BUNDLE from '../../../../rules/cma-2026.json' with { type: 'json' }
+import { getActiveCMA } from '../../../../engine/cma.js'
 
 // Express a future nominal £ amount in today's money.
 function _toTodaysMoney(future, inflation, years) {
@@ -40,6 +40,10 @@ function _toTodaysMoney(future, inflation, years) {
  * @returns {object}
  */
 export function buildDecumulationSnapshot(entity) {
+  // Read the LIVE assumptions (baseline ⊕ any user override) so adjustments in
+  // Settings → Assumptions flow straight into this projection.
+  const CMA_BUNDLE = getActiveCMA()
+
   // ── investable ──────────────────────────────────────────────────────────────
   let investableAssets = 0
   try {

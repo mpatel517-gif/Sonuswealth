@@ -18,7 +18,7 @@
 
 import { investable } from '../../../../engine/fq-calculator.js'
 import { probabilityOfSuccess } from '../../../../engine/cashflow-engine.js'
-import CMA_BUNDLE from '../../../../rules/cma-2026.json' with { type: 'json' }
+import { getActiveCMA } from '../../../../engine/cma.js'
 
 // Express a future nominal £ amount in today's money.
 //   today = future / (1 + inflation)^years
@@ -48,6 +48,8 @@ function _toTodaysMoney(future, inflation, years) {
  * }}
  */
 export function buildDrawdownSnapshot(entity) {
+  // Live assumptions (baseline ⊕ user override) — see src/engine/cma.js.
+  const CMA_BUNDLE = getActiveCMA()
   const pot = investable(entity)
 
   const customDraw = +entity?.drawdown

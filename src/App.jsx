@@ -28,6 +28,7 @@ installGlobalErrorListeners()
 installBundleAutoSync()
 import { StepUpProvider } from './state/step-up.jsx'
 import { bootRules } from './lib/boot-rules.js'
+import { hydrateCMA } from './engine/cma.js'
 // L3-2 preview gallery — mounts Tier-A panels via ?panel= URL param for snap verification.
 import { PanelPreviewGallery } from './components/MyMoney/L3/L3Sections/PanelPreviewGallery.jsx'
 
@@ -291,6 +292,11 @@ function AppInner() {
     } catch (_e) { /* fall through */ }
     return 'a'
   })
+
+  // Boot: apply any persisted capital-market-assumption override (Settings →
+  // Assumptions) so the user's adjusted growth/inflation survive a reload.
+  // Runs once; safe before any engine call because cma.js defaults to baseline.
+  useEffect(() => { hydrateCMA() }, [])
 
   // Persist persona changes (skip 'real-user' — that path is auth-driven
   // and the persona id is synthetic for the session).

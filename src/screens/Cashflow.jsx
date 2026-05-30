@@ -47,7 +47,12 @@ import {
   cf_portfolioEfficiency,
 } from '../engine/fq-calculator.js'
 
-import CMA_BUNDLE from '../rules/cma-2026.json' with { type: 'json' }
+// Active-CMA layer: the live assumptions (baseline ⊕ any user override from
+// Settings → Assumptions). getActiveCMA() for transient drill panels; the
+// useActiveCMA() hook in the main screen subscribes so memos recompute when a
+// dial moves. Replaces the old static `import CMA_BUNDLE from cma-2026.json`.
+import { getActiveCMA } from '../engine/cma.js'
+import { useActiveCMA } from '../state/useActiveCMA.js'
 
 // L3-3 (2026-05-28): tax-band + NI breakdown for L4 drills inside cashflow drill panels.
 import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
@@ -192,6 +197,7 @@ function SurplusDrillPanel({ entity, onClose }) {
 
 function SurplusDrillPanelInner({ entity, onClose }) {
   const drillStack   = useDrillStackContext()
+  const CMA_BUNDLE  = getActiveCMA()
   const incomeAll  = useMemo(() => { try { return calcAllIncome(entity, CMA_BUNDLE) } catch { return null } }, [entity])
   const ms         = useMemo(() => { try { return monthlySurplus(entity, CMA_BUNDLE) } catch { return null } }, [entity])
   const lb         = useMemo(() => { try { return liquidityBuffer(entity) } catch { return null } }, [entity])
@@ -441,6 +447,7 @@ function IncomeBreakdownDrillPanel({ entity, onClose }) {
 
 function IncomeBreakdownDrillPanelInner({ entity, onClose }) {
   const drillStack = useDrillStackContext()
+  const CMA_BUNDLE = getActiveCMA()
   const incomeAll = useMemo(() => { try { return calcAllIncome(entity, CMA_BUNDLE) } catch { return null } }, [entity])
   const inc = entity?.income || {}
 
@@ -574,6 +581,7 @@ function HealthScoreDrillPanel({ entity, onClose }) {
 
 function HealthScoreDrillPanelInner({ entity, onClose }) {
   const drillStack = useDrillStackContext()
+  const CMA_BUNDLE = getActiveCMA()
   const health = useMemo(() => { try { return cashflowHealth(entity, CMA_BUNDLE) } catch { return null } }, [entity])
 
   const BAND_COLOUR = { Critical: 'var(--c-danger)', Stressed: 'var(--c-warning)', Steady: 'var(--c-acc)', Healthy: 'var(--c-success)', Thriving: 'var(--c-success)' }
@@ -1004,6 +1012,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // the user flips the TY chip, so the screen recomputes against the new
   // bundle instead of showing yesterday's numbers.
   const bv = useBundleVersion()
+  // Live assumptions: subscribing here re-renders the screen when the user moves
+  // a dial in Settings → Assumptions; `cv` is threaded into every CMA-using memo
+  // below (alongside bv) so the projections recompute against the new numbers.
+  const { cma: CMA_BUNDLE, version: cv } = useActiveCMA()
 
   // ── Anchors ────────────────────────────────────────────────────────────
   // Use calcFQ (canonical per Home v1.4 §Q1.2) — was calcFQCalibrated which
@@ -1017,62 +1029,62 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // ── Cashflow Health (§3B hero) ─────────────────────────────────────────
   const health = useMemo(
     () => cashflowHealth(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
 
   // ── §A NOW computations ────────────────────────────────────────────────
   const incomeAll = useMemo(
     () => calcAllIncome(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
-  const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity, bv])
-  const lb = useMemo(() => liquidityBuffer(entity), [entity, bv])
+  const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity, bv, cv])
+  const lb = useMemo(() => liquidityBuffer(entity), [entity, bv, cv])
   const surplusAlloc = useMemo(
     () => recommendedSurplusAllocation(entity, ms.surplus),
-    [entity, ms.surplus, bv]
+    [entity, ms.surplus, bv, cv]
   )
 
   // ── §B TRAJECTORY computations ─────────────────────────────────────────
   const swr = useMemo(
     () => swrFromRegime(swrRegime, null, CMA_BUNDLE),
-    [swrRegime, bv]
+    [swrRegime, bv, cv]
   )
-  const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE), [entity, bv])
-  const fi = useMemo(() => fiRatio(entity), [entity, bv])
+  const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE), [entity, bv, cv])
+  const fi = useMemo(() => fiRatio(entity), [entity, bv, cv])
 
   // 1000-run Monte Carlo per spec §5.4 / §5.5 (O-CF-RULES-01).
   const pos = useMemo(
     () => cf_probabilityOfSuccess(entity, CMA_BUNDLE, 1000),
-    [entity, bv]
+    [entity, bv, cv]
   )
   const seqVuln = useMemo(
     () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
   const gkPath = useMemo(
     () => guytonKlingerPath(entity, 30, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
   const fiveScen = useMemo(
     () => cf_fiveCashflowScenarios(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
-  const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv])
-  const coiVar = useMemo(() => coiCashflowVariants(entity), [entity, bv])
-  const prcPcc = useMemo(() => cf_prcPccSpread(entity), [entity, bv])
+  const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv, cv])
+  const coiVar = useMemo(() => coiCashflowVariants(entity), [entity, bv, cv])
+  const prcPcc = useMemo(() => cf_prcPccSpread(entity), [entity, bv, cv])
   const reality = useMemo(
     () => cf_realityEngineFactorisation(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
   const mdd = useMemo(
     () => cf_maxDrawdownExposure(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
   const eff = useMemo(
     () => cf_portfolioEfficiency(entity, CMA_BUNDLE),
-    [entity, bv]
+    [entity, bv, cv]
   )
 
   // ── Render ─────────────────────────────────────────────────────────────

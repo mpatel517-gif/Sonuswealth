@@ -21,7 +21,7 @@
 // G16: every chip / disclaimer string verbatim from spec §8.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import useTaxYear from '../hooks/useTaxYear.jsx'
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
 // L3-4b (2026-05-28): externalised copy lookup. Fallback = the existing
@@ -56,6 +56,8 @@ import {
 // the `income` variant which renders Sources / Gross / Tax / Net.
 import FinancesHeroCard from '../components/MyMoney/FinancesHeroCard.jsx'
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
+import { L3PanelHost } from '../components/MyMoney/L3/L3PanelHost.jsx'
+import { IncomeSourcesPanel } from '../components/MyMoney/L3/L3Sections/IncomeSourcesPanel.jsx'
 
 // ── persona detection (uses bundle helpers + entity shape) ────────────────────
 function isDirector(entity) {
@@ -552,6 +554,7 @@ function ReceiptWaterfall({ tax, paUsed, class1, class4 }) {
 
 // ── Main screen ──────────────────────────────────────────────────────────────
 export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
+  const [showSources, setShowSources] = useState(false)  // per-source leaf drill
   // CX-1 (2026-05-28): consume canonical tax-year selector so the screen
   // displays the user's chosen TY. Bundle propagation to engine is the
   // multi-week part — for now the chip on screen makes the selection visible.
@@ -745,6 +748,21 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
           totals={totals}
           onSegmentTap={(key, value) => ask({ kind: 'income-source', source: key, value })}
         />
+        {/* Drill: every income source → its own leaf (amount, tax treatment,
+            provenance, correct-this-value). Closes the income half of the
+            full-taxonomy drill requirement. */}
+        <button
+          type="button"
+          onClick={() => setShowSources(true)}
+          style={{
+            marginTop: 12, width: '100%', padding: '10px 12px', borderRadius: 10,
+            background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+            color: 'var(--c-acc)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}
+        >
+          See every source in detail →
+        </button>
       </Card>
 
       {/* 5. Classification donut */}
@@ -841,6 +859,19 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
       <div style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'center', marginTop: 20, paddingTop: 12, borderTop: '1px solid var(--c-sep)' }}>
         Information based on UK 2026/27 rules. Not personal advice.
       </div>
+
+      {/* Per-source drill — the purpose-built Income panel, every source → leaf. */}
+      {showSources && (
+        <L3PanelHost
+          title="Income sources"
+          subtitle="Every source — tap a figure to see how it's worked out or correct it"
+          personaId={personaId}
+          onClose={() => setShowSources(false)}
+          onHome={() => { setShowSources(false); onNav?.('money') }}
+        >
+          <IncomeSourcesPanel entity={entity} />
+        </L3PanelHost>
+      )}
     </div>
   )
 }

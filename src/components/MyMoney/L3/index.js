@@ -16,6 +16,11 @@ export { DrillableChart } from './DrillableChart.jsx'
 export { L4ChartPanel }   from './L4ChartPanel.jsx'
 
 // L3-2 domain panels — first real consumers of L3Panel.
+// Tier A:
 export { IncomeSourcesPanel } from './L3Sections/IncomeSourcesPanel.jsx'
 export { WrappersPanel }      from './L3Sections/WrappersPanel.jsx'
 export { StatePensionPanel }  from './L3Sections/StatePensionPanel.jsx'
+// Tier B:
+export { TaxObligationsPanel } from './L3Sections/TaxObligationsPanel.jsx'
+export { IHTEstatePanel }      from './L3Sections/IHTEstatePanel.jsx'
+export { TrustsPanel }         from './L3Sections/TrustsPanel.jsx'

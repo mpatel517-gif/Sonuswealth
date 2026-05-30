@@ -21,13 +21,21 @@
 import { IncomeSourcesPanel } from './IncomeSourcesPanel.jsx'
 import { WrappersPanel } from './WrappersPanel.jsx'
 import { StatePensionPanel } from './StatePensionPanel.jsx'
+import { TaxObligationsPanel } from './TaxObligationsPanel.jsx'
+import { IHTEstatePanel } from './IHTEstatePanel.jsx'
+import { TrustsPanel } from './TrustsPanel.jsx'
 import { DrillStackProvider } from '../DrillStack.jsx'
 import { useEvents, EV } from '../../../../state/events.jsx'
 
 const PANELS = {
+  // Tier A
   income:           { component: IncomeSourcesPanel, label: 'Income sources' },
   wrappers:         { component: WrappersPanel,      label: 'Wrappers' },
   'state-pension':  { component: StatePensionPanel,  label: 'State pension' },
+  // Tier B
+  'tax-obligations': { component: TaxObligationsPanel, label: 'Tax obligations' },
+  'iht-estate':      { component: IHTEstatePanel,      label: 'IHT & estate' },
+  trusts:            { component: TrustsPanel,         label: 'Trusts' },
 }
 
 function PanelHeader({ label, persona }) {

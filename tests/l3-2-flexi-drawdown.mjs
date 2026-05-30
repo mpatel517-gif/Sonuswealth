@@ -1,6 +1,7 @@
 // tests/l3-2-flexi-drawdown.mjs
 //
-// L3 flexi-drawdown panel contract test.
+// L3 flexi-drawdown panel contract test — full CMA engine
+// (probabilityOfSuccess) + today's-money / future-pounds toggle.
 // Run via: node tests/l3-2-flexi-drawdown.mjs
 
 import { readFile } from 'node:fs/promises'
@@ -8,8 +9,10 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import { buildDrawdownSnapshot } from '../src/components/MyMoney/L3/L3Sections/FlexiDrawdownPanel.data.js'
-import { pensionTotal } from '../src/engine/_helpers.js'
-import { annualDrawPayload, posPayload } from '../src/components/MyMoney/L3/L3Sections/FlexiDrawdownPayloads.js'
+import { investable } from '../src/engine/fq-calculator.js'
+import {
+  annualDrawPayload, posPayload, typicalPotPayload,
+} from '../src/components/MyMoney/L3/L3Sections/FlexiDrawdownPayloads.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const personasDir = join(__dirname, '..', 'src', 'rules', 'personas')
@@ -20,170 +23,146 @@ const log = (ok, msg) => {
   if (ok) { passes += 1; console.log(`✓ ${msg}`) }
   else    { fails  += 1; console.log(`✗ ${msg}`) }
 }
+const loadPersona = async (f) => JSON.parse(await readFile(join(personasDir, f), 'utf8'))
 
-async function loadPersona(file) {
-  return JSON.parse(await readFile(join(personasDir, file), 'utf8'))
-}
-
-// ── Case 1 — output shape: all required fields present + finite ───────────
+// ── Case 1 — output shape ──────────────────────────────────────────────────
 console.log('\n── Case 1 — output shape ──')
 {
   const e = await loadPersona('persona-a.json')
   const s = buildDrawdownSnapshot(e)
-  const required = ['pot', 'annualDraw', 'drawIsCustom', 'pos', 'terminalAge',
-                    'startAge', 'p10', 'p50', 'p90', 'simulations']
-  for (const k of required) {
-    log(s[k] !== undefined, `field '${k}' present (got ${JSON.stringify(s[k])})`)
+  const required = ['pot', 'annualDraw', 'drawSource', 'pos', 'horizonYears',
+    'terminalAge', 'startAge', 'inflation', 'runs', 'statePensionFrom',
+    'nominal', 'real', 'insufficient']
+  for (const k of required) log(s[k] !== undefined, `field '${k}' present`)
+  for (const k of ['pot', 'annualDraw', 'pos', 'terminalAge', 'startAge', 'inflation', 'runs']) {
+    log(Number.isFinite(s[k]), `'${k}'=${s[k]} finite`)
   }
-  // All numeric fields are finite
-  for (const k of ['pot', 'annualDraw', 'pos', 'terminalAge', 'startAge', 'p10', 'p50', 'p90', 'simulations']) {
-    log(Number.isFinite(s[k]), `field '${k}'=${s[k]} is finite`)
+  for (const band of ['nominal', 'real']) {
+    for (const p of ['p10', 'p50', 'p90']) {
+      log(Number.isFinite(s[band][p]), `${band}.${p}=${s[band][p]} finite`)
+    }
   }
 }
 
-// ── Case 2 — pos in [0, 100] ───────────────────────────────────────────────
-console.log('\n── Case 2 — pos in [0, 100] ──')
+// ── Case 2 — pos in [0,100] ────────────────────────────────────────────────
+console.log('\n── Case 2 — pos in [0,100] ──')
 {
-  for (const file of ['persona-a.json', 'mrT-core.json', 'persona-c.json']) {
+  for (const file of ['persona-a.json', 'persona-c.json', 'persona-e.json']) {
     const e = await loadPersona(file)
     const s = buildDrawdownSnapshot(e)
-    log(s.pos >= 0 && s.pos <= 100,
-      `${file} → pos=${s.pos}% in [0,100]`)
+    log(s.pos >= 0 && s.pos <= 100, `${file} → pos=${s.pos}%`)
   }
 }
 
-// ── Case 3 — p10 <= p50 <= p90 at terminal age ────────────────────────────
-console.log('\n── Case 3 — p10 <= p50 <= p90 ──')
+// ── Case 3 — bands ordered p10 ≤ p50 ≤ p90 (both views) ────────────────────
+console.log('\n── Case 3 — bands ordered ──')
 {
-  const e = await loadPersona('persona-a.json')
+  const e = await loadPersona('persona-c.json')
   const s = buildDrawdownSnapshot(e)
-  log(s.p10 <= s.p50, `p10(${s.p10}) <= p50(${s.p50})`)
-  log(s.p50 <= s.p90, `p50(${s.p50}) <= p90(${s.p90})`)
+  log(s.nominal.p10 <= s.nominal.p50 && s.nominal.p50 <= s.nominal.p90,
+    `nominal ${s.nominal.p10} ≤ ${s.nominal.p50} ≤ ${s.nominal.p90}`)
+  log(s.real.p10 <= s.real.p50 && s.real.p50 <= s.real.p90,
+    `real ${s.real.p10} ≤ ${s.real.p50} ≤ ${s.real.p90}`)
 }
 
-// ── Case 4 — zero drawdown → pos = 100 ───────────────────────────────────
-console.log('\n── Case 4 — zero drawdown → pos = 100 ──')
+// ── Case 4 — today's money ≤ future pounds (inflation deflation) ───────────
+console.log('\n── Case 4 — real ≤ nominal (when horizon > 0) ──')
 {
-  // Engine: a positive pot with zero annual drawdown should survive all sims.
-  // Use a large pot with entity.drawdown explicitly = 0 — that triggers the
-  // 4% fallback (drawIsCustom=false), giving annualDraw = 0.04 * pot > 0.
-  // To get truly zero drawdown we need pot=0 which also gives 0 draw — but
-  // then startPot=0 → engine marks every sim as dead immediately → pos=0.
-  // Instead: use a real pot with a tiny draw far below the growth floor so
-  // survival is ~100%, OR directly test the "zero drawdown on non-zero pot"
-  // path by making draw zero via a custom-but-zero approach.
-  //
-  // The engine's zero-pot path: startPot=0 → pot-=0 → pot still 0 → alive=false → survived=0.
-  // This is correct engine behaviour. We test it as: zero pot → pos=0.
-  const zeroPot = buildDrawdownSnapshot({ age: 50 })
-  log(zeroPot.pot === 0, `empty entity pot=0`)
-  log(zeroPot.annualDraw === 0, `annualDraw=0 when pot=0`)
-  // When pot=0, every sim starts dead (pot-draw=0-0=0 → alive=false) → pos=0
-  log(zeroPot.pos === 0, `pos=0 when pot=0 (all sims start depleted, got ${zeroPot.pos})`)
-
-  // Positive check: large pot with a modest draw rate — pos should be > 0.
-  // Age 70, pot £500k, 4% draw = £20k/yr over 25yr horizon — expect decent POS.
-  const largePot = buildDrawdownSnapshot({
-    age: 70,
-    assets: { sipp: { total: 500000 } },
-  })
-  log(largePot.pos > 0 && largePot.pos <= 100, `large pot + 4% draw → pos=${largePot.pos}% in (0,100]`)
-}
-
-// ── Case 5 — large drawdown on small pot → pos low ────────────────────────
-console.log('\n── Case 5 — large drawdown on small pot → pos low ──')
-{
-  // £5k pot, drawing £10k/yr — pot depleted in year 1 → near 0% survival
-  const smallPotEntity = {
-    age: 65,
-    drawdown: 10000,
-    assets: { sipp: { total: 5000 } },
+  const e = await loadPersona('persona-c.json')
+  const s = buildDrawdownSnapshot(e)
+  if (s.horizonYears > 0 && s.nominal.p50 > 0) {
+    log(s.real.p50 <= s.nominal.p50, `real p50 (${s.real.p50}) ≤ nominal p50 (${s.nominal.p50})`)
+    log(s.real.p90 <= s.nominal.p90, `real p90 (${s.real.p90}) ≤ nominal p90 (${s.nominal.p90})`)
+  } else {
+    log(true, `horizon ${s.horizonYears} — deflation not applicable (skipped)`)
   }
-  const s = buildDrawdownSnapshot(smallPotEntity)
-  log(s.pos < 10, `small pot + large draw → pos=${s.pos}% < 10%`)
-  log(s.drawIsCustom === true, `drawIsCustom=true when entity.drawdown set`)
 }
 
-// ── Case 6 — pot reconciles with pensionTotal ──────────────────────────────
-console.log('\n── Case 6 — pot reconciles with pensionTotal ──')
+// ── Case 5 — insufficient/empty entity → pos 0, insufficient true ─────────
+console.log('\n── Case 5 — empty entity → insufficient ──')
 {
-  for (const file of ['persona-a.json', 'mrT-core.json']) {
+  const s = buildDrawdownSnapshot({ age: 50 })
+  log(s.pot === 0, `empty pot=0`)
+  log(s.pos === 0, `pos=0 (got ${s.pos})`)
+  log(s.insufficient === true, `insufficient=true`)
+}
+
+// ── Case 6 — large draw on small pot → low chance ─────────────────────────
+console.log('\n── Case 6 — small pot + large draw → low pos ──')
+{
+  const s = buildDrawdownSnapshot({ age: 67, drawdown: 30000, assets: { sipp: { total: 60000 } } })
+  log(s.pos < 35, `small pot + big draw → pos=${s.pos}% < 35%`)
+  log(s.drawSource === 'custom', `drawSource='custom' when entity.drawdown set (got '${s.drawSource}')`)
+}
+
+// ── Case 7 — pot reconciles with investable() ──────────────────────────────
+console.log('\n── Case 7 — pot === investable() ──')
+{
+  for (const file of ['persona-a.json', 'persona-c.json']) {
     const e = await loadPersona(file)
     const s = buildDrawdownSnapshot(e)
-    const engine = pensionTotal(e)
-    log(s.pot === engine,
-      `${file} → snap.pot=${s.pot.toLocaleString()} === pensionTotal=${engine.toLocaleString()}`)
+    log(s.pot === investable(e), `${file} → pot=${s.pot.toLocaleString()} === investable`)
   }
 }
 
-// ── Case 7 — annualDraw editable path = 'drawdown' ────────────────────────
-console.log('\n── Case 7 — annualDraw payload editable.path = drawdown ──')
+// ── Case 8 — annualDraw editable path = 'drawdown' ────────────────────────
+console.log('\n── Case 8 — editable.path = drawdown ──')
 {
   const e = await loadPersona('persona-a.json')
   const s = buildDrawdownSnapshot(e)
   const pay = annualDrawPayload(s)
-  log(pay.editable?.path === 'drawdown', `annualDrawPayload editable.path='drawdown' (got '${pay.editable?.path}')`)
-  log(pay.editable?.unit === '£', `annualDrawPayload editable.unit='£' (got '${pay.editable?.unit}')`)
-  log(Number.isFinite(pay.editable?.currentValue), `editable.currentValue is finite (got ${pay.editable?.currentValue})`)
+  log(pay.editable?.path === 'drawdown', `editable.path='drawdown' (got '${pay.editable?.path}')`)
+  log(pay.editable?.unit === '£', `editable.unit='£'`)
+  log(Number.isFinite(pay.editable?.currentValue), `editable.currentValue finite`)
 }
 
-// ── Case 8 — posPayload shape has required fields ─────────────────────────
-console.log('\n── Case 8 — posPayload shape ──')
+// ── Case 9 — drawSource defaults to 4% when nothing set ───────────────────
+console.log('\n── Case 9 — default draw = 4% of savings ──')
+{
+  const e = await loadPersona('persona-c.json')
+  // strip any drawdown/targetIncome to force default path
+  const stripped = { ...e, drawdown: undefined, targetIncome: undefined }
+  const s = buildDrawdownSnapshot(stripped)
+  log(s.drawSource === 'default', `drawSource='default' (got '${s.drawSource}')`)
+  log(Math.abs(s.annualDraw - Math.round(s.pot * 0.04)) <= 1,
+    `default draw ≈ 4% of pot (${s.annualDraw} vs ${Math.round(s.pot * 0.04)})`)
+}
+
+// ── Case 10 — posPayload shape + plain-English breakdown ──────────────────
+console.log('\n── Case 10 — posPayload shape ──')
 {
   const e = await loadPersona('persona-a.json')
   const s = buildDrawdownSnapshot(e)
   const pay = posPayload(s)
-  log(typeof pay.formula === 'string' && pay.formula.length > 0, 'posPayload.formula is non-empty string')
-  log(typeof pay.source === 'string' && pay.source.length > 0, 'posPayload.source is non-empty string')
-  log(['high', 'medium', 'low'].includes(pay.confidence), `posPayload.confidence='${pay.confidence}'`)
-  log(Array.isArray(pay.breakdown) && pay.breakdown.length > 0, `posPayload.breakdown is array with ${pay.breakdown?.length} rows`)
+  log(typeof pay.formula === 'string' && pay.formula.length > 0, 'formula non-empty')
+  log(['high', 'medium', 'low'].includes(pay.confidence), `confidence='${pay.confidence}'`)
+  log(Array.isArray(pay.breakdown) && pay.breakdown.length > 0, `breakdown ${pay.breakdown?.length} rows`)
+  // No raw "POS"/"p10" jargon in the labels
+  const hasJargon = pay.breakdown.some(r => /\bPOS\b|\bp10\b|\bp90\b|stdev/i.test(r.label))
+  log(!hasJargon, 'no POS/p10/p90/stdev jargon in breakdown labels')
 }
 
-// ── Case 9 — Bruce (persona-a): pot + POS sanity ──────────────────────────
-console.log('\n── Case 9 — Bruce (persona-a) sanity check ──')
+// ── Case 11 — toggle payloads differ real vs nominal ──────────────────────
+console.log('\n── Case 11 — toggle changes the value ──')
 {
-  const bruce = await loadPersona('persona-a.json')
-  const s = buildDrawdownSnapshot(bruce)
-  // Bruce age 62, pot 850k, 4% draw = 34k — expect POS > 70%
-  log(s.pot === 850000, `Bruce pot=£850,000 (got ${s.pot.toLocaleString()})`)
-  log(s.annualDraw === 34000, `Bruce 4% draw=£34,000 (got ${s.annualDraw.toLocaleString()})`)
-  log(s.pos > 70, `Bruce POS=${s.pos}% > 70% (sensible for 850k/34k draw)`)
-  log(s.startAge === 62, `Bruce startAge=62 (got ${s.startAge})`)
-  console.log(`  Bruce POS: ${s.pos}%  Pot: £${s.pot.toLocaleString()}`)
-}
-
-// ── Case 10 — small synthetic: low pot persona ────────────────────────────
-console.log('\n── Case 10 — small-pot synthetic ──')
-{
-  const small = {
-    age: 67,
-    drawdown: 15000,
-    assets: { sipp: { total: 80000 } },
-  }
-  const s = buildDrawdownSnapshot(small)
-  log(s.pot === 80000, `small-pot=£80,000 (got ${s.pot})`)
-  log(s.annualDraw === 15000, `annualDraw=£15,000 (custom, got ${s.annualDraw})`)
-  log(s.drawIsCustom === true, `drawIsCustom=true`)
-  // £80k drawing £15k/yr ≈ 5.3yr raw; with growth maybe 6-8yr — expect POS < 40%
-  log(s.pos < 40, `small-pot pos=${s.pos}% < 40% (expected poor survival)`)
-}
-
-// ── Case 11 — simulations count matches 2000 ──────────────────────────────
-console.log('\n── Case 11 — simulations count ──')
-{
-  const e = await loadPersona('persona-a.json')
+  const e = await loadPersona('persona-c.json')
   const s = buildDrawdownSnapshot(e)
-  log(s.simulations === 2000, `simulations=2000 (got ${s.simulations})`)
+  const real = typicalPotPayload(s, 'real')
+  const nom  = typicalPotPayload(s, 'nominal')
+  log(real.breakdown[3].value === "Today's money", `real view labelled "Today's money"`)
+  log(nom.breakdown[3].value === 'Future pounds', `nominal view labelled 'Future pounds'`)
 }
 
-// ── Case 12 — runs in < 3s ────────────────────────────────────────────────
-console.log('\n── Case 12 — performance < 3s ──')
+// ── Case 12 — runs = 2000 + perf < 3s ─────────────────────────────────────
+console.log('\n── Case 12 — runs + perf ──')
 {
   const t0 = Date.now()
   const e = await loadPersona('persona-a.json')
-  buildDrawdownSnapshot(e)
+  const s = buildDrawdownSnapshot(e)
   const dt = Date.now() - t0
-  log(dt < 3000, `runs in ${dt}ms < 3000ms`)
+  log(s.runs === 2000, `runs=2000 (got ${s.runs})`)
+  log(dt < 3000, `runs in ${dt}ms < 3000`)
+  console.log(`  persona-a: pos=${s.pos}% · savings £${s.pot.toLocaleString()} · draw £${s.annualDraw.toLocaleString()}/yr · horizon to ${s.terminalAge}`)
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────

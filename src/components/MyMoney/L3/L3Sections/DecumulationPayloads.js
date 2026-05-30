@@ -99,14 +99,15 @@ export function fundedRatioPayload(snap) {
     }
   }
   return {
-    formula: `Projected assets at retirement ÷ required pot. Required pot = targetIncome ÷ SWR (${pctStr(snap.swrRate)}). Assets projected at 5% nominal growth over horizon. ${snap.fundedRatioPct}% = ${snap.fundedRatioPct >= 100 ? 'fully funded' : 'underfunded — gap to close'}.`,
-    source: 'engine.fundedRatio(entity, null) — projects current investable forward, inflates targetIncome at 2.5%/yr, divides by (inflated target ÷ SWR).',
+    formula: `We grow your savings to retirement, then compare them with what you'd need to fund your target income for life. ${snap.fundedRatioPct}% means your savings cover ${snap.fundedRatioPct}% of what's needed — ${snap.fundedRatioPct >= 100 ? 'fully on track' : 'a gap to close'}. Uses the plan's market assumptions: 5.8% a year growth and ${Math.round(snap.inflation * 100)}% a year inflation.`,
+    source: 'engine.fundedRatio(entity, CMA bundle) — grows your savings at 5.8% a year, rises your target income with 2.7% inflation, then divides what you have by what you need.',
     confidence: snap.frConfidence === 'HIGH' ? 'high' : 'medium',
     breakdown: [
-      { label: 'Funded ratio',    value: `${snap.fundedRatioPct}%` },
-      { label: 'Interpretation',  value: snap.fundedRatioPct >= 100 ? 'Fully funded' : `${100 - snap.fundedRatioPct}% gap — projected pot below required` },
-      { label: 'Model confidence', value: snap.frConfidence },
-      { label: 'SWR used',        value: snap.swrLabel },
+      { label: 'How well-funded you are', value: `${snap.fundedRatioPct}%` },
+      { label: 'What this means',          value: snap.fundedRatioPct >= 100 ? 'Fully on track' : `${100 - snap.fundedRatioPct}% short of what you'd need` },
+      { label: 'Growth assumed',           value: '5.8% a year' },
+      { label: 'Inflation assumed',        value: `${Math.round(snap.inflation * 100)}% a year` },
+      { label: 'Safe income rate',         value: snap.swrLabel },
     ],
   }
 }
@@ -141,7 +142,30 @@ export function runwayYearsPayload(snap) {
       { label: 'Investable assets',   value: fmt(snap.investableAssets) },
       { label: 'Target income',       value: fmt(snap.targetIncome) },
       { label: 'Years of cover',      value: `${snap.runwayYears} yrs (zero-growth floor)` },
-      { label: 'Note', value: 'Real runway is longer once investment growth is applied — see funded ratio for the growth-adjusted view.' },
+      { label: 'Note', value: 'Your savings would actually last longer once investment growth is added — see "How well-funded you are" for the growth-adjusted view.' },
+    ],
+  }
+}
+
+/**
+ * Projected savings at retirement — read-only, view = 'real' | 'nominal'.
+ */
+export function projectedSavingsPayload(snap, view) {
+  const val = view === 'real' ? snap.projected.real : snap.projected.nominal
+  const moneyNote = view === 'real'
+    ? `Shown in today's money — adjusted back by ${Math.round(snap.inflation * 100)}%-a-year inflation so you can compare with prices now.`
+    : `Shown in future pounds — the actual amount in ${snap.horizonYears} years, before adjusting for inflation.`
+  return {
+    formula: `Your savings of ${fmt(snap.investableAssets)} grown at 5.8% a year for ${snap.horizonYears} years to retirement. ${moneyNote}`,
+    source: 'engine.fundedRatio(entity, CMA bundle) — actual_assets_at_retirement (grown at the plan growth rate).',
+    confidence: snap.frConfidence === 'HIGH' ? 'high' : 'medium',
+    breakdown: [
+      { label: 'Savings now',                 value: fmt(snap.investableAssets) },
+      { label: 'Years until retirement',      value: `${snap.horizonYears}` },
+      { label: 'In future pounds',            value: fmt(snap.projected.nominal) },
+      { label: "In today's money",            value: fmt(snap.projected.real) },
+      { label: 'What you would need',          value: view === 'real' ? fmt(snap.required.real) : fmt(snap.required.nominal) },
+      { label: 'Shown as',                    value: view === 'real' ? "Today's money" : 'Future pounds' },
     ],
   }
 }

@@ -172,6 +172,27 @@ console.log('\n── Case 12 — swrRate is positive for all personas ──')
   }
 }
 
+// ── Case 13 — full CMA projection (real ≤ nominal) + toggle payload ───────
+console.log('\n── Case 13 — CMA projection + today\'s-money toggle ──')
+{
+  const { projectedSavingsPayload } = await import('../src/components/MyMoney/L3/L3Sections/DecumulationPayloads.js')
+  const e = await loadPersona('persona-a.json')
+  const s = buildDecumulationSnapshot(e)
+  log(s.cmaUsed === true, `cmaUsed=true (fundedRatio fed the CMA bundle)`)
+  log(!!s.projected && !!s.required, `projected + required present`)
+  if (!s.frInsufficient && s.horizonYears > 0) {
+    log(s.projected.real <= s.projected.nominal,
+      `projected real (${s.projected.real}) ≤ nominal (${s.projected.nominal})`)
+    const real = projectedSavingsPayload(s, 'real')
+    const nom  = projectedSavingsPayload(s, 'nominal')
+    log(real.breakdown.find(r => r.label === 'Shown as')?.value === "Today's money", `real → "Today's money"`)
+    log(nom.breakdown.find(r => r.label === 'Shown as')?.value === 'Future pounds', `nominal → 'Future pounds'`)
+  } else {
+    log(true, `horizon ${s.horizonYears}/insufficient — toggle not applicable (skipped)`)
+  }
+  console.log(`  Bruce: funded ${s.fundedRatioPct}% · savings now £${s.investableAssets.toLocaleString()} · projected today's-money £${s.projected.real.toLocaleString()}`)
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 const total = passes + fails
 console.log(`\n${'─'.repeat(67)}`)

@@ -10,6 +10,14 @@
 
 import { investable, fundedRatio, swrFromRegime } from '../../../../engine/fq-calculator.js'
 import { targetIncome, runwayWithDrawdown } from '../../../../engine/_helpers.js'
+import CMA_BUNDLE from '../../../../rules/cma-2026.json' with { type: 'json' }
+
+// Express a future nominal £ amount in today's money.
+function _toTodaysMoney(future, inflation, years) {
+  if (!Number.isFinite(future)) return 0
+  const f = Math.pow(1 + (inflation || 0), Math.max(0, years || 0))
+  return f > 0 ? Math.round(future / f) : future
+}
 
 /**
  * Build a decumulation sustainability snapshot for the panel.
@@ -63,20 +71,37 @@ export function buildDecumulationSnapshot(entity) {
   // ── sustainable income ──────────────────────────────────────────────────────
   const sustainableIncome = Math.round(investableAssets * swrRate)
 
-  // ── funded ratio ─────────────────────────────────────────────────────────────
-  let fundedRatioPct  = null
-  let frConfidence    = 'INSUFFICIENT'
-  let frInsufficient  = true
+  // ── funded ratio (full CMA: 5.8% growth, 2.7% inflation) ────────────────────
+  let fundedRatioPct      = null
+  let frConfidence        = 'INSUFFICIENT'
+  let frInsufficient      = true
+  let requiredNominal     = 0   // what you'd need at retirement (future £)
+  let horizonYears        = 0
+  const inflation = CMA_BUNDLE.inflation || 0.027
+  const growth    = CMA_BUNDLE.growth || 0.058
   try {
-    const fr = fundedRatio(entity, null)
+    const fr = fundedRatio(entity, CMA_BUNDLE)
     frInsufficient = fr.insufficient_data === true
     frConfidence   = fr.confidence || 'INSUFFICIENT'
     if (!frInsufficient && fr.ratio != null) {
-      fundedRatioPct = Math.round(fr.ratio * 100)
+      fundedRatioPct   = Math.round(fr.ratio * 100)
+      requiredNominal  = fr.required_assets || 0
+      horizonYears     = fr.horizon_years || 0
     }
   } catch (_) {
     // stays null / INSUFFICIENT
   }
+  // Project the SAME savings figure shown to the user (investableAssets) at the
+  // CMA growth rate — so "savings now" and "projected savings" reconcile and
+  // never look like the pot shrank. (fundedRatio's internal asset reader is
+  // narrower than investable(); we keep its ratio as the headline but grow the
+  // displayed figure consistently here.)
+  const projectedNominal = horizonYears > 0
+    ? Math.round(investableAssets * Math.pow(1 + growth, horizonYears))
+    : investableAssets
+  // Same figures expressed in today's money (today's purchasing power).
+  const projectedReal = _toTodaysMoney(projectedNominal, inflation, horizonYears)
+  const requiredReal  = _toTodaysMoney(requiredNominal,  inflation, horizonYears)
 
   // ── runway ──────────────────────────────────────────────────────────────────
   // Simple capital-depletion cover: investable ÷ targetIncome.
@@ -104,5 +129,11 @@ export function buildDecumulationSnapshot(entity) {
     onTrack,
     frConfidence,
     frInsufficient,
+    // CMA-projected savings at retirement, in both views (for the toggle).
+    horizonYears,
+    inflation,
+    projected: { nominal: Math.round(projectedNominal), real: projectedReal },
+    required:  { nominal: Math.round(requiredNominal),  real: requiredReal },
+    cmaUsed: true,
   }
 }

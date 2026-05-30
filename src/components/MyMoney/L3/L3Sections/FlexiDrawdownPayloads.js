@@ -1,143 +1,99 @@
 // FlexiDrawdownPayloads.js — pure payload builders for DrillableNumber → L4.
 //
-// Plan reference: MyMoney L3 Tier-A — pension drawdown sustainability.
+// 2026-05-30: rewritten for the full CMA engine (probabilityOfSuccess) +
+// today's-money / future-pounds toggle. Each builder returns
+// { formula, source, confidence, breakdown, editable? }. No React.
 //
-// Each builder returns { formula, source, confidence, breakdown } consumed
-// by DrillableNumber. No React. All values are pre-formatted strings or
-// raw numbers ready for display.
+// Plain English in the user-facing breakdown labels; the engine path is named
+// in `source` for the curious.
 
 import { fmt } from '../../../../engine/fq-calculator.js'
 
-/**
- * Payload for the hero POS metric.
- * Explains the Monte Carlo simulation behind the % figure.
- *
- * @param {object} snap — result of buildDrawdownSnapshot
- * @returns {{ formula, source, confidence, breakdown }}
- */
-export function posPayload(snap) {
-  const drawDesc = snap.drawIsCustom
-    ? `£${snap.annualDraw.toLocaleString()} (user-set entity.drawdown)`
-    : `${fmt(snap.annualDraw)}/yr (4% illustrative default — no drawdown set)`
+const drawSourceLabel = {
+  custom: 'the amount you set',
+  target: 'your target retirement income',
+  default: '4% of your savings (a starting point)',
+}
 
+// Hero — "chance your money lasts".
+export function posPayload(snap) {
   return {
-    formula: `Monte Carlo simulation: ${snap.simulations.toLocaleString()} random return paths, each run from age ${snap.startAge} to age ${snap.terminalAge}. Each path applies annual drawdown of ${drawDesc}, then applies a stochastic real return drawn from N(4%, 10%) (CMA assumptions: 4% real mean, 10% stdev). POS = fraction of paths where the pot remains above zero at age ${snap.terminalAge}.`,
-    source: 'scenarios.monteCarloPOS(entity, annualDraw, { simulations:2000, terminalAge:95 }) — real simulation, not a rule-of-thumb.',
+    formula: `We ran ${snap.runs.toLocaleString()} simulated futures from age ${snap.startAge} to age ${snap.terminalAge}. Each future draws a different run of market returns (built from the market and inflation assumptions in the plan) and rises your yearly income with prices. The "chance it lasts" is the share of those futures where the money never runs out. The State Pension is added in from age ${snap.statePensionFrom}.`,
+    source: 'cashflow-engine.probabilityOfSuccess(entity, CMA bundle, 2000 runs) — lognormal market returns, inflation as a yearly rising cost, State Pension included.',
     confidence: snap.pot > 0 ? 'high' : 'low',
     breakdown: [
-      { label: 'Pot at simulation start',    value: fmt(snap.pot) },
-      { label: 'Annual drawdown assumed',    value: fmt(snap.annualDraw) },
-      { label: 'Drawdown source',            value: snap.drawIsCustom ? 'entity.drawdown (user-set)' : '4% of pot (illustrative default)' },
-      { label: 'Simulations run',            value: snap.simulations.toLocaleString() },
-      { label: 'Projection horizon',         value: `age ${snap.startAge} → age ${snap.terminalAge}` },
-      { label: 'Probability of survival',    value: `${snap.pos}%` },
-      { label: 'Return assumption (mean)',   value: '4% real (CMA default)' },
-      { label: 'Return assumption (stdev)',  value: '10% (CMA default)' },
+      { label: 'Your retirement savings',      value: fmt(snap.pot) },
+      { label: 'Income drawn each year',       value: `${fmt(snap.annualDraw)} (${drawSourceLabel[snap.drawSource]})` },
+      { label: 'Simulated futures',            value: snap.runs.toLocaleString() },
+      { label: 'Time horizon',                 value: `age ${snap.startAge} → ${snap.terminalAge}` },
+      { label: 'Chance it lasts',              value: `${snap.pos}%` },
+      { label: 'Inflation assumed',            value: `${Math.round(snap.inflation * 100)}% a year` },
+      { label: 'State Pension included from',  value: `age ${snap.statePensionFrom}` },
     ],
   }
 }
 
-/**
- * Payload for the current pension pot row.
- * Explains pensionTotal composition.
- *
- * @param {object} snap
- * @returns {{ formula, source, confidence, breakdown }}
- */
 export function potPayload(snap) {
   return {
-    formula: 'Sum of all SIPP + workplace DC pensions via pensionTotal(entity). Occupational-DB entries without a CETV are excluded (FP-4 rule — DB income floor, not a liquidatable pot).',
-    source: 'engine.pensionTotal(entity) — walks assets.sipp.pensions[], assets.pensions[], falls back to assets.sipp.total.',
+    formula: 'Your savings the model can draw on: pensions + ISAs + other investments + cash. Property is not counted because it cannot easily be spent in retirement.',
+    source: 'engine.investable(entity) — pensions + ISAs + investments + cash (excludes property).',
     confidence: snap.pot > 0 ? 'high' : 'low',
     breakdown: [
-      { label: 'Total pension pot', value: fmt(snap.pot) },
-      { label: 'Note', value: 'Tap the Pension wrapper row for per-scheme breakdown.' },
+      { label: 'Savings the model can draw on', value: fmt(snap.pot) },
+      { label: 'Note', value: 'Tap the Wrappers or Pension panels for the per-pot breakdown.' },
     ],
   }
 }
 
-/**
- * Payload for the annual drawdown row — EDITABLE.
- * path: 'drawdown' on entity root.
- *
- * @param {object} snap
- * @returns {{ formula, source, confidence, breakdown, editable }}
- */
+// Editable — the yearly income / drawdown. Wired to entity.drawdown.
 export function annualDrawPayload(snap) {
   return {
-    formula: snap.drawIsCustom
-      ? 'User-set annual drawdown amount. Edit to model a different withdrawal rate.'
-      : 'Illustrative default: 4% of total pension pot. No drawdown schedule is set on this entity — update entity.drawdown to use a real figure.',
-    source: snap.drawIsCustom
-      ? 'entity.drawdown (user-set)'
-      : 'Derived: 0.04 × pensionTotal(entity) — 4% illustrative default.',
-    confidence: snap.drawIsCustom ? 'high' : 'medium',
+    formula: snap.drawSource === 'default'
+      ? 'No income figure is set yet, so the model uses 4% of your savings as a sensible starting point. Set your own figure to see how it changes the result.'
+      : 'The income you plan to take each year. The model rises this with inflation every year, so your spending power stays roughly level.',
+    source: snap.drawSource === 'custom' ? 'entity.drawdown (you set this)'
+          : snap.drawSource === 'target' ? 'entity.targetIncome'
+          : 'Starting point: 4% of your savings.',
+    confidence: snap.drawSource === 'default' ? 'medium' : 'high',
     breakdown: [
-      { label: 'Annual drawdown', value: fmt(snap.annualDraw) },
-      { label: 'Drawdown source', value: snap.drawIsCustom ? 'User-set' : '4% of pot (default — tap to override)' },
-      { label: 'Monthly equivalent', value: fmt(snap.annualDraw / 12) },
+      { label: 'Income each year',   value: fmt(snap.annualDraw) },
+      { label: 'Roughly per month',  value: fmt(Math.round(snap.annualDraw / 12)) },
+      { label: 'Where this comes from', value: drawSourceLabel[snap.drawSource] },
     ],
     editable: {
       path: 'drawdown',
-      label: 'Annual drawdown amount',
+      label: 'Income you draw each year',
       currentValue: snap.annualDraw,
       unit: '£',
     },
   }
 }
 
-/**
- * Payload for the median pot at terminal age row.
- *
- * @param {object} snap
- * @returns {{ formula, source, confidence, breakdown }}
- */
-export function medianPotPayload(snap) {
+// Shared helper for the three outcome rows — view = 'real' | 'nominal'.
+function _bandPayload(snap, view, key, plainLabel) {
+  const band = view === 'real' ? snap.real : snap.nominal
+  const moneyNote = view === 'real'
+    ? `Shown in today's money — future pounds adjusted back by ${Math.round(snap.inflation * 100)}% a year of inflation so you can compare with prices now.`
+    : `Shown in future pounds — the actual £ figure at age ${snap.terminalAge}, before adjusting for ${Math.round(snap.inflation * 100)}%-a-year inflation.`
   return {
-    formula: `50th percentile pot value at age ${snap.terminalAge} across ${snap.simulations.toLocaleString()} Monte Carlo paths. Half of simulations end above this figure, half below.`,
-    source: 'scenarios.monteCarloPOS — percentilesByAge[last].p50',
-    confidence: snap.pos > 0 ? 'high' : 'medium',
+    formula: `${plainLabel} of the ${snap.runs.toLocaleString()} simulated futures, measured at age ${snap.terminalAge}. ${moneyNote}`,
+    source: `cashflow-engine.probabilityOfSuccess — terminal-pot ${key} (${view === 'real' ? 'discounted to today' : 'nominal'}).`,
+    confidence: snap.pot > 0 ? 'high' : 'medium',
     breakdown: [
-      { label: `Median pot at age ${snap.terminalAge}`, value: fmt(snap.p50) },
-      { label: 'Pessimistic (p10)',  value: fmt(snap.p10) },
-      { label: 'Optimistic (p90)',   value: fmt(snap.p90) },
-      { label: 'Note', value: 'Based on CMA assumptions: 4% real mean, 10% stdev.' },
+      { label: 'Typical (middle) outcome',      value: fmt(band.p50) },
+      { label: 'If markets are unkind (1 in 10)', value: fmt(band.p10) },
+      { label: 'If markets are kind (1 in 10)',   value: fmt(band.p90) },
+      { label: 'Shown as', value: view === 'real' ? "Today's money" : 'Future pounds' },
     ],
   }
 }
 
-/**
- * Payload for p10 pessimistic pot row.
- *
- * @param {object} snap
- * @returns {{ formula, source, confidence, breakdown }}
- */
-export function p10Payload(snap) {
-  return {
-    formula: `10th percentile pot at age ${snap.terminalAge} — the pot size in the bottom 10% of outcomes. Use this as the stress-test floor.`,
-    source: 'scenarios.monteCarloPOS — percentilesByAge[last].p10',
-    confidence: 'high',
-    breakdown: [
-      { label: `Pessimistic (p10) at age ${snap.terminalAge}`, value: fmt(snap.p10) },
-      { label: 'Interpretation', value: '9 in 10 outcomes leave more than this in the pot.' },
-    ],
-  }
+export function typicalPotPayload(snap, view) {
+  return _bandPayload(snap, view, 'median', 'The middle outcome')
 }
-
-/**
- * Payload for p90 optimistic pot row.
- *
- * @param {object} snap
- * @returns {{ formula, source, confidence, breakdown }}
- */
-export function p90Payload(snap) {
-  return {
-    formula: `90th percentile pot at age ${snap.terminalAge} — the pot size in the top 10% of outcomes. Use as the upside ceiling.`,
-    source: 'scenarios.monteCarloPOS — percentilesByAge[last].p90',
-    confidence: 'high',
-    breakdown: [
-      { label: `Optimistic (p90) at age ${snap.terminalAge}`, value: fmt(snap.p90) },
-      { label: 'Interpretation', value: 'Only 1 in 10 outcomes leave more than this.' },
-    ],
-  }
+export function unluckyPotPayload(snap, view) {
+  return _bandPayload(snap, view, 'p10', 'A poor run for markets — the worst 1 in 10')
+}
+export function luckyPotPayload(snap, view) {
+  return _bandPayload(snap, view, 'p90', 'A good run for markets — the best 1 in 10')
 }

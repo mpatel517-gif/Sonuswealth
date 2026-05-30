@@ -1,166 +1,185 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// FlexiDrawdownPanel — Tier-A L3 panel: pension drawdown sustainability.
+// FlexiDrawdownPanel — L3 panel: "will my pension pot last?"
 //
-// Plan reference: MyMoney L3 Tier-A — flexi-drawdown.
+// 2026-05-30: now powered by the full CMA engine (probabilityOfSuccess) —
+// lognormal market returns built from the CMA bundle, inflation modelled as a
+// rising cost each year, and the State Pension layered in. Shows results in
+// today's money OR future pounds via a plain-English toggle.
 //
-// Domain config:
-//   · hero         = POS% (monteCarloPOS probability) — chance pot lasts to 95
-//   · taxTreatment = pension drawdown tax rules (plain English)
-//   · middle[]     = Sustainability section: pot, drawdown (editable), POS,
-//                    percentile bands at terminal age
-//   · confidence   = high when pot > 0 (real MC result)
-//
-// Per CLAUDE.md §0.3 (banned codes): plain English only. No "SWR" in user copy.
+// Per CLAUDE.md §0.3: plain English only. No "POS", "SWR", "p10/p90" in the
+// labels the user reads — those live in the drill detail, not the row titles.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { L3Panel }             from '../L3Panel.jsx'
-import { DrillableNumber }     from '../DrillableNumber.jsx'
-import { useDrillStackContext } from '../DrillStack.jsx'
-import { fmt }                  from '../../../../engine/fq-calculator.js'
+import { useState }              from 'react'
+import { L3Panel }               from '../L3Panel.jsx'
+import { DrillableNumber }       from '../DrillableNumber.jsx'
+import { useDrillStackContext }  from '../DrillStack.jsx'
+import { fmt }                   from '../../../../engine/fq-calculator.js'
 import { buildDrawdownSnapshot } from './FlexiDrawdownPanel.data.js'
 import {
   posPayload,
   potPayload,
   annualDrawPayload,
-  medianPotPayload,
-  p10Payload,
-  p90Payload,
+  typicalPotPayload,
+  unluckyPotPayload,
+  luckyPotPayload,
 } from './FlexiDrawdownPayloads.js'
 
-function SustainabilitySection({ snap, pushNumber }) {
-  const rows = [
+// Plain-English toggle: today's money vs future pounds.
+function MoneyViewToggle({ view, setView }) {
+  const opt = (key, label, hint) => (
+    <button
+      type="button"
+      onClick={() => setView(key)}
+      data-money-view={key}
+      title={hint}
+      style={{
+        flex: 1,
+        padding: '6px 8px',
+        fontSize: 'var(--fs-xsmall, 10px)',
+        fontWeight: 600,
+        cursor: 'pointer',
+        border: `1px solid ${view === key ? 'var(--c-acc, #5ddbc2)' : 'var(--c-border, rgba(255,255,255,0.15))'}`,
+        background: view === key ? 'rgba(93,219,194,0.15)' : 'transparent',
+        color: view === key ? 'var(--c-acc, #5ddbc2)' : 'var(--c-text2)',
+        borderRadius: 6,
+      }}
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+      {opt('real', 'In today’s money', 'Future pounds adjusted back to what they would buy today')}
+      {opt('nominal', 'Future pounds', 'The actual £ figures in future years, before adjusting for rising prices')}
+    </div>
+  )
+}
+
+function SustainabilitySection({ snap, view, setView, pushNumber }) {
+  const band = view === 'real' ? snap.real : snap.nominal
+
+  // pot / draw / chance are view-independent (today's money / a probability).
+  const fixedRows = [
     {
       key: 'pot',
-      label: 'Current pension pot',
+      label: 'Your retirement savings',
       value: fmt(snap.pot),
       payload: potPayload(snap),
       readOnly: true,
     },
     {
       key: 'draw',
-      label: snap.drawIsCustom ? 'Annual drawdown' : 'Annual drawdown (illustrative 4%)',
+      label: snap.drawSource === 'default'
+        ? 'Income you draw each year (a starting 4%)'
+        : 'Income you draw each year',
       value: fmt(snap.annualDraw),
       payload: annualDrawPayload(snap),
       readOnly: false,
     },
     {
       key: 'pos',
-      label: `Probability of lasting to age ${snap.terminalAge}`,
+      label: `Chance it lasts to age ${snap.terminalAge}`,
       value: `${snap.pos}%`,
       payload: posPayload(snap),
       readOnly: true,
     },
+  ]
+
+  // The three outcome rows flip with the toggle.
+  const bandRows = [
     {
       key: 'p50',
-      label: `Median pot at age ${snap.terminalAge}`,
-      value: fmt(snap.p50),
-      payload: medianPotPayload(snap),
-      readOnly: true,
+      label: `Typical outcome — left at age ${snap.terminalAge}`,
+      value: fmt(band.p50),
+      payload: typicalPotPayload(snap, view),
     },
     {
       key: 'p10',
-      label: `Pessimistic outcome (p10) at age ${snap.terminalAge}`,
-      value: fmt(snap.p10),
-      payload: p10Payload(snap),
-      readOnly: true,
+      label: 'If markets are unkind (worst 1 in 10)',
+      value: fmt(band.p10),
+      payload: unluckyPotPayload(snap, view),
     },
     {
       key: 'p90',
-      label: `Optimistic outcome (p90) at age ${snap.terminalAge}`,
-      value: fmt(snap.p90),
-      payload: p90Payload(snap),
-      readOnly: true,
+      label: 'If markets are kind (best 1 in 10)',
+      value: fmt(band.p90),
+      payload: luckyPotPayload(snap, view),
     },
   ]
 
+  const renderRow = (row) => (
+    <div
+      key={row.key}
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        padding: '5px 0',
+        borderBottom: '1px solid var(--c-border-subtle, rgba(255,255,255,0.06))',
+      }}
+    >
+      <span style={{ fontSize: 'var(--fs-small, 12px)', color: 'var(--c-text2)', flex: 1, paddingRight: 8 }}>
+        {row.label}
+      </span>
+      <DrillableNumber
+        metric={`Flexi-drawdown · ${row.label}`}
+        value={row.value}
+        formula={row.payload.formula}
+        source={row.payload.source}
+        confidence={row.payload.confidence}
+        breakdown={row.payload.breakdown}
+        editable={row.payload.editable}
+        onDrill={pushNumber}
+      >
+        <span
+          style={{
+            fontVariantNumeric: 'tabular-nums',
+            fontSize: 'var(--fs-small, 12px)',
+            color: row.key === 'pos'
+              ? (snap.pos >= 75 ? 'var(--c-good, var(--c-acc))' : snap.pos >= 50 ? 'var(--c-warn, #F5A623)' : 'var(--c-bad, #E05252)')
+              : 'var(--c-text)',
+          }}
+        >
+          {row.value}
+        </span>
+      </DrillableNumber>
+    </div>
+  )
+
   return (
     <div data-section-label="Sustainability" style={{ padding: '4px 6px' }}>
-      <div
-        style={{
-          fontSize: 8,
-          opacity: 0.6,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          marginBottom: 8,
-        }}
-      >
-        Drawdown sustainability
+      <div style={{ fontSize: 8, opacity: 0.6, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Will your money last?
       </div>
-      {rows.map(row => (
-        <div
-          key={row.key}
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            padding: '5px 0',
-            borderBottom: '1px solid var(--c-border-subtle, rgba(255,255,255,0.06))',
-          }}
-        >
-          <span
-            style={{
-              fontSize: 'var(--fs-small, 12px)',
-              color: 'var(--c-text2)',
-              flex: 1,
-              paddingRight: 8,
-            }}
-          >
-            {row.label}
-          </span>
-          <DrillableNumber
-            metric={`Flexi-drawdown · ${row.label}`}
-            value={row.value}
-            formula={row.payload.formula}
-            source={row.payload.source}
-            confidence={row.payload.confidence}
-            breakdown={row.payload.breakdown}
-            editable={row.payload.editable}
-            onDrill={pushNumber}
-          >
-            <span
-              style={{
-                fontVariantNumeric: 'tabular-nums',
-                fontSize: 'var(--fs-small, 12px)',
-                color: row.key === 'pos'
-                  ? (snap.pos >= 75 ? 'var(--c-good, var(--c-acc))' : snap.pos >= 50 ? 'var(--c-warn, #F5A623)' : 'var(--c-bad, #E05252)')
-                  : 'var(--c-text)',
-              }}
-            >
-              {row.value}
-            </span>
-          </DrillableNumber>
-        </div>
-      ))}
-      {!snap.drawIsCustom && (
-        <div
-          style={{
-            marginTop: 8,
-            fontSize: 'var(--fs-xsmall, 10px)',
-            color: 'var(--c-text3)',
-            fontStyle: 'italic',
-          }}
-        >
-          No drawdown schedule set — using 4% of pot as an illustrative figure. Tap Annual drawdown to update.
-        </div>
-      )}
+      {fixedRows.map(renderRow)}
+
+      <div style={{ fontSize: 8, opacity: 0.6, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '12px 0 6px' }}>
+        What could be left at age {snap.terminalAge}
+      </div>
+      <MoneyViewToggle view={view} setView={setView} />
+      {bandRows.map(renderRow)}
+
+      <div style={{ marginTop: 8, fontSize: 'var(--fs-xsmall, 10px)', color: 'var(--c-text3)' }}>
+        Based on {snap.runs.toLocaleString()} simulated futures using market and inflation
+        assumptions ({Math.round(snap.inflation * 100)}% a year). The State Pension is
+        included from age {snap.statePensionFrom}.
+        {snap.drawSource === 'default' && ' No income amount set yet — using 4% of your savings as a starting point. Tap “Income you draw each year” to set your own.'}
+      </div>
     </div>
   )
 }
 
-/**
- * Flexi-drawdown L3 panel — sustainability + percentile bands.
- *
- * @param {{ entity: object, ripple?: object }} props
- */
 export function FlexiDrawdownPanel({ entity, ripple }) {
   const snap = buildDrawdownSnapshot(entity)
   const { pushNumber } = useDrillStackContext()
+  const [view, setView] = useState('real')
   const heroPay = posPayload(snap)
 
   const hero = {
     metric: (
       <DrillableNumber
-        metric="Flexi-drawdown · Probability of survival"
+        metric="Flexi-drawdown · Chance it lasts"
         value={`${snap.pos}%`}
         formula={heroPay.formula}
         source={heroPay.source}
@@ -171,38 +190,38 @@ export function FlexiDrawdownPanel({ entity, ripple }) {
         {`${snap.pos}%`}
       </DrillableNumber>
     ),
-    label: 'Chance your pension pot lasts',
+    label: 'Chance your money lasts',
     sublabel: snap.pot === 0
-      ? 'No pension pot recorded'
-      : `Pot ${fmt(snap.pot)} · drawing ${fmt(snap.annualDraw)}/yr to age ${snap.terminalAge} · tap to drill`,
+      ? 'No retirement savings recorded'
+      : `${fmt(snap.pot)} saved · drawing ${fmt(snap.annualDraw)}/yr to age ${snap.terminalAge} · tap to drill`,
   }
 
   const taxTreatment = {
     incomeTax: {
-      headline: 'Withdrawals taxed at your marginal rate; 25% tax-free cash',
-      detail: 'Each flexi-drawdown withdrawal is split: up to 25% of the uncrystallised pot can be taken tax-free (your Pension Commencement Lump Sum entitlement). The remaining 75% is added to your taxable income for the year and taxed at your marginal rate — so large withdrawals can push you into a higher band.',
+      headline: 'Withdrawals taxed at your normal rate; first 25% tax-free',
+      detail: 'You can take up to 25% of the pot as a tax-free lump sum. The rest counts as income for the year and is taxed at your normal rate — so a big one-off withdrawal can tip you into a higher tax band.',
     },
     capitalGains: {
-      headline: 'n/a — inside a pension',
-      detail: 'Growth inside a registered pension is sheltered from capital gains tax. CGT only applies once assets leave the pension wrapper.',
+      headline: 'None while the money stays in the pension',
+      detail: 'Growth inside a pension is free of capital gains tax. Tax only comes into play once money is withdrawn.',
     },
     inheritance: {
-      headline: 'Outside your estate until April 2027, then within it',
-      detail: 'Under Finance Act 2026 (Royal Assent March 2026, effective April 2027), unused pension pots will fall inside your estate for IHT purposes. Until then, nominated beneficiaries inherit the pot free of IHT — check your nomination is up to date.',
+      headline: 'Outside your estate until April 2027, then inside it',
+      detail: 'From April 2027 (Finance Act 2026), any unused pension counts towards inheritance tax. Until then it passes to the people you have nominated free of inheritance tax — worth checking your nomination is up to date.',
     },
   }
 
   const middle = [
     {
       key: 'sustainability',
-      render: () => <SustainabilitySection snap={snap} pushNumber={pushNumber} />,
+      render: () => <SustainabilitySection snap={snap} view={view} setView={setView} pushNumber={pushNumber} />,
     },
   ]
 
   const confidence = {
     level: snap.pot === 0 ? 'low' : 'high',
-    totalFields: 3, // pot, drawdown, age
-    verifiedFields: snap.pot > 0 ? (snap.drawIsCustom ? 3 : 2) : 0,
+    totalFields: 3,
+    verifiedFields: snap.pot > 0 ? (snap.drawSource === 'default' ? 2 : 3) : 0,
   }
 
   return (

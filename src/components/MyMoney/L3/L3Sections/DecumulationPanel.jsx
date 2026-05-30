@@ -16,6 +16,7 @@
 //   surfacing, no broker links.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState }              from 'react'
 import { L3Panel }               from '../L3Panel.jsx'
 import { DrillableNumber }        from '../DrillableNumber.jsx'
 import { useDrillStackContext }    from '../DrillStack.jsx'
@@ -28,39 +29,69 @@ import {
   fundedRatioPayload,
   sustainableIncomePayload,
   runwayYearsPayload,
+  projectedSavingsPayload,
 } from './DecumulationPayloads.js'
+
+// Plain-English toggle: today's money vs future pounds.
+function MoneyViewToggle({ view, setView }) {
+  const opt = (key, label) => (
+    <button
+      type="button"
+      onClick={() => setView(key)}
+      data-money-view={key}
+      style={{
+        flex: 1, padding: '5px 8px', fontSize: 'var(--fs-xsmall, 10px)', fontWeight: 600, cursor: 'pointer',
+        border: `1px solid ${view === key ? 'var(--c-acc, #5ddbc2)' : 'var(--c-border, rgba(255,255,255,0.15))'}`,
+        background: view === key ? 'rgba(93,219,194,0.15)' : 'transparent',
+        color: view === key ? 'var(--c-acc, #5ddbc2)' : 'var(--c-text2)',
+        borderRadius: 6,
+      }}
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div style={{ display: 'flex', gap: 6, margin: '8px 0' }}>
+      {opt('real', 'In today’s money')}
+      {opt('nominal', 'Future pounds')}
+    </div>
+  )
+}
 
 // ── Sub-component: Sustainability section ─────────────────────────────────────
 
-function SustainabilitySection({ snap, pushNumber }) {
+function SustainabilitySection({ snap, view, setView, pushNumber }) {
+  const showProjection = !snap.frInsufficient && snap.horizonYears > 0
+  const projected = view === 'real' ? snap.projected.real : snap.projected.nominal
+
   const rows = [
     {
       key:     'targetIncome',
-      label:   'Target annual income',
+      label:   'Income you want each year',
       display: fmt(snap.targetIncome) + '/yr',
       payload: targetIncomePayload(snap),
     },
     {
       key:     'investable',
-      label:   'Investable assets',
+      label:   'Savings you can draw on',
       display: fmt(snap.investableAssets),
       payload: investablePayload(snap),
     },
     {
       key:     'fundedRatio',
-      label:   'Funded ratio',
+      label:   'How well-funded you are',
       display: snap.frInsufficient ? '—' : `${snap.fundedRatioPct}%`,
       payload: fundedRatioPayload(snap),
     },
     {
       key:     'sustainableIncome',
-      label:   `Sustainable income (${snap.swrLabel})`,
+      label:   'Safe income each year',
       display: fmt(snap.sustainableIncome) + '/yr',
       payload: sustainableIncomePayload(snap),
     },
     {
       key:     'runway',
-      label:   'Years of cover (zero-growth floor)',
+      label:   'Years your savings would cover (no growth)',
       display: snap.runwayYears > 0 ? `${snap.runwayYears} yrs` : '—',
       payload: runwayYearsPayload(snap),
     },
@@ -77,7 +108,7 @@ function SustainabilitySection({ snap, pushNumber }) {
           marginBottom: 10,
         }}
       >
-        Sustainability
+        Will your money last?
       </div>
 
       {rows.map((row) => (
@@ -122,6 +153,35 @@ function SustainabilitySection({ snap, pushNumber }) {
           </span>
         </div>
       ))}
+
+      {showProjection && (
+        <>
+          <div style={{ fontSize: 8, opacity: 0.6, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '12px 0 4px' }}>
+            Your savings grown to age {snap.startAge ?? 'retirement'}
+          </div>
+          <MoneyViewToggle view={view} setView={setView} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+            <span style={{ fontSize: 'var(--fs-small, 12px)', color: 'var(--c-text2)', flex: 1 }}>
+              Projected savings by retirement
+            </span>
+            <span style={{ fontSize: 'var(--fs-small, 12px)', fontVariantNumeric: 'tabular-nums', color: 'var(--c-text)' }}>
+              <DrillableNumber
+                metric="Decumulation · Projected savings by retirement"
+                value={fmt(projected)}
+                {...projectedSavingsPayload(snap, view)}
+                onDrill={pushNumber}
+              >
+                {fmt(projected)}
+              </DrillableNumber>
+            </span>
+          </div>
+          <div style={{ marginTop: 6, fontSize: 'var(--fs-xsmall, 10px)', color: 'var(--c-text3)' }}>
+            {view === 'real'
+              ? `Shown in today's money — adjusted back by ${Math.round(snap.inflation * 100)}%-a-year inflation so you can compare with prices now.`
+              : `Shown in future pounds — the actual amount in ${snap.horizonYears} years, before adjusting for ${Math.round(snap.inflation * 100)}%-a-year inflation.`}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -151,9 +211,9 @@ function VerdictStrip({ snap }) {
         </>
       ) : (
         <>
-          <strong style={{ color: 'var(--c-warn, #FFA05A)' }}>Review needed.</strong>
-          {' '}At {snap.swrLabel}, your pot sustains {fmt(snap.sustainableIncome)}/yr against a target of {fmt(snap.targetIncome)}/yr.
-          {' '}Consider reducing spending, extending working years, or increasing contributions.
+          <strong style={{ color: 'var(--c-warn, #FFA05A)' }}>Worth a review.</strong>
+          {' '}Drawing at a safe rate, your savings give about {fmt(snap.sustainableIncome)}/yr — short of the {fmt(snap.targetIncome)}/yr you want.
+          {' '}It could help to spend a little less, work a bit longer, or save more before you stop.
         </>
       )}
     </div>
@@ -170,6 +230,7 @@ function VerdictStrip({ snap }) {
 export function DecumulationPanel({ entity, ripple }) {
   const snap         = buildDecumulationSnapshot(entity)
   const { pushNumber } = useDrillStackContext()
+  const [view, setView] = useState('real')
   const heroPayload  = decumulationHeroPayload(snap)
 
   // Hero metric: funded-ratio % when available; else years-of-runway
@@ -227,7 +288,7 @@ export function DecumulationPanel({ entity, ripple }) {
     },
     {
       key:    'sustainability',
-      render: () => <SustainabilitySection snap={snap} pushNumber={pushNumber} />,
+      render: () => <SustainabilitySection snap={snap} view={view} setView={setView} pushNumber={pushNumber} />,
     },
   ]
 

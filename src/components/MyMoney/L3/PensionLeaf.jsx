@@ -6,7 +6,7 @@ import OverlayShell from '../../shared/OverlayShell.jsx'
 import { MiniTrendLines } from './MiniTrendLines.jsx'
 import { projectSeries, growthRateFor } from '../../../engine/projection.js'
 import { getActiveCMA } from '../../../engine/cma.js'
-import { classifyPot, buildDecumulationPlan } from '../../../engine/decumulation-plan.js'
+import { classifyPot, rankDrawOrder } from '../../../engine/decumulation-plan.js'
 import { TAX } from '../../../engine/fq-calculator.js'
 import { useEvents, EV } from '../../../state/events.jsx'
 
@@ -36,10 +36,11 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
   const lsa = TAX?.lsa ?? 268275
   const tfcShare = Math.min((+pot.value || 0) * 0.25, lsa)
 
-  const plan = buildDecumulationPlan(pots, { age })
-  const role = isSipp
-    ? plan.sequence.find(s => s.action === 'flex')
-    : plan.sequence.find(s => s.action === 'verify')
+  // This pot's specific position in the draw-order (ties leaf to the map).
+  const enriched = pots.map(p => ({ ...p, expectedReturn: growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', cma) }))
+  const ranked = rankDrawOrder(enriched).ranked
+  const myRank = ranked.find(r => r.pot?.name === pot.name)
+  const ORD = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th' }
 
   const { commit } = useEvents()
   const [editing, setEditing] = useState(false)
@@ -71,17 +72,28 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Projection at {(rate * 100).toFixed(1)}% p.a. (assumption — not past performance). Adjust in Settings → Assumptions.</div>
         </div>
 
+        {pot.provider && <Row label="Provider" value={pot.provider} hint="Who administers this pot." />}
         <Row label="Annual charge" value={`${((pot.charge || 0) * 100).toFixed(2)}% ≈ ${fmt(dragPerYear)}/yr`} hint="What this pot costs you each year in fees." />
         <Row label="Tax-free cash from this pot" value={`up to ${fmt(tfcShare)}`} hint="25% of this pot, within your Lump Sum Allowance across all pensions." />
         <Row label="Who inherits" value={pot.nominationDate ? `Nomination on file (${pot.nominationDate})` : 'No nomination on file'} hint="From 6 April 2027 this pot counts toward your estate for inheritance tax." />
+        <Row label="Exit penalty / guarantees" value={isSipp ? 'None typical for a SIPP' : 'Not yet verified'} hint={isSipp ? 'Self-invested pots normally have no exit penalty.' : 'Legacy/workplace schemes can carry penalties, a protected pension age, or guaranteed benefits worth keeping. Check with the provider before drawing.'} />
 
-        {role && (
+        {/* Specific draw-order position — ties this leaf to the decision map */}
+        {myRank && (
           <div style={{ background: 'var(--c-surface,rgba(255,255,255,0.04))', borderRadius: 'var(--r-md,10px)', padding: 12 }}>
-            <div className="sw-eyebrow">ITS ROLE IN YOUR WITHDRAWAL PLAN</div>
-            <div style={{ fontWeight: 700, marginTop: 2 }}>Step {role.order}: {role.title}</div>
-            <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4 }}>{role.reason}</div>
+            <div className="sw-eyebrow">WHEN TO TURN THIS INTO INCOME</div>
+            <div style={{ fontWeight: 700, marginTop: 2 }}>
+              {myRank.priority === 'verify-keep' ? 'Verify before drawing' : `Drawn ${ORD[myRank.order] || myRank.order + 'th'} of ${ranked.length}`}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4 }}>{myRank.primaryReason}</div>
           </div>
         )}
+
+        {/* What's inside — capture prompt (no holdings data yet) */}
+        <div style={{ padding: 10, borderRadius: 'var(--r-md,10px)', border: '1px dashed var(--c-border,rgba(255,255,255,0.2))' }}>
+          <div className="sw-eyebrow">WHAT'S INSIDE THIS POT</div>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4 }}>Fund mix and actual return aren't captured yet. Add them to replace the {(rate * 100).toFixed(1)}% assumption with this pot's real growth — and to rank it precisely against your other pots.</div>
+        </div>
 
         {editing ? (
           <div style={{ display: 'flex', gap: 8 }}>

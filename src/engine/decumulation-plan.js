@@ -76,14 +76,16 @@ export function buildDecumulationPlan(pots = [], opts = {}) {
   return { sequence, flags }
 }
 
-// Pick the factor that most argues for draining a pot sooner, vs its peers.
+// Pick the factor that most argues for draining a pot sooner, vs its rankable
+// peers (the `charges`/`rets` passed in are the flex set only, so a legacy
+// pot's outlier charge can't mask a SIPP-vs-SIPP fee gap). Names the figure.
 function _dominantReason(s, charges, rets) {
   const maxCharge = Math.max(...charges), minRet = Math.min(...rets)
   const chargeLeads = s.factors.charge === maxCharge && maxCharge > 0 && charges.some(c => c !== maxCharge)
   const growthLeads = s.factors.growth === minRet && rets.some(r => r !== minRet)
-  if (chargeLeads) return 'Higher charge — draining it sooner cuts lifetime fees.'
-  if (growthLeads) return 'Lower expected growth — drain before the faster-growing pots.'
-  return 'Balanced — order is flexible; capture each fund to refine it.'
+  if (chargeLeads) return `Higher charge (${(s.factors.charge * 100).toFixed(2)}%) than the other pots — drain it sooner to cut lifetime fees.`
+  if (growthLeads) return `Lower expected growth (${(s.factors.growth * 100).toFixed(1)}%) — drain before the faster-growing pots so they compound.`
+  return 'Lower charge and similar growth — keep it ahead of the legacy pot; capture its fund to refine the order.'
 }
 
 // Rank pots into a draw-order: which to turn into income first, and why.
@@ -112,6 +114,10 @@ export function rankDrawOrder(pots = []) {
   const keep = scored.filter(s => s.legacy)
   const ordered = [...flex, ...keep]
   const n = ordered.length
+  // Compare each flex pot only against other flex pots, so a legacy pot's
+  // outlier charge can't mask a SIPP-vs-SIPP fee difference.
+  const flexCharges = flex.length ? flex.map(s => s.factors.charge) : [0]
+  const flexRets = flex.length ? flex.map(s => s.factors.growth) : [0]
 
   const ranked = ordered.map((s, i) => ({
     ...s,
@@ -119,7 +125,7 @@ export function rankDrawOrder(pots = []) {
     priority: s.legacy ? 'verify-keep' : (i === 0 ? 'draw-first' : i === n - 1 ? 'keep-longest' : 'middle'),
     primaryReason: s.legacy
       ? 'Verify guarantees/penalties before drawing — may be worth keeping.'
-      : _dominantReason(s, charges, rets),
+      : _dominantReason(s, flexCharges, flexRets),
   }))
   return { ranked }
 }

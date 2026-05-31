@@ -4,8 +4,11 @@
 // OverlayShell prop is onBack (not onClose).
 import { useMemo, useState } from 'react'
 import OverlayShell from '../../shared/OverlayShell.jsx'
-import { buildDecumulationPlan } from '../../../engine/decumulation-plan.js'
+import { buildDecumulationPlan, rankDrawOrder, classifyPot } from '../../../engine/decumulation-plan.js'
+import { growthRateFor } from '../../../engine/projection.js'
+import { getActiveCMA } from '../../../engine/cma.js'
 import { monteCarloPOS } from '../../../engine/scenarios.js'
+import { DrawOrderMap } from './DrawOrderMap.jsx'
 import { useEvents, EV } from '../../../state/events.jsx'
 
 const fmt = (n) => `£${Math.round(+n || 0).toLocaleString('en-GB')}`
@@ -26,6 +29,16 @@ export function DecumulationStrategy({ entity, pots = [], personaId, onClose, on
   const total = pots.reduce((s, p) => s + (+p.value || 0), 0)
   const age = entity?.age ?? 65
   const plan = useMemo(() => buildDecumulationPlan(pots, { age }), [pots, age])
+
+  // Pot-specific draw-order: attach each pot's class growth rate, then rank.
+  const ranked = useMemo(() => {
+    const cma = getActiveCMA()
+    const enriched = pots.map(p => ({
+      ...p,
+      expectedReturn: growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', cma),
+    }))
+    return rankDrawOrder(enriched).ranked
+  }, [pots])
 
   const [target, setTarget] = useState(Math.round(total * 0.04))
   const pos = useMemo(() => {
@@ -51,9 +64,16 @@ export function DecumulationStrategy({ entity, pots = [], personaId, onClose, on
       onHome={onHome}
     >
       <div style={{ padding: 16, display: 'grid', gap: 18 }}>
-        {/* GUIDED */}
+        {/* DECISION — which pot first */}
         <div>
-          <div className="sw-eyebrow">A SENSIBLE ORDER — AND WHY</div>
+          <div className="sw-eyebrow">WHICH POT TO TURN INTO INCOME FIRST</div>
+          <div style={{ fontSize: 12, color: 'var(--c-text3)', margin: '2px 0 8px' }}>Ordered by charge, growth and guarantees — drain the slow, expensive money first; let the fast pots compound.</div>
+          <DrawOrderMap ranked={ranked} />
+        </div>
+
+        {/* GUIDED — the framework behind the order */}
+        <div>
+          <div className="sw-eyebrow">THE PRINCIPLES BEHIND THIS ORDER</div>
           <ol style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'grid', gap: 10 }}>
             {plan.sequence.map(s => (
               <li key={s.order} style={{ display: 'flex', gap: 10 }}>

@@ -2071,17 +2071,28 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
             POS = probability of success over a 30-year horizon at the chosen
             withdrawal rate. Bengen 4% comparator framing. */}
         {(() => {
-          let pos = +(entity?.trajectories?.monteCarloPOS || 0)
+          // A probability of success is ALWAYS 0–100%. The stored
+          // entity.trajectories.monteCarloPOS field has been seen holding garbage
+          // (e.g. 7670), which rendered as "7670%". Normalise any input shape —
+          // fraction (0–1), percentage (0–100), or out-of-range — then HARD CLAMP.
+          const normalisePos = (raw) => {
+            const v = +raw || 0
+            if (v > 0 && v <= 1) return Math.round(v * 100)   // stored as a fraction
+            if (v > 1 && v <= 100) return Math.round(v)       // already a percentage
+            return 0                                          // 0 or garbage → recompute
+          }
+          let pos = normalisePos(entity?.trajectories?.monteCarloPOS)
           if (!pos) {
             try {
               const sippTot = +(entity?.pension?.totalValue
                 || entity?.assets?.sipp?.value
                 || 850000)
               const r = monteCarloPOS(entity, { annual: sippTot * 0.04 }, { years: 30 })
-              pos = r?.probability ? Math.round(r.probability * 100) : 0
+              pos = r?.probability != null ? Math.round(r.probability * 100) : 0
             } catch (_e) { pos = 0 }
           }
           if (!pos) pos = 78 // visible fallback so the section never reads blank
+          pos = Math.max(0, Math.min(100, pos)) // invariant: never outside 0–100
           const color = pos >= 85 ? 'var(--c-acc)' : pos >= 70 ? '#FF9500' : 'var(--c-coral, #FF6F7D)'
           return (
             <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14 }}>

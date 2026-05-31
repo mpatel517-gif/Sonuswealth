@@ -38,6 +38,10 @@ import { useMemo, useState } from 'react'
 import { useTemporalMode } from '../state/temporalMode.jsx'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
+import { MiniTrendLines } from '../components/MyMoney/L3/MiniTrendLines.jsx'
+import { projectSeries, growthRateFor } from '../engine/projection.js'
+import { getActiveCMA } from '../engine/cma.js'
+import { classifyPot, potsNeedingReview } from '../engine/decumulation-plan.js'
 // S1 selector migration (Phase 2): canonical readers come through the
 // engine/selectors/ facade so screens can't drift back to inline raw-field
 // readers (P0-2 class of bug). Direct engine imports in screens are forbidden
@@ -1692,6 +1696,14 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
     return []
   }, [])
 
+  // Per-pot projected trend-lines + review count — reveals that the pension
+  // aggregate is N pots, not one. 20y illustrative horizon (projected, not
+  // past performance). Spec 2026-05-31 §3 L1.
+  const _pensionCma = safe(() => getActiveCMA(), {})
+  const pensionSeries = safe(() => pensionPots.map(p =>
+    projectSeries(+p.value || 0, growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', _pensionCma), 20)), [])
+  const pensionsNeedReview = safe(() => potsNeedingReview(pensionPots).length, 0)
+
   // Property details (for drill-down)
   const propertyList = safe(() => {
     const arr = Array.isArray(a.property) ? a.property : []
@@ -1776,7 +1788,17 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
                 <div style={{ height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginBottom: 2 }}>
                   <div style={{ height: '100%', borderRadius: 3, width: `${Math.max(0, Math.min(100, pctOfAssets))}%`, background: colour, transition: 'width 900ms cubic-bezier(0.16,1,0.3,1)' }} />
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>{pctOfAssets.toFixed(0)}% of assets</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>
+                    {pctOfAssets.toFixed(0)}% of assets
+                    {key === 'pensions' && pensionPots.length > 0 && (
+                      <span> · across {pensionPots.length} pension{pensionPots.length !== 1 ? 's' : ''}{pensionsNeedReview ? ` · ${pensionsNeedReview} need review` : ''}</span>
+                    )}
+                  </div>
+                  {key === 'pensions' && pensionSeries.length > 0 && (
+                    <MiniTrendLines series={pensionSeries} width={72} height={20} />
+                  )}
+                </div>
                 {isOpen && hasDetail && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--c-sep)' }}>
                     {detail.map((item, di) => (

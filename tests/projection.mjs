@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import {
-  growthRateFor, projectValue, projectNode, projectTaxonomy,
+  growthRateFor, projectValue, projectNode, projectTaxonomy, projectSeries,
 } from '../src/engine/projection.js'
 import { getBundle } from '../src/engine/_bundle.js'
 import CMA from '../src/rules/cma-2026.json' with { type: 'json' }
@@ -62,6 +62,19 @@ console.log('\n── projectTaxonomy ──')
   log(r.totals.future > r.totals.now, `future > now over horizon (£${Math.round(r.totals.future).toLocaleString()} > £${Math.round(r.totals.now).toLocaleString()})`)
   log(Number.isFinite(r.totals.future), 'future finite')
   log(Array.isArray(r.byNode) && r.byNode.length > 0, `byNode populated (${r.byNode.length} nodes)`)
+}
+
+// ── projectSeries ───────────────────────────────────────────────────────────
+console.log('\n── projectSeries ──')
+{
+  const s = projectSeries(100000, 0.05, 5)
+  log(s.length === 6, 'series includes now + each year to horizon (n+1 points)')
+  log(s[0] === 100000, 'first point is now')
+  log(s[s.length - 1] > s[0], 'grows over the horizon at a positive rate')
+}
+{
+  const s = projectSeries(100000, 0.05, 0)
+  log(s.length === 1 && s[0] === 100000, 'horizon 0 → single now point (baseline-safe)')
 }
 
 // NOTE: the Future-vs-Plan event-class split (applyEvents includeScenarios) is

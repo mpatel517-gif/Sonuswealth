@@ -52,6 +52,15 @@ export function projectValue(now, rate, years, contributionPerYear = 0) {
   return grown + fromContribs
 }
 
+// Yearly value path from now to horizon (inclusive both ends) for sparklines.
+// years<=0 ⇒ [now]. Reuses projectValue so the path matches the point engine.
+export function projectSeries(now, rate, years, contributionPerYear = 0) {
+  const y = Math.max(0, Math.floor(years || 0))
+  const out = []
+  for (let t = 0; t <= y; t++) out.push(Math.round(projectValue(now, rate, t, contributionPerYear)))
+  return out
+}
+
 // Project one node to the horizon. Assets/income grow via projectValue; a node
 // flagged direction:'shrink' (liability) amortises toward zero at its rate/payment.
 export function projectNode(node, opts = {}) {

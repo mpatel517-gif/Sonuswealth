@@ -38,6 +38,7 @@
     "test:l3-2-dcdb": "node tests/l3-2-dc-vs-db.mjs",
     "test:l3-2-decum": "node tests/l3-2-decumulation.mjs",
     "test:cma-override": "node tests/cma-override.mjs",
+    "test:projection": "node tests/projection.mjs",
     "test:coverage": "c8 --reporter=text --reporter=lcov --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --check-coverage=false node tests/dynamic-onboarding.mjs",
     "test:coverage:gate": "c8 --reporter=text --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --lines=40 --statements=40 node tests/dynamic-onboarding.mjs",
     "regression:capture": "node tests/harness/regression-capture.mjs",

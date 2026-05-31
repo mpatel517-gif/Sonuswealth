@@ -89,6 +89,9 @@ import TappableNumber    from '../components/shared/TappableNumber.jsx'
 // MyMoney v2.7 §3.4 + taxonomy-driven add flow.
 import BalanceSheet       from '../components/MyMoney/BalanceSheet.jsx'
 import { PensionSummaryDrill } from '../components/MyMoney/L3/PensionSummaryDrill.jsx'
+import { projectSeries, growthRateFor } from '../engine/projection.js'
+import { getActiveCMA } from '../engine/cma.js'
+import { classifyPot } from '../engine/decumulation-plan.js'
 import CategoryCard       from '../components/MyMoney/CategoryCard.jsx'
 import AddItemSheet       from '../components/MyMoney/AddItemSheet.jsx'
 import TileGrid           from '../components/MyMoney/TileGrid.jsx'
@@ -3604,11 +3607,21 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         // breakdowns even when legacy + spec shapes co-exist (Mr T fixture).
         subtotals.netWorth = nw
 
+        // Pension pill: reveal it IS N pots (not one £850k atom) + per-pot
+        // projected trend, and link the draw-down ACTION to Cashflow (where
+        // decumulation lives — mymoney-checklist L18). 20y illustrative horizon.
+        const _penPots = entity?.assets?.sipp?.pensions || entity?.assets?.pensions || entity?.assets?.pension?.pots || []
+        const _penCma = (() => { try { return getActiveCMA() } catch { return {} } })()
+        const _penSeries = _penPots.map(p => projectSeries(+p.value || 0, growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', _penCma), 20))
+
         // Compose the 10 category cards. Order = spec §3.4 default.
         // Empty-state copy has personality per category — generic "Tap Add"
         // wasn't earning its place (skill rule: every word earns its place).
         const CATEGORIES = [
           { id: 'pensions',     label: 'Pensions',             domainCodes: 'A · B',     rows: catRows.pensions,     onRowTap: () => setActiveDrill('pension'),
+            changeLabel: 'est. 12-mo',
+            composition: _penPots.length ? { count: _penPots.length, noun: 'pension', series: _penSeries } : null,
+            crossLink: { label: 'Plan how to draw this as income — on Cashflow', onClick: () => onNav?.('flow') },
             empty: 'No pensions yet. Add a SIPP or workplace scheme — the contributions get back up to 47% in tax relief.' },
           { id: 'investments',  label: 'Savings & Investments',domainCodes: 'C · D · E · F', rows: catRows.investments,
             empty: 'Nothing invested yet. Add an ISA first — £20k a year, no tax on growth, no tax on withdrawal.' },
@@ -4180,6 +4193,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           personaId={personaId}
           onClose={() => setActiveDrill(null)}
           onHome={onHome}
+          onPlanIncome={() => { setActiveDrill(null); onNav?.('flow') }}
         />
       )}
 

@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import ExplainerChip from '../shared/Explainer.jsx'
 import TappableNumber from '../shared/TappableNumber.jsx'
+import { MiniTrendLines } from './L3/MiniTrendLines.jsx'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CategoryTile — rich tile for one of the 10 balance-sheet categories.
@@ -114,6 +115,9 @@ export default function CategoryTile({
   liability = false,
   empty = null,           // optional empty-state copy override
   series = null,          // 12-month back-cast values for the sparkline (oldest → newest)
+  changeLabel = null,     // basis for changePct, e.g. "12-mo" — removes "+0.2% of what?" ambiguity
+  composition = null,     // { count, noun, series: number[][] } — reveals an aggregate IS N items + per-item trend
+  crossLink = null,       // { label, onClick } — when the action lives on another screen, link to it
   onView,
   onAdd,
 }) {
@@ -249,11 +253,16 @@ export default function CategoryTile({
             {label}
           </div>
           {changePct != null && !isEmpty && (
-            <div style={{
-              fontSize: 11, fontWeight: 700, color: changeColor,
-              marginTop: 3, fontVariantNumeric: 'tabular-nums',
-            }}>
-              {changePct >= 0 ? '+' : ''}{changePct.toFixed(1)}%
+            <div style={{ marginTop: 3 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: changeColor,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {changePct >= 0 ? '+' : ''}{changePct.toFixed(1)}%
+              </div>
+              {changeLabel && (
+                <div style={{ fontSize: 8, color: 'var(--c-text3)', letterSpacing: 0.3, lineHeight: 1 }}>{changeLabel}</div>
+              )}
             </div>
           )}
         </div>
@@ -283,8 +292,24 @@ export default function CategoryTile({
           prop for internal use only per the plain-English principle. */}
       <div style={{ marginBottom: 12 }} />
 
-      {/* Composition mini-bar (only if not empty) */}
-      {!isEmpty && wrappers.length > 0 && (
+      {/* Composition reveal — aggregate IS N items + per-item trend (replaces
+          a trivial single-wrapper "X 100%" bar with real signal). */}
+      {!isEmpty && composition && composition.count > 0 && (
+        <div style={{ marginBottom: 10 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--c-text2)', fontWeight: 600 }}>
+              across {composition.count} {composition.noun}{composition.count !== 1 ? 's' : ''}
+            </span>
+            {Array.isArray(composition.series) && composition.series.length > 0 && (
+              <MiniTrendLines series={composition.series} width={72} height={20} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Composition mini-bar — only when there are ≥2 wrappers (a single
+          wrapper renders a pointless "X 100%" bar, which the founder flagged). */}
+      {!isEmpty && !composition && wrappers.length > 1 && (
         <div style={{ marginBottom: 10 }}>
           <div style={{
             height: 6, borderRadius: 100,
@@ -435,6 +460,24 @@ export default function CategoryTile({
           }}>
             {empty || 'No items yet. Tap Add to capture.'}
           </div>
+        )}
+
+        {/* Cross-screen link — when the action lives on another tab (e.g.
+            drawdown strategy on Cashflow), surface a navigable link here. */}
+        {crossLink && !isEmpty && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); crossLink.onClick?.() }}
+            className="sw-press"
+            style={{
+              display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 10px', marginBottom: 8, borderRadius: 10,
+              background: `color-mix(in srgb, ${accentColor} 8%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${accentColor} 22%, transparent)`,
+              color: accentColor, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            }}>
+            <span>{crossLink.label}</span><span aria-hidden>→</span>
+          </button>
         )}
 
         {/* Footer — view detail + add */}

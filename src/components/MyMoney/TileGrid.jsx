@@ -480,6 +480,9 @@ export default function TileGrid({
               liability={c.liability}
               empty={c.empty}
               series={c.series}
+              changeLabel={c.changeLabel}
+              composition={c.composition}
+              crossLink={c.crossLink}
               costOfInaction={c.costOfInaction}
               onView={() => onView?.(c.id)}
               onAdd={onAdd}

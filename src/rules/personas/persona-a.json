@@ -44,7 +44,13 @@
           "charge": 0.0015,
           "chargeIsEstimate": false,
           "transferEligible": true,
-          "nominationDate": "2025-01-10"
+          "nominationDate": "2025-01-10",
+          "growth_rate_assumption": 0.062,
+          "funds": [
+            { "name": "FTSE Global All Cap Index", "value": 294000, "growth_rate_assumption": 0.068 },
+            { "name": "Global Bond Index (hedged)", "value": 84000, "growth_rate_assumption": 0.032 },
+            { "name": "Cash", "value": 42000, "growth_rate_assumption": 0.04 }
+          ]
         },
         {
           "name": "Hargreaves Lansdown SIPP",
@@ -54,7 +60,13 @@
           "charge": 0.0045,
           "chargeIsEstimate": false,
           "transferEligible": true,
-          "nominationDate": "2025-03-22"
+          "nominationDate": "2025-03-22",
+          "growth_rate_assumption": 0.071,
+          "funds": [
+            { "name": "US Equity Index", "value": 168000, "growth_rate_assumption": 0.078 },
+            { "name": "UK Equity Income", "value": 70000, "growth_rate_assumption": 0.061 },
+            { "name": "Emerging Markets", "value": 42000, "growth_rate_assumption": 0.085 }
+          ]
         },
         {
           "name": "Wayne Enterprises DC (legacy)",

@@ -4,7 +4,8 @@
 import { useState } from 'react'
 import OverlayShell from '../../shared/OverlayShell.jsx'
 import { InteractiveProjection } from './InteractiveProjection.jsx'
-import { growthRateFor } from '../../../engine/projection.js'
+import { MiniTrendLines } from './MiniTrendLines.jsx'
+import { growthRateFor, projectSeries } from '../../../engine/projection.js'
 import { getActiveCMA } from '../../../engine/cma.js'
 import { classifyPot, rankDrawOrder } from '../../../engine/decumulation-plan.js'
 import { TAX } from '../../../engine/fq-calculator.js'
@@ -29,11 +30,18 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
   const years = Math.max(1, retire - age)
   const isSipp = classifyPot(pot) === 'self-invested'
   const nodeType = isSipp ? 'pension-sipp' : 'pension-occupational-dc'
-  const rate = growthRateFor(nodeType, cma)
+  // Normalise across pot shapes (value|balance, charge|charges_percent) and
+  // prefer THIS pot's captured growth assumption over the class proxy — so two
+  // pots no longer share one rate (doctrine §2: prefer the captured fact).
+  const value = +pot.value || +pot.balance || 0
+  const charge = +pot.charge || +pot.charges_percent || 0
+  const rate = +pot.growth_rate_assumption || growthRateFor(nodeType, cma)
+  const funds = Array.isArray(pot.funds) ? pot.funds : []
+  const retireYrs = Math.max(1, retire - age)
 
-  const dragPerYear = Math.round((+pot.value || 0) * (+pot.charge || 0))
+  const dragPerYear = Math.round(value * charge)
   const lsa = TAX?.lsa ?? 268275
-  const tfcShare = Math.min((+pot.value || 0) * 0.25, lsa)
+  const tfcShare = Math.min(value * 0.25, lsa)
 
   // This pot's specific position in the draw-order (ties leaf to the map).
   const enriched = pots.map(p => ({ ...p, expectedReturn: growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', cma) }))
@@ -60,22 +68,21 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
         {/* Hero */}
         <div>
           <div className="sw-eyebrow">VALUE TODAY</div>
-          <div style={{ fontSize: 'var(--fs-hero,34px)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(pot.value)}</div>
+          <div style={{ fontSize: 'var(--fs-hero,34px)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(value)}</div>
           <span className={isSipp ? 'sw-chip sw-chip-blue' : 'sw-chip sw-chip-warn'} style={{ display: 'inline-block', marginTop: 6 }}>{pot.type || (isSipp ? 'SIPP' : 'Legacy')}</span>
         </div>
 
         {/* Interactive projection — drag growth, toggle real-terms, watch it move */}
         <InteractiveProjection
-          now={+pot.value || 0}
+          now={value}
           baselineRate={rate}
           inflation={cma?.inflation ?? 0.025}
           years={years}
           retirementAge={retire}
-          onOpenAssumptions={() => window.dispatchEvent(new CustomEvent('sonus:open-assumptions'))}
         />
 
         {pot.provider && <Row label="Provider" value={pot.provider} hint="Who administers this pot." />}
-        <Row label="Annual charge" value={`${((pot.charge || 0) * 100).toFixed(2)}% ≈ ${fmt(dragPerYear)}/yr`} hint="What this pot costs you each year in fees." />
+        <Row label="Annual charge" value={`${(charge * 100).toFixed(2)}% ≈ ${fmt(dragPerYear)}/yr`} hint="What this pot costs you each year in fees." />
         <Row label="Tax-free cash from this pot" value={`up to ${fmt(tfcShare)}`} hint="25% of this pot, within your Lump Sum Allowance across all pensions." />
         <Row label="Who inherits" value={pot.nominationDate ? `Nomination on file (${pot.nominationDate})` : 'No nomination on file'} hint="From 6 April 2027 this pot counts toward your estate for inheritance tax." />
         <Row label="Exit penalty / guarantees" value={isSipp ? 'None typical for a SIPP' : 'Not yet verified'} hint={isSipp ? 'Self-invested pots normally have no exit penalty.' : 'Legacy/workplace schemes can carry penalties, a protected pension age, or guaranteed benefits worth keeping. Check with the provider before drawing.'} />
@@ -91,10 +98,33 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           </div>
         )}
 
-        {/* What's inside — capture prompt (no holdings data yet) */}
-        <div style={{ padding: 10, borderRadius: 'var(--r-md,10px)', border: '1px dashed var(--c-border,rgba(255,255,255,0.2))' }}>
+        {/* Holdings inside this pot — the fund-level drill (doctrine §3). Renders
+            real funds when captured; honest capture state when not. */}
+        <div>
           <div className="sw-eyebrow">WHAT'S INSIDE THIS POT</div>
-          <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4 }}>Fund mix and actual return aren't captured yet. Add them to replace the {(rate * 100).toFixed(1)}% assumption with this pot's real growth — and to rank it precisely against your other pots.</div>
+          {funds.length > 0 ? (
+            <div style={{ marginTop: 6 }}>
+              {funds.map((fnd, i) => {
+                const fv = +fnd.value || 0
+                const fg = +fnd.growth_rate_assumption || rate
+                const pct = value ? Math.round((fv / value) * 100) : 0
+                return (
+                  <div key={(fnd.name || '') + i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--c-border,rgba(255,255,255,0.08))' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700 }}>{fnd.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{fmt(fv)} · {pct}% of pot · {(fg * 100).toFixed(1)}% assumed growth</div>
+                    </div>
+                    <MiniTrendLines series={[projectSeries(fv, fg, retireYrs)]} width={64} height={22} />
+                  </div>
+                )
+              })}
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6 }}>Each line is that fund projected at its own assumption — not past performance. The pot's blended rate ({(rate * 100).toFixed(1)}%) drives the projection above.</div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 6, padding: 10, borderRadius: 'var(--r-md,10px)', border: '1px dashed var(--c-border,rgba(255,255,255,0.2))' }}>
+              <div style={{ fontSize: 12, color: 'var(--c-text2)' }}>Fund mix isn't captured for this pot yet. Add the funds to replace the {(rate * 100).toFixed(1)}% blended assumption with each holding's real growth — and to see how it's invested.</div>
+            </div>
+          )}
         </div>
 
         {/* Drawdown link — the income decision lives on Cashflow (whole-portfolio) */}

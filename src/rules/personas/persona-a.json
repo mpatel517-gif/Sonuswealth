@@ -46,6 +46,15 @@
           "transferEligible": true,
           "nominationDate": "2025-01-10",
           "growth_rate_assumption": 0.062,
+          "contributed_to_date": { "personal": 170000, "employer": 60000 },
+          "contribution_monthly": { "personal": 1000, "employer": 500 },
+          "valuation_history": [
+            { "yearsAgo": 5, "value": 210000 },
+            { "yearsAgo": 4, "value": 255000 },
+            { "yearsAgo": 3, "value": 290000 },
+            { "yearsAgo": 2, "value": 338000 },
+            { "yearsAgo": 1, "value": 384000 }
+          ],
           "funds": [
             { "name": "FTSE Global All Cap Index", "value": 294000, "growth_rate_assumption": 0.068 },
             { "name": "Global Bond Index (hedged)", "value": 84000, "growth_rate_assumption": 0.032 },
@@ -62,6 +71,15 @@
           "transferEligible": true,
           "nominationDate": "2025-03-22",
           "growth_rate_assumption": 0.071,
+          "contributed_to_date": { "personal": 160000, "employer": 0 },
+          "contribution_monthly": { "personal": 800, "employer": 0 },
+          "valuation_history": [
+            { "yearsAgo": 5, "value": 120000 },
+            { "yearsAgo": 4, "value": 150000 },
+            { "yearsAgo": 3, "value": 178000 },
+            { "yearsAgo": 2, "value": 215000 },
+            { "yearsAgo": 1, "value": 250000 }
+          ],
           "funds": [
             { "name": "US Equity Index", "value": 168000, "growth_rate_assumption": 0.078 },
             { "name": "UK Equity Income", "value": 70000, "growth_rate_assumption": 0.061 },

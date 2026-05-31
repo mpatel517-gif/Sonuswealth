@@ -4,6 +4,8 @@
 import { useState } from 'react'
 import OverlayShell from '../../shared/OverlayShell.jsx'
 import { InteractiveProjection } from './InteractiveProjection.jsx'
+import { ContributionDecomposition } from './ContributionDecomposition.jsx'
+import { FundDonut } from './FundDonut.jsx'
 import { MiniTrendLines } from './MiniTrendLines.jsx'
 import { growthRateFor, projectSeries } from '../../../engine/projection.js'
 import { getActiveCMA } from '../../../engine/cma.js'
@@ -38,6 +40,13 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
   const rate = +pot.growth_rate_assumption || growthRateFor(nodeType, cma)
   const funds = Array.isArray(pot.funds) ? pot.funds : []
   const retireYrs = Math.max(1, retire - age)
+  const history = Array.isArray(pot.valuation_history) ? pot.valuation_history : []
+  const contributedToDate = pot.contributed_to_date || null
+  const contributionMonthly = pot.contribution_monthly || null
+  const inflation = cma?.inflation ?? 0.025
+  const netRealRate = Math.max(0, rate - charge - inflation)   // matches the projection's real-terms mid line
+  const contribAnnual = (((+(contributionMonthly?.personal) || 0) + (+(contributionMonthly?.employer) || 0))) * 12   // same forward contributions both charts use, so age-67 ties out
+  const FUND_PALETTE = ['var(--c-acc,#5ddbc2)', 'var(--c-gold,#E8B84B)', 'var(--c-violet,#9B8CFF)', 'var(--c-coral,#FF6F7D)', 'var(--c-text3,#8895a7)']
 
   const dragPerYear = Math.round(value * charge)
   const lsa = TAX?.lsa ?? 268275
@@ -77,10 +86,29 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           now={value}
           baselineRate={rate}
           charge={charge}
-          inflation={cma?.inflation ?? 0.025}
+          inflation={inflation}
           currentAge={age}
           retirementAge={retire}
+          contributionPerYear={contribAnnual}
+          history={history}
         />
+
+        {/* What you put in vs what it grew (doctrine: decomposition, not overlay) */}
+        {contributedToDate ? (
+          <ContributionDecomposition
+            now={value}
+            currentAge={age}
+            retireAge={retire}
+            rate={netRealRate}
+            contributedToDate={contributedToDate}
+            contributionMonthly={contributionMonthly || {}}
+          />
+        ) : (
+          <div style={{ padding: 10, borderRadius: 'var(--r-md,10px)', border: '1px dashed var(--c-border,rgba(255,255,255,0.2))' }}>
+            <div className="sw-eyebrow">WHAT YOU PUT IN vs WHAT IT GREW</div>
+            <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4 }}>Contribution history isn't captured for this pot yet. Add what you and any employer have paid in to see how much of {fmt(value)} is money invested versus investment growth.</div>
+          </div>
+        )}
 
         {pot.provider && <Row label="Provider" value={pot.provider} hint="Who administers this pot." />}
         <Row label="Annual charge" value={`${(charge * 100).toFixed(2)}% ≈ ${fmt(dragPerYear)}/yr`} hint="What this pot costs you each year in fees." />
@@ -105,12 +133,16 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           <div className="sw-eyebrow">WHAT'S INSIDE THIS POT</div>
           {funds.length > 0 ? (
             <div style={{ marginTop: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 10px' }}>
+                <FundDonut funds={funds} colors={FUND_PALETTE} />
+              </div>
               {funds.map((fnd, i) => {
                 const fv = +fnd.value || 0
                 const fg = +fnd.growth_rate_assumption || rate
                 const pct = value ? Math.round((fv / value) * 100) : 0
                 return (
                   <div key={(fnd.name || '') + i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--c-border,rgba(255,255,255,0.08))' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: FUND_PALETTE[i % FUND_PALETTE.length], display: 'inline-block', flexShrink: 0, opacity: 0.85 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700 }}>{fnd.name}</div>
                       <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{fmt(fv)} · {pct}% of pot · {(fg * 100).toFixed(1)}% assumed growth</div>

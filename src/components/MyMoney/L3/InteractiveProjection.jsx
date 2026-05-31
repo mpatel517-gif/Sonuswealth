@@ -1,9 +1,10 @@
 // InteractiveProjection.jsx — lifecycle projection obeying the charting law:
-// labelled axes; gross AND net drawn so the charge drag is VISIBLE; the
+// labelled axes; PAST actual + FUTURE projection with a "today" divider (a trend
+// is bi-directional); gross AND net drawn so the charge drag is VISIBLE; the
 // retirement age is DRAGGABLE (the user moves when they retire and the curve
-// recomputes); accumulate → draw down so it turns over, extended past
-// retirement to where the money is used. Today's-money default; framed as the
-// user's assumption, not a forecast.
+// recomputes); accumulate → draw down so it turns over, extended past retirement
+// to where the money is used. Today's-money default; framed as the user's
+// assumption, not a forecast.
 import { useState, useMemo } from 'react'
 
 const fmt = (n) => {
@@ -31,7 +32,7 @@ const SCEN = [
   { key: 'high', d: 0.02, c: 'var(--c-gold,#E8B84B)' },
 ]
 
-export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0, inflation = 0.025, currentAge = 60, retirementAge = 67, terminalAge = 95, contributionPerYear = 0, drawdownRate = 0.04 }) {
+export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0, inflation = 0.025, currentAge = 60, retirementAge = 67, terminalAge = 95, contributionPerYear = 0, drawdownRate = 0.04, history = [] }) {
   const clampedBaseline = Math.min(MAX_RATE, Math.max(MIN_RATE, baselineRate))
   const [rate, setRate] = useState(clampedBaseline)
   const [real, setReal] = useState(true)
@@ -39,6 +40,15 @@ export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0
 
   const drag = charge + (real ? inflation : 0)               // what charges (+inflation) take off
   const netOf = (gross) => Math.max(-0.05, gross - drag)
+
+  // Past actual path — currentAge back to the earliest captured snapshot, ending at today.
+  const past = useMemo(() => {
+    const pts = (history || [])
+      .filter(h => Number.isFinite(+h.value) && Number.isFinite(+h.yearsAgo) && +h.yearsAgo > 0)
+      .map(h => ({ age: currentAge - Math.round(+h.yearsAgo), v: Math.round(+h.value) }))
+      .sort((a, b) => a.age - b.age)
+    return pts.length ? [...pts, { age: currentAge, v: Math.round(now) }] : []
+  }, [history, currentAge, now])
 
   const series = useMemo(() => SCEN.map(s => {
     const gross = Math.max(0, rate + s.d)
@@ -54,17 +64,20 @@ export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0
 
   const W = 320, H = 150, L = 6, R = 6, T = 10, B = 18
   const ages = mid.pts.map(p => p.age)
-  const minAge = ages[0], maxAge = ages[ages.length - 1]
-  const allV = [...series.flatMap(s => s.pts.map(p => p.v)), ...grossMid.map(p => p.v)]
+  const minAge = past.length ? past[0].age : ages[0]
+  const maxAge = ages[ages.length - 1]
+  const allV = [...series.flatMap(s => s.pts.map(p => p.v)), ...grossMid.map(p => p.v), ...past.map(p => p.v)]
   const maxV = Math.max(...allV, 1)
   const xAt = (age) => L + ((age - minAge) / (maxAge - minAge || 1)) * (W - L - R)
   const yAt = (v) => T + (1 - v / maxV) * (H - T - B)
   const lineOf = (pts) => pts.map(p => `${xAt(p.age).toFixed(1)},${yAt(p.v).toFixed(1)}`).join(' ')
   const retX = xAt(retire)
+  const todayX = xAt(currentAge)
+  const axisAges = [...new Set([minAge, ...(past.length ? [currentAge] : []), retire, maxAge])].sort((a, b) => a - b)
 
   return (
     <div style={{ background: 'var(--c-surface,rgba(255,255,255,0.04))', borderRadius: 'var(--r-lg,14px)', padding: 14 }}>
-      <div className="sw-eyebrow">PROJECTED PATH · {real ? "TODAY'S MONEY" : 'FUTURE POUNDS'}</div>
+      <div className="sw-eyebrow">{past.length ? 'TRACK RECORD + PROJECTED PATH' : 'PROJECTED PATH'} · {real ? "TODAY'S MONEY" : 'FUTURE POUNDS'}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 2, flexWrap: 'wrap' }}>
         <div><span style={{ fontSize: 'var(--fs-hero,26px)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(peak)}</span><span style={{ fontSize: 11, color: 'var(--c-text3)' }}> peak at {retire}</span></div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>→ {fmt(atTerminal)} left at {terminalAge}, drawing {(drawdownRate * 100).toFixed(0)}%/yr</div>
@@ -76,17 +89,27 @@ export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0
           const v = maxV * f, y = yAt(v)
           return <g key={f}><line x1={L} y1={y} x2={W - R} y2={y} stroke="var(--c-border,rgba(255,255,255,0.08))" strokeWidth="1" /><text x={L} y={y - 2} fontSize="7" fill="var(--c-text3,#8895a7)">{fmt(v)}</text></g>
         })}
+        {/* today divider — separates actual past from projected future */}
+        {past.length > 0 && (
+          <g>
+            <line x1={todayX} y1={T} x2={todayX} y2={H - B} stroke="var(--c-text2,#c4ccd6)" strokeWidth="1" opacity="0.5" />
+            <text x={todayX - 2} y={T + 7} fontSize="7" fill="var(--c-text2,#c4ccd6)" fontWeight="700" textAnchor="end">today</text>
+          </g>
+        )}
         {/* draggable retirement divider */}
         <line x1={retX} y1={T} x2={retX} y2={H - B} stroke="var(--c-acc,#5ddbc2)" strokeWidth="1.5" strokeDasharray="3 2" opacity="0.8" />
         <text x={retX + 2} y={T + 7} fontSize="7" fill="var(--c-acc,#5ddbc2)" fontWeight="700">retire {retire} ▸</text>
         {/* gross reference (before charges) — the gap to the net mid line is the cost of fees */}
         <polyline fill="none" stroke="var(--c-text3,#8895a7)" strokeWidth="1" strokeDasharray="2 2" opacity="0.7" points={lineOf(grossMid)} />
-        {/* net scenario lines */}
+        {/* net scenario lines (future) */}
         {series.map(s => <polyline key={s.key} fill="none" stroke={s.c} strokeWidth={s.key === 'mid' ? 2.2 : 1.3} strokeLinejoin="round" points={lineOf(s.pts)} opacity={s.key === 'mid' ? 1 : 0.8} />)}
-        {[minAge, retire, maxAge].map(a => <text key={a} x={xAt(a)} y={H - 6} fontSize="7" fill="var(--c-text3,#8895a7)" textAnchor={a === minAge ? 'start' : a === maxAge ? 'end' : 'middle'}>age {a}</text>)}
+        {/* actual past — solid, brighter, drawn last so it sits on top */}
+        {past.length > 1 && <polyline fill="none" stroke="var(--c-text,#fff)" strokeWidth="2.4" strokeLinejoin="round" points={lineOf(past)} />}
+        {axisAges.map(a => <text key={a} x={xAt(a)} y={H - 6} fontSize="7" fill="var(--c-text3,#8895a7)" textAnchor={a === minAge ? 'start' : a === maxAge ? 'end' : 'middle'}>age {a}</text>)}
       </svg>
 
       <div style={{ display: 'flex', gap: 10, fontSize: 10, color: 'var(--c-text2)', marginTop: 2, flexWrap: 'wrap' }}>
+        {past.length > 1 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 9, height: 2, background: 'var(--c-text,#fff)', display: 'inline-block' }} />actual so far</span>}
         {series.map(s => <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><span style={{ width: 9, height: 2, background: s.c, display: 'inline-block' }} />{(s.gross * 100).toFixed(1)}% gross → {(s.net * 100).toFixed(1)}% net</span>)}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--c-text3)' }}><span style={{ width: 9, height: 0, borderTop: '1px dashed var(--c-text3,#8895a7)', display: 'inline-block' }} />gross (before {real ? 'charges & inflation' : 'charges'})</span>
       </div>
@@ -114,7 +137,7 @@ export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0
       </div>
 
       <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8 }}>
-        Drag retirement age and growth to test. Lines are net of charges{real ? ' and inflation' : ''}; the dashed line is before charges. The post-retirement fall assumes a {(drawdownRate * 100).toFixed(0)}% drawdown — your real income plan lives on Cashflow. Not a forecast; returns can fall.
+        {past.length > 1 ? 'White is your actual value to date; coloured lines project forward. ' : ''}Drag retirement age and growth to test. Lines are net of charges{real ? ' and inflation' : ''}; the dashed line is before charges. The post-retirement fall assumes a {(drawdownRate * 100).toFixed(0)}% drawdown — your real income plan lives on Cashflow. Not a forecast; returns can fall.
       </div>
     </div>
   )

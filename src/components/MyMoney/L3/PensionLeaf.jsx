@@ -76,8 +76,9 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
         <InteractiveProjection
           now={value}
           baselineRate={rate}
+          charge={charge}
           inflation={cma?.inflation ?? 0.025}
-          years={years}
+          currentAge={age}
           retirementAge={retire}
         />
 

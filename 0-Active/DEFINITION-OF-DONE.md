@@ -53,6 +53,24 @@ In addition to the 5-field evidence string:
 
 ---
 
+### D. Money-surface tickets (any pill / drill / leaf / chart that shows a user's money)
+
+**Added 2026-05-31.** New failure mode (per the doc's own §"When to update" rule): the 2026-05-31 pension rebuild passed §A and §B on every pass — evidence string filled, build green, snaps clean, numbers tied out, spec cited — and the founder *still* rejected it five times running. Because §A/§B check **build-integrity**, not **domain & experience completeness**. The IFA/compliance/dataviz/drillability lenses existed as skills but were never *in the gate* — they ran reactively, scoped to whatever the founder had just flagged. That is the "founder is the QA" loop. This gate closes it.
+
+In addition to the 5-field evidence string + §B (it is also a UI ticket), ALL of these lens checks must PASS, and **they run BEFORE the founder sees the work, not after:**
+
+- [ ] **IFA completeness** (`sonuswealth-ifa-auditor`) — no top-tier ("face-fall") finding open. Specifically: shows **income (£/yr), not only capital**; projections are **full-lifecycle** (accumulate → draw down), not accumulation-only; growth is **per-asset + shown as a range** (low/mid/high), never one confident line; **DB-vs-DC resolved** before any pot value/TFC/drawdown is rendered; state pension + other income integrated where relevant.
+- [ ] **FCA compliance** (`sonuswealth-compliance`) — **no RED**. Projections labelled "your assumption, not a forecast"; user-adjustable inputs **bounded** to defensible ranges; guided actions framed as **general principle, not a personal recommendation**; any relief/benefit figure **conditioned on verified facts** (relevant earnings, MPAA, drawing status).
+- [ ] **Drillability** (`drillability-checker`) — every number drills to source → formula → provenance, and **every aggregate drills to its constituents down to the real leaf** (e.g. pension → funds → per-fund history). No dead-ends. PP-3.
+- [ ] **Data-viz** (`sonuswealth-dataviz-critic` + `chart-or-table-decider`) — every visual **communicates** (scale, legend, labels), is the **right chart type**, and is not decorative-only. PP-11.
+- [ ] **Accuracy** (`accuracy-auditor`) — no hardcoded UK figure; every threshold reads from the rules bundle / `TAX`.
+
+**How it runs (this is the part that removes the founder as QA):** the five lenses are dispatched **in parallel** (Workflow orchestration) against the built surface; findings are fixed and the surface re-gated until all five PASS; only then does it reach the founder. The founder reviews **direction + gate-passed work** — never hunts faults. A money-surface ticket with any open lens finding stays `in_progress`.
+
+**The one thing this gate does NOT catch — and no gate can:** *"is this the right product, conceived the right way for this user's actual job?"* That is product vision, not a checklist, and it stays a human call (founder + a product owner who lives in the domain). The gate guarantees every surface is **complete, correct, compliant, legible, and deep**; it does not guarantee it's the **right surface**. Don't pretend it does.
+
+---
+
 ## The "partial done" trap — banned
 
 The pattern: ship the scaffold, leave the wiring, mark the ticket done, move on. Every L3 ticket in this project that came back as a complaint started this way.
@@ -102,6 +120,7 @@ The 5-field evidence string + the partial-done ban + the weekly verification tog
 | "Done means scaffolded" | Partial-done ban — no "foundation done" closures |
 | "We'll deploy it later" | Two-checkbox pattern in §C |
 | "It used to work" | Weekly cross-app verification + last-week diff |
+| "Tests + snaps pass but it's financially shallow / non-compliant / capital-not-income / dead-ends instead of drilling" | §D money-surface lens gate (IFA + compliance + drillability + dataviz + accuracy), run in parallel BEFORE the founder sees it |
 
 ---
 

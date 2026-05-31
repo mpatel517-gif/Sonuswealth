@@ -66,7 +66,7 @@ export function PensionSummaryDrill({ entity, pots = [], personaId, onClose, onH
   const tfcAvail = Math.min(total * 0.25, lsa)
   const totalFees = pots.reduce((s, p) => s + (+p.value || 0) * (+p.charge || 0), 0)
 
-  if (leaf) return <PensionLeaf pot={leaf} entity={entity} pots={pots} personaId={personaId} onClose={() => setLeaf(null)} onHome={onHome} />
+  if (leaf) return <PensionLeaf pot={leaf} entity={entity} pots={pots} personaId={personaId} onClose={() => setLeaf(null)} onHome={onHome} onPlanIncome={onPlanIncome} />
 
   return (
     <OverlayShell

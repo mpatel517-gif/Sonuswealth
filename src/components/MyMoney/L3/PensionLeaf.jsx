@@ -3,8 +3,8 @@
 // OverlayShell prop is onBack (not onClose); default export.
 import { useState } from 'react'
 import OverlayShell from '../../shared/OverlayShell.jsx'
-import { MiniTrendLines } from './MiniTrendLines.jsx'
-import { projectSeries, growthRateFor } from '../../../engine/projection.js'
+import { InteractiveProjection } from './InteractiveProjection.jsx'
+import { growthRateFor } from '../../../engine/projection.js'
 import { getActiveCMA } from '../../../engine/cma.js'
 import { classifyPot, rankDrawOrder } from '../../../engine/decumulation-plan.js'
 import { TAX } from '../../../engine/fq-calculator.js'
@@ -22,7 +22,7 @@ function Row({ label, value, hint }) {
   )
 }
 
-export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome }) {
+export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome, onPlanIncome }) {
   const cma = getActiveCMA()
   const age = entity?.age ?? 65
   const retire = entity?.retirementAge ?? 67
@@ -30,7 +30,6 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
   const isSipp = classifyPot(pot) === 'self-invested'
   const nodeType = isSipp ? 'pension-sipp' : 'pension-occupational-dc'
   const rate = growthRateFor(nodeType, cma)
-  const series = projectSeries(+pot.value || 0, rate, years)
 
   const dragPerYear = Math.round((+pot.value || 0) * (+pot.charge || 0))
   const lsa = TAX?.lsa ?? 268275
@@ -65,12 +64,15 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           <span className={isSipp ? 'sw-chip sw-chip-blue' : 'sw-chip sw-chip-warn'} style={{ display: 'inline-block', marginTop: 6 }}>{pot.type || (isSipp ? 'SIPP' : 'Legacy')}</span>
         </div>
 
-        {/* Projected trend */}
-        <div>
-          <div className="sw-eyebrow">PROJECTED TO RETIREMENT (AGE {retire})</div>
-          <MiniTrendLines series={[series]} width={220} height={48} />
-          <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Projection at {(rate * 100).toFixed(1)}% p.a. (assumption — not past performance). Adjust in Settings → Assumptions.</div>
-        </div>
+        {/* Interactive projection — drag growth, toggle real-terms, watch it move */}
+        <InteractiveProjection
+          now={+pot.value || 0}
+          baselineRate={rate}
+          inflation={cma?.inflation ?? 0.025}
+          years={years}
+          retirementAge={retire}
+          onOpenAssumptions={() => window.dispatchEvent(new CustomEvent('sonus:open-assumptions'))}
+        />
 
         {pot.provider && <Row label="Provider" value={pot.provider} hint="Who administers this pot." />}
         <Row label="Annual charge" value={`${((pot.charge || 0) * 100).toFixed(2)}% ≈ ${fmt(dragPerYear)}/yr`} hint="What this pot costs you each year in fees." />
@@ -94,6 +96,19 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           <div className="sw-eyebrow">WHAT'S INSIDE THIS POT</div>
           <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4 }}>Fund mix and actual return aren't captured yet. Add them to replace the {(rate * 100).toFixed(1)}% assumption with this pot's real growth — and to rank it precisely against your other pots.</div>
         </div>
+
+        {/* Drawdown link — the income decision lives on Cashflow (whole-portfolio) */}
+        {onPlanIncome && (
+          <button
+            type="button"
+            onClick={onPlanIncome}
+            className="sw-press"
+            style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 'var(--r-md,10px)', border: '1px solid color-mix(in srgb, var(--c-acc,#5ddbc2) 30%, transparent)', background: 'color-mix(in srgb, var(--c-acc,#5ddbc2) 8%, transparent)', color: 'var(--c-acc,#5ddbc2)', fontWeight: 700, cursor: 'pointer' }}
+          >
+            <span>Plan how to draw this as income — across all your money</span>
+            <span aria-hidden>→</span>
+          </button>
+        )}
 
         {editing ? (
           <div style={{ display: 'flex', gap: 8 }}>

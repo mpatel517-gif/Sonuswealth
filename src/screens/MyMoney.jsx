@@ -3628,7 +3628,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             changeLabel: 'est. 12-mo',
             trendSeries: _penSeries.length ? _penSeries : null,
             composition: _penItems.length ? { noun: 'pension', items: _penItems, onDrill: _openPensionPot } : null,
-            crossLink: { label: 'Plan how to draw this as income — on Cashflow', onClick: () => onNav?.('flow') },
+            // Drawdown link lives in the drill/leaf (detailed analysis), not on
+            // the scan-friendly tile (founder 2026-05-31: pill too long).
             empty: 'No pensions yet. Add a SIPP or workplace scheme — the contributions get back up to 47% in tax relief.' },
           { id: 'investments',  label: 'Savings & Investments',domainCodes: 'C · D · E · F', rows: catRows.investments,
             empty: 'Nothing invested yet. Add an ISA first — £20k a year, no tax on growth, no tax on withdrawal.' },
@@ -3715,7 +3716,11 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
               // Verbatim format — `£{X}` rounded to nearest £1 for legibility.
               // Locale-formatted number matches the spec template.
               const deltaRounded = Math.round(ihtDelta.delta)
-              tile.contextLine = `From April 2027, pensions enter your estate. Current pre-tax delta: £${deltaRounded.toLocaleString('en-GB')}.`
+              // Declutter (founder 2026-05-31): the verbose "From April 2027…"
+              // contextLine duplicated the SIPP-IHT chip below (both say 2027).
+              // Drop the sentence; the drillable chip carries it compactly.
+              void deltaRounded
+              tile.contextLine = null
               tile.status = {
                 label: 'SIPP-IHT 2027 — delta',
                 tone: 'warn',

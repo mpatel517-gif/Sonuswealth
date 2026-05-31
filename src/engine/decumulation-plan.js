@@ -75,3 +75,51 @@ export function buildDecumulationPlan(pots = [], opts = {}) {
 
   return { sequence, flags }
 }
+
+// Pick the factor that most argues for draining a pot sooner, vs its peers.
+function _dominantReason(s, charges, rets) {
+  const maxCharge = Math.max(...charges), minRet = Math.min(...rets)
+  const chargeLeads = s.factors.charge === maxCharge && maxCharge > 0 && charges.some(c => c !== maxCharge)
+  const growthLeads = s.factors.growth === minRet && rets.some(r => r !== minRet)
+  if (chargeLeads) return 'Higher charge — draining it sooner cuts lifetime fees.'
+  if (growthLeads) return 'Lower expected growth — drain before the faster-growing pots.'
+  return 'Balanced — order is flexible; capture each fund to refine it.'
+}
+
+// Rank pots into a draw-order: which to turn into income first, and why.
+// Pure — each pot may carry `expectedReturn` (fraction), `charge` (fraction),
+// `value`, and `expectedReturnSource` ('actual' suppresses the unknown flag).
+// Legacy/guarantee-risk pots are deferred to the end (verify before drawing).
+// Drain-sooner score = 0.5·charge + 0.3·(1−growth) + 0.2·value (min-max normed).
+export function rankDrawOrder(pots = []) {
+  if (!pots.length) return { ranked: [] }
+  const charges = pots.map(p => +p.charge || 0)
+  const rets = pots.map(p => +p.expectedReturn || 0)
+  const vals = pots.map(p => +p.value || 0)
+  const norm = (arr, v) => { const mn = Math.min(...arr), mx = Math.max(...arr); return mx === mn ? 0.5 : (v - mn) / (mx - mn) }
+
+  const scored = pots.map(p => {
+    const legacy = classifyPot(p) === 'workplace-legacy'
+    const drainScore = 0.5 * norm(charges, +p.charge || 0) + 0.3 * (1 - norm(rets, +p.expectedReturn || 0)) + 0.2 * norm(vals, +p.value || 0)
+    const unknowns = []
+    if (!(+p.charge)) unknowns.push('charge')
+    if (p.expectedReturnSource !== 'actual') unknowns.push('actual fund return')
+    if (legacy) unknowns.push('exit penalty / guarantee')
+    return { pot: p, legacy, drainScore, factors: { charge: +p.charge || 0, growth: +p.expectedReturn || 0, value: +p.value || 0 }, unknowns }
+  })
+
+  const flex = scored.filter(s => !s.legacy).sort((a, b) => b.drainScore - a.drainScore || b.factors.value - a.factors.value)
+  const keep = scored.filter(s => s.legacy)
+  const ordered = [...flex, ...keep]
+  const n = ordered.length
+
+  const ranked = ordered.map((s, i) => ({
+    ...s,
+    order: i + 1,
+    priority: s.legacy ? 'verify-keep' : (i === 0 ? 'draw-first' : i === n - 1 ? 'keep-longest' : 'middle'),
+    primaryReason: s.legacy
+      ? 'Verify guarantees/penalties before drawing — may be worth keeping.'
+      : _dominantReason(s, charges, rets),
+  }))
+  return { ranked }
+}

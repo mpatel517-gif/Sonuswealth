@@ -49,9 +49,10 @@ function Section({ title, children }) {
   )
 }
 
-export function PensionSummaryDrill({ entity, pots = [], personaId, onClose, onHome, onPlanIncome }) {
+export function PensionSummaryDrill({ entity, pots = [], personaId, onClose, onHome, onPlanIncome, initialPotName = null }) {
   const cma = getActiveCMA()
-  const [leaf, setLeaf] = useState(null)
+  // If the tile tapped a specific pension segment, open that pot's leaf straight away.
+  const [leaf, setLeaf] = useState(() => (initialPotName ? pots.find(p => p.name === initialPotName) || null : null))
   // Decumulation strategy lives on Cashflow (mymoney-checklist L18) — this drill
   // shows holdings (§4.5) and LINKS to the income plan rather than hosting it.
   const planIncome = () => (onPlanIncome ? onPlanIncome() : null)

@@ -115,6 +115,7 @@ export default function CategoryTile({
   liability = false,
   empty = null,           // optional empty-state copy override
   series = null,          // 12-month back-cast values for the sparkline (oldest → newest)
+  trendSeries = null,     // number[][] — when set, the top sparkline shows one line PER item (e.g. per pension) instead of a single category line
   changeLabel = null,     // basis for changePct, e.g. "12-mo" — removes "+0.2% of what?" ambiguity
   composition = null,     // { count, noun, series: number[][] } — reveals an aggregate IS N items + per-item trend
   crossLink = null,       // { label, onClick } — when the action lives on another screen, link to it
@@ -181,7 +182,25 @@ export default function CategoryTile({
             Wave 0.6 founder fix: "spark not drillable". Wrapped in a button
             that fires sonus:ask so tapping the line opens an Ask Sonu
             conversation about this category's trend. */}
-        {!isEmpty && Array.isArray(series) && series.length >= 2 && (() => {
+        {/* Multi-line trend: one line per item (e.g. per pension) — founder:
+            "the first spark line, replace it with the 3 you just created". */}
+        {!isEmpty && Array.isArray(trendSeries) && trendSeries.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              window.dispatchEvent(new CustomEvent('sonus:ask', {
+                detail: { question: `How are my ${(label || id || 'holdings').toLowerCase()} trending?`, context: { metric: 'categoryTrendMulti', category: id } },
+              }))
+            }}
+            aria-label={`Ask Sonu about ${label || id} trend`}
+            title="Tap to ask Sonu about this trend"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}
+          >
+            <MiniTrendLines series={trendSeries} width={64} height={22} strokeWidth={1.3} />
+          </button>
+        )}
+        {!isEmpty && !trendSeries && Array.isArray(series) && series.length >= 2 && (() => {
           const W = 64, H = 22, pad = 2
           const xs = series.map((_, i) => pad + (i / (series.length - 1)) * (W - pad * 2))
           const maxV = Math.max(...series.map(v => +v || 0))
@@ -292,20 +311,49 @@ export default function CategoryTile({
           prop for internal use only per the plain-English principle. */}
       <div style={{ marginBottom: 12 }} />
 
-      {/* Composition reveal — aggregate IS N items + per-item trend (replaces
-          a trivial single-wrapper "X 100%" bar with real signal). */}
-      {!isEmpty && composition && composition.count > 0 && (
-        <div style={{ marginBottom: 10 }} onClick={(e) => e.stopPropagation()}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: 'var(--c-text2)', fontWeight: 600 }}>
-              across {composition.count} {composition.noun}{composition.count !== 1 ? 's' : ''}
-            </span>
-            {Array.isArray(composition.series) && composition.series.length > 0 && (
-              <MiniTrendLines series={composition.series} width={72} height={20} />
-            )}
+      {/* Composition reveal — aggregate IS N items, shown as ONE colour-
+          segmented bar (same pattern as the ISA/GIA wrapper bar), each segment
+          + chip drillable into that item. Replaces the trivial "X 100%" bar. */}
+      {!isEmpty && composition && composition.items?.length > 0 && (() => {
+        const items = composition.items
+        const totalVal = items.reduce((s, it) => s + (+it.value || 0), 0) || 1
+        const drill = composition.onDrill
+        return (
+          <div style={{ marginBottom: 10 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 11, color: 'var(--c-text2)', fontWeight: 600, marginBottom: 6 }}>
+              across {items.length} {composition.noun}{items.length !== 1 ? 's' : ''}
+            </div>
+            <div style={{ height: 8, borderRadius: 100, background: 'var(--c-surface2)', display: 'flex', overflow: 'hidden' }}>
+              {items.map((it, i) => (
+                <div
+                  key={(it.name || '') + i}
+                  role={drill ? 'button' : undefined}
+                  aria-label={drill ? `Open ${it.name}` : undefined}
+                  onClick={drill ? () => drill(it) : undefined}
+                  title={`${it.name}: ${fmt(it.value)}`}
+                  style={{ width: `${((+it.value || 0) / totalVal) * 100}%`, background: it.color || WRAPPER_TONE.OTHER, cursor: drill ? 'pointer' : 'default', boxShadow: `0 0 6px ${it.color || WRAPPER_TONE.OTHER}55` }}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', fontSize: 10, color: 'var(--c-text3)' }}>
+              {items.map((it, i) => (
+                <button
+                  key={(it.name || '') + i}
+                  type="button"
+                  className="sw-press"
+                  onClick={drill ? () => drill(it) : undefined}
+                  aria-label={drill ? `Open ${it.name} detail` : undefined}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid transparent', padding: '4px 6px', borderRadius: 6, cursor: drill ? 'pointer' : 'default', color: 'inherit', fontSize: 'inherit', minHeight: 28 }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: it.color || WRAPPER_TONE.OTHER, display: 'inline-block' }} />
+                  <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>{it.short || it.name}</span>
+                  <span>{Math.round(((+it.value || 0) / totalVal) * 100)}%</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Composition mini-bar — only when there are ≥2 wrappers (a single
           wrapper renders a pointless "X 100%" bar, which the founder flagged). */}

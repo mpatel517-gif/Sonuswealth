@@ -480,6 +480,7 @@ export default function TileGrid({
               liability={c.liability}
               empty={c.empty}
               series={c.series}
+              trendSeries={c.trendSeries}
               changeLabel={c.changeLabel}
               composition={c.composition}
               crossLink={c.crossLink}

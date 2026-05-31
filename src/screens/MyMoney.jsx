@@ -3079,6 +3079,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   //       | 'wrapper:<WRAPPER_CODE>'  (e.g. 'wrapper:ISA', 'wrapper:PENSION', 'wrapper:PROPERTY')
   //       | null
   const [activeDrill, setActiveDrill] = useState(null)
+  // When a specific pension segment/chip is tapped on the tile, open its leaf directly.
+  const [pensionInitialPot, setPensionInitialPot] = useState(null)
 
   // Header NW tap → NetWorthDrill (founder direction 2026-05-25 round 5).
   // Dashboard.jsx dispatches 'sonus:networth-drill' and waits one tick for
@@ -3613,6 +3615,10 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         const _penPots = entity?.assets?.sipp?.pensions || entity?.assets?.pensions || entity?.assets?.pension?.pots || []
         const _penCma = (() => { try { return getActiveCMA() } catch { return {} } })()
         const _penSeries = _penPots.map(p => projectSeries(+p.value || 0, growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', _penCma), 20))
+        const _penColors = ['var(--c-acc2,#5B8DEF)', 'var(--c-gold,#E8B84B)', 'var(--c-violet,#9B8CFF)', 'var(--c-acc,#5ddbc2)', 'var(--c-coral,#FF6F7D)']
+        const _penShort = (name = '') => (name.replace(/\([^)]*\)/g, '').replace(/\b(SIPP|DC|Lansdown|Enterprises)\b/gi, '').replace(/\s+/g, ' ').trim() || name)
+        const _penItems = _penPots.map((p, i) => ({ name: p.name, short: _penShort(p.name), value: +p.value || 0, color: _penColors[i % _penColors.length] }))
+        const _openPensionPot = (it) => { setPensionInitialPot(it?.name || null); setActiveDrill('pension') }
 
         // Compose the 10 category cards. Order = spec §3.4 default.
         // Empty-state copy has personality per category — generic "Tap Add"
@@ -3620,7 +3626,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         const CATEGORIES = [
           { id: 'pensions',     label: 'Pensions',             domainCodes: 'A · B',     rows: catRows.pensions,     onRowTap: () => setActiveDrill('pension'),
             changeLabel: 'est. 12-mo',
-            composition: _penPots.length ? { count: _penPots.length, noun: 'pension', series: _penSeries } : null,
+            trendSeries: _penSeries.length ? _penSeries : null,
+            composition: _penItems.length ? { noun: 'pension', items: _penItems, onDrill: _openPensionPot } : null,
             crossLink: { label: 'Plan how to draw this as income — on Cashflow', onClick: () => onNav?.('flow') },
             empty: 'No pensions yet. Add a SIPP or workplace scheme — the contributions get back up to 47% in tax relief.' },
           { id: 'investments',  label: 'Savings & Investments',domainCodes: 'C · D · E · F', rows: catRows.investments,
@@ -4191,9 +4198,10 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           entity={entity}
           pots={entity?.assets?.sipp?.pensions || entity?.assets?.pensions || entity?.assets?.pension?.pots || []}
           personaId={personaId}
-          onClose={() => setActiveDrill(null)}
+          initialPotName={pensionInitialPot}
+          onClose={() => { setActiveDrill(null); setPensionInitialPot(null) }}
           onHome={onHome}
-          onPlanIncome={() => { setActiveDrill(null); onNav?.('flow') }}
+          onPlanIncome={() => { setActiveDrill(null); setPensionInitialPot(null); onNav?.('flow') }}
         />
       )}
 

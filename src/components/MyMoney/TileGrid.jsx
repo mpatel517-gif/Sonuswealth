@@ -203,8 +203,14 @@ export default function TileGrid({
   const semiLiquidPct = liqTotal > 0 ? Math.round((semiLiquidAmt / liqTotal) * 100) : 0
   const illiquidPct   = liqTotal > 0 ? Math.round((illiquidAmt / liqTotal) * 100) : 0
   const altPct        = liqTotal > 0 ? Math.max(0, 100 - liquidPct - semiLiquidPct - illiquidPct) : 0
-  const primary = PRIMARY_ORDER.map(id => map[id]).filter(Boolean)
-  const secondary = SECONDARY_ORDER.map(id => map[id]).filter(Boolean)
+  // Founder 2026-05-31: "only show what a person has." A category with no
+  // holdings is NOT rendered as a (necessarily hollow) tile — discovery happens
+  // through the Add-category control, and a newly-added category then takes its
+  // place here. This removes the empty Business/Alternatives/Protection boxes
+  // that competed with real holdings for attention.
+  const hasData = (c) => !!c && ((Array.isArray(c.rows) && c.rows.length > 0) || +c.subtotal > 0)
+  const primary = PRIMARY_ORDER.map(id => map[id]).filter(hasData)
+  const secondary = SECONDARY_ORDER.map(id => map[id]).filter(hasData)
 
   // Build the trend boxes — collect only the ones we have data for
   const trendBoxes = []
@@ -466,7 +472,7 @@ export default function TileGrid({
         marginBottom: 12,
       }}>
         {[...primary, ...secondary].map((c, i) => (
-          <div key={c.id} style={{ animationDelay: `${i * 60}ms` }}>
+          <div key={c.id} style={{ animationDelay: `${i * 60}ms`, height: '100%' }}>
             <CategoryTile
               id={c.id}
               icon={ICONS[c.id]}

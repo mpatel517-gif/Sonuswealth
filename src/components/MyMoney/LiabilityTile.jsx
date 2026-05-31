@@ -99,7 +99,10 @@ export default function LiabilityTile({
       overflow: 'hidden',
       cursor: onView ? 'pointer' : 'default',
       transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
-      minHeight: 320,
+      // Was minHeight:320 — a single sparse mortgage tile became a giant void.
+      // Size to content; the grid equalises siblings per row (founder 2026-05-31).
+      minHeight: 0,
+      height: '100%',
       display: 'flex', flexDirection: 'column',
     }}
     onClick={onView}>

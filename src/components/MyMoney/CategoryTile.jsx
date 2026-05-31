@@ -148,10 +148,15 @@ export default function CategoryTile({
       overflow: 'hidden',
       cursor: onView ? 'pointer' : 'default',
       transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
-      // Founder UX pass 2 (2026-05-26): enforce symmetric height — tiles with
-      // short content (Alternatives, Obligations, empty states) were 95px
-      // shorter than tiles with full COW + status, breaking the grid rhythm.
-      minHeight: 320,
+      // Heights synchronise per ROW via the grid (align-items:stretch) + the
+      // wrapper's height:100% — not a fixed 320 floor. The old floor forced a
+      // void into any tile with less than 320px of content (sparse Liabilities,
+      // empty states) AND still couldn't equalise tiles taller than 320 (the
+      // Pensions pill with COW + SIPP-IHT chip). Now the tile fills its cell;
+      // the tallest tile in a row sets that row's height, no artificial gap.
+      // (Founder 2026-05-31: "not equal in size … looks not synchronized.")
+      minHeight: 0,
+      height: '100%',
       display: 'flex', flexDirection: 'column',
     }}
     onClick={onView}>

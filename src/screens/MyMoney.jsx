@@ -4001,11 +4001,15 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         for (const l of (liab.otherLoans || [])) {
           const bal = +(l.outstanding || l.outstanding_balance || 0)
           if (!bal) continue
-          const aprRaw = +(l.apr || l.interest_rate || 0)
+          // Personas store the rate as `rate` (0.0385); older shapes use apr/
+          // interest_rate. Missing it here was leaving the BTL tile hollow — no
+          // APR chip, no £/mo, no interest/yr (the whole block gates on apr).
+          const aprRaw = +(l.apr || l.interest_rate || l.rate || 0)
           const rawType = (l.type || 'loan').toLowerCase().replace(/[\s-]+/g, '_')
+          const friendly = (l.type || 'loan').replace(/_/g, ' ').replace(/\bbtl\b/gi, 'BTL').replace(/^\w/, c => c.toUpperCase())
           items.push({
             type: rawType,
-            label: (l.type || 'Loan').replace(/_/g, ' '),
+            label: friendly,
             balance: bal,
             apr: aprRaw > 0 ? aprRaw * 100 : null,
             monthly: +l.monthlyPayment || 0,
@@ -4064,7 +4068,13 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             ) : (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                // A lone debt shouldn't stretch the full width into a wide void;
+                // cap the single-item case, otherwise pack 280px tiles (founder
+                // 2026-05-31). align-items:stretch keeps multi-tile rows equal.
+                gridTemplateColumns: items.length === 1
+                  ? 'minmax(280px, 460px)'
+                  : 'repeat(auto-fit, minmax(280px, 1fr))',
+                alignItems: 'stretch',
                 gap: 12,
               }}>
                 {items.map((item, i) => {

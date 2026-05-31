@@ -88,6 +88,7 @@ import TappableNumber    from '../components/shared/TappableNumber.jsx'
 // Phase 2 follow-up — balance-sheet view + 10 grouped categories per
 // MyMoney v2.7 §3.4 + taxonomy-driven add flow.
 import BalanceSheet       from '../components/MyMoney/BalanceSheet.jsx'
+import { PensionSummaryDrill } from '../components/MyMoney/L3/PensionSummaryDrill.jsx'
 import CategoryCard       from '../components/MyMoney/CategoryCard.jsx'
 import AddItemSheet       from '../components/MyMoney/AddItemSheet.jsx'
 import TileGrid           from '../components/MyMoney/TileGrid.jsx'
@@ -4167,17 +4168,18 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         onCommit={handleAssetCommit}
       />
 
-      {/* ── Pension drill-down ──────────────────────────────────────────── */}
+      {/* ── Pension drill-down (redesigned: Have→Understand→Decide) ──────── */}
+      {/* 2026-05-31: routed into PensionSummaryDrill (grouped-by-type list +
+          per-pot leaf + guided/interactive Decide view). The 800-line inline
+          PensionDrillDown above is now superseded/dead — excise after founder
+          sign-off. Spec: docs/superpowers/specs/2026-05-31-pension-surface-redesign-design.md */}
       {activeDrill === 'pension' && (
-        <PensionDrillDown
+        <PensionSummaryDrill
           entity={entity}
+          pots={entity?.assets?.sipp?.pensions || entity?.assets?.pensions || entity?.assets?.pension?.pots || []}
           personaId={personaId}
-          onBack={() => setActiveDrill(null)}
+          onClose={() => setActiveDrill(null)}
           onHome={onHome}
-          onCommit={(eventOrSchedule) => {
-            if (Array.isArray(eventOrSchedule)) handleCommitSchedule(eventOrSchedule)
-            else if (eventOrSchedule?.type) handleNominationEvent(eventOrSchedule)
-          }}
         />
       )}
 

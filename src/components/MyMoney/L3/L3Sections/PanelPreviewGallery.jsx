@@ -30,6 +30,7 @@ import { FlexiDrawdownPanel } from './FlexiDrawdownPanel.jsx'
 import { DCvsDBPanel } from './DCvsDBPanel.jsx'
 import { DecumulationPanel } from './DecumulationPanel.jsx'
 import { DrillStackProvider } from '../DrillStack.jsx'
+import { TrajectoryBar } from '../TrajectoryBar.jsx'
 import { useEvents, EV } from '../../../../state/events.jsx'
 
 const PANELS = {
@@ -189,6 +190,35 @@ export function PanelPreviewGallery({ entity, panel, personaId, onBack }) {
             </div>
           </div>
         </DrillStackProvider>
+      </div>
+    )
+  }
+
+  // Scratch preview for the TrajectoryBar primitive (#18 1c snap gate).
+  if (panel === 'trajectory') {
+    const rows = [
+      { label: 'Vanguard SIPP (grows)',    now: 420000, future: 612000, plan: 680000, direction: 'grow' },
+      { label: 'BTL property (grows)',     now: 350000, future: 470000, plan: 470000, direction: 'grow' },
+      { label: 'Current account (flat)',   now: 18000,  future: 18500,  plan: 18500,  direction: 'grow' },
+      { label: 'Mortgage (pays down)',     now: 240000, future: 180000, plan: 120000, direction: 'shrink' },
+      { label: 'State pension (switches on)', now: 0,    future: 11502,  plan: 11502,  direction: 'grow' },
+    ]
+    return (
+      <div data-preview-gallery="trajectory" style={{ minHeight: '100vh', background: 'var(--c-bg,#0a0e14)', color: 'var(--c-text,#fff)', padding: 16 }}>
+        <PanelHeader label="TrajectoryBar — grow / flat / shrink / switch-on" persona={null} />
+        {['actual', 'forecast', 'plan'].map(mode => (
+          <div key={mode} style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.6, margin: '8px 0' }}>
+              Active lens: {mode}
+            </div>
+            {rows.map(r => (
+              <div key={r.label} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--c-text2)', marginBottom: 2 }}>{r.label}</div>
+                <TrajectoryBar {...r} activeMode={mode} horizonLabel="age 67" onExpand={() => {}} />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     )
   }

@@ -2017,6 +2017,139 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           Where your future income comes from
         </div>
 
+        {/* §4.5.1 Scheme list & nominations — MOVED TO TOP (founder IA fix
+            2026-05-31): you should see YOUR PENSIONS first, then the analysis
+            below. Was buried under LSA + sustainability + tax-treatment. */}
+        <SectionTitle>1 · Your pensions and who they pay out to</SectionTitle>
+        <div style={{
+          fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.4,
+          display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+        }}>
+          Includes <strong>self-invested</strong> <ExplainerChip id="MM-SIPP" size={13} />,
+          <strong>final-salary</strong> <ExplainerChip id="MM-DB" size={13} /> and
+          <strong>workplace</strong> <ExplainerChip id="MM-WORKPLACE-DC" size={13} /> schemes.
+          The "who inherits" line on each row is your <strong>beneficiary nomination</strong> <ExplainerChip id="MM-NOMINATION" size={13} />.
+        </div>
+        <div style={{
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+          borderRadius: 16, overflow: 'hidden', marginBottom: 22,
+        }}>
+          {noms.map((p, i) => {
+            const colour = p.status === 'stale' || p.status === 'missing' ? '#FF9500'
+              : p.status === 'aging' ? '#FFB347' : '#00E5A8'
+            const label = p.status === 'stale' ? `Nomination ${p.ageYears}y out of date — review`
+              : p.status === 'missing' ? 'No-one named — pot may fall into your estate'
+              : p.status === 'aging' ? `Nomination ${p.ageYears}y old — worth a check`
+              : `Nomination up to date (reviewed ${p.ageYears}y ago)`
+            const isDB = p.schemeKind === 'DB'
+            const dbSource = isDB
+              ? (entity.assets?.pensions || []).find(x =>
+                  (x.name === p.name) ||
+                  (x.scheme_name === p.name) ||
+                  (x.provider === p.name)
+                )
+              : null
+            const accrualYears = dbSource?.accrual_years ?? dbSource?.accrualYears
+            const projectedAnnual = dbSource?.projected_annual_pension ?? dbSource?.projectedAnnualPension
+            const nra = dbSource?.normal_retirement_age ?? dbSource?.normalRetirementAge
+            const cetv = dbSource?.cetv ?? (isDB ? +p.value : null)
+            return (
+              <div key={i} style={{
+                padding: '10px 14px',
+                borderBottom: i < noms.length - 1 ? '1px solid var(--c-sep)' : 'none',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <WrapperBadge wrapper="PENSION" label={isDB ? 'DB' : undefined} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScheme(p)}
+                      className="sw-press"
+                      style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left',
+                        cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--c-text)',
+                        display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      {p.name} <span style={{ color: 'var(--c-text3)', fontWeight: 500 }}>›</span>
+                    </button>
+                    <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+                      {fmt(p.value)} · <span style={{ color: colour, fontWeight: 600 }}>{label}</span>
+                    </div>
+                  </div>
+                  {(p.status === 'stale' || p.status === 'missing') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                      <button onClick={() => onCommit?.({
+                        type: EV.NOMINATION_REVIEWED,
+                        payload: { pensionName: p.name, reviewedDate: new Date().toISOString().slice(0, 10) },
+                      })}
+                        style={{
+                          padding: '5px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
+                          background: 'rgba(255,149,0,0.10)', color: '#FF9500',
+                          border: '1px solid rgba(255,149,0,0.35)', cursor: 'pointer',
+                        }}>Mark reviewed (offline)</button>
+                      <div style={{ fontSize: 9, color: 'var(--c-text3)', maxWidth: 180, textAlign: 'right', lineHeight: 1.3 }}>
+                        Records that you've checked the nomination with your provider — does not update the provider's records.
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {isDB && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--c-sep)' }}>
+                    <div style={{
+                      fontSize: 10, fontWeight: 800, color: 'var(--c-text3)',
+                      letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6,
+                    }}>
+                      Defined-benefit scheme
+                    </div>
+                    {(accrualYears != null || projectedAnnual != null || nra != null || cetv != null) && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                        gap: 6, marginBottom: 8,
+                      }}>
+                        {accrualYears != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>Accrual: </span>
+                            <strong>{accrualYears} yr{accrualYears === 1 ? '' : 's'}</strong>
+                          </div>
+                        )}
+                        {projectedAnnual != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>Projected: </span>
+                            <strong>{fmt(projectedAnnual)}/yr</strong>
+                          </div>
+                        )}
+                        {nra != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>NRA: </span>
+                            <strong>{nra}</strong>
+                          </div>
+                        )}
+                        {cetv != null && (
+                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+                            <span style={{ color: 'var(--c-text3)' }}>CETV: </span>
+                            <strong>{fmt(cetv)}</strong>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {cetv != null && cetv > 30000 && (
+                      <div style={{
+                        fontSize: 11, lineHeight: 1.4,
+                        padding: '8px 10px', borderRadius: 10,
+                        background: 'rgba(255,111,125,0.08)',
+                        border: '1px solid rgba(255,111,125,0.35)',
+                        color: 'var(--c-text)',
+                      }}>
+                        DB transfers of £30,000 or more legally require regulated financial advice (FCA COBS 19.1A). Sonuswealth stores transfer values for information only.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
         {/* v0.3 R8 §2 — LSA / LSDBA top-promotion (P7-1).
             Lump-sum allowance usage matters before any drawdown decision.
             Pensions Schemes Act 2023 caps at £268,275 (LSA) and £1,073,100 (LSDBA). */}
@@ -2241,140 +2374,8 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           askQuestion="What are the real charges on my pensions, and how do my fund choices compare with the default?"
         />
 
-        {/* §4.5.1 Scheme list & nominations */}
-        <SectionTitle>1 · Your pensions and who they pay out to</SectionTitle>
-        <div style={{
-          fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.4,
-          display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-        }}>
-          Includes <strong>self-invested</strong> <ExplainerChip id="MM-SIPP" size={13} />,
-          <strong>final-salary</strong> <ExplainerChip id="MM-DB" size={13} /> and
-          <strong>workplace</strong> <ExplainerChip id="MM-WORKPLACE-DC" size={13} /> schemes.
-          The "who inherits" line on each row is your <strong>beneficiary nomination</strong> <ExplainerChip id="MM-NOMINATION" size={13} />.
-        </div>
-        <div style={{
-          background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
-          borderRadius: 16, overflow: 'hidden',
-        }}>
-          {noms.map((p, i) => {
-            const colour = p.status === 'stale' || p.status === 'missing' ? '#FF9500'
-              : p.status === 'aging' ? '#FFB347' : '#00E5A8'
-            const label = p.status === 'stale' ? `Nomination ${p.ageYears}y out of date — review`
-              : p.status === 'missing' ? 'No-one named — pot may fall into your estate'
-              : p.status === 'aging' ? `Nomination ${p.ageYears}y old — worth a check`
-              : `Nomination up to date (reviewed ${p.ageYears}y ago)`
-            // Pension audit P11 (2026-05-26): DB schemes get their own
-            // affordances. Look up the source pension in entity.assets.pensions
-            // by name to surface accrual / projected annual / NRA, and gate the
-            // £30k+ CETV regulated-advice notice (FCA COBS 19.1A).
-            const isDB = p.schemeKind === 'DB'
-            const dbSource = isDB
-              ? (entity.assets?.pensions || []).find(x =>
-                  (x.name === p.name) ||
-                  (x.scheme_name === p.name) ||
-                  (x.provider === p.name)
-                )
-              : null
-            const accrualYears = dbSource?.accrual_years ?? dbSource?.accrualYears
-            const projectedAnnual = dbSource?.projected_annual_pension ?? dbSource?.projectedAnnualPension
-            const nra = dbSource?.normal_retirement_age ?? dbSource?.normalRetirementAge
-            const cetv = dbSource?.cetv ?? (isDB ? +p.value : null)
-            return (
-              <div key={i} style={{
-                padding: '10px 14px',
-                borderBottom: i < noms.length - 1 ? '1px solid var(--c-sep)' : 'none',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <WrapperBadge wrapper="PENSION" label={isDB ? 'DB' : undefined} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedScheme(p)}
-                      className="sw-press"
-                      style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left',
-                        cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--c-text)',
-                        display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                    >
-                      {p.name} <span style={{ color: 'var(--c-text3)', fontWeight: 500 }}>›</span>
-                    </button>
-                    <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
-                      {fmt(p.value)} · <span style={{ color: colour, fontWeight: 600 }}>{label}</span>
-                    </div>
-                  </div>
-                  {(p.status === 'stale' || p.status === 'missing') && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                      <button onClick={() => onCommit?.({
-                        type: EV.NOMINATION_REVIEWED,
-                        payload: { pensionName: p.name, reviewedDate: new Date().toISOString().slice(0, 10) },
-                      })}
-                        style={{
-                          padding: '5px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
-                          background: 'rgba(255,149,0,0.10)', color: '#FF9500',
-                          border: '1px solid rgba(255,149,0,0.35)', cursor: 'pointer',
-                        }}>Mark reviewed (offline)</button>
-                      <div style={{ fontSize: 9, color: 'var(--c-text3)', maxWidth: 180, textAlign: 'right', lineHeight: 1.3 }}>
-                        Records that you've checked the nomination with your provider — does not update the provider's records.
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {isDB && (
-                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--c-sep)' }}>
-                    <div style={{
-                      fontSize: 10, fontWeight: 800, color: 'var(--c-text3)',
-                      letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6,
-                    }}>
-                      Defined-benefit scheme
-                    </div>
-                    {(accrualYears != null || projectedAnnual != null || nra != null || cetv != null) && (
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                        gap: 6, marginBottom: 8,
-                      }}>
-                        {accrualYears != null && (
-                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
-                            <span style={{ color: 'var(--c-text3)' }}>Accrual: </span>
-                            <strong>{accrualYears} yr{accrualYears === 1 ? '' : 's'}</strong>
-                          </div>
-                        )}
-                        {projectedAnnual != null && (
-                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
-                            <span style={{ color: 'var(--c-text3)' }}>Projected: </span>
-                            <strong>{fmt(projectedAnnual)}/yr</strong>
-                          </div>
-                        )}
-                        {nra != null && (
-                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
-                            <span style={{ color: 'var(--c-text3)' }}>NRA: </span>
-                            <strong>{nra}</strong>
-                          </div>
-                        )}
-                        {cetv != null && (
-                          <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
-                            <span style={{ color: 'var(--c-text3)' }}>CETV: </span>
-                            <strong>{fmt(cetv)}</strong>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {cetv != null && cetv > 30000 && (
-                      <div style={{
-                        fontSize: 11, lineHeight: 1.4,
-                        padding: '8px 10px', borderRadius: 10,
-                        background: 'rgba(255,111,125,0.08)',
-                        border: '1px solid rgba(255,111,125,0.35)',
-                        color: 'var(--c-text)',
-                      }}>
-                        DB transfers of £30,000 or more legally require regulated financial advice (FCA COBS 19.1A). Sonuswealth stores transfer values for information only.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        {/* §4.5.1 scheme list relocated to the TOP of this drill (founder IA
+            fix 2026-05-31) — see above. */}
 
         {/* §4.5.2 Annual Allowance & MPAA & Carry Forward
             Pension audit P3 (2026-05-26): previous 3-tile grid (This year's cap

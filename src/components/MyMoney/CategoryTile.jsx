@@ -2,6 +2,7 @@ import { useId } from 'react'
 import ExplainerChip from '../shared/Explainer.jsx'
 import TappableNumber from '../shared/TappableNumber.jsx'
 import { MiniTrendLines } from './L3/MiniTrendLines.jsx'
+import { TrajectoryBar } from './TrajectoryBar.jsx'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CategoryTile — rich tile for one of the 10 balance-sheet categories.
@@ -116,6 +117,9 @@ export default function CategoryTile({
   empty = null,           // optional empty-state copy override
   series = null,          // 12-month back-cast values for the sparkline (oldest → newest)
   trendSeries = null,     // number[][] — when set, the top sparkline shows one line PER item (e.g. per pension) instead of a single category line
+  trajectory = null,      // { now, future, plan } — Pattern A temporal bar (spec 2026-06-01)
+  activeLens = 'now',     // 'now' | 'future' | 'plan' — global temporal lens, emphasises a length
+  horizonLabel = '',      // e.g. "10-year horizon" — labels the future end of the trajectory bar
   changeLabel = null,     // basis for changePct, e.g. "12-mo" — removes "+0.2% of what?" ambiguity
   composition = null,     // { count, noun, series: number[][] } — reveals an aggregate IS N items + per-item trend
   crossLink = null,       // { label, onClick } — when the action lives on another screen, link to it
@@ -312,6 +316,14 @@ export default function CategoryTile({
           />
         )}
       </div>
+      {/* Temporal trajectory (Pattern A) — Now → Future → Plan as one bar. Shows
+          only when projected (future != now); at the current-period horizon it
+          stays hidden rather than drawing a flat now-only bar. */}
+      {!isEmpty && trajectory && trajectory.future > trajectory.now && (
+        <div style={{ marginBottom: 12 }} onClick={(e) => e.stopPropagation()}>
+          <TrajectoryBar now={trajectory.now} future={trajectory.future} plan={trajectory.plan} active={activeLens} horizonLabel={horizonLabel} />
+        </div>
+      )}
       {/* domainCodes (engineering taxonomy codes) intentionally hidden — kept as a
           prop for internal use only per the plain-English principle. */}
       <div style={{ marginBottom: 12 }} />

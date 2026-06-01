@@ -487,6 +487,9 @@ export default function TileGrid({
               empty={c.empty}
               series={c.series}
               trendSeries={c.trendSeries}
+              trajectory={c.trajectory}
+              activeLens={projection?.viewMode === 'plan' ? 'plan' : projection?.viewMode === 'forecast' ? 'future' : 'now'}
+              horizonLabel={projection?.windowLabel || ''}
               changeLabel={c.changeLabel}
               composition={c.composition}
               crossLink={c.crossLink}

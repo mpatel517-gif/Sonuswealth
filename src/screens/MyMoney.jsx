@@ -89,7 +89,7 @@ import TappableNumber    from '../components/shared/TappableNumber.jsx'
 // MyMoney v2.7 §3.4 + taxonomy-driven add flow.
 import BalanceSheet       from '../components/MyMoney/BalanceSheet.jsx'
 import { PensionSummaryDrill } from '../components/MyMoney/L3/PensionSummaryDrill.jsx'
-import { projectSeries, growthRateFor } from '../engine/projection.js'
+import { projectSeries, growthRateFor, projectValue } from '../engine/projection.js'
 import { getActiveCMA } from '../engine/cma.js'
 import { classifyPot } from '../engine/decumulation-plan.js'
 import CategoryCard       from '../components/MyMoney/CategoryCard.jsx'
@@ -3871,6 +3871,22 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             alternatives: 0.0045,
             obligations:  0.0,
             income:       0.0,
+          }
+          // Per-tile temporal trajectory (Pattern A, spec 2026-06-01): Now /
+          // Future / Plan. The bar's horizon is DECOUPLED from the tax-year window
+          // (that coupling is why Future "showed nothing") — every tile always
+          // projects to a sensible default: to retirement, capped 25y; 10y if
+          // already retired. The global Today/Future/Plan lens only emphasises a
+          // length. plan == future until per-category committed scenario deltas
+          // are wired (next increment). Same drift rate as the sparkline so the
+          // two never disagree.
+          if (tile.subtotal && tile.subtotal !== 0 && c.id !== 'income' && c.id !== 'protection') {
+            const _toRet = (entity?.retirementAge ?? 67) - (entity?.age ?? 50)
+            const _years = _toRet > 1 ? Math.min(_toRet, 25) : 10
+            const _annual = Math.pow(1 + (CAT_MONTHLY_DRIFT[c.id] ?? 0.001), 12) - 1
+            const _now = +tile.subtotal
+            const _future = Math.round(projectValue(_now, _annual, _years))
+            tile.trajectory = { now: _now, future: _future, plan: _future }
           }
           // Founder UX pass 2 (2026-05-26): EVERY tile gets a sparkline.
           // Previously only growth-story categories (pensions/investments/

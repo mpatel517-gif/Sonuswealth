@@ -60,11 +60,11 @@ export default function AskPill({ onTap, hidden = false, tabHint = 'home' }) {
     <button
       onClick={typeof onTap === 'function' ? onTap : undefined}
       aria-label="Open Ask AI"
-      className="sw-lift sw-press"
+      className="sw-lift sw-press sw-ask-pill"
       style={{
         position: 'absolute',
-        left: 16,
-        right: 16,
+        // left/right live in .sw-ask-pill so desktop can clear the 240px sidebar
+        // (founder 2026-06-01: the pill covered the left nav). Mobile = 16/16.
         bottom: 86, // 78 nav + 8 gap
         height: 52,
         zIndex: 200,

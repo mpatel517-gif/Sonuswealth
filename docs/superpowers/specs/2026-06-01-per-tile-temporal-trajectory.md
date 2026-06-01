@@ -45,8 +45,14 @@ Horizon source = the existing tax-year/horizon selector (5y/10y/20y/Lifetime). C
 ## 4. Interaction model (the change)
 
 - **Keep Today / Future / Plan as a GLOBAL LENS.** It sets which value is the "big number" on every tile's trajectory bar (Pattern A: "big number = whichever lens is active"). This reconciles "per-tile representation" with one coherent global control — you don't lose the at-a-glance NW-at-horizon.
-- **Remove the global What-if tab.** The separate global What-if surface owns cross-portfolio what-if. On the tiles, What-if is no longer a global mode.
-- **Per-tile What-if** = a small affordance on each tile (e.g. the pension tile: "what if I retire at 60 / contribute £X more"), scoped to THAT topic only. It either (a) opens a compact inline mini-scenario for that category, or (b) routes into the global What-if surface seeded with that topic. (Fork B, §6.)
+
+### Three tiers of What-if (founder clarified 2026-06-01)
+
+What-if is NOT removed — it exists at three nested scopes, each narrower than the last:
+
+1. **Global What-if** — lives on the **Home** screen. Whole-portfolio scenarios across every tab.
+2. **Tab What-if** — the tab's own "What if" tab (e.g. MyMoney's). Scoped to **that tab's topics only** (MyMoney = balance-sheet categories), NOT global. *Action: rescope the existing MyMoney What-if tab so its scenario library is filtered to MyMoney topics.*
+3. **Per-item What-if** — a small **"What if ⚡" next to "View detail"** on each tile. Scoped to **that one item/topic** (the pension tile's what-if is about pensions only). Inline mini-what-if (Fork B), bound to the shared scenario engine. *First step shipped: the button + a topic-seeded Ask-Sonu what-if entry; the full inline drag-in-place mini is the next increment.*
 
 ## 5. Increments (each ships + snaps)
 

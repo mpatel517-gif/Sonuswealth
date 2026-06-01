@@ -297,6 +297,10 @@ body {
 .stub-ico{font-size:44px;} .stub-t{font-size:18px;font-weight:700;color:var(--c-text2);} .stub-s{font-size:13px;line-height:1.6;}
 
 /* ── RESPONSIVE — iPad and desktop ─────────────────────────────────────── */
+/* Ask Sonu pill — mobile/tablet default spans content width; desktop override
+   (clears the 240px sidebar) lives in the min-width:1024px block below. */
+.sw-ask-pill { left: 16px; right: 16px; }
+
 @media (min-width: 768px) {
   #root { max-width: 680px; }
   .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -333,6 +337,8 @@ body {
     display: none !important;
   }
   .r-grid { grid-template-columns: 1fr 1fr 1fr; }
+  /* Ask Sonu pill clears the 240px sidebar at desktop (founder 2026-06-01). */
+  .sw-ask-pill { left: 256px; right: 24px; }
 }
 
 /* ── DESKTOP SIDEBAR (Phase 2 Batch B.5) ──────────────────────────────────

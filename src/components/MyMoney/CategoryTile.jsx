@@ -125,6 +125,7 @@ export default function CategoryTile({
   crossLink = null,       // { label, onClick } — when the action lives on another screen, link to it
   onView,
   onAdd,
+  onWhatIf = null,        // per-item what-if, scoped to this topic (spec 2026-06-01)
 }) {
   // C-10: unique gradient ID per component instance — prevents all tiles sharing the same gradient
   const uid = useId()
@@ -316,17 +317,16 @@ export default function CategoryTile({
           />
         )}
       </div>
-      {/* Temporal trajectory (Pattern A) — Now → Future → Plan as one bar. Shows
-          only when projected (future != now); at the current-period horizon it
-          stays hidden rather than drawing a flat now-only bar. */}
-      {!isEmpty && trajectory && trajectory.future > trajectory.now && (
-        <div style={{ marginBottom: 12 }} onClick={(e) => e.stopPropagation()}>
-          <TrajectoryBar now={trajectory.now} future={trajectory.future} plan={trajectory.plan} active={activeLens} horizonLabel={horizonLabel} />
+      {/* Temporal trajectory (Pattern A) — compact, directly under the value
+          (founder: "place it after the value"). Hidden at current-period horizon
+          (future == now) rather than drawing a flat now-only bar. */}
+      {!isEmpty && trajectory && trajectory.future > trajectory.now ? (
+        <div style={{ marginTop: -2, marginBottom: 12 }} onClick={(e) => e.stopPropagation()}>
+          <TrajectoryBar now={trajectory.now} future={trajectory.future} plan={trajectory.plan} active={activeLens} />
         </div>
+      ) : (
+        <div style={{ marginBottom: 12 }} />
       )}
-      {/* domainCodes (engineering taxonomy codes) intentionally hidden — kept as a
-          prop for internal use only per the plain-English principle. */}
-      <div style={{ marginBottom: 12 }} />
 
       {/* Composition reveal — aggregate IS N items, shown as ONE colour-
           segmented bar (same pattern as the ISA/GIA wrapper bar), each segment
@@ -569,17 +569,34 @@ export default function CategoryTile({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           paddingTop: 10, borderTop: '1px solid var(--c-sep)', gap: 8,
         }}>
-          <button onClick={(e) => { e.stopPropagation(); onView?.() }}
-            aria-label={`View ${label || id || 'category'} detail`}
-            className="sw-press"
-            style={{
-              background: 'transparent', border: 'none',
-              color: accentColor,
-              fontSize: 11, fontWeight: 800, letterSpacing: 0.3,
-              cursor: 'pointer', padding: 0,
-            }}>
-            View detail →
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button onClick={(e) => { e.stopPropagation(); onView?.() }}
+              aria-label={`View ${label || id || 'category'} detail`}
+              className="sw-press"
+              style={{
+                background: 'transparent', border: 'none',
+                color: accentColor,
+                fontSize: 11, fontWeight: 800, letterSpacing: 0.3,
+                cursor: 'pointer', padding: 0,
+              }}>
+              View detail →
+            </button>
+            {/* Per-item What-if (founder 2026-06-01): scoped to THIS topic only —
+                distinct from the tab-level and global what-ifs. */}
+            {onWhatIf && (
+              <button onClick={(e) => { e.stopPropagation(); onWhatIf(id) }}
+                aria-label={`What if — ${label || id || 'this'}`}
+                className="sw-press"
+                style={{
+                  background: 'transparent', border: 'none',
+                  color: 'var(--c-text3)',
+                  fontSize: 11, fontWeight: 800, letterSpacing: 0.3,
+                  cursor: 'pointer', padding: 0,
+                }}>
+                What if ⚡
+              </button>
+            )}
+          </div>
           <button onClick={(e) => { e.stopPropagation(); onAdd?.(id) }}
             className="sw-press"
             style={{

@@ -3975,6 +3975,18 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
               }
             }}
             onAdd={openBucket}
+            onWhatIf={(catId) => {
+              // Per-item what-if (spec 2026-06-01) — scoped to THIS topic only,
+              // distinct from the tab-level and global what-ifs. Entry point:
+              // opens Ask Sonu's what-if seeded with the category. The full inline
+              // mini-what-if (drag retirement/contribution in place) is the next
+              // increment; it will bind to the same scenario engine.
+              const _label = { pensions: 'pensions', investments: 'savings & investments', property: 'property', cash: 'cash', business: 'business assets', alternatives: 'alternatives' }[catId] || catId
+              window.dispatchEvent(new CustomEvent('sonus:ask', { detail: {
+                question: `What if my ${_label} changed — show me the scenarios for just this`,
+                context: { metric: 'categoryWhatIf', category: catId, scope: 'mymoney' },
+              } }))
+            }}
           />
           </>
         )

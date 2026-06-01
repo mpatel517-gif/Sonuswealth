@@ -149,6 +149,7 @@ export default function TileGrid({
   entity = null,
   onView,
   onAdd,
+  onWhatIf = null,
 }) {
   let prcPcc = null
   try { prcPcc = entity ? prcPccSpread(entity) : null } catch { prcPcc = null }
@@ -495,6 +496,7 @@ export default function TileGrid({
               crossLink={c.crossLink}
               costOfInaction={c.costOfInaction}
               onView={() => onView?.(c.id)}
+              onWhatIf={onWhatIf ? () => onWhatIf(c.id) : null}
               onAdd={onAdd}
             />
           </div>

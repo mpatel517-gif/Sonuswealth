@@ -132,7 +132,7 @@ export function InteractiveProjection({ now = 0, baselineRate = 0.05, charge = 0
         <input type="range" min={MIN_RATE * 100} max={MAX_RATE * 100} step={0.1} value={(rate * 100).toFixed(1)} onChange={e => setRate(+e.target.value / 100)} style={{ width: '100%', marginTop: 6, accentColor: 'var(--c-acc,#5ddbc2)' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
           <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>{Math.round(MIN_RATE * 100)}–{Math.round(MAX_RATE * 100)}% · this pot's assumption {(clampedBaseline * 100).toFixed(1)}%</span>
-          <button type="button" onClick={() => setReal(r => !r)} style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, border: '1px solid var(--c-border,rgba(255,255,255,0.18))', background: real ? 'var(--c-acc,#5ddbc2)' : 'transparent', color: real ? '#06231f' : 'var(--c-text2)', cursor: 'pointer' }}>{real ? "Today's money" : 'Future pounds'}</button>
+          <button type="button" onClick={() => setReal(r => !r)} style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, border: '1px solid var(--c-border,rgba(255,255,255,0.18))', background: real ? 'var(--c-acc,#5ddbc2)' : 'transparent', color: real ? 'var(--c-on-accent,#06231f)' : 'var(--c-text2)', cursor: 'pointer' }}>{real ? "Today's money" : 'Future pounds'}</button>
         </div>
       </div>
 

@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import OverlayShell from '../../shared/OverlayShell.jsx'
 import { MiniTrendLines } from './MiniTrendLines.jsx'
+import { TrajectoryBar } from '../TrajectoryBar.jsx'
 import { PensionLeaf } from './PensionLeaf.jsx'
 import { projectSeries, growthRateFor } from '../../../engine/projection.js'
 import { getActiveCMA } from '../../../engine/cma.js'
@@ -70,8 +71,14 @@ function PotRow({ pot, entity, cma, onOpen }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, color: 'var(--c-text)' }}>{pot.name}</div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{meta} · <span style={{ color: stale ? 'var(--c-gold,#E8B84B)' : 'var(--c-good,#5DDBA8)' }}>{stale ? 'nomination — review' : 'nomination up to date'}</span></div>
+        {/* Per-pot trajectory (founder 2026-06-01: "near the spark line") — the
+            now→future bar replaces the 12-month sparkline; DB has no pot to grow. */}
+        {!isDB && value > 0 && (
+          <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+            <TrajectoryBar now={value} future={series[series.length - 1]} height={6} />
+          </div>
+        )}
       </div>
-      {!isDB && <MiniTrendLines series={[series]} width={64} height={24} />}
       <span style={{ color: 'var(--c-text3)' }}>›</span>
     </button>
   )

@@ -220,7 +220,7 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
         {editing ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <input value={val} onChange={e => setVal(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--c-border,rgba(255,255,255,0.2))', background: 'var(--c-surface,rgba(255,255,255,0.04))', color: 'var(--c-text)' }} />
-            <button type="button" onClick={saveValue} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--c-acc,#5ddbc2)', color: '#06231f', fontWeight: 700, cursor: 'pointer' }}>Save</button>
+            <button type="button" onClick={saveValue} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--c-acc,#5ddbc2)', color: 'var(--c-on-accent,#06231f)', fontWeight: 700, cursor: 'pointer' }}>Save</button>
           </div>
         ) : (
           <button type="button" onClick={() => setEditing(true)} style={{ alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 8, border: '1px solid var(--c-border,rgba(255,255,255,0.2))', background: 'transparent', color: 'var(--c-text)', cursor: 'pointer' }}>Update value</button>

@@ -134,6 +134,62 @@ function Drawer({ icon, color, label, count, equity, value, line, onOpen }) {
   )
 }
 
+// ── Property sub-type taxonomy (founder 2026-06-01 "entire taxonomy") ─────────
+// A category that holds genuinely different sub-types must peel each into its own
+// drawer with the CORRECT tax — a commercial unit taxed as a residential BTL, or
+// farmland shown without APR, is exactly the wrong-tax failure we guard against.
+// Tax verified against UK-2026.1.1 bundle + current legislation (June 2026).
+const PROPERTY_TYPES = {
+  let: {
+    order: 1, icon: '⌖', color: '#FFB347', label: 'Let property', plural: 'Let properties', rate: 0.045,
+    use: 'rental', usesTaxBlock: true, residentialLet: true,
+    taxNote: 'Section 24 restricts mortgage-interest relief to a 20% basic-rate credit (since April 2020) — a real burden for higher/additional-rate landlords. Residential CGT 18% / 24% on disposal, reported and paid within 60 days. No PPR; no BPR.',
+    chips: [{ t: 'warn', l: 'S24 restricted' }, { t: 'bad', l: 'No PPR' }, { t: 'bad', l: 'No BPR' }, { l: '60-day CGT' }],
+  },
+  'second-home': {
+    order: 2, icon: '◫', color: '#5AC8FA', label: 'Second home', plural: 'Second homes', rate: 0.04,
+    use: 'second-home', usesTaxBlock: false, residentialLet: false,
+    taxNote: 'A second home gets no PPR relief — full residential CGT 18% / 24% on the whole gain, reported within 60 days. It was bought with the 5% SDLT additional-property surcharge on top of the standard bands. No rental income unless you let it (then S24 applies).',
+    chips: [{ t: 'bad', l: 'No PPR' }, { t: 'warn', l: 'SDLT +5% on purchase' }, { l: 'CGT 18/24' }, { l: '60-day CGT' }],
+  },
+  commercial: {
+    order: 3, icon: '▤', color: '#9B8CFF', label: 'Commercial property', plural: 'Commercial properties', rate: 0.05,
+    use: 'commercial', usesTaxBlock: false, residentialLet: false,
+    taxNote: 'Outside the residential regime: no Section 24 (loan interest is fully deductible against rental profit), CGT 18% / 24% on the gain declared via Self Assessment (no 60-day reporting), and SDLT on the lower non-residential bands with no 5% surcharge. Qualifies for Business Property Relief only if it is an asset of a trading business, not a passive investment.',
+    chips: [{ t: 'good', l: 'No S24' }, { t: 'good', l: 'No SDLT surcharge' }, { l: 'CGT 18/24' }, { t: 'good', l: 'BPR if trading' }],
+  },
+  overseas: {
+    order: 4, icon: '◴', color: '#30D158', label: 'Overseas property', plural: 'Overseas properties', rate: 0.04,
+    use: 'overseas', usesTaxBlock: false, residentialLet: false,
+    taxNote: 'As a UK resident you are taxable on worldwide rental income and gains, unless you are a recent arriver electing the 4-year FIG regime. Foreign tax paid is credited under the relevant double-tax treaty. No UK PPR unless it is your only or main home. Local property taxes apply in the country where it sits.',
+    chips: [{ t: 'warn', l: 'Worldwide taxable' }, { l: 'Foreign tax credit' }, { t: 'bad', l: 'No UK PPR' }, { l: 'FIG if eligible' }],
+  },
+  hmo: {
+    order: 5, icon: '⌸', color: '#FF9500', label: 'HMO', plural: 'HMOs', rate: 0.05,
+    use: 'hmo', usesTaxBlock: false, residentialLet: true,
+    taxNote: 'A House in Multiple Occupation is a residential let — Section 24 applies, residential CGT 18% / 24%, 60-day reporting. It needs a mandatory HMO licence (5+ occupants) and, in an Article 4 area, planning permission. Higher gross yield, but heavier management and compliance.',
+    chips: [{ t: 'warn', l: 'S24 restricted' }, { t: 'warn', l: 'HMO licence' }, { t: 'bad', l: 'No PPR' }, { l: '60-day CGT' }],
+  },
+  agricultural: {
+    order: 6, icon: '⊞', color: '#A2845E', label: 'Agricultural land', plural: 'Agricultural land', rate: 0.03,
+    use: 'agricultural', usesTaxBlock: false, residentialLet: false,
+    taxNote: 'Farmland can qualify for Agricultural Property Relief — up to 100% IHT relief on the agricultural value within the £2.5m combined APR/BPR allowance (50% above) from April 2026, after a 2-year owner-occupier or 7-year let qualifying period. No Section 24 on a genuine farming trade. CGT 18% / 24% applies to any non-agricultural development value.',
+    chips: [{ t: 'good', l: 'APR eligible' }, { t: 'good', l: 'No S24' }, { l: '£2.5m allowance' }, { l: 'CGT 18/24' }],
+  },
+}
+const UK_COUNTRIES = ['uk', 'gb', 'united kingdom', 'england', 'scotland', 'wales', 'northern ireland', '']
+function classifyProperty(p) {
+  const u = String(p.use || p.type || '').toLowerCase()
+  const country = String(p.country || p.jurisdiction || '').toLowerCase()
+  if (country && !UK_COUNTRIES.includes(country)) return 'overseas'
+  if (/overseas|abroad|foreign/.test(u)) return 'overseas'
+  if (/hmo|multiple occupation/.test(u)) return 'hmo'
+  if (/commercial|office|retail|industrial|warehouse|\bshop\b/.test(u)) return 'commercial'
+  if (/agricultur|farm|woodland|forestry/.test(u)) return 'agricultural'
+  if (/second|holiday/.test(u)) return 'second-home'
+  return 'let' // buy-to-let, rental, btl, or unspecified
+}
+
 export default function PropertyDrillDown(props) {
   return (
     <DrillStackProvider>
@@ -179,10 +235,25 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
                       (+entity?.income?.rental || 0) + (+entity?.income?.other || 0))
   const isHigherRate = grossIncome >= 50270
 
+  // Per-property mortgage lookup (BTL/other loans secured on the property).
+  const propDebt = (p) => {
+    const m = btlMortgages.find(mm => mm.secured_on === p.id)
+    return +m?.outstanding || +m?.outstanding_balance || 0
+  }
+  // Bucket every non-residence property by sub-type — one drawer per TYPE present,
+  // so a commercial unit and a let flat never share a drawer (they share no tax).
+  const bucketOf = {}
+  for (const p of btls) (bucketOf[classifyProperty(p)] ??= []).push(p)
+
   // Sub-category groups — the onion's first peel. Each drives one drawer.
   const groups = []
   if (residenceValue > 0) groups.push({ key: 'residence', icon: '⌂', color: '#FF9F0A', label: 'Main residence', value: residenceValue, equity: residenceEquity, count: 1, rate: 0.04 })
-  if (btlValue > 0) groups.push({ key: 'let', icon: '⌖', color: '#FFB347', label: btls.length > 1 ? 'Let properties' : 'Let property', value: btlValue, equity: btlEquity, count: Math.max(1, btls.length), rate: 0.045 })
+  for (const [k, list] of Object.entries(bucketOf).sort((x, y) => (PROPERTY_TYPES[x[0]]?.order || 9) - (PROPERTY_TYPES[y[0]]?.order || 9))) {
+    const meta = PROPERTY_TYPES[k] || PROPERTY_TYPES.let
+    const value = list.reduce((s, p) => s + (+p.value || +p.value_gbp || 0), 0)
+    const equity = value - list.reduce((s, p) => s + propDebt(p), 0)
+    groups.push({ key: k, icon: meta.icon, color: meta.color, label: list.length > 1 ? meta.plural : meta.label, value, equity, count: list.length, rate: meta.rate })
+  }
 
   const drillStack = useDrillStackContext()
   const propertyBreakdown = [
@@ -194,7 +265,9 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
 
   // OverlayShell back pops a sub-category first, then closes the whole drill.
   const shellBack = openGroup ? () => setOpenGroup(null) : onBack
-  const groupLabel = openGroup === 'residence' ? 'Main residence' : openGroup === 'let' ? (btls.length > 1 ? 'Let properties' : 'Let property') : null
+  const activeMeta = openGroup && openGroup !== 'residence' ? (PROPERTY_TYPES[openGroup] || PROPERTY_TYPES.let) : null
+  const activeList = openGroup && openGroup !== 'residence' ? (bucketOf[openGroup] || []) : []
+  const groupLabel = openGroup === 'residence' ? 'Main residence' : activeMeta ? (activeList.length > 1 ? activeMeta.plural : activeMeta.label) : null
 
   return (
     <OverlayShell title={groupLabel ? `Property · ${groupLabel}` : 'Property · drill-down'}
@@ -219,7 +292,7 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
         {!openGroup && (
           <>
             <div className="sw-eyebrow" style={{ fontStyle: 'italic', color: 'var(--c-text3)', marginBottom: 12 }}>
-              Two kinds of property, taxed nothing alike. Tap one to go deeper.
+              {groups.length} kind{groups.length === 1 ? '' : 's'} of property, each taxed differently. Tap one to go deeper.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
               <Tile label="Total property" value={fmt(totalPropertyValue)} tone="good" />
@@ -241,13 +314,25 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
               </div>
             )}
 
-            <Section title="Not captured yet" sub="Other property types you could add here:">
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['Second home', 'Overseas property', 'Commercial property', 'Agricultural land', 'Woodland / forestry', 'HMO', 'Shared ownership', 'REITs', 'Equity release', 'Ground rents'].map(t => (
-                  <span key={t} style={{ padding: '6px 12px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px dashed var(--c-border)', color: 'var(--c-text3)', fontSize: 11, fontWeight: 600 }}>+ {t}</span>
-                ))}
-              </div>
-            </Section>
+            {(() => {
+              const present = new Set(groups.map(g => g.key))
+              const fromTax = Object.entries(PROPERTY_TYPES)
+                .filter(([k]) => !present.has(k))
+                .sort((x, y) => x[1].order - y[1].order)
+                .map(([, m]) => m.label)
+              const extras = ['Woodland / forestry', 'Shared ownership', 'REITs', 'Equity release', 'Ground rents']
+              const missing = [...fromTax, ...extras]
+              if (!missing.length) return null
+              return (
+                <Section title="Not captured yet" sub="Other property types you could add here:">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {missing.map(t => (
+                      <span key={t} style={{ padding: '6px 12px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px dashed var(--c-border)', color: 'var(--c-text3)', fontSize: 11, fontWeight: 600 }}>+ {t}</span>
+                    ))}
+                  </div>
+                </Section>
+              )
+            })()}
           </>
         )}
 
@@ -299,41 +384,42 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
           </>
         )}
 
-        {/* ── LAYER 2 — Let property ─────────────────────────────────────── */}
-        {openGroup === 'let' && (
+        {/* ── LAYER 2 — any non-residence sub-type (dynamic by tax class) ──── */}
+        {activeMeta && (
           <>
-            <Section title="How a let property is taxed" sub={
-              <><Term id="MM-S24">S24</Term> restricts mortgage-interest relief to a 20% basic-rate credit (since April 2020) — a material burden for higher/additional-rate landlords. 60-day CGT reporting on disposal. Residential CGT 18% / 24%.</>
-            }>
-              <TaxTreatmentBlock wrapper="PROPERTY" asset={{ type: 'btl', use: 'rental' }} label="Tax treatment · Buy-to-let" />
+            <Section title={`How ${(activeList.length > 1 ? activeMeta.plural : activeMeta.label).toLowerCase()} ${activeList.length > 1 ? 'are' : 'is'} taxed`}
+              sub={activeMeta.taxNote}>
+              {activeMeta.usesTaxBlock && (
+                <TaxTreatmentBlock wrapper="PROPERTY" asset={{ type: 'btl', use: activeMeta.use }} label={`Tax treatment · ${activeMeta.label}`} />
+              )}
             </Section>
 
-            <Section title={btls.length > 1 ? 'Your let properties' : 'The property'} sub="Tap a property for its full detail and what you can do.">
+            <Section title={activeList.length > 1 ? `Your ${activeMeta.plural.toLowerCase()}` : 'The property'} sub="Tap a property for its full detail and what you can do.">
               <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
-                {btls.map((p, i) => {
+                {activeList.map((p, i) => {
                   const mortgage = btlMortgages.find(m => m.secured_on === p.id)
                   const debt = +mortgage?.outstanding || +mortgage?.outstanding_balance || 0
-                  const equity = (+p.value || +p.value_gbp || 0) - debt
+                  const value = +p.value || +p.value_gbp || 0
+                  const equity = value - debt
                   const annualRent = +p.annual_rent || (+p.monthly_rent || 0) * 12
-                  const gain = (+p.value || +p.value_gbp || 0) - (+p.purchase_price || 0)
+                  const gain = value - (+p.purchase_price || 0)
                   return (
-                    <div key={p.id || i} style={{ padding: '14px', borderBottom: i < btls.length - 1 ? '1px solid var(--c-sep)' : 'none' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginBottom: 2 }}>{p.label || p.address || 'BTL'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8 }}>{p.use || 'buy-to-let'} · purchased {p.purchase_date || 'n/a'}</div>
+                    <div key={p.id || i} style={{ padding: '14px', borderBottom: i < activeList.length - 1 ? '1px solid var(--c-sep)' : 'none' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginBottom: 2 }}>{p.label || p.address || activeMeta.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8 }}>
+                        {p.use || activeMeta.use}{p.country || p.jurisdiction ? ` · ${p.country || p.jurisdiction}` : ''} · purchased {p.purchase_date || 'n/a'}
+                      </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                        <Chip tone="warn">S24: {p.s24_position || 'fully-restricted'}</Chip>
-                        <Chip tone="bad">No PPR</Chip>
-                        <Chip tone="bad">No BPR</Chip>
-                        <Chip>60-day CGT reporting</Chip>
+                        {activeMeta.chips.map((c, ci) => <Chip key={ci} tone={c.t || 'neutral'}>{c.l}</Chip>)}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
-                        <Tile label="Market value" value={fmt(p.value || p.value_gbp)} />
+                        <Tile label="Market value" value={fmt(value)} />
                         <Tile label="Cost basis" value={fmt(p.purchase_price)} />
-                        <Tile label="Embedded gain" value={fmt(gain)} tone={gain > 0 ? 'warn' : 'neutral'} sub="Residential CGT 18% / 24%" />
-                        <Tile label="Annual rent" value={fmt(annualRent)} sub="Gross" />
-                        <Tile label="BTL mortgage" value={fmt(debt)} sub={mortgage?.rate_type || ''} />
+                        <Tile label="Embedded gain" value={fmt(gain)} tone={gain > 0 ? 'warn' : 'neutral'} sub="CGT 18% / 24%" />
+                        {annualRent > 0 && <Tile label="Annual rent" value={fmt(annualRent)} sub="Gross" />}
+                        <Tile label="Mortgage" value={fmt(debt)} sub={mortgage?.rate_type || ''} />
                         <Tile label="Equity" value={fmt(equity)} tone={equity > 0 ? 'good' : 'bad'} />
-                        {(+p.mortgage_interest_annual > 0 || +mortgage?.annual_interest > 0) && (() => {
+                        {activeMeta.residentialLet && (+p.mortgage_interest_annual > 0 || +mortgage?.annual_interest > 0) && (() => {
                           const interest = +p.mortgage_interest_annual || +mortgage?.annual_interest || 0
                           const credit = interest * 0.20
                           const preS24 = interest * (isHigherRate ? 0.40 : 0.20)
@@ -345,7 +431,7 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
                         })()}
                       </div>
                       <button type="button"
-                        onClick={() => setSelected({ ...p, type: p.type || 'btl', use: p.use || 'rental', name: p.name || p.address || 'Buy-to-let property', _debt: debt, _costBasis: +p.purchase_price || 0, _isResidence: false, _isHigherRate: isHigherRate })}
+                        onClick={() => setSelected({ ...p, type: p.type || activeMeta.use, use: p.use || activeMeta.use, name: p.name || p.address || activeMeta.label, _debt: debt, _costBasis: +p.purchase_price || 0, _isResidence: false, _isHigherRate: isHigherRate })}
                         className="sw-press"
                         style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         View details <span style={{ color: 'var(--c-text3)' }}>›</span>
@@ -353,12 +439,6 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
                     </div>
                   )
                 })}
-              </div>
-            </Section>
-
-            <Section title="CGT on a let-property disposal — current rates">
-              <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, padding: 14, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
-                CGT — 18% in the basic-rate band, 24% above. No PPR relief on a let property (unless it was once your main home — then partial). Lettings relief £40,000 cap, only where you shared occupation.
               </div>
             </Section>
           </>

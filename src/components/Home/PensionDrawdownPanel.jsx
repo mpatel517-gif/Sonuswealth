@@ -145,7 +145,7 @@ export default function PensionDrawdownPanel({ entity, onClose, onNav }) {
           }}>
             <div style={{
               flexShrink: 0, width: 28, height: 28, borderRadius: '50%',
-              background: 'var(--c-acc)', color: '#0B1F3A',
+              background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
               fontSize: 12, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
@@ -164,7 +164,7 @@ export default function PensionDrawdownPanel({ entity, onClose, onNav }) {
                   style={{
                     marginTop: 10, padding: '8px 16px', borderRadius: 999,
                     background: 'var(--c-acc)', border: 'none',
-                    color: '#0B1F3A', fontSize: 12, fontWeight: 700,
+                    color: 'var(--c-on-accent, #0B1F3A)', fontSize: 12, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}
                 >

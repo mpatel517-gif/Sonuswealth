@@ -18,6 +18,16 @@ import TaxTreatmentBlock from './TaxTreatmentBlock.jsx'
 import { getWrapper } from '../../engine/selectors/index.js'
 import { useEvents, EV } from '../../state/events.jsx'
 import { DrillableNumber, L4NumberPanel } from './L3/index.js'
+import WhatYouCanDo from './WhatYouCanDo.jsx'
+import PropertyDecisions from './PropertyDecisions.jsx'
+import InvestmentDecisions from './InvestmentDecisions.jsx'
+import BusinessDecisions from './BusinessDecisions.jsx'
+import CashDecisions from './CashDecisions.jsx'
+import AlternativesDecisions from './AlternativesDecisions.jsx'
+import ProtectionDecisions from './ProtectionDecisions.jsx'
+import DebtDecisions from './DebtDecisions.jsx'
+import { TrajectoryBar } from './TrajectoryBar.jsx'
+import { projectValue } from '../../engine/projection.js'
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -126,8 +136,10 @@ export default function AssetDetailOverlay({
     setEditing(false)
   }
 
-  const chipClass = WRAPPER_TONE[wrapper] || 'sw-chip-violet'
-  const wrapperText = WRAPPER_LABEL[wrapper] || wrapper
+  const chipClass = domain === 'protection' ? 'sw-chip-blue' : (WRAPPER_TONE[wrapper] || 'sw-chip-violet')
+  const wrapperText = domain === 'protection'
+    ? (asset?.type ? `${String(asset.type).replace(/[-_]/g, ' ')} cover` : 'Protection policy')
+    : (WRAPPER_LABEL[wrapper] || wrapper)
 
   return (
     <OverlayShell
@@ -145,7 +157,7 @@ export default function AssetDetailOverlay({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span className={`sw-chip sw-chip-sm ${chipClass}`} style={{ fontWeight: 700, letterSpacing: 0.4 }}>
-              {wrapper === 'UNKNOWN' ? 'WRAPPER?' : wrapper.replace('_', ' ')}
+              {domain === 'protection' ? 'POLICY' : wrapper === 'UNKNOWN' ? 'WRAPPER?' : wrapper.replace('_', ' ')}
             </span>
             {asset?.provider && (
               <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{asset.provider}</span>
@@ -222,14 +234,48 @@ export default function AssetDetailOverlay({
           )}
         </div>
 
+        {/* ── Where this is heading — the analysis half (founder (A) 2026-06-01:
+            "view detail shows information including analysis"). Same honest
+            TrajectoryBar primitive the pension leaf uses: today → horizon at the
+            holding's OWN captured growth assumption, never fabricated. Skipped
+            when no real growth/interest rate exists, so we don't invent one. ── */}
+        {(() => {
+          const gr = +(asset?.growth_rate_assumption ?? asset?.interest_rate ?? 0)
+          if (!(value > 0) || !(gr > 0)) return null
+          const yrs = 10
+          const future = Math.round(projectValue(value, gr, yrs))
+          return (
+            <div>
+              <div style={{
+                fontSize: 11, fontWeight: 800, color: 'var(--c-text3)',
+                letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8,
+              }}>Where this is heading</div>
+              <TrajectoryBar now={value} future={future} height={8} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
+                <span>today · {fmt(value)}</span>
+                <span>in {yrs} years</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
+                At this holding’s own {(gr * 100).toFixed(1)}%/yr assumption — your assumption, not a forecast or past performance. Before charges and inflation.
+              </div>
+            </div>
+          )
+        })()}
+
         {/* ── Tax treatment ────────────────────────────────────────────── */}
-        <div>
-          <div style={{
-            fontSize: 11, fontWeight: 800, color: 'var(--c-text3)',
-            letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8,
-          }}>How this is taxed</div>
-          <TaxTreatmentBlock asset={asset} wrapper={wrapper} compact />
-        </div>
+        {/* Skipped for protection: a policy has no investment wrapper, so the
+            generic block reads "wrapper not resolved" — meaningless. The
+            decision modeller's in-trust / IHT-on-payout logic IS its tax
+            treatment. (Audit 2026-06-01.) */}
+        {domain !== 'protection' && (
+          <div>
+            <div style={{
+              fontSize: 11, fontWeight: 800, color: 'var(--c-text3)',
+              letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8,
+            }}>How this is taxed</div>
+            <TaxTreatmentBlock asset={asset} wrapper={wrapper} compact />
+          </div>
+        )}
 
         {/* ── Provenance ───────────────────────────────────────────────── */}
         <div>
@@ -268,6 +314,97 @@ export default function AssetDetailOverlay({
               {asset.maturity_date && (<><span style={{ color: 'var(--c-text3)' }}>Matures</span><span>{asset.maturity_date}</span></>)}
             </div>
           </div>
+        )}
+
+        {/* ── Decision layer (founder fault #2 + 2026-06-01 "model sell/remortgage
+            and see the tax impact"). Property gets the interactive impact
+            modeller; every other holding gets the FCA-safe guidance block. ── */}
+        {domain === 'property' ? (
+          <PropertyDecisions
+            asset={asset}
+            debt={asset?._debt}
+            costBasis={asset?._costBasis}
+            isResidence={!!asset?._isResidence}
+            isHigherRate={asset?._isHigherRate !== false}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'property', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : domain === 'investments' ? (
+          <InvestmentDecisions
+            asset={asset}
+            wrapper={wrapper}
+            isHigherRate={asset?._isHigherRate !== false}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'investments', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : domain === 'alternatives' ? (
+          <AlternativesDecisions
+            asset={asset}
+            wrapper={wrapper}
+            isHigherRate={asset?._isHigherRate !== false}
+            costBasis={asset?._costBasis}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'alternatives', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : domain === 'liabilities' ? (
+          <DebtDecisions
+            asset={asset}
+            marginalRate={asset?._marginalRate ?? 0.4}
+            surplusCash={asset?._surplusCash ?? 0}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'liabilities', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : domain === 'protection' ? (
+          <ProtectionDecisions
+            asset={asset}
+            annualIncome={asset?._annualIncome ?? 0}
+            dependents={asset?._dependents ?? 0}
+            totalCover={asset?._totalCover ?? 0}
+            coverGap={asset?._coverGap ?? 0}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'protection', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : domain === 'business' ? (
+          <BusinessDecisions
+            asset={asset}
+            isHigherRate={asset?._isHigherRate !== false}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'business', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : domain === 'cash' ? (
+          <CashDecisions
+            asset={asset}
+            marginalRate={asset?._marginalRate ?? 0.4}
+            psa={asset?._psa ?? 500}
+            monthlyEssentials={asset?._monthlyEssentials ?? 0}
+            totalCash={asset?._totalCash ?? 0}
+            isaRoom={asset?._isaRoom ?? 20000}
+            onAddToPlan={(scenario) => commit(personaId, {
+              type: EV.SCENARIO_SAVED,
+              payload: { domain: 'cash', asset: asset?.name, ...scenario },
+              timestamp: new Date().toISOString(),
+            })}
+          />
+        ) : (
+          <WhatYouCanDo asset={asset} wrapper={wrapper} domain={domain} />
         )}
 
       </div>

@@ -75,7 +75,7 @@ function PotRow({ pot, entity, cma, onOpen }) {
             now→future bar replaces the 12-month sparkline; DB has no pot to grow. */}
         {!isDB && value > 0 && (
           <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-            <TrajectoryBar now={value} future={series[series.length - 1]} height={6} />
+            <TrajectoryBar now={value} future={series[series.length - 1]} height={6} interactive={false} />
           </div>
         )}
       </div>

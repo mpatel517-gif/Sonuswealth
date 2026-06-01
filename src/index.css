@@ -545,7 +545,13 @@ body {
 /* ── SHEET OVERLAY ───────────────────────────────────────────────────────── */
 .sheet-overlay { position:fixed; inset:0; z-index:600; pointer-events:all; }
 .sheet-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.55); }
-.sheet-panel { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:680px; background:var(--c-surface); border-radius:20px 20px 0 0; padding:20px 20px 44px; max-height:75vh; overflow-y:auto; }
+/* Centred via auto margins, NOT transform: the entry animation (.sw-fade-in-up
+   → sw-fade-up keyframe) ends on `transform: translateY(0)` with fill `both`,
+   which would clobber a `translateX(-50%)` centering and push the panel ~half
+   its width off the right edge (founder 2026-06-01: "right edge cannot see the
+   scroll bar and the edge"). left:0 + right:0 + margin-inline:auto centres a
+   max-width box while leaving `transform` free for the keyframe. */
+.sheet-panel { position:absolute; bottom:0; left:0; right:0; margin-inline:auto; width:100%; max-width:680px; background:var(--c-surface); border-radius:20px 20px 0 0; padding:20px 20px 44px; max-height:75vh; overflow-y:auto; overflow-x:hidden; }
 .sheet-handle { width:36px; height:5px; border-radius:3px; background:var(--c-sep); margin:0 auto 16px; }
 
 /* ── THEME-AWARE CARD BACKGROUNDS ──────────────────────────────────────────

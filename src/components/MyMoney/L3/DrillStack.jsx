@@ -94,7 +94,15 @@ export function useDrillStack() {
 // topmost panel is interactive; lower ones are visually dimmed.
 export function DrillStack({ stack, children }) {
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    // Full-VIEWPORT overlay (was position:relative + height:100% — which, placed
+    // in-flow under the MyMoney tiles, collapsed to content height and rendered
+    // the drill BELOW the page instead of as a screen; the OverlayShell inside,
+    // being absolute inset:0, then only filled that collapsed box). Pension's
+    // drill has no DrillStack wrapper, so it already filled the viewport — this
+    // brings EVERY DrillStack drill (liabilities, investments, business, cash,
+    // alternatives) to the same "opens as another screen" behaviour. (Founder
+    // 2026-06-01: "view detail … needs to open in another screen not below.")
+    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--c-bg)' }}>
       {children}
       {stack.panels.map((entry, i) => {
         const isTop = i === stack.panels.length - 1
@@ -106,7 +114,10 @@ export function DrillStack({ stack, children }) {
               position: 'absolute',
               inset: 0,
               background: 'var(--c-bg, #0a0a0a)',
-              zIndex: 100 + i,
+              // Above the base OverlayShell (zIndex 500) so a pushed panel — and
+              // its breadcrumb ← Back — renders ON TOP of the drill, not behind
+              // it. (Was 100+i, which left deep drills hidden under the shell.)
+              zIndex: 600 + i,
               overflowY: 'auto',
               pointerEvents: isTop ? 'auto' : 'none',
               opacity: isTop ? 1 : 0.0,

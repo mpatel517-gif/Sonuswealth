@@ -33,6 +33,7 @@
           "name": "Fred — Bedrock Quarry Pension",
           "value": 195000,
           "type": "Workplace DC",
+          "schemeKind": "DC",
           "provider": "Royal London",
           "charge": 0.004,
           "chargeIsEstimate": false,
@@ -43,6 +44,7 @@
           "name": "Fred — Personal SIPP",
           "value": 145000,
           "type": "SIPP",
+          "schemeKind": "DC",
           "provider": "Hargreaves Lansdown",
           "charge": 0.0045,
           "chargeIsEstimate": false,
@@ -53,11 +55,16 @@
           "name": "Wilma — Teachers Supplementary DC",
           "value": 140000,
           "type": "Workplace DC",
+          "schemeKind": "DC",
           "provider": "Aviva",
           "charge": 0.0055,
           "chargeIsEstimate": false,
           "transferEligible": true,
-          "nominationDate": "2023-06-20"
+          "nominationDate": "2023-06-20",
+          "contribution_monthly": {
+            "personal": 200,
+            "employer": 200
+          }
         }
       ]
     },

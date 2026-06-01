@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import CategoryTile from './CategoryTile.jsx'
-import TappableNumber from '../shared/TappableNumber.jsx'
 import { prcPccSpread, fmt as engineFmt } from '../../engine/fq-calculator.js'
+import { buildTrendMetricDrill } from './trendMetricDrill.js'
 
 // M-03 fix: single source-of-truth formatter shared with TripleAnchor
 // (which uses `fmt` from fq-calculator.js). Previously TileGrid had its own
@@ -18,14 +18,17 @@ function fmt(v) {
 
 // ── TrendBox — equal-height square card for the hero metrics ─────────────────
 // All boxes forced to same height via parent gridAutoRows: '1fr' + height: 100%
-function TrendBox({ label, labelDetail, color, children, question, value, context }) {
-  // Founder UX pass 4 (2026-05-26): the previous wrapper used size="chip" which
-  // rendered the ⚡ bolt as a sibling node *next to* the tile via inline-flex,
-  // making each tile narrower than its neighbour and breaking symmetry. The
-  // corner-badge mode positions the bolt as an absolute top-right notification
-  // dot inside the tile so every tile renders at equal width.
+//
+// Founder 2026-06-01 (R13): these tiles "are not drillable — every item should
+// explain and go to the nth degree to the source document with a way to
+// add/modify." So tapping a tile now opens its provenance drill (formula →
+// source → recursive breakdown → add/modify), not an Ask chat. The what-if
+// question survives as Section 6 + an action chip inside that drill. The ⌕
+// corner glyph signals the tile is traceable.
+function TrendBox({ label, labelDetail, color, children, drill, onDrillMetric }) {
   const inner = (
     <div style={{
+      position: 'relative',
       background: `color-mix(in srgb, ${color} 10%, var(--c-surface2))`,
       border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
       borderRadius: 10,
@@ -37,12 +40,18 @@ function TrendBox({ label, labelDetail, color, children, question, value, contex
       justifyContent: 'space-between',
       minWidth: 0,
     }}>
+      {drill && (
+        <span aria-hidden="true" style={{
+          position: 'absolute', top: 6, right: 7, fontSize: 8,
+          color: 'var(--c-text3)', opacity: 0.55, lineHeight: 1,
+        }}>⌕</span>
+      )}
       <div>
         <div style={{
           fontSize: 8, fontWeight: 800, color: 'var(--c-text3)',
           textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          paddingRight: 18,  // reserve space for corner bolt so labels don't collide
+          paddingRight: 14,  // reserve space for corner glyph so labels don't collide
         }}>
           {label}
         </div>
@@ -61,12 +70,22 @@ function TrendBox({ label, labelDetail, color, children, question, value, contex
       </div>
     </div>
   )
-  if (!question) return inner
+  if (!drill || typeof onDrillMetric !== 'function') return inner
   return (
-    <TappableNumber value={value} display={`${label}: ${String(children)}`}
-      question={question} context={context} size="corner">
+    <button
+      type="button"
+      onClick={() => onDrillMetric(drill)}
+      aria-label={`Show how ${label} is calculated and where it comes from`}
+      title={`${label} — tap to trace the source`}
+      style={{
+        background: 'none', border: 'none', padding: 0, margin: 0,
+        font: 'inherit', color: 'inherit', textAlign: 'inherit',
+        width: '100%', height: '100%', cursor: 'pointer', display: 'block',
+        borderRadius: 10,
+      }}
+    >
       {inner}
-    </TappableNumber>
+    </button>
   )
 }
 
@@ -150,20 +169,25 @@ export default function TileGrid({
   onView,
   onAdd,
   onWhatIf = null,
+  onDrillMetric = null,
+  editablePlanTarget = null,
 }) {
   let prcPcc = null
   try { prcPcc = entity ? prcPccSpread(entity) : null } catch { prcPcc = null }
 
   let momDelta = null, momPct = null, yoyDelta = null, yoyPct = null
+  let nwPrevMonth = null, nwYearAgo = null
   if (Array.isArray(trajectory) && trajectory.length >= 2) {
     const last = +trajectory[trajectory.length - 1]?.value || 0
     const prev = +trajectory[trajectory.length - 2]?.value || 0
+    nwPrevMonth = prev
     momDelta = last - prev
     momPct = prev > 0 ? (momDelta / prev) * 100 : 0
   }
   if (Array.isArray(trajectory) && trajectory.length >= 12) {
     const last = +trajectory[trajectory.length - 1]?.value || 0
     const yearAgo = +trajectory[trajectory.length - 12]?.value || 0
+    nwYearAgo = yearAgo
     yoyDelta = last - yearAgo
     yoyPct = yearAgo > 0 ? (yoyDelta / yearAgo) * 100 : 0
   }
@@ -257,6 +281,32 @@ export default function TileGrid({
       children: `${prcPcc.ratio.toFixed(1)}×` })
   }
 
+  // R13 — attach a provenance drill payload to each trend metric so tapping a
+  // tile opens its source chain (formula → inputs → user facts → add/modify),
+  // not an Ask chat. All numbers are the live primitives above — nothing
+  // hardcoded (R14).
+  const _metricCtx = {
+    fmt,
+    netWorth,
+    totalAssets,
+    totalLiabilities,
+    planTarget,
+    planPct,
+    yoyDelta, yoyPct, nwYearAgo,
+    momDelta, momPct, nwPrevMonth,
+    debtRatio,
+    yearsCovered,
+    annualEssentials: monthlyEssentials != null ? monthlyEssentials * 12 : 0,
+    prcPcc,
+    catMap: map,
+    editablePlanTarget,
+  }
+  for (const b of trendBoxes) {
+    b.drill = buildTrendMetricDrill(b.key, { ..._metricCtx, askQuestion: b.question })
+  }
+  // Sparkline header drill — the 12-month trend itself is traceable too.
+  const trendDrill = buildTrendMetricDrill('trend', _metricCtx)
+
   // Arrange into 2-col grid: pair them up
   const cols = 2
   const rows = Math.ceil(trendBoxes.length / cols)
@@ -302,15 +352,19 @@ export default function TileGrid({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                window.dispatchEvent(new CustomEvent('sonus:ask', {
-                  detail: {
-                    question: 'How did my net worth move over this period?',
-                    context: { metric: 'netWorth', view: 'trend', trajectory },
-                  },
-                }))
+                if (trendDrill && typeof onDrillMetric === 'function') {
+                  onDrillMetric(trendDrill)
+                } else {
+                  window.dispatchEvent(new CustomEvent('sonus:ask', {
+                    detail: {
+                      question: 'How did my net worth move over this period?',
+                      context: { metric: 'netWorth', view: 'trend', trajectory },
+                    },
+                  }))
+                }
               }}
-              aria-label="Drill into net worth trend"
-              title="Tap to ask Sonu about this trend"
+              aria-label="Show how the net worth trend is calculated and where it comes from"
+              title="Tap to trace this trend to its source"
               style={{
                 background: 'none', border: 'none', padding: 0,
                 cursor: 'pointer', display: 'flex', alignItems: 'center',
@@ -346,9 +400,8 @@ export default function TileGrid({
                   label={b.label}
                   labelDetail={b.labelDetail}
                   color={b.color}
-                  question={b.question}
-                  value={b.value}
-                  context={b.context}
+                  drill={b.drill}
+                  onDrillMetric={onDrillMetric}
                 >
                   {b.children}
                 </TrendBox>

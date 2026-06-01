@@ -213,7 +213,7 @@ function RevealScreen({ answers, onContinue }) {
 
       <button onClick={() => onContinue(answers)} style={{
         marginTop:22, width:'100%', padding:15,
-        background:'var(--c-acc)', color:'#0B1F3A',
+        background:'var(--c-acc)', color:'var(--c-on-accent, #0B1F3A)',
         border:'none', borderRadius:100,
         fontSize:16, fontWeight:700, cursor:'pointer',
         boxShadow:'var(--sh-acc)',
@@ -645,7 +645,7 @@ export default function Onboarding({ onComplete, onBack }) {
           <button onClick={next} disabled={!canContinue()} style={{
             flex:1, padding:15,
             background: canContinue() ? (isLast ? 'var(--c-acc)' : 'var(--c-text)') : 'var(--c-surface2)',
-            color: canContinue() ? (isLast ? '#0B1F3A' : 'var(--c-bg)') : 'var(--c-text3)',
+            color: canContinue() ? (isLast ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-bg)') : 'var(--c-text3)',
             border: `1px solid ${canContinue() ? 'transparent' : 'var(--c-border2)'}`,
             borderRadius:100, fontSize:16, fontWeight:700,
             transition:'all .2s ease',

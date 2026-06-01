@@ -206,6 +206,15 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
   const currentLifeCover = totalLifeCover
   const lifeCoverGap = Math.max(0, needLifeCover - currentLifeCover)
 
+  // ── Context blob injected into every setSelected asset so ProtectionDecisions
+  // can model decisions without re-computing from entity. Step 2 contract.
+  const _ctx = {
+    _annualIncome:  annualIncome,
+    _dependents:    +(entity.profile?.dependents ?? entity.dependents ?? 0),
+    _totalCover:    totalLifeCover,
+    _coverGap:      lifeCoverGap,
+  }
+
   return (
     <OverlayShell title="Protection · drill-down"
       subtitle={coreCount === 0 ? 'No protection on file' : (
@@ -287,13 +296,13 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
                   life.term_years && { label: `${life.term_years}y term` },
                   life.start_date && { label: `Since ${String(life.start_date).slice(0,4)}` },
                 ].filter(Boolean)}
-                onTap={() => setSelected({ asset: { ...life, name: 'Life assurance — term', type: 'life-cover', value: life.amount }, category: 'protection', itemType: 'life' })} />
+                onTap={() => setSelected({ asset: { ...life, ..._ctx, name: 'Life assurance — term', type: 'life-cover', value: life.amount }, category: 'protection', itemType: 'life' })} />
             )}
             {showCriticalIllness && (
               <>
                 <div style={{ borderTop: '1px solid var(--c-sep)' }} />
                 <PolicyRow title="Critical illness cover" exists={ci.exists} amount={ci.amount} premium={ci.premium} provider={ci.provider}
-                  onTap={() => setSelected({ asset: { ...ci, name: 'Critical illness cover', type: 'critical-illness', value: ci.amount }, category: 'protection', itemType: 'critical-illness' })} />
+                  onTap={() => setSelected({ asset: { ...ci, ..._ctx, name: 'Critical illness cover', type: 'critical-illness', value: ci.amount }, category: 'protection', itemType: 'critical-illness' })} />
               </>
             )}
             {showIncomeProtection && (
@@ -304,14 +313,14 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
                     ip.deferred_period_weeks != null && { label: `${ip.deferred_period_weeks}-wk deferred` },
                     ip.cover_pct_of_salary != null && { label: `${Math.round(ip.cover_pct_of_salary * 100)}% of salary` },
                   ].filter(Boolean)}
-                  onTap={() => setSelected({ asset: { ...ip, name: 'Income protection', type: 'income-protection', value: (+ip.monthlyBenefit || 0) * 12 }, category: 'protection', itemType: 'income-protection' })} />
+                  onTap={() => setSelected({ asset: { ...ip, ..._ctx, name: 'Income protection', type: 'income-protection', value: (+ip.monthlyBenefit || 0) * 12 }, category: 'protection', itemType: 'income-protection' })} />
               </>
             )}
             {showPMI && (
               <>
                 <div style={{ borderTop: '1px solid var(--c-sep)' }} />
                 <PolicyRow title="Private medical (PMI)" exists={pmi.exists} amount={0} premium={pmi.premium} provider={pmi.provider}
-                  onTap={() => setSelected({ asset: { ...pmi, name: 'Private medical (PMI)', type: 'pmi', value: 0 }, category: 'protection', itemType: 'pmi' })} />
+                  onTap={() => setSelected({ asset: { ...pmi, ..._ctx, name: 'Private medical (PMI)', type: 'pmi', value: 0 }, category: 'protection', itemType: 'pmi' })} />
               </>
             )}
           </div>
@@ -325,13 +334,13 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
                 <PolicyRow title="Relevant life plan" exists={true} amount={relevantLife.amount} premium={relevantLife.premium} provider={relevantLife.provider}
                   inTrust={true}
                   extras={[{ label: 'Corp tax deductible', tone: 'good' }, relevantLife.via_company && { label: 'Via company' }].filter(Boolean)}
-                  onTap={() => setSelected({ asset: { ...relevantLife, name: 'Relevant life plan', type: 'relevant-life', value: relevantLife.amount }, category: 'protection', itemType: 'relevant-life' })} />
+                  onTap={() => setSelected({ asset: { ...relevantLife, ..._ctx, name: 'Relevant life plan', type: 'relevant-life', value: relevantLife.amount }, category: 'protection', itemType: 'relevant-life' })} />
               )}
               {relevantLife.exists && keyPerson.exists && <div style={{ borderTop: '1px solid var(--c-sep)' }} />}
               {keyPerson.exists && (
                 <PolicyRow title="Keyperson insurance" exists={true} amount={keyPerson.amount} premium={keyPerson.premium} provider={keyPerson.provider}
                   extras={[{ label: 'Business asset' }]}
-                  onTap={() => setSelected({ asset: { ...keyPerson, name: 'Keyperson insurance', type: 'keyperson', value: keyPerson.amount }, category: 'protection', itemType: 'keyperson' })} />
+                  onTap={() => setSelected({ asset: { ...keyPerson, ..._ctx, name: 'Keyperson insurance', type: 'keyperson', value: keyPerson.amount }, category: 'protection', itemType: 'keyperson' })} />
               )}
             </div>
           </Section>
@@ -347,7 +356,7 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
                 <button
                   key={g.id || i}
                   type="button"
-                  onClick={() => setSelected({ asset: { ...g, name: gType.replace(/-/g, ' '), type: gType, value: g.cover_amount, source: g.source || 'manual' }, category: 'protection', itemType: gType })}
+                  onClick={() => setSelected({ asset: { ...g, ..._ctx, name: gType.replace(/-/g, ' '), type: gType, value: g.cover_amount, source: g.source || 'manual' }, category: 'protection', itemType: gType })}
                   className="sw-press"
                   style={{
                     width: '100%', textAlign: 'left',
@@ -383,7 +392,7 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
                 <button
                   key={bi.id || i}
                   type="button"
-                  onClick={() => setSelected({ asset: { ...bi, name: biType.replace(/-/g, ' '), type: biType, value: bi.cover_amount, source: bi.source || 'manual' }, category: 'protection', itemType: biType })}
+                  onClick={() => setSelected({ asset: { ...bi, ..._ctx, name: biType.replace(/-/g, ' '), type: biType, value: bi.cover_amount, source: bi.source || 'manual' }, category: 'protection', itemType: biType })}
                   className="sw-press"
                   style={{
                     width: '100%', textAlign: 'left',

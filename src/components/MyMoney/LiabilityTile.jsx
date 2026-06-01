@@ -20,14 +20,22 @@
 
 import { useId } from 'react'
 import TappableNumber from '../shared/TappableNumber.jsx'
+import { TrajectoryBar } from './TrajectoryBar.jsx'
 
+// Big figures (balances) — abbreviated for glanceability.
 function fmt(v) {
   const n = +v || 0
   const abs = Math.abs(n)
   const sign = n < 0 ? '−' : ''
   if (abs >= 1_000_000) return `${sign}£${(abs / 1_000_000).toFixed(2)}m`
   if (abs >= 1_000)     return `${sign}£${(abs / 1_000).toFixed(0)}k`
-  return `${sign}£${abs.toLocaleString()}`
+  return `${sign}£${Math.round(abs).toLocaleString('en-GB')}`
+}
+// Precise figures (payments, interest) — full pounds, thousands separator, NO
+// pennies and NO £k rounding. £1,189/mo not "£1k/mo"; £457/yr not "£456.95/yr".
+function gbp(v) {
+  const n = Math.round(+v || 0)
+  return `${n < 0 ? '−' : ''}£${Math.abs(n).toLocaleString('en-GB')}`
 }
 
 // Icon glyphs by liability type — same set used elsewhere in MyMoney so the
@@ -69,9 +77,13 @@ export default function LiabilityTile({
   apr,                    // % e.g. 5.2 (not 0.052)
   monthly,                // £/month payment
   series = null,          // 12-month back-cast balance values (oldest → newest)
+  trajectory = null,      // { now, future, plan } debt balance — Now→Future→Plan (invert mode)
   yoyChangePct = null,    // YoY balance change (negative = paying down — good)
+  changeLabel = null,     // basis for the change %, e.g. "12-mo est."
   isAvalanche = false,    // true if this is the highest-APR debt in the set
-  onView,                 // tap-anywhere → drill open
+  onView,                 // tap-anywhere / View detail → drill open
+  onWhatIf = null,        // per-debt what-if, scoped to this debt (parity with CategoryTile)
+  onAdd = null,           // + Add → open the liabilities add flow (parity with CategoryTile)
 }) {
   const uid = useId()
   const gradientId = `liabspark-${uid.replace(/:/g, '')}`
@@ -107,28 +119,10 @@ export default function LiabilityTile({
     }}
     onClick={onView}>
 
-      {/* Avalanche-priority badge — top-right corner notification. Renders only
-          on the highest-APR debt across the persona's liability set.
-          Phrasing is mathematical (highest interest rate) not advisory. */}
-      {isAvalanche && (
-        <div
-          title="This debt costs the most per £ owed at its current APR. Paying it down faster reduces total interest."
-          style={{
-            position: 'absolute', top: 10, right: 10,
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 999,
-            background: `color-mix(in srgb, ${band.color} 20%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${band.color} 55%, transparent)`,
-            color: band.color,
-            fontSize: 9, fontWeight: 800,
-            letterSpacing: 0.6, textTransform: 'uppercase',
-            zIndex: 2,
-          }}>
-          ▲ Highest APR
-        </div>
-      )}
-
-      {/* Top row — icon + sparkline + label & change */}
+      {/* Top row — icon + sparkline + label & change.
+          (The "Highest APR" marker used to float as an absolute top-right badge
+          and collided with the CREDIT CARD label — founder 2026-06-01. It now
+          renders inline in the chip row below, where it can't overlap.) */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
         <button
           onClick={(e) => { e.stopPropagation(); onView?.() }}
@@ -202,19 +196,26 @@ export default function LiabilityTile({
           )
         })()}
 
-        <div style={{ textAlign: 'right', paddingRight: isAvalanche ? 70 : 0 }}>
+        <div style={{ textAlign: 'right' }}>
           <div className="sw-eyebrow" style={{
             fontSize: 10, color: 'var(--c-text3)',
-            letterSpacing: 0.8, textTransform: 'capitalize',
+            letterSpacing: 0.8,
+            /* No textTransform:capitalize — it mangles hyphens ("Buy-To-Let").
+               The label is already humanised by humanizeDebtType (R5b). */
           }}>
             {label}
           </div>
           {yoyChangePct != null && (
-            <div style={{
-              fontSize: 11, fontWeight: 700, color: changeColor,
-              marginTop: 3, fontVariantNumeric: 'tabular-nums',
-            }}>
-              {yoyChangePct >= 0 ? '+' : ''}{yoyChangePct.toFixed(1)}%
+            <div style={{ marginTop: 3 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: changeColor,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {yoyChangePct >= 0 ? '+' : ''}{yoyChangePct.toFixed(1)}%
+              </div>
+              {changeLabel && (
+                <div style={{ fontSize: 8, color: 'var(--c-text3)', letterSpacing: 0.3, lineHeight: 1 }}>{changeLabel}</div>
+              )}
             </div>
           )}
         </div>
@@ -223,23 +224,28 @@ export default function LiabilityTile({
       {/* Hero balance — coral. Shown as a negative number so the user reads
           it as "money out" not just "money". TappableNumber gives the ⚡ "what
           if" route into Ask Sonu about debt scenarios. */}
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          fontSize: 24, fontWeight: 880, color: accent,
-          letterSpacing: -0.5, lineHeight: 1, marginBottom: 4,
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-        <TappableNumber
-          value={balance}
-          display={fmt(-Math.abs(balance))}
-          size="hero"
-          question={`What if I paid down my ${(label || 'this debt').toLowerCase()} faster?`}
-          context={{ metric: 'liabilityBalance', type, label, balance, apr, monthly }}
-        />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            fontSize: 24, fontWeight: 880, color: accent,
+            letterSpacing: -0.5, lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+          <TappableNumber
+            value={balance}
+            display={fmt(-Math.abs(balance))}
+            size="hero"
+            question={`What if I paid down my ${(label || 'this debt').toLowerCase()} faster?`}
+            context={{ metric: 'liabilityBalance', type, label, balance, apr, monthly }}
+          />
+        </div>
+        {trajectory && trajectory.future < trajectory.now && (
+          <div style={{ flex: 1, minWidth: 130 }} onClick={(e) => e.stopPropagation()}>
+            <TrajectoryBar now={trajectory.now} future={trajectory.future} plan={trajectory.plan} invert />
+          </div>
+        )}
       </div>
-
-      <div style={{ marginBottom: 12 }} />
 
       {/* APR chip — primary cost signal. Colour-coded by band. */}
       {apr != null && (
@@ -262,6 +268,20 @@ export default function LiabilityTile({
             }}>
             {apr.toFixed(1)}% APR
           </span>
+          {isAvalanche && (
+            <span
+              title="This debt costs the most per £ owed at its current APR. Paying it down faster reduces total interest."
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '4px 9px', borderRadius: 999,
+                background: `color-mix(in srgb, ${band.color} 18%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${band.color} 50%, transparent)`,
+                color: band.color, fontSize: 9, fontWeight: 800,
+                letterSpacing: 0.5, textTransform: 'uppercase',
+              }}>
+              ▲ Highest APR
+            </span>
+          )}
           {monthly > 0 && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -272,7 +292,7 @@ export default function LiabilityTile({
               fontSize: 11, fontWeight: 700,
               fontVariantNumeric: 'tabular-nums',
             }}>
-              {fmt(monthly)}/mo
+              {gbp(monthly)}/mo
             </span>
           )}
         </div>
@@ -287,29 +307,60 @@ export default function LiabilityTile({
         }}>
           <span style={{ color: 'var(--c-text3)' }}>Interest at this APR · </span>
           <span style={{ color: accent, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(annualInterest)}/yr
+            {gbp(annualInterest)}/yr
           </span>
         </div>
       )}
 
-      {/* Spacer to push the drill prompt to the bottom — keeps tile rhythm. */}
+      {/* Spacer pushes the footer to the bottom — keeps tile rhythm. */}
       <div style={{ flex: 1 }} />
 
-      {/* Bottom drill prompt — same affordance pattern as CategoryTile. */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onView?.() }}
-        style={{
-          background: 'none', border: 'none', padding: '8px 0 0 0',
-          textAlign: 'left', cursor: 'pointer',
-          color: 'var(--c-text3)', fontSize: 11, fontWeight: 600,
-          letterSpacing: 0.3,
-          transition: 'color 0.15s ease',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = accent}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--c-text3)'}
-      >
-        Open drill →
-      </button>
+      {/* Footer — IDENTICAL pattern to CategoryTile (founder 2026-06-01:
+          "Liabilities doesn't follow the pattern … be consistent with assets").
+          View detail → · What if ⚡ (left) · + Add (right). */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        paddingTop: 10, borderTop: '1px solid var(--c-sep)', gap: 8,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button onClick={(e) => { e.stopPropagation(); onView?.() }}
+            aria-label={`View ${label || 'liability'} detail`}
+            className="sw-press"
+            style={{
+              background: 'transparent', border: 'none', color: accent,
+              fontSize: 11, fontWeight: 800, letterSpacing: 0.3,
+              cursor: 'pointer', padding: 0,
+            }}>
+            View detail →
+          </button>
+          {onWhatIf && (
+            <button onClick={(e) => { e.stopPropagation(); onWhatIf() }}
+              aria-label={`What if — ${label || 'this debt'}`}
+              className="sw-press"
+              style={{
+                background: 'transparent', border: 'none', color: 'var(--c-text3)',
+                fontSize: 11, fontWeight: 800, letterSpacing: 0.3,
+                cursor: 'pointer', padding: 0,
+              }}>
+              What if ⚡
+            </button>
+          )}
+        </div>
+        {onAdd && (
+          <button onClick={(e) => { e.stopPropagation(); onAdd() }}
+            className="sw-press"
+            style={{
+              background: `color-mix(in srgb, ${accent} 10%, transparent)`,
+              border: `1px dashed color-mix(in srgb, ${accent} 40%, transparent)`,
+              color: accent,
+              padding: '4px 10px', borderRadius: 100,
+              fontSize: 10, fontWeight: 800, letterSpacing: 0.4,
+              cursor: 'pointer',
+            }}>
+            + Add
+          </button>
+        )}
+      </div>
     </div>
   )
 }

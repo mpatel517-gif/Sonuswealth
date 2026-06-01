@@ -365,7 +365,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
                     <div style={{ minWidth: 0 }}>
                       <button
                         type="button"
-                        onClick={() => setSelected(a)}
+                        onClick={() => setSelected({ ...a, value: a.balance, _marginalRate: marginal, _psa: psa, _monthlyEssentials: monthlyEss, _totalCash: totalCash, _isaRoom: 20000 })}
                         className="sw-press"
                         style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left',
                           cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--c-text)',

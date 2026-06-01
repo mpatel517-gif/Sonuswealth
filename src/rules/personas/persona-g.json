@@ -58,7 +58,11 @@
           "charge": 0.0025,
           "chargeIsEstimate": false,
           "transferEligible": false,
-          "nominationDate": "2024-06-15"
+          "nominationDate": "2024-06-15",
+          "contribution_monthly": {
+            "personal": 660,
+            "employer": 440
+          }
         },
         {
           "name": "Previous employer DC (Infosys UK)",
@@ -68,7 +72,11 @@
           "charge": 0.0055,
           "chargeIsEstimate": true,
           "transferEligible": true,
-          "nominationDate": "2021-09-01"
+          "nominationDate": "2021-09-01",
+          "contribution_monthly": {
+            "personal": 0,
+            "employer": 0
+          }
         }
       ]
     },

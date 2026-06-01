@@ -123,7 +123,8 @@
           "charge": 0.003,
           "chargeIsEstimate": false,
           "transferEligible": false,
-          "nominationDate": "2024-09-01"
+          "nominationDate": "2024-09-01",
+          "contribution_monthly": { "personal": 150, "employer": 100 }
         },
         {
           "name": "Previous employer pension (Ministry of Magic)",
@@ -133,7 +134,8 @@
           "charge": 0.0065,
           "chargeIsEstimate": true,
           "transferEligible": true,
-          "nominationDate": "2022-03-15"
+          "nominationDate": "2022-03-15",
+          "contribution_monthly": { "personal": 0, "employer": 0 }
         },
         {
           "name": "Personal SIPP (opened 2025)",
@@ -143,7 +145,8 @@
           "charge": 0.0015,
           "chargeIsEstimate": false,
           "transferEligible": false,
-          "nominationDate": "2025-08-01"
+          "nominationDate": "2025-08-01",
+          "contribution_monthly": { "personal": 200, "employer": 0 }
         }
       ]
     },

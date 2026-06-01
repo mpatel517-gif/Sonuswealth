@@ -260,7 +260,7 @@ function MastheadCard({ entity, viewMode, onModeChange }) {
             padding: '12px 16px', minHeight: 44, borderRadius: 999, border: 'none', fontFamily: 'inherit',
             fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase',
             background: viewMode === id ? 'var(--c-acc)' : 'transparent',
-            color: viewMode === id ? '#0B1F3A' : 'var(--c-text3)',
+            color: viewMode === id ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text3)',
             cursor: 'pointer', transition: 'background 150ms ease',
             whiteSpace: 'nowrap', flexShrink: 0,
             display: 'inline-flex', alignItems: 'center',
@@ -1372,7 +1372,7 @@ function DimExplainerStub({ metric, fqData, onClose, onNav }) {
 
         <div style={{ display: 'flex', gap: 8 }}>
           {route && onNav && (
-            <button onClick={() => { onClose(); onNav(route) }} className="sw-press" style={{ flex: 1, padding: '9px 14px', borderRadius: 100, background: 'var(--c-acc)', border: 'none', color: '#0B1F3A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => { onClose(); onNav(route) }} className="sw-press" style={{ flex: 1, padding: '9px 14px', borderRadius: 100, background: 'var(--c-acc)', border: 'none', color: 'var(--c-on-accent, #0B1F3A)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               Go to {TAB_LABELS[route] || route} →
             </button>
           )}
@@ -2347,7 +2347,7 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
                           }}
                           style={{
                             padding: '8px 16px', borderRadius: 999, background: 'var(--c-acc)',
-                            border: 'none', color: '#0B1F3A', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                            border: 'none', color: 'var(--c-on-accent, #0B1F3A)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                           }}
                         >
                           Show me how →

@@ -42,13 +42,18 @@ export function L3PanelHost({ title, subtitle, personaId, onClose, onHome, child
     commit(personaId, { type: EV.ASSET_FIELD_CORRECTED, payload })
   }
 
+  // DrillStackProvider is the OUTER wrapper (its DrillStack is position:fixed and
+  // would otherwise paint over the OverlayShell header). OverlayShell sits INSIDE
+  // it as the base layer — same nesting the category drills use — so the
+  // ← Back / ⌂ Home chrome is always visible. Founder 2026-06-01: "wherever you
+  // go you must be able to get back."
   return (
-    <OverlayShell title={title} subtitle={subtitle} onBack={onClose} onHome={onHome}>
-      <DrillStackProvider onEdit={handleEdit}>
+    <DrillStackProvider onEdit={handleEdit}>
+      <OverlayShell title={title} subtitle={subtitle} onBack={onClose} onHome={onHome}>
         <div style={{ padding: 12 }}>
           {children}
         </div>
-      </DrillStackProvider>
-    </OverlayShell>
+      </OverlayShell>
+    </DrillStackProvider>
   )
 }

@@ -156,12 +156,42 @@ export default function MoneyBusiness({ entity, personaId, onBack, onHome, onNav
     }, 0)
   } else if (entity.dla?.balance != null) {
     dla = +entity.dla.balance
+  } else if (entity.directors_loan?.balance != null) {
+    // mrT all-domain shape: { balance, in_credit }. in_credit:true → the company
+    // owes the director (positive/good); in_credit:false → director overdrawn
+    // (negative → BIK/s455 territory). Was unread → "DLA not captured" for the
+    // canonical director fixture. Founder 2026-06-01.
+    const b = +entity.directors_loan.balance || 0
+    dla = entity.directors_loan.in_credit === false ? -b : b
   }
-  const corpTaxBand = entity.corpTaxBand || entity.business?.corpTaxBand || null
-  const bprAssetCount = ba.filter(b => b.bpr_qualifying || b.bprQualifying).length
+  // Corp tax band — derive from the company's profit when not explicitly set
+  // (Mr T's `companies[].annual_profit_*` was unread → "not captured"). Bands
+  // per FA: ≤£50k small-profits 19%, ≥£250k main 25%, between = marginal.
+  let corpTaxBand = entity.corpTaxBand || entity.business?.corpTaxBand || null
+  if (!corpTaxBand) {
+    const _co = (entity.companies || [])[0]
+    const _profit = +(_co?.annual_profit_before_tax || _co?.annual_profit || _co?.annual_profit_after_tax || 0)
+    if (_profit > 0) {
+      corpTaxBand = _profit <= 50000 ? 'Small profits — 19%'
+        : _profit >= 250000 ? 'Main rate — 25%'
+        : 'Marginal — 26.5% effective'
+    }
+  }
+  // BPR — Mr T's business_assets use `qualifies_for_bpr` (+ `incorporation_date`),
+  // not `bpr_qualifying`/`years_held` → BPR scored 0. Read all shapes; derive the
+  // holding period from incorporation/acquired date when no explicit years.
+  const _nowY = new Date().getFullYear()
+  const _isBpr = (b) => b.bpr_qualifying || b.bprQualifying || b.qualifies_for_bpr
+  const bprAssetCount = ba.filter(_isBpr).length
   const bprQualifiedYears = ba
-    .filter(b => b.bpr_qualifying || b.bprQualifying)
-    .map(b => +b.years_held || +b.yearsHeld || 0)
+    .filter(_isBpr)
+    .map(b => {
+      const explicit = +b.years_held || +b.yearsHeld || 0
+      if (explicit) return explicit
+      const d = b.incorporation_date || b.acquired_date || b.acquiredDate
+      const yr = d ? +String(d).slice(0, 4) : 0
+      return yr ? Math.max(0, _nowY - yr) : 0
+    })
   const bprMaxYears = bprQualifiedYears.length ? Math.max(...bprQualifiedYears) : 0
   const bprStatus = bprMaxYears >= 2 ? 'good' : 'warn'
 

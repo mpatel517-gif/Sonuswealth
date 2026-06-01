@@ -386,6 +386,25 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
       <div className="sheet-panel sw-fade-in-up" style={{ maxHeight: '88vh', overflowY: 'auto' }}>
         <div className="sheet-handle" />
 
+        {/* Close — exits the whole add flow (founder 2026-06-01: "no way to go
+            back out of the screen"; ← Back only steps between 1→2→3). Backdrop
+            tap also closes, but a visible affordance is required. */}
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Close add"
+          title="Close"
+          style={{
+            position: 'absolute', top: 12, right: 12, zIndex: 2,
+            width: 32, height: 32, borderRadius: 999,
+            display: 'grid', placeItems: 'center',
+            background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+            color: 'var(--c-text2)', fontSize: 16, lineHeight: 1, cursor: 'pointer',
+          }}
+        >
+          ✕
+        </button>
+
         {/* Step strip */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
           {['category', 'type', 'fields'].map((s, i) => {

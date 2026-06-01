@@ -94,14 +94,42 @@ export function pensionTotal(entity) {
 export function investmentsTotal(entity) {
   const a = entity?.assets || {};
   let total = 0;
-  // legacy
-  if (a.isa?.value != null)       total += +a.isa.value       || 0;
-  if (typeof a.isa === 'number')  total += +a.isa             || 0;
-  if (a.portfolio?.value != null) total += +a.portfolio.value || 0;
+  const invArr = Array.isArray(a.investments) ? a.investments : [];
+  // Detect whether the canonical nested array already carries ISA / GIA holdings,
+  // so we do NOT also add the legacy scalar shape (double-count). Mr T stores ISA
+  // + GIA in BOTH a.investments[] AND the a.isa / a.portfolio scalars; the old code
+  // summed both, inflating netWorth by £71.4k (ISA £46.6k + GIA £24.8k counted
+  // twice). Mirrors foldLegacyInvestments' guard in InvestmentsDrillDown so the
+  // engine, the drill, and the tile all agree. (Audit 2026-06-01.)
+  const invHasISA = invArr.some(i => /isa/i.test(String(i.type ?? i.wrapper ?? '')));
+  const invHasGIA = invArr.some(i => /\bgia\b|general/i.test(String(i.type ?? i.wrapper ?? '')));
+  // legacy scalars — only when the nested array doesn't already cover them
+  if (!invHasISA) {
+    if (a.isa?.value != null)           total += +a.isa.value || 0;
+    else if (typeof a.isa === 'number') total += +a.isa       || 0;
+  }
+  if (!invHasGIA && a.portfolio?.value != null) total += +a.portfolio.value || 0;
   // nested
-  if (Array.isArray(a.investments)) {
-    for (const inv of a.investments) {
-      total += +(inv.balance_gbp ?? inv.balance ?? inv.estimated_value ?? inv.value ?? 0) || 0;
+  for (const inv of invArr) {
+    total += +(inv.balance_gbp ?? inv.balance ?? inv.estimated_value ?? inv.value ?? 0) || 0;
+  }
+  // B7 fix (2026-06-01): persona-c (Tony Stark) stores GIA accounts in a.gia[],
+  // tax-efficient investments in a.taxEfficientInvestments[], and onshore/offshore
+  // bonds in a.investmentBonds[]. None are inside a.investments[] so they were
+  // silently omitted from netWorth(). Add all three read-paths here.
+  if (Array.isArray(a.gia)) {
+    for (const x of a.gia) {
+      total += +(x.value ?? x.balance_gbp ?? x.balance ?? 0) || 0;
+    }
+  }
+  if (Array.isArray(a.taxEfficientInvestments)) {
+    for (const x of a.taxEfficientInvestments) {
+      total += +(x.value ?? x.balance_gbp ?? x.balance ?? 0) || 0;
+    }
+  }
+  if (Array.isArray(a.investmentBonds)) {
+    for (const x of a.investmentBonds) {
+      total += +(x.value ?? x.balance_gbp ?? x.balance ?? 0) || 0;
     }
   }
   return total;
@@ -193,9 +221,20 @@ export function alternativesTotal(entity) {
  */
 export function businessTotal(entity) {
   const a = entity?.assets || {};
+  // Read the SAME source the hero strip uses (screens/MyMoney.jsx _heroBaseAssets):
+  // prefer the top-level `entity.business_assets[]` (the shape Mr T + the Business
+  // CategoryTile/rowsForBPR use), else fall back to `assets.businesses[]` (the
+  // onboarding shape) — never both, so personas populating either are counted once.
+  // Before this fix the engine read ONLY `assets.businesses[]`, so Mr T's £145k
+  // Synthetic Tech stake (stored top-level) was dropped from netWorth() — the hero
+  // counted it (Assets £1.20m) while engine NW omitted it (£698k), so the strip
+  // failed the §9.5 tie-out (Assets − Liab ≠ NW). (2026-06-01.)
+  const list = (Array.isArray(entity?.business_assets) && entity.business_assets.length)
+    ? entity.business_assets
+    : (a.businesses || a.business_assets || a.businessAssets || a.business || []);
   let total = 0;
-  if (Array.isArray(a.businesses)) {
-    for (const b of a.businesses) {
+  if (Array.isArray(list)) {
+    for (const b of list) {
       if (b?.status === 'disposed') continue;
       const raw  = +(b.value_gbp ?? b.value ?? b.estimated_value ?? 0) || 0;
       const frac = +(b.beneficial_interest_this_individual ?? b.ownershipShare ?? 1) || 1;
@@ -275,7 +314,18 @@ export function liabilitiesTotal(entity) {
   // legacy object shape
   const m = (+(l.mortgage?.outstanding) || 0);
   const o = (l.otherLoans || []).reduce((s, x) => s + (+x.outstanding || 0), 0);
-  return m + o;
+  // B5 fix (2026-06-01): property mortgages stored on asset.property[].mortgage_outstanding
+  // were never counted in the engine liabilities total. Persona-c carries £700k across two
+  // BTL properties. Assets are gross (pre-mortgage) values so adding mortgage debt here is
+  // correct — no double-subtraction.
+  const a = entity?.assets || {};
+  const propMortgages = Array.isArray(a.property)
+    ? a.property.reduce((s, p) => {
+        if (p['$ref'] || p.status === 'disposed') return s;
+        return s + +(p.mortgage_outstanding ?? p.mortgage_balance ?? 0);
+      }, 0)
+    : 0;
+  return m + o + propMortgages;
 }
 
 /**

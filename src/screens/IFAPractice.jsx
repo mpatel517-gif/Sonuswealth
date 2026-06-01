@@ -593,7 +593,7 @@ function AdviserModePreview({ client, practice, adviser, onClose, onOpenClient, 
             </div>
             <button onClick={onOpenClient} className="sw-press" style={{
               width: '100%', padding: '12px 16px', fontSize: 14, fontWeight: 800,
-              background: 'var(--c-acc)', color: '#0B1F3A',
+              background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
               border: 'none', borderRadius: 100, cursor: 'pointer',
             }}>
               Open {client.name.split(' ')[0]}'s plan →
@@ -618,7 +618,7 @@ function AdviserModePreview({ client, practice, adviser, onClose, onOpenClient, 
             <button onClick={saveNote} disabled={!note.trim()}
               className="sw-press" style={{
                 width: '100%', padding: '10px 14px', fontSize: 13, fontWeight: 700,
-                background: 'var(--c-acc)', color: '#0B1F3A',
+                background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
                 border: 'none', borderRadius: 100,
                 cursor: note.trim() ? 'pointer' : 'not-allowed',
                 opacity: note.trim() ? 1 : 0.5,

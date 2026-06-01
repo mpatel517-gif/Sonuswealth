@@ -27,7 +27,7 @@
 | Per-holding **name legend** (Vanguard/Hargreaves/Wayne 49%…) | CategoryTile composition | macOS PP-2 — names are drill detail, not surface. Bar + "across N" stays. ([[feedback_no_holding_names_on_tiles]]) |
 | **"See all N pensions →"** button | CategoryTile | Redundant with "across N" + "View detail →". |
 | **`minHeight: 320`** fixed floor | CategoryTile + LiabilityTile | Voided sparse tiles, couldn't equalise tall ones. Now size-to-content + per-row grid stretch. |
-| **MiniTrendLines** sparkline | CategoryTile (top-right), PensionLeaf fund rows, PensionSummaryDrill pot rows | Replaced by the meaningful now→future TrajectoryBar. |
+| **MiniTrendLines / header sparkline** (`series` + `trendSeries`) | CategoryTile + LiabilityTile header | Replaced by the now→future TrajectoryBar. **Actually deleted from code 2026-06-01** (was still rendering despite this doc — founder "where the multiple spark lines"); dead imports/helpers (`useId`, `_f`, `InlineFuture`, `gradientId`, `tile.series` producer, TileGrid `series=`/`trendSeries=`) removed too. |
 | **InlineFuture** (interim "→ £X" text-only) | CategoryTile | Superseded — the bar itself sits inline next to the value. |
 | Empty-data category tiles (Business/Alternatives when £0) | TileGrid | "Only show what a person has." Add via the Add-category control. |
 
@@ -42,6 +42,9 @@
 | **PensionSummaryDrill** | Colour-coded badges; per-pot TrajectoryBars; DB row shows CETV not £0; CTA uses `--c-on-accent`. |
 | **InteractiveProjection** | "Today's money" toggle uses `--c-on-accent` (light-theme contrast). |
 | **AskPill** | `position: fixed` (was absolute — scrolled over content); `.sw-ask-pill` clears the 240px sidebar on desktop. |
+| **CategoryTile header %** (2026-06-01) | `changePct` is now per-category (each category's own annualised drift — Pensions ~7% · Property ~4% · Cash ~3.4%) + labelled **"12-mo est."** Was the single net-worth change stamped identically on every tile, unlabelled (founder "only 0.2% in both tiles"). |
+| **LiabilityTile** (2026-06-01) | Footer now IDENTICAL to CategoryTile (`View detail → · What if ⚡ · + Add`); was bespoke `Open drill →`. Header sparkline removed; change % labelled "12-mo est." Founder: "Liabilities doesn't follow the pattern … be consistent with assets." |
+| **AddItemSheet** (2026-06-01) | Visible **✕ close** (top-right) — exits the whole flow; was only step-`← Back`. Also B1: `.sheet-panel` re-centred via auto-margins (the `sw-fade-up` keyframe was clobbering the `translateX(-50%)` centering → right edge clipped). |
 
 ## 4. Engine / data / tokens
 

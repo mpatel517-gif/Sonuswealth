@@ -199,7 +199,7 @@ export default function ScenarioIntake({ scenario, entity, onSubmit, onBack }) {
       <div style={{ padding: '12px 14px 16px', borderTop: '1px solid var(--c-sep)' }}>
         <button onClick={handleSubmit} style={{
           width: '100%', padding: '12px 20px', borderRadius: 999, border: 'none',
-          background: 'var(--c-acc)', color: '#0B1F3A', fontSize: 13, fontWeight: 800,
+          background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)', fontSize: 13, fontWeight: 800,
           cursor: 'pointer', fontFamily: 'inherit',
         }}>
           Explore this scenario →

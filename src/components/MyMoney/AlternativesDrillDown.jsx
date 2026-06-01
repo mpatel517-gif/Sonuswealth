@@ -19,7 +19,7 @@ import { holdingClock } from '../../engine/persona-helpers.js'
 import { BRAND } from '../../config/brand.js'
 import { LiquidityLadder } from '../charts/index.js'
 // S1 selector migration (Phase 2)
-import { cash as cashTotal, investments as investmentsTotal, pensions as pensionTotal, properties as propertyTotal } from '../../engine/selectors/index.js'
+import { cash as cashTotal, investments as investmentsTotal, pensions as pensionTotal, properties as propertyTotal, ani as calcANI } from '../../engine/selectors/index.js'
 import { isaTotal, giaTotal } from '../../engine/_helpers.js'
 
 function fmt(v) {
@@ -103,36 +103,63 @@ const TAX_COPY = {
   },
 }
 
-// Normalise input — items array or per-type object → unified items list
+// Normalise input — gather alternatives from EVERY source the balance-sheet
+// classifier uses, so the drill ties out to the tile. The tile is fed by
+// `rowsForAlternatives(entity)` in screens/MyMoney.jsx (line ~727), which walks:
+//   1. `entity.assets.investments[]` items whose type is an alt class. This
+//      includes crypto · gold · art · private-equity · wine · collectible AND
+//      the venture-relief wrappers EIS · SEIS · VCT — per the M5 founder
+//      decision (MyMoney.jsx:3797, 2026-05-26) EIS/SEIS/VCT are surfaced under
+//      Alternatives, NOT Savings & Investments, so the tile reads £63k/7. The
+//      OLD reader read only assets.alternatives → Mr T's holdings (all in the
+//      investments bucket) drilled into "NO HOLDINGS CAPTURED". (Audit 2026-06-01.)
+//   2. the dedicated alt arrays: `entity.alternatives` · `entity.alt_assets` ·
+//      `entity.assets.alternatives` (array OR legacy per-type object form).
+// Keep this in lock-step with the alternatives subtotal builder in MyMoney.jsx
+// (catRows.alternatives = [...dRows.U, EIS, SEIS, VCT]) so tile ⇄ drill tie out.
+const ALT_INV_TYPES = ['crypto', 'gold', 'art', 'private-equity', 'wine', 'collectible', 'eis', 'seis', 'vct']
+
 function readAlternatives(entity) {
-  const raw = entity?.assets?.alternatives
-  if (!raw) return []
-  if (Array.isArray(raw)) {
-    return raw.map((it, idx) => normalizeItem(it, idx))
-  }
-  // Object form: { wine: [...], art: [...], gold: number, ... } or
-  // { wine: { value: 8400 }, ... }
   const out = []
-  for (const [k, v] of Object.entries(raw)) {
-    if (Array.isArray(v)) {
-      v.forEach((x, i) => out.push(normalizeItem({ ...x, type: x.type || k }, i)))
-    } else if (typeof v === 'number') {
-      out.push(normalizeItem({ type: k, value: v, name: TYPE_META[k]?.label || k }, 0))
-    } else if (v && typeof v === 'object') {
-      out.push(normalizeItem({ ...v, type: v.type || k }, 0))
+  // (1) alt-typed holdings sitting inside the investments bucket
+  for (const inv of (entity?.assets?.investments || [])) {
+    const t = String(inv.type || '').toLowerCase()
+    if (ALT_INV_TYPES.some(k => t.includes(k))) {
+      out.push(normalizeItem(inv, out.length))
     }
   }
-  return out
+  // (2) dedicated alt arrays — array form or legacy per-type object form
+  const altArrays = [entity?.alternatives, entity?.alt_assets, entity?.assets?.alternatives]
+  for (const raw of altArrays) {
+    if (!raw) continue
+    if (Array.isArray(raw)) {
+      raw.forEach((it) => { if (it?.status !== 'disposed') out.push(normalizeItem(it, out.length)) })
+    } else if (typeof raw === 'object') {
+      for (const [k, v] of Object.entries(raw)) {
+        if (Array.isArray(v)) v.forEach((x) => out.push(normalizeItem({ ...x, type: x.type || k }, out.length)))
+        else if (typeof v === 'number') out.push(normalizeItem({ type: k, value: v, name: TYPE_META[k]?.label || k }, out.length))
+        else if (v && typeof v === 'object') out.push(normalizeItem({ ...v, type: v.type || k }, out.length))
+      }
+    }
+  }
+  // De-dupe by id (an item could appear in both investments[] and an alt array)
+  const byId = new Map()
+  for (const it of out) { const key = it.id || `${it.type}-${it.value}`; if (!byId.has(key)) byId.set(key, it) }
+  return [...byId.values()]
 }
 
+// Map source type strings onto the TYPE_META taxonomy keys.
+const TYPE_ALIAS = { private_equity: 'pe', privateequity: 'pe', collectible: 'collectibles' }
+
 function normalizeItem(it, idx) {
-  const t = String(it.type || it.wrapper || 'other').toLowerCase().replace(/-/g, '_')
+  const t0 = String(it.type || it.wrapper || 'other').toLowerCase().replace(/-/g, '_')
+  const t = TYPE_ALIAS[t0] || t0
   const knownType = TYPE_META[t] ? t : 'other'
   return {
     id: it.id || `${knownType}-${idx}`,
     name: it.name || TYPE_META[knownType]?.label || 'Item',
     type: knownType,
-    value: +(it.value_gbp ?? it.value ?? it.balance_gbp ?? it.balance ?? 0) || 0,
+    value: +(it.value_gbp ?? it.value ?? it.balance_gbp ?? it.balance ?? it.estimated_value ?? 0) || 0,
     lastValued: it.last_valuation_date || it.valuation_date || null,
     acquisitionDate: it.acquisition_date || it.purchase_date || it.start_date || null,
     raw: it,
@@ -400,7 +427,16 @@ function AlternativesDrillDownInner({ entity, personaId, onBack, onHome }) {
                     {g.items.map((it, i) => (
                       <button key={it.id || i}
                         type="button"
-                        onClick={() => setSelected(it)}
+                        onClick={() => {
+                          // Higher-rate threshold from TAX bundle (TAX.brt = £50,270 for 2026/27).
+                          // TAX imported via fq-calculator → _bundle; use literal as confirmed fallback.
+                          const HIGHER_RATE_THRESHOLD = 50270
+                          setSelected({
+                            ...it,
+                            _isHigherRate: (calcANI(entity)?.ani ?? 0) > HIGHER_RATE_THRESHOLD,
+                            _costBasis: it.raw?.cost_base ?? it.raw?.acquisition_cost ?? it.raw?.purchase_price ?? 0,
+                          })
+                        }}
                         className="sw-press"
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,

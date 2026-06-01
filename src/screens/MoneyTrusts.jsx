@@ -107,11 +107,50 @@ function Card({ eyebrow, title, status, children, footerNote }) {
   )
 }
 
+// ── Estate-status readers — bridge the SIMPLE top-level shape the personas
+// actually use (willStatus / nominationsStatus / hasTrust / trustGifts) to the
+// rich nested shape these panels were written against. Without this, Mr T —
+// the all-domain fixture with willStatus:"current", lpaStatus:"both",
+// nominationsStatus:"all", a PET trust gift and life cover in trust — rendered
+// the entire Estate Vault as "not started / 0 vehicles". Founder 2026-06-01:
+// "Mr T has all the taxonomy but it's smoke and mirrors — we can't display it."
+function _willStatusOf(entity) {
+  const nested = entity?.estate?.will?.status
+  if (nested) return nested
+  const s = String(entity?.willStatus || entity?.riskQuestionnaire?.d6_will_current || '').toLowerCase()
+  if (s === 'current' || s === 'yes') return 'current'
+  if (s === 'draft' || s === 'inprogress' || s === 'partial') return 'draft'
+  return 'notStarted'
+}
+function _nomStatusOf(entity) {
+  const nested = entity?.estate?.nominations?.status
+  if (nested) return nested
+  const s = String(entity?.nominationsStatus || entity?.riskQuestionnaire?.d6_nominations_complete || '').toLowerCase()
+  if (s === 'all' || s === 'current' || s === 'yes') return 'current'
+  if (s === 'some' || s === 'partial' || s === 'draft') return 'draft'
+  return 'notStarted'
+}
+function _trustsOf(entity) {
+  const nested = entity?.estate?.trusts
+  if (Array.isArray(nested) && nested.length) return nested
+  if (Array.isArray(entity?.assets?.trusts) && entity.assets.trusts.length) return entity.assets.trusts
+  const out = []
+  const tg = entity?.trustGifts || entity?.assets?.trustGifts
+  if (tg && (tg.trustType || tg.value || tg.amount)) {
+    out.push({ type: tg.trustType || 'Trust', value: tg.value || tg.amount, name: tg.name || (tg.trustType ? `${tg.trustType} gift into trust` : 'Trust'), beneficiaries: tg.beneficiaries })
+  }
+  const lifeInTrust = entity?.assets?.protection?.lifeInsurance?.inTrust || /in_trust/.test(String(entity?.riskQuestionnaire?.d6_life_in_trust || ''))
+  if (lifeInTrust) {
+    out.push({ type: 'Life policy in trust', name: 'Life cover written in trust', value: entity?.assets?.protection?.lifeInsurance?.sumAssured })
+  }
+  return out
+}
+
 // ── Section components ──────────────────────────────────────────────────────
 
 function WillSection({ entity }) {
   const will = entity?.estate?.will || {}
-  const status = will.status || 'notStarted'
+  const status = _willStatusOf(entity)
   const lastReview = _formatDate(will.lastReviewedDate || will.signedDate || will.date)
   const executors = Array.isArray(will.executors) ? will.executors : []
   return (
@@ -175,7 +214,7 @@ function LpaPanel({ kind, lpaData }) {
 }
 
 function NominationsSection({ entity }) {
-  const status = entity?.estate?.nominations?.status || 'notStarted'
+  const status = _nomStatusOf(entity)
   const pensionNoms   = entity?.estate?.nominations?.pension   || entity?.assets?.sipp?.nominee
   const isaNoms       = entity?.estate?.nominations?.isa       || null
   const protectionNoms= entity?.estate?.nominations?.protection || null
@@ -206,7 +245,7 @@ function NominationsSection({ entity }) {
 }
 
 function TrustsSection({ entity }) {
-  const trusts = Array.isArray(entity?.estate?.trusts) ? entity.estate.trusts : []
+  const trusts = _trustsOf(entity)
   if (trusts.length === 0) {
     return (
       <Card eyebrow="Vehicles" title="Trusts" status="notStarted">
@@ -256,11 +295,11 @@ export default function MoneyTrusts({ entity, personaId, onBack, onHome, onNav, 
   // CX-6 (2026-05-28): unified LPA reader covering all 3 known shape variants.
   const lpa = lpaStatus(entity)
   const items = [
-    { key: 'will',         status: entity?.estate?.will?.status         || 'notStarted' },
+    { key: 'will',         status: _willStatusOf(entity) },
     { key: 'lpaHealth',    status: lpa.health.status  },
     { key: 'lpaFinance',   status: lpa.finance.status },
-    { key: 'nominations',  status: entity?.estate?.nominations?.status  || 'notStarted' },
-    { key: 'trusts',       status: (entity?.estate?.trusts?.length > 0) ? 'current' : 'notStarted' },
+    { key: 'nominations',  status: _nomStatusOf(entity) },
+    { key: 'trusts',       status: (_trustsOf(entity).length > 0) ? 'current' : 'notStarted' },
   ]
 
   return (
@@ -309,10 +348,16 @@ export default function MoneyTrusts({ entity, personaId, onBack, onHome, onNav, 
         // double-counted and pinned the figure to zero on Bruce.
         const taxable = +iht.taxable || 0
         const reliefs = Math.max(0, estate - taxable)
-        const vehicleCount = (entity?.estate?.trusts?.length || 0)
-          + (entity?.estate?.will?.status === 'current' ? 1 : 0)
-          + (lpa.health.status === 'registered' ? 1 : 0)
-          + (lpa.finance.status === 'registered' ? 1 : 0)
+        // Count estate structures actually in place — read via the same bridge
+        // helpers (top-level shape) and treat a 'current'/'registered' LPA as in
+        // place (the old check looked only for literal 'registered', so even a
+        // present LPA scored 0). Founder 2026-06-01: VEHICLES read 0 for Mr T.
+        const _lpaInPlace = (s) => s.registered || s.status === 'registered' || s.status === 'current'
+        const vehicleCount = _trustsOf(entity).length
+          + (_willStatusOf(entity) === 'current' ? 1 : 0)
+          + (_nomStatusOf(entity) === 'current' ? 1 : 0)
+          + (_lpaInPlace(lpa.health) ? 1 : 0)
+          + (_lpaInPlace(lpa.finance) ? 1 : 0)
         return (
           <FinancesHeroCard
             entity={entity}

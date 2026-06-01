@@ -41,7 +41,11 @@
               "charge": 0.003,
               "chargeIsEstimate": false,
               "transferEligible": false,
-              "nominationDate": null
+              "nominationDate": null,
+              "contribution_monthly": {
+                "personal": 117,
+                "employer": 70
+              }
             }
           ]
         },
@@ -253,7 +257,11 @@
               "charge": 0.0035,
               "chargeIsEstimate": false,
               "transferEligible": false,
-              "nominationDate": "2023-05-10"
+              "nominationDate": "2023-05-10",
+              "contribution_monthly": {
+                "personal": 217,
+                "employer": 130
+              }
             },
             {
               "name": "Previous employer DC",
@@ -498,7 +506,11 @@
               "charge": 0.003,
               "chargeIsEstimate": false,
               "transferEligible": false,
-              "nominationDate": "2024-01-12"
+              "nominationDate": "2024-01-12",
+              "contribution_monthly": {
+                "personal": 500,
+                "employer": 313
+              }
             },
             {
               "name": "Previous employer DC (consolidated)",
@@ -729,7 +741,11 @@
               "charge": 0.002,
               "chargeIsEstimate": false,
               "transferEligible": false,
-              "nominationDate": "2025-03-08"
+              "nominationDate": "2025-03-08",
+              "contribution_monthly": {
+                "personal": 708,
+                "employer": 496
+              }
             },
             {
               "name": "Personal SIPP (consolidated)",
@@ -739,7 +755,11 @@
               "charge": 0.0045,
               "chargeIsEstimate": false,
               "transferEligible": false,
-              "nominationDate": "2025-03-08"
+              "nominationDate": "2025-03-08",
+              "contribution_monthly": {
+                "personal": 1500,
+                "employer": 0
+              }
             }
           ]
         },

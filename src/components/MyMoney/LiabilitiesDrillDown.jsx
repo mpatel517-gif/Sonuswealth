@@ -18,6 +18,7 @@ import ExplainerChip from '../shared/Explainer.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { BRAND } from '../../config/brand.js'
 import { LiquidityLadder } from '../charts/index.js'
+import { amortise, payoffLabel } from './debtMath.js'
 
 function Term({ children, id }) {
   return (
@@ -89,12 +90,27 @@ function Section({ title, sub, children }) {
   )
 }
 
+// B8 fix (2026-06-01): personas use 'student_loan_plan2' (underscore + plan suffix)
+// while these functions tested only for 'student-loan' (hyphen). Normalise by
+// replacing all hyphens/underscores with a single canonical form before matching.
+function _normLoanType(loan) {
+  return (loan.type || '').toLowerCase().replace(/_/g, '-')
+}
+function _isStudentLoan(loan) {
+  const t = _normLoanType(loan)
+  return t.includes('student') && (t.includes('loan') || t.includes('plan'))
+}
+
 function loanCategory(loan) {
-  const t = (loan.type || '').toLowerCase()
+  const t = _normLoanType(loan)
   if (t.includes('buy-to-let') || t.includes('btl')) return 'BTL mortgage'
-  if (t.includes('student-loan')) return 'Student loan'
+  if (_isStudentLoan(loan)) return 'Student loan'
   if (t.includes('credit-card')) return 'Credit card'
   if (t.includes('commercial')) return 'Commercial mortgage'
+  // Residential / main mortgage — must come AFTER BTL & commercial so those
+  // win, but BEFORE the generic fall-through (else 'residential-mortgage' lands
+  // in "Other loan" — founder 2026-06-01 saw the £215k home loan mis-grouped).
+  if (t.includes('residential') || t.includes('mortgage')) return 'Residential mortgage'
   if (t.includes('overdraft')) return 'Overdraft'
   if (t.includes('car') || t.includes('pcp') || t.includes('hp') || t.includes('lease')) return 'Car finance'
   if (t.includes('bridging')) return 'Bridging'
@@ -104,8 +120,11 @@ function loanCategory(loan) {
 }
 
 function isEstateDeductible(loan) {
-  const t = (loan.type || '').toLowerCase()
-  if (t.includes('student-loan')) return false
+  // UK student loans are written off on death — NOT estate-deductible.
+  // B8 fix: was testing 'student-loan' (hyphen only); personas use
+  // 'student_loan_plan2' (underscore + plan suffix) → loans were wrongly
+  // showing as estate-deductible and labelled 'Other loan'.
+  if (_isStudentLoan(loan)) return false
   return true
 }
 
@@ -144,8 +163,20 @@ function LiabilitiesDrillDownInner({ entity, personaId, onBack, onHome }) {
   // Build a unified loan list for rendering
   const allLoans = [
     mortgage && { id: 'mortgage', type: 'residential-mortgage', label: 'Residential mortgage', outstanding: mortgage.outstanding, monthly_payment: mortgage.monthlyPayment, interest_rate: mortgage.rate, rate_type: mortgage.rateType, remainingYears: mortgage.remainingYears },
-    ...otherLoans,
+    // Normalise otherLoans field names — personas store `rate` (0.0385) and
+    // `monthlyPayment`, but this drill reads `interest_rate` + `monthly_payment`.
+    // Without this the BTL row showed "APR 0.00% · monthly n/a" while the tile
+    // correctly showed 3.9% / £1k/mo (founder 2026-06-01: "check all the actions").
+    ...otherLoans.map(l => ({
+      ...l,
+      interest_rate: l.interest_rate != null ? l.interest_rate : (l.apr != null ? l.apr : l.rate),
+      monthly_payment: l.monthly_payment != null ? l.monthly_payment : l.monthlyPayment,
+    })),
   ].filter(Boolean)
+    // Only show debts the person actually has — a £0 residential mortgage was
+    // rendering as "−£0 · APR not recorded" and counting toward "2 LOANS"
+    // (founder 2026-06-01: only show what they have; check all the rows).
+    .filter(l => (+l.outstanding || +l.outstanding_balance || 0) > 0)
 
   // Liquidity ladder tiers — asset sources that could pay down high-APR debt.
   const cashTotal = +entity.assets?.cash?.total
@@ -179,6 +210,23 @@ function LiabilitiesDrillDownInner({ entity, personaId, onBack, onHome }) {
     return bRate - aRate
   })
 
+  // Group by debt type (R15 — categorised like the pension drill). Within a
+  // group, keep the highest-APR-first order from sortedLoans. Groups themselves
+  // are ordered by total balance (largest commitment first), so the biggest
+  // claim on the estate leads.
+  const loanGroups = (() => {
+    const m = new Map()
+    for (const l of sortedLoans) {
+      const cat = loanCategory(l)
+      const out = +l.outstanding || +l.outstanding_balance || 0
+      if (!m.has(cat)) m.set(cat, { cat, loans: [], total: 0 })
+      const g = m.get(cat)
+      g.loans.push(l)
+      g.total += out
+    }
+    return [...m.values()].sort((a, b) => b.total - a.total)
+  })()
+
   return (
     <OverlayShell title="What you owe · drill-down"
       subtitle={
@@ -205,13 +253,15 @@ function LiabilitiesDrillDownInner({ entity, personaId, onBack, onHome }) {
           What you owe, what it costs, and the fastest path to zero
         </div>
 
-        {/* Section 1 — composition */}
-        <Section title="1 · What you owe" sub="Real debts (money borrowed for value) reduce your estate for inheritance tax. Student loans don't — they're written off on death, so they don't affect your estate.">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
-            <Tile label="Total debt" value={fmt(totalDebt)} tone="bad" />
-            <Tile label="Mortgage" value={fmt(mortgageOutstanding)} />
-            <Tile label="Other loans" value={fmt(otherTotal)} />
-            <Tile label="Estate-deductible" value={fmt(estateDeductible)} tone="good" sub="Reduces IHT base" />
+        {/* Section 1 — the ONE thing not shown elsewhere: how much of the debt
+            reduces the estate. Total is already in the header; mortgage / other-
+            loan splits are in Section 3's type groups. Showing them again here as
+            number tiles was the redundancy the founder flagged ("£215k four
+            times"). Kept: estate-deductible (the IFA insight) + its counterpart. */}
+        <Section title="1 · What it means for your estate" sub="Real debts (money borrowed for value) reduce your estate for inheritance tax. Student loans don't — they're written off on death, so they don't affect your estate.">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+            <Tile label="Reduces your estate" value={fmt(estateDeductible)} tone="good" sub="Deducted before IHT" />
+            {studentTotal > 0 && <Tile label="Not in estate" value={fmt(studentTotal)} tone="warn" sub="Written off on death" />}
           </div>
         </Section>
 
@@ -232,81 +282,115 @@ function LiabilitiesDrillDownInner({ entity, personaId, onBack, onHome }) {
           </Section>
         )}
 
-        {/* Section 3 — per-loan */}
-        <Section title="3 · Each debt in detail" sub="Interest rate, rate type, when your fix ends, and the monthly payment. A fix ending within 24 months is the trigger to start remortgage planning.">
-          <div className="sw-eyebrow" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>
-            Ordered by APR (highest first)
-          </div>
-          <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
-            {sortedLoans.map((l, i) => {
-              const cat = loanCategory(l)
-              const rate = +l.interest_rate || +l.apr || 0
-              const out = +l.outstanding || +l.outstanding_balance || 0
-              const monthly = +l.monthly_payment || +l.repayment_from_salary_monthly || 0
-              const rateType = l.rate_type || l.rateType
-              const fixYear = rateType && /(\d{4})/.exec(rateType)?.[1]
-              const fixApproachingSoon = fixYear && (+fixYear - new Date().getFullYear()) <= 2
-              const deductible = isEstateDeductible(l)
-              // Payoff timeline — months at current minimums.
-              const monthlyInterest = (rate * out) / 12
-              const principalPerMonth = Math.max(1, monthly - monthlyInterest)
-              const payoffMonths = out > 0 && monthly > 0 ? Math.ceil(out / principalPerMonth) : null
-              const hasApr = rate > 0
-              return (
-                <div key={l.id || i} style={{
-                  padding: '14px',
-                  borderBottom: i < sortedLoans.length - 1 ? '1px solid var(--c-sep)' : 'none',
+        {/* Section 3 — grouped by type (R15: categorised like the pension drill —
+            grouped by type → per-debt row → per-debt leaf, not a flat list).
+            Each group is a scheme-type card with its own subtotal; within a group
+            debts are ordered highest-APR first. Founder 2026-06-01: "Liabilities
+            drill … not categorised properly like pensions … scrambled, cluttered." */}
+        <Section title="3 · Each debt in detail" sub="Grouped by type, highest-rate first. Interest rate, rate type, when your fix ends, and the monthly payment. A fix ending within 24 months is the trigger to start remortgage planning.">
+          {loanGroups.length === 0 && (
+            <div style={{ padding: 16, fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', fontStyle: 'italic', background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14 }}>
+              No liabilities captured. Tap + Add on the Liabilities tile to record a loan.
+            </div>
+          )}
+          {loanGroups.map((grp) => (
+            <div key={grp.cat} style={{ marginBottom: 12 }}>
+              {/* Group header ONLY when the group holds ≥2 debts — a header that
+                  repeats the single row beneath it (label + balance) is pure
+                  redundancy (founder 2026-06-01: "shambles"). A lone debt renders
+                  as just its row; the row's label already names the type. */}
+              {grp.loans.length >= 2 && (
+                <div style={{
+                  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                  padding: '0 2px 6px', marginBottom: 2,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-text2)', letterSpacing: 0.3 }}>{grp.cat}</span>
+                    <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>{grp.loans.length} debts</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)', fontVariantNumeric: 'tabular-nums' }}>−{fmt(grp.total)}</span>
+                </div>
+              )}
+              <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
+                {grp.loans.map((l, i) => {
+                  const cat = loanCategory(l)
+                  const rate = +l.interest_rate || +l.apr || 0
+                  const out = +l.outstanding || +l.outstanding_balance || 0
+                  const monthly = +l.monthly_payment || +l.repayment_from_salary_monthly || 0
+                  const rateType = l.rate_type || l.rateType
+                  const fixYear = rateType && /(\d{4})/.exec(rateType)?.[1]
+                  const fixApproachingSoon = fixYear && (+fixYear - new Date().getFullYear()) <= 2
+                  const deductible = isEstateDeductible(l)
+                  // Single source of debt maths — kills the old "~5637 months"
+                  // (470-yr) interest-only bug (founder 2026-06-01). rate is a
+                  // decimal here (0.054) → ×100 for amortise's percent input.
+                  const am = amortise(out, rate * 100, monthly)
+                  const hasApr = rate > 0
+                  return (
                     <button
+                      key={l.id || i}
                       type="button"
-                      onClick={() => setSelected(l)}
+                      onClick={() => {
+                        // Pass decision-modeller context alongside the loan so
+                        // DebtDecisions can size the overpayment slider and apply
+                        // the correct marginal rate without re-computing from entity.
+                        // _marginalRate: 0.4 placeholder — no ANI selector exists yet
+                        // on this drill; replace with engine selector when available.
+                        const _marginalRate = 0.4
+                        // _surplusCash: cash above a ~6-month essentials buffer.
+                        // entity.profile?.monthlyEssentials * 6 if captured; else
+                        // fall back to raw cashTotal (conservative — no buffer sized).
+                        const essentials6m = entity.profile?.monthlyEssentials
+                          ? entity.profile.monthlyEssentials * 6
+                          : 0
+                        const _surplusCash = essentials6m > 0
+                          ? Math.max(0, cashTotal - essentials6m)
+                          : cashTotal
+                        setSelected({ ...l, _marginalRate, _surplusCash })
+                      }}
                       className="sw-press"
+                      aria-label={`Open ${l.label || cat} detail`}
                       style={{
-                        background: 'transparent', border: 'none', padding: 0,
-                        textAlign: 'left', cursor: 'pointer',
-                        fontSize: 13, fontWeight: 700, color: 'var(--c-text)',
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        display: 'block', width: '100%', textAlign: 'left',
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        padding: '14px',
+                        borderBottom: i < grp.loans.length - 1 ? '1px solid var(--c-sep)' : 'none',
                       }}
                     >
-                      {l.label || cat} <span style={{ color: 'var(--c-text3)', fontWeight: 500 }}>›</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {l.label || cat} <span style={{ color: 'var(--c-text3)', fontWeight: 500 }}>›</span>
+                        </span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)', fontVariantNumeric: 'tabular-nums' }}>
+                          −{fmt(out)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8 }}>
+                        {l.lender || cat} · {monthly ? `£${monthly}/mo` : 'monthly n/a'} · APR {pct(rate)}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {rateType && <Chip tone={fixApproachingSoon ? 'warn' : 'neutral'}>{rateType}</Chip>}
+                        {fixApproachingSoon && <Chip tone="warn">Remortgage soon</Chip>}
+                        {rate >= 0.15 && <Chip tone="bad">High-cost</Chip>}
+                        {deductible ? <Chip tone="good">Estate-deductible</Chip> : <Chip tone="warn">Not in estate</Chip>}
+                        {cat === 'BTL mortgage' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                            <Chip tone="warn">S24 20% credit only</Chip>
+                            <ExplainerChip id="MM-S24" size={13} />
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 8, fontStyle: 'italic' }}>
+                        {hasApr ? payoffLabel(am) : 'APR not recorded'}
+                      </div>
                     </button>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)', fontVariantNumeric: 'tabular-nums' }}>
-                      −{fmt(out)}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8 }}>
-                    {l.lender || cat} · {monthly ? `£${monthly}/mo` : 'monthly n/a'} · APR {pct(rate)}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <Chip tone="neutral">{cat}</Chip>
-                    {rateType && <Chip tone={fixApproachingSoon ? 'warn' : 'neutral'}>{rateType}</Chip>}
-                    {fixApproachingSoon && <Chip tone="warn">Remortgage soon</Chip>}
-                    {rate >= 0.15 && <Chip tone="bad">High-cost</Chip>}
-                    {deductible ? <Chip tone="good">Estate-deductible</Chip> : <Chip tone="warn">Not in estate</Chip>}
-                    {cat === 'BTL mortgage' && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                        <Chip tone="warn">S24 20% credit only</Chip>
-                        <ExplainerChip id="MM-S24" size={13} />
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 8, fontStyle: 'italic' }}>
-                    {hasApr
-                      ? (payoffMonths ? `~ ${payoffMonths} months at current minimums` : 'Months to payoff at current rate — payment not recorded')
-                      : 'APR not recorded'}
-                  </div>
-                </div>
-              )
-            })}
-            {sortedLoans.length === 0 && (
-              <div style={{ padding: 16, fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', fontStyle: 'italic' }}>
-                No liabilities captured. Tap + Add on the Liabilities tile to record a loan.
+                  )
+                })}
               </div>
-            )}
-          </div>
+            </div>
+          ))}
           {sortedLoans.length > 1 && (
-            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.5 }}>
               Highest-APR debts close fastest by directing extra payments there.
             </div>
           )}

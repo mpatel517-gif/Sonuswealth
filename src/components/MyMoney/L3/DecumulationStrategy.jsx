@@ -105,7 +105,7 @@ export function DecumulationStrategy({ entity, pots = [], personaId, onClose, on
             <Metric label="Above your allowance" value="income tax applies" small />
           </div>
           {pos >= 99 && <div style={{ fontSize: 12, color: 'var(--c-good,#5DDBA8)', marginTop: 8 }}>Near-certain to last — you may be able to spend more, or pass more on.</div>}
-          <button type="button" onClick={saveAsPlan} style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--c-acc,#5ddbc2)', background: saved ? 'var(--c-acc,#5ddbc2)' : 'transparent', color: saved ? '#06231f' : 'var(--c-acc,#5ddbc2)', fontWeight: 700, cursor: 'pointer' }}>{saved ? 'Added to your Plan ✓' : 'Add to my Plan'}</button>
+          <button type="button" onClick={saveAsPlan} style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--c-acc,#5ddbc2)', background: saved ? 'var(--c-acc,#5ddbc2)' : 'transparent', color: saved ? 'var(--c-on-accent,#06231f)' : 'var(--c-acc,#5ddbc2)', fontWeight: 700, cursor: 'pointer' }}>{saved ? 'Added to your Plan ✓' : 'Add to my Plan'}</button>
         </div>
 
         <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>Modelling, not a guarantee. Information and guidance only — not personal advice. Verify with an FCA-authorised adviser before acting.</div>

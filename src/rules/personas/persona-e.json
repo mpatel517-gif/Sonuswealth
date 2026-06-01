@@ -37,6 +37,21 @@
     "companyValue": 3200000,
     "bprYearsHeld": 42
   },
+  "business_assets": [
+    {
+      "id": "wonka-company",
+      "name": "The Wonka Company Ltd",
+      "value": 3200000,
+      "value_gbp": 3200000,
+      "qualifies_for_bpr": true,
+      "qualifies_for_apr": false,
+      "qualifies_for_badr": false,
+      "shareholding_pct": 1,
+      "trading_status": "trading",
+      "bprYearsHeld": 42,
+      "incorporation_date": "1984-01-01"
+    }
+  ],
   "assets": {
     "sipp": {
       "total": 680000,
@@ -80,13 +95,19 @@
       "ownershipShare": 0.5,
       "address": "Wonka Manor, Buckinghamshire"
     },
-    "portfolio": {
-      "value": 3200000,
-      "growth": 0.06,
-      "ret": 0.06,
-      "bpr": true,
-      "description": "The Wonka Company Ltd — BPR qualifying, 42 years held"
-    },
+    "businesses": [
+      {
+        "id": "wonka-company",
+        "name": "The Wonka Company Ltd",
+        "value_gbp": 3200000,
+        "growth": 0.06,
+        "bpr": true,
+        "bprQualifying": true,
+        "bprYearsHeld": 42,
+        "beneficial_interest_this_individual": 1,
+        "description": "The Wonka Company Ltd — BPR qualifying, 42 years held"
+      }
+    ],
     "cash": {
       "total": 260000,
       "own": 130000,
@@ -352,12 +373,12 @@
 
   "trajectories": {
     "netWorthHistory": [
-      { "date": "2025-06-01", "value": 5085000 }, { "date": "2025-07-01", "value": 5092000 },
-      { "date": "2025-08-01", "value": 5098000 }, { "date": "2025-09-01", "value": 5104000 },
-      { "date": "2025-10-01", "value": 5108000 }, { "date": "2025-11-01", "value": 5112000 },
-      { "date": "2025-12-01", "value": 5115000 }, { "date": "2026-01-01", "value": 5118000 },
-      { "date": "2026-02-01", "value": 5119000 }, { "date": "2026-03-01", "value": 5120000 },
-      { "date": "2026-04-01", "value": 5120000 }, { "date": "2026-05-01", "value": 5120000 }
+      { "date": "2025-06-01", "value": 5425000 }, { "date": "2025-07-01", "value": 5432000 },
+      { "date": "2025-08-01", "value": 5438000 }, { "date": "2025-09-01", "value": 5444000 },
+      { "date": "2025-10-01", "value": 5448000 }, { "date": "2025-11-01", "value": 5452000 },
+      { "date": "2025-12-01", "value": 5455000 }, { "date": "2026-01-01", "value": 5458000 },
+      { "date": "2026-02-01", "value": 5459000 }, { "date": "2026-03-01", "value": 5460000 },
+      { "date": "2026-04-01", "value": 5460000 }, { "date": "2026-05-01", "value": 5460000 }
     ],
     "scoreHistory": [
       { "date": "2025-06-01", "score": 60 }, { "date": "2025-07-01", "score": 60 },

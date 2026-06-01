@@ -161,14 +161,28 @@ function _readOne(estate, keyA, keyARegistered, keyADate, shortObj) {
  */
 export function lpaStatus(entity) {
   const estate = entity?.estate || {};
-  const health  = _readOne(estate, 'healthWelfare',
+  let health  = _readOne(estate, 'healthWelfare',
                                     'healthWelfareRegistered',
                                     'healthWelfareDate',
                                     estate.lpaHealth || entity?.lpa?.health);
-  const finance = _readOne(estate, 'propertyFinancial',
+  let finance = _readOne(estate, 'propertyFinancial',
                                     'propertyFinancialRegistered',
                                     'propertyFinancialDate',
                                     estate.lpaFinance || entity?.lpa?.finance);
+  // Shape (d) — the SIMPLE top-level string the personas actually carry:
+  // entity.lpaStatus = 'both' | 'health' | 'finance' | 'none'. The nested
+  // probes above miss it entirely, so the all-domain fixture (Mr T, lpaStatus
+  // 'both') rendered both LPAs as notStarted. When the nested shapes are absent,
+  // derive from this flag. Founder 2026-06-01.
+  const flag = String(entity?.lpaStatus || entity?.riskQuestionnaire?.d6_lpa_status || '').toLowerCase();
+  if (flag && flag !== 'none') {
+    if (health.status === 'notStarted' && (flag === 'both' || flag === 'health')) {
+      health = { status: 'current', registered: true, signedDate: null, staleFlag: false, source: 'entity.lpaStatus' };
+    }
+    if (finance.status === 'notStarted' && (flag === 'both' || flag === 'finance')) {
+      finance = { status: 'current', registered: true, signedDate: null, staleFlag: false, source: 'entity.lpaStatus' };
+    }
+  }
   return { health, finance };
 }
 

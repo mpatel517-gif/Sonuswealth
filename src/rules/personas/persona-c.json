@@ -96,9 +96,10 @@
           "provider": "BT Pension Scheme",
           "cetv": 280000,
           "annual_benefit_deferred": 7200,
+          "guaranteed_income": 7200,
           "normal_retirement_age": 65,
           "taxonomy_id": "A12",
-          "note": "CETV only — balance not in net worth; entitlement only"
+          "note": "CETV only — balance not in net worth; entitlement only. guaranteed_income mirrors annual_benefit_deferred for component compatibility."
         },
         {
           "name": "Stakeholder pension (legacy mid-90s)",
@@ -304,12 +305,7 @@
         "chattel_note": "Non-wasting chattel. Pieces individually >£6k; >£15k — full CGT applies."
       }
     ],
-    "residence": {
-      "value": 1100000,
-      "ownership": "sole",
-      "ownershipShare": 1.0,
-      "address": "Stark Tower, Canary Wharf, London E14"
-    },
+    "residence": null,
     "portfolio": {
       "value": 1400000,
       "growth": 0.08,
@@ -450,7 +446,16 @@
       "rate": 0,
       "remainingYears": 0
     },
-    "otherLoans": []
+    "otherLoans": [
+      {
+        "id": "dla-overdrawn",
+        "type": "Director Loan (overdrawn)",
+        "outstanding": 48000,
+        "monthlyPayment": 0,
+        "rate": 0.0225,
+        "note": "S455 tax £16,200 charged. Repayment deadline 31 Dec 2026. >£10k so BIK applies."
+      }
+    ]
   },
   "dependants": [],
   "willStatus": "current",

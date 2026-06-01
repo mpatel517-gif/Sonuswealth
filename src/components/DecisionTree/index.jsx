@@ -205,7 +205,7 @@ function ReasoningTrace({ tree }) {
             }}>
               <span style={{
                 flexShrink: 0, width: 22, height: 22, borderRadius: '50%',
-                background: 'var(--c-acc)', color: '#0B1F3A',
+                background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
                 fontSize: 10, fontWeight: 800,
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               }}>

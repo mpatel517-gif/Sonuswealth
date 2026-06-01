@@ -73,7 +73,7 @@ function _buildTAX(b) {
     ver:           b.version       ?? b._meta?.version                   ?? 'UK-2026.1',
     taxYear:       b._meta?.taxYear ?? '2026/27',
     statePensionFull:      b.pension?.statePensionFullAmount
-                       ?? b.nationalInsurance?.stateNewPensionFullAmount ?? 11502,
+                       ?? b.nationalInsurance?.stateNewPensionFullAmount ?? 12547.60,
     statePensionQualYears: b.pension?.statePensionQualifyingYears
                        ?? b.nationalInsurance?.statePensionQualifyingYears ?? 35,
 

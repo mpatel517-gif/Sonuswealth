@@ -208,7 +208,7 @@ export default function Welcome({ onStart, onDemo }) {
             signup. Was "Join the waitlist" while auth was a stub. */}
         <button onClick={onStart} style={{
           width:'100%', padding:17,
-          background:'var(--c-acc)', color:'#0B1F3A',
+          background:'var(--c-acc)', color:'var(--c-on-accent, #0B1F3A)',
           borderRadius:100, fontSize:16, fontWeight:700, letterSpacing:-.3,
           boxShadow:'var(--sh-acc)', marginBottom:10, border:'none', cursor:'pointer',
         }}>

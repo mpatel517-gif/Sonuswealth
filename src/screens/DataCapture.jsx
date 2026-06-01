@@ -880,11 +880,11 @@ const inputStyle = {
 }
 const btnPrimary = {
   padding: '8px 14px', fontSize: 12, fontWeight: 700,
-  background: 'var(--c-acc)', color: '#0B1F3A',
+  background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
   border: 'none', borderRadius: 100, cursor: 'pointer',
 }
 const btnPrimaryActive = {
-  ...btnPrimary, background: 'var(--c-acc)', color: '#0B1F3A',
+  ...btnPrimary, background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
 }
 const btnGhost = {
   padding: '8px 14px', fontSize: 12, fontWeight: 700,

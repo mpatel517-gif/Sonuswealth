@@ -778,7 +778,7 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
                 flex: 1, padding: '10px 0', borderRadius: 10,
                 background: stagesYears === n ? 'var(--c-acc)' : 'var(--c-surface2)',
                 border: '1px solid ' + (stagesYears === n ? 'var(--c-acc)' : 'var(--c-sep)'),
-                color: stagesYears === n ? '#0B1F3A' : 'var(--c-text)',
+                color: stagesYears === n ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text)',
                 fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -853,7 +853,7 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
           style={{
             width: '100%', padding: '14px', borderRadius: 14,
             background: 'var(--c-acc)', border: 'none',
-            color: '#0B1F3A', fontSize: 14, fontWeight: 800,
+            color: 'var(--c-on-accent, #0B1F3A)', fontSize: 14, fontWeight: 800,
             cursor: 'pointer', fontFamily: 'inherit',
             letterSpacing: 0.3,
           }}
@@ -895,7 +895,7 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
                   fontSize: 11, fontWeight: 800,
                   background: done ? 'var(--c-acc)' : 'transparent',
                   border: done ? 'none' : '1px solid var(--c-sep)',
-                  color: done ? '#0B1F3A' : 'var(--c-text3)',
+                  color: done ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text3)',
                 }}>
                   {done ? '✓' : active ? '·' : ''}
                 </span>
@@ -970,7 +970,7 @@ function DrawdownDemo({ entity }) {  // eslint-disable-line no-unused-vars
               >
                 <span style={{
                   flexShrink: 0, width: 24, height: 24, borderRadius: '50%',
-                  background: 'var(--c-acc)', color: '#0B1F3A',
+                  background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
                   fontSize: 11, fontWeight: 800,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -2411,7 +2411,7 @@ export default function MagicShowcase({ entity, onClose }) {
                 flexShrink: 0, padding: '10px 14px', borderRadius: 12,
                 background: active ? 'var(--c-acc)' : 'var(--c-surface2)',
                 border: '1px solid ' + (active ? 'var(--c-acc)' : 'var(--c-sep)'),
-                color: active ? '#0B1F3A' : 'var(--c-text)',
+                color: active ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text)',
                 cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
               }}
             >

@@ -54,6 +54,15 @@ function InlineFuture({ now = 0, future = 0, plan = null, lens = 'now' }) {
 //   · Liability variant uses coral treatment
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Pluralize a noun for the "across N {noun}" composition line. Naive +s gave
+// "propertys" / "policys" (MONEY-TILE-TEMPLATE R6 audit, founder 2026-06-01).
+function pluralize(noun = '', n = 2) {
+  if (n === 1) return noun
+  if (/[^aeiou]y$/i.test(noun)) return noun.slice(0, -1) + 'ies'   // property → properties
+  if (/(s|x|z|ch|sh)$/i.test(noun)) return noun + 'es'             // box → boxes
+  return noun + 's'
+}
+
 function fmt(v, opts = {}) {
   const abs = Math.abs(v)
   if (abs >= 1_000_000) return `${v < 0 ? '−' : ''}£${(abs / 1_000_000).toFixed(2)}m`
@@ -82,57 +91,8 @@ const WRAPPER_TONE = {
   OTHER:    '#657286',
 }
 
-// L-02 fix: lay-readable wrapper labels mirror MyMoney.jsx WRAPPER_LABEL.
-// Replaces the old `label.replace('_', ' ')` which produced "BOND ON" /
-// "BOND OFF" reading as switch states.
-const WRAPPER_LAY_LABEL = {
-  PENSION:  'Pension',
-  ISA:      'ISA',
-  GIA:      'GIA',
-  CASH:     'Cash',
-  PROPERTY: 'Property',
-  EIS:      'EIS',
-  SEIS:     'SEIS',
-  VCT:      'VCT',
-  TRUST:    'Trust',
-  BOND_ON:  'Onshore bond',
-  BOND_OFF: 'Offshore bond',
-  STATE:    'State',
-  OTHER:    'Other',
-}
-
-// Compose a top-3 wrapper composition from rows; everything else collapsed
-// into "Other". Returns array of { label, value, share, displayPct }.
-// V-2 fix (2026-05-28): displayPct uses Hamilton (largest-remainder) method
-// so the printed percentages always sum to exactly 100. Previously each
-// segment was independently Math.round(share*100), which produced 53+48=101
-// on Bruce's ISA/GIA breakdown. share (raw fraction) is kept for bar widths.
-function composeWrappers(rows) {
-  if (!rows?.length) return []
-  const byW = {}
-  for (const r of rows) {
-    const w = r.wrapper || 'OTHER'
-    byW[w] = (byW[w] || 0) + (+r.value || 0)
-  }
-  const sorted = Object.entries(byW).sort((a, b) => b[1] - a[1])
-  const top3 = sorted.slice(0, 3)
-  const restTotal = sorted.slice(3).reduce((s, [, v]) => s + v, 0)
-  if (restTotal > 0) top3.push(['OTHER', restTotal])
-  const total = top3.reduce((s, [, v]) => s + v, 0) || 1
-  const segments = top3.map(([w, v]) => ({ label: w, value: v, share: v / total }))
-  // Hamilton method: floor each, hand out leftover units to segments with the
-  // largest fractional remainders. Guarantees Σ displayPct === 100 (or 0).
-  const raw = segments.map(s => s.share * 100)
-  const floors = raw.map(r => Math.floor(r))
-  const remainders = raw.map((r, i) => ({ i, frac: r - floors[i] }))
-  let leftover = 100 - floors.reduce((s, n) => s + n, 0)
-  remainders.sort((a, b) => b.frac - a.frac)
-  const display = floors.slice()
-  for (let k = 0; k < leftover && k < remainders.length; k++) {
-    display[remainders[k].i] += 1
-  }
-  return segments.map((s, i) => ({ ...s, displayPct: display[i] }))
-}
+// WRAPPER_LAY_LABEL + composeWrappers REMOVED (MONEY-TILE-TEMPLATE R6) — they
+// powered the wrapper-% legend, the second composition pattern now deleted.
 
 export default function CategoryTile({
   id,
@@ -165,7 +125,6 @@ export default function CategoryTile({
 
   const total = subtotal != null ? subtotal : rows.reduce((s, r) => s + (+r.value || 0), 0)
   const isEmpty = (rows.length === 0) && (subtotal == null || subtotal === 0)
-  const wrappers = composeWrappers(rows)
   const accentColor = liability ? 'var(--c-coral, #FF6F7D)' : 'var(--c-acc)'
   const valueColor = liability ? 'var(--c-coral, #FF6F7D)' : 'var(--c-text)'
   const changeColor = changePct == null
@@ -239,7 +198,7 @@ export default function CategoryTile({
             title="Tap to ask Sonu about this trend"
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}
           >
-            <MiniTrendLines series={trendSeries} width={64} height={22} strokeWidth={1.3} />
+            <MiniTrendLines series={trendSeries} width={64} height={22} strokeWidth={1.3} mode="absolute" />
           </button>
         )}
         {!isEmpty && !trendSeries && Array.isArray(series) && series.length >= 2 && (() => {
@@ -370,7 +329,7 @@ export default function CategoryTile({
         return (
           <div style={{ marginBottom: 10 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 11, color: 'var(--c-text2)', fontWeight: 600, marginBottom: 6 }}>
-              across {items.length} {composition.noun}{items.length !== 1 ? 's' : ''}
+              across {items.length} {pluralize(composition.noun, items.length)}
             </div>
             <div style={{ height: 8, borderRadius: 100, background: 'var(--c-surface2)', display: 'flex', overflow: 'hidden' }}>
               {items.map((it, i) => (
@@ -394,81 +353,11 @@ export default function CategoryTile({
         )
       })()}
 
-      {/* Composition mini-bar — only when there are ≥2 wrappers (a single
-          wrapper renders a pointless "X 100%" bar, which the founder flagged). */}
-      {!isEmpty && !composition && wrappers.length > 1 && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{
-            height: 6, borderRadius: 100,
-            background: 'var(--c-surface2)',
-            display: 'flex', overflow: 'hidden',
-            transformOrigin: 'left center',
-            animation: 'sw-bar-grow 0.9s var(--ease-out-expo) both',
-          }}>
-            {wrappers.map(w => (
-              <div key={w.label}
-                style={{
-                  width: `${w.share * 100}%`,
-                  background: WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER,
-                  boxShadow: `0 0 6px ${WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER}55`,
-                }}
-                title={`${w.label}: ${fmt(w.value)} (${w.displayPct}%)`} />
-            ))}
-          </div>
-          <div style={{
-            display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap',
-            fontSize: 10, color: 'var(--c-text3)',
-          }}>
-            {wrappers.slice(0, 3).map(w => {
-              const chipLabel = WRAPPER_LAY_LABEL[w.label] || w.label.replace(/_/g, ' ')
-              return (
-                <button
-                  key={w.label}
-                  type="button"
-                  className="sw-press"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    window.dispatchEvent(new CustomEvent('sonus:ask', {
-                      detail: {
-                        question: `Show me my ${chipLabel} ${(label || id || 'holdings').toLowerCase()} in detail`,
-                        seed: { category: id, chip: w.label, value: w.value, share: w.share },
-                      },
-                    }))
-                  }}
-                  aria-label={`Ask about ${chipLabel} in ${label || id}`}
-                  title={`Ask Sonu about your ${chipLabel} holdings`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    background: 'none', border: '1px solid transparent',
-                    padding: '4px 6px', borderRadius: 6, cursor: 'pointer',
-                    color: 'inherit', fontSize: 'inherit',
-                    minHeight: 28,
-                    transition: 'border-color 0.15s ease, background 0.15s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = `color-mix(in srgb, ${WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER} 40%, transparent)`
-                    e.currentTarget.style.background = `color-mix(in srgb, ${WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER} 8%, transparent)`
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'transparent'
-                    e.currentTarget.style.background = 'none'
-                  }}
-                >
-                  <span style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: WRAPPER_TONE[w.label] || WRAPPER_TONE.OTHER,
-                    display: 'inline-block',
-                  }} />
-                  <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>
-                    {chipLabel}
-                  </span>
-                  <span>{w.displayPct}%</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* Wrapper-% legend REMOVED (MONEY-TILE-TEMPLATE R6, founder 2026-06-01):
+          it was a SECOND composition pattern ("ISA 53% · GIA 47%") that made
+          adjacent tiles inconsistent. There is now ONE pattern only — the
+          `composition` block above ("across N {noun}" + drillable bar), built for
+          every multi-holding tile in MyMoney.jsx. No second code path. */}
 
       {/* Context line + cost-of-inaction sub-line + status chip */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>

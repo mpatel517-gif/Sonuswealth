@@ -66,6 +66,11 @@ import {
 // (b) several of their call sites diverge from ripple's defaults
 // (e.g. ihtDynamic with includeSipp=true override, mutated entity).
 import { useRipple } from '../state/ripple.jsx'
+// W1 temporal wiring (2026-06-01): MyMoney reads from the same single store
+// that Dashboard.GlobalTaxYearChip and X28TopBar write. This makes all three
+// controls share one source of truth — changing the window in Dashboard or in
+// the X28TopBar pill on MyMoney both re-project tile headlines and TrajectoryBars.
+import useTaxYear from '../hooks/useTaxYear.jsx'
 // S1 selector migration (Phase 2): monthlyEssentials reader pulled via selector
 // facade. Resolves the 4 known persona shapes consistently with engine canon.
 import { monthlyEssentials as getMonthlyEssentials } from '../engine/selectors/index.js'
@@ -89,6 +94,8 @@ import TappableNumber    from '../components/shared/TappableNumber.jsx'
 // MyMoney v2.7 §3.4 + taxonomy-driven add flow.
 import BalanceSheet       from '../components/MyMoney/BalanceSheet.jsx'
 import { PensionSummaryDrill } from '../components/MyMoney/L3/PensionSummaryDrill.jsx'
+import { L3PanelHost } from '../components/MyMoney/L3/L3PanelHost.jsx'
+import { L4NumberPanel } from '../components/MyMoney/L3/L4NumberPanel.jsx'
 import { projectSeries, growthRateFor, projectValue } from '../engine/projection.js'
 import { getActiveCMA } from '../engine/cma.js'
 import { classifyPot } from '../engine/decumulation-plan.js'
@@ -114,6 +121,8 @@ import BusinessDrillDown    from '../components/MyMoney/BusinessDrillDown.jsx'
 import ProtectionDrillDown  from '../components/MyMoney/ProtectionDrillDown.jsx'
 import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx'
 import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
+import DebtLeaf from '../components/MyMoney/DebtLeaf.jsx'
+import { amortise } from '../components/MyMoney/debtMath.js'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
 import AlternativesDrillDown from '../components/MyMoney/AlternativesDrillDown.jsx'
 import AssetDetailOverlay    from '../components/MyMoney/AssetDetailOverlay.jsx'
@@ -153,7 +162,7 @@ import NetWorthDrill        from '../components/MyMoney/NetWorthDrill.jsx'
 import CashFlowDrill        from '../components/MyMoney/CashFlowDrill.jsx'
 import WrapperDrill         from '../components/MyMoney/WrapperDrill.jsx'
 import WhatIfLibrary        from '../components/MyMoney/WhatIfLibrary.jsx'
-import { EV } from '../state/events.jsx'
+import { EV, useEventsFor } from '../state/events.jsx'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // §1 WRAPPER BADGE (D-WRAPPER-FIRST-1)
@@ -388,6 +397,26 @@ function rowsForPensions(entity) {
   return out
 }
 
+// Humanise a debt/loan type slug into a clean sentence-case label
+// (MONEY-TILE-TEMPLATE R5b): "credit-card" → "Credit card",
+// "student_loan_plan2" → "Student loan (Plan 2)", "buy-to-let-mortgage" →
+// "Buy-to-let mortgage". Replaces BOTH `-` and `_`; never rely on CSS
+// `capitalize` (which mangles hyphens → "Buy-To-Let"). Founder 2026-06-01.
+function humanizeDebtType(type = '') {
+  const raw = String(type).toLowerCase().trim()
+  const planMatch = raw.match(/plan[\s_-]?(\d)/)
+  let t = raw
+    .replace(/plan[\s_-]?\d/g, '')                    // strip "planN" — re-added as "(Plan N)"
+    .replace(/[_-]+/g, ' ')
+    .replace(/\bbtl\b/g, 'buy-to-let')
+    .replace(/\bhp\b/g, 'hire purchase')
+    .replace(/\s+/g, ' ')
+    .trim()
+  let label = t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Loan'   // sentence-case, hyphens intact
+  if (planMatch) label += ` (Plan ${planMatch[1]})`
+  return label
+}
+
 function rowsForISAs(entity) {
   const a = entity.assets || {}
   const out = []
@@ -417,15 +446,31 @@ function rowsForISAs(entity) {
 function rowsForGIA(entity) {
   const a = entity.assets || {}
   const out = []
-  // Dedupe: skip legacy a.portfolio.value when spec investments[] has GIA items.
+  // B7 fix (2026-06-01): read a.gia[] — persona-c (Tony Stark) stores GIA
+  // accounts here (4 accounts, £605k). These are not inside a.investments[].
+  for (const inv of (a.gia || [])) {
+    out.push({
+      id: inv.id || inv.taxonomy_id || inv.name, label: inv.name || 'GIA',
+      value: +(inv.value || inv.balance_gbp || inv.balance || 0) || 0,
+      sub: inv.provider || inv.subtype || '',
+      wrapper: 'GIA',
+      raw: inv,
+    })
+  }
+  // Dedupe: skip legacy a.portfolio.value when spec investments[] has GIA items
+  // OR when a.gia[] is already populated (avoids double-count for Tony Stark).
   const specItems = (a.investments || []).filter(inv => {
     const t = (inv.type || '').toLowerCase()
     return t === 'gia' || t.includes('general-investment')
   })
-  if (a.portfolio?.value > 0 && specItems.length === 0) {
+  // Skip legacy BPR-qualifying portfolio here — it belongs exclusively to the
+  // BUSINESS tile via rowsForBPR (domain H). Including it in both double-counts.
+  // B6 fix (2026-06-01): also skip when a.gia[] is present to avoid
+  // double-counting (persona-c has both a.gia[] AND a.portfolio{bpr:true}).
+  if (a.portfolio?.value > 0 && specItems.length === 0 && out.length === 0 && !a.portfolio?.bpr) {
     out.push({
       id: 'gia-legacy', label: 'GIA / Brokerage', value: +a.portfolio.value || 0,
-      sub: a.portfolio?.bpr ? 'BPR-qualifying' : 'General investment',
+      sub: 'General investment',
       wrapper: 'GIA',
     })
   }
@@ -442,6 +487,9 @@ function rowsForGIA(entity) {
 
 function rowsForByWrapper(entity, wrapper) {
   // Generic catch-all: BOND_ON, BOND_OFF, EIS, SEIS, VCT, TRUST
+  // B7 fix (2026-06-01): also read taxEfficientInvestments[] (EIS/SEIS/VCT)
+  // and investmentBonds[] (BOND_ON/BOND_OFF) — persona-c stores these in
+  // dedicated top-level arrays rather than inside investments[].
   const a = entity.assets || {}
   const out = []
   for (const inv of (a.investments || [])) {
@@ -450,6 +498,34 @@ function rowsForByWrapper(entity, wrapper) {
         id: inv.id || inv.name, label: inv.name || inv.type, value: +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0) || 0,
         sub: inv.provider || '',
         wrapper,
+      })
+    }
+  }
+  // taxEfficientInvestments[]: type is 'EIS' | 'SEIS' | 'VCT' etc.
+  // Map to wrapper: EIS→EIS, SEIS→SEIS, VCT→VCT
+  for (const inv of (a.taxEfficientInvestments || [])) {
+    const w = (inv.type || '').toUpperCase()
+    if (w === wrapper) {
+      out.push({
+        id: inv.id || inv.taxonomy_id || inv.name, label: inv.name || inv.type,
+        value: +(inv.value || inv.balance_gbp || inv.balance || 0) || 0,
+        sub: inv.provider || '',
+        wrapper,
+        raw: inv,
+      })
+    }
+  }
+  // investmentBonds[]: type 'onshore-bond'→BOND_ON, 'offshore-bond'→BOND_OFF
+  for (const inv of (a.investmentBonds || [])) {
+    const t = (inv.type || '').toLowerCase()
+    const w = t.includes('offshore') ? 'BOND_OFF' : t.includes('bond') ? 'BOND_ON' : null
+    if (w === wrapper) {
+      out.push({
+        id: inv.id || inv.taxonomy_id || inv.name, label: inv.name || inv.type,
+        value: +(inv.value || inv.balance_gbp || inv.balance || 0) || 0,
+        sub: inv.provider || '',
+        wrapper,
+        raw: inv,
       })
     }
   }
@@ -542,7 +618,7 @@ function rowsForLiabilities(entity) {
   if (Array.isArray(liab)) {
     for (const l of liab) {
       out.push({
-        id: l.id || l.type, label: (l.type || 'loan').replace(/_/g, ' '),
+        id: l.id || l.type, label: humanizeDebtType(l.type),
         value: +(l.outstanding_balance_gbp ?? l.outstanding_balance ?? l.balance ?? 0) || 0,
         sub: `${fmt(+(l.monthly_payment || 0))}/mo · ${((+l.apr || +l.interest_rate || 0) * 100).toFixed(1)}% APR`,
         wrapper: null, isLiability: true,
@@ -556,7 +632,7 @@ function rowsForLiabilities(entity) {
     })
     for (const l of (liab.otherLoans || [])) {
       out.push({
-        id: l.id || l.type, label: (l.type || 'Loan').replace(/_/g, ' '),
+        id: l.id || l.type, label: humanizeDebtType(l.type),
         value: +l.outstanding || 0, sub: `${fmt(+l.monthlyPayment || 0)}/mo`,
         isLiability: true,
       })
@@ -3079,8 +3155,34 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   //       | 'wrapper:<WRAPPER_CODE>'  (e.g. 'wrapper:ISA', 'wrapper:PENSION', 'wrapper:PROPERTY')
   //       | null
   const [activeDrill, setActiveDrill] = useState(null)
+  // R13 — provenance drill for a Net-Worth-Trend metric tile (Plan funded,
+  // 1-yr growth, Debt ratio, …). Holds the L4NumberPanel payload to show.
+  const [metricDrill, setMetricDrill] = useState(null)
+  // FK-1 (founder 2026-06-01): each liability tile drills to ITS OWN debt leaf.
+  const [debtLeaf, setDebtLeaf] = useState(null)
   // When a specific pension segment/chip is tapped on the tile, open its leaf directly.
   const [pensionInitialPot, setPensionInitialPot] = useState(null)
+
+  // ── Plan-lens wiring (2026-06-01): committed SCENARIO_SAVED decisions carry a
+  // structured `deltas:[{category, deltaNow}]`. We fold those per category so the
+  // Plan trajectory (gold tip) reflects the decision — e.g. "sell this BTL" drops
+  // Property's plan and lifts Cash. This is what makes "Add to plan" real rather
+  // than a logged no-op. SCENARIO_SAVED is NOT folded into the base entity (so
+  // "Today" is unchanged); it only adjusts the Plan projection. ──
+  const _scenarioEvents = useEventsFor(personaId)
+  const planAdjust = useMemo(() => {
+    const m = {}
+    for (const ev of (_scenarioEvents || [])) {
+      if (ev?.type !== EV.SCENARIO_SAVED || !Array.isArray(ev?.payload?.deltas)) continue
+      for (const d of ev.payload.deltas) {
+        if (d?.category) m[d.category] = (m[d.category] || 0) + (+d.deltaNow || 0)
+      }
+    }
+    return m
+  }, [_scenarioEvents])
+  const planScenarioCount = useMemo(() =>
+    (_scenarioEvents || []).filter(e => e?.type === EV.SCENARIO_SAVED && Array.isArray(e?.payload?.deltas)).length,
+    [_scenarioEvents])
 
   // Header NW tap → NetWorthDrill (founder direction 2026-05-25 round 5).
   // Dashboard.jsx dispatches 'sonus:networth-drill' and waits one tick for
@@ -3098,8 +3200,64 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // Pivot view (item 7) — Balance Sheet / Income / Insurance / Bonds
   const [pivot, setPivot] = useState('balance-sheet')
   const [addOpen, setAddOpen] = useState(false)
-  const [windowId, setWindowId] = useState('current-period')
-  const [viewMode, setViewMode] = useState('actual')
+
+  // W1 temporal wiring (2026-06-01): subscribe to the global temporal store so
+  // that BOTH the Dashboard GlobalTaxYearChip (native <select>) AND the inline
+  // X28TopBar window pill stay in sync and both trigger tile re-projection.
+  // useTaxYear() reads localStorage.sonuswealth.temporal on mount and re-reads
+  // on every `sonus:taxyear` event — the same event both controls dispatch.
+  // X28TopBar is still controlled (windowId/viewMode props + callbacks) so the
+  // user can also change the window directly on this screen; those callbacks
+  // write the store and dispatch `sonus:taxyear`, which useTaxYear re-reads,
+  // keeping the three in sync without a second store.
+  const tyStore = useTaxYear()
+  const [windowId, setWindowIdRaw] = useState(tyStore.window || 'current-period')
+  const [viewMode, setViewMode] = useState(() => {
+    // Hydrate viewMode from store on first render.
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem('sonuswealth.temporal') : null
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.viewMode) return parsed.viewMode
+      }
+    } catch { /* ignore */ }
+    return 'actual'
+  })
+
+  // Keep local windowId in sync with the store whenever any control changes it.
+  // This covers the Dashboard chip path (no onWindowChange callback here).
+  useEffect(() => {
+    setWindowIdRaw(tyStore.window || 'current-period')
+  }, [tyStore.window])
+
+  // Also sync viewMode from the store — X28TopBar writes viewMode to the store
+  // on window auto-switch (defaultMode), but that doesn't go through the
+  // onViewModeChange callback when triggered externally. Re-read on taxyear.
+  useEffect(() => {
+    function syncMode() {
+      try {
+        const raw = typeof window !== 'undefined' ? window.localStorage.getItem('sonuswealth.temporal') : null
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+        if (parsed?.viewMode) setViewMode(parsed.viewMode)
+      } catch { /* ignore */ }
+    }
+    if (typeof window === 'undefined') return undefined
+    window.addEventListener('sonus:taxyear', syncMode)
+    return () => window.removeEventListener('sonus:taxyear', syncMode)
+  }, [])
+
+  // setWindowId: write the canonical store AND update local state so the
+  // X28TopBar callback continues to work without a separate store write.
+  function setWindowId(newId) {
+    setWindowIdRaw(newId)
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem('sonuswealth.temporal') : null
+      const prev = raw ? JSON.parse(raw) : {}
+      window.localStorage.setItem('sonuswealth.temporal', JSON.stringify({ ...prev, window: newId, ts: Date.now() }))
+      window.dispatchEvent(new Event('sonus:taxyear'))
+    } catch { /* quota / SSR */ }
+  }
   // scenarioEntity: set by WhatIfLibrary when the user expands a scenario card.
   // PivotView uses activeEntity = scenarioEntity ?? entity so pivot views
   // reflect scenario numbers while a card is expanded.
@@ -3241,22 +3399,75 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // — rendered "Assets £0 · Liabilities £0" against a correct £698k Net Worth.
   // Compute from the same primitives used by TileGrid so the strip is
   // self-consistent with the asset grid below.
-  const heroTotalAssets = (() => {
+  //
+  // W1 / Task A + B (2026-06-01): all three figures (NW, Assets, Liabilities)
+  // must be on the same lens × horizon. Strategy:
+  //   · Compute base (now) sums for assets and liabilities
+  //   · When the active projection uses a growth factor, apply the SAME factor
+  //     to both assets and liabilities so Assets×f − Liab×f = NW×f exactly.
+  //   · This matches netWorthAtYears() which uses NW_now × 1.04^years; no
+  //     amortisation model exists for liabilities, so scaling both keeps the
+  //     identity tight without inventing amortisation.
+  const _heroBaseAssets = (() => {
     const a = entity?.assets || {}
     let t = 0
     t += +(a.sipp?.total || 0)
     t += (a.pensions || []).reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
     t += (a.investments || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
-    t += +(a.isa?.total || a.isa?.value || 0)
-    t += +(a.portfolio?.total || a.portfolio?.value || 0)
-    t += (a.property || []).reduce((s, p) => s + +(p.value_gbp || p.value || p.market_value || 0), 0)
+    // Dedup the legacy ISA/GIA scalar shapes against the investments[] array —
+    // Mr T holds ISA+GIA in BOTH shapes, so adding both double-counted £71.4k and
+    // the hero ASSETS (£1.20m) overstated the sum of the category tiles (£1.13m).
+    // Mirrors investmentsTotal()'s guard so hero = engine = tiles. (Audit 2026-06-01.)
+    const _invHasISA = (a.investments || []).some(x => /isa/i.test(String(x.type ?? x.wrapper ?? '')))
+    const _invHasGIA = (a.investments || []).some(x => /\bgia\b|general/i.test(String(x.type ?? x.wrapper ?? '')))
+    if (!_invHasISA) t += +(a.isa?.total || a.isa?.value || 0)
+    if (!_invHasGIA) t += +(a.portfolio?.total || a.portfolio?.value || 0)
+    // B4 fix (2026-06-01): property[] was not applying ownershipShare / beneficial_interest.
+    // Engine's propertyTotal() always applies it; hero was gross, engine was net — break-even
+    // only for sole-owner personas. Joint-owned (personas b/e/f) had inflated hero assets.
+    t += (a.property || []).reduce((s, p) => {
+      if (p['$ref'] || p.status === 'disposed') return s
+      const raw  = +(p.value_gbp || p.value || p.market_value || 0)
+      const frac = +(p.beneficial_interest_this_individual ?? p.ownershipShare ?? 1) || 1
+      return s + raw * frac
+    }, 0)
     // F-1 fix (2026-05-26 snap audit): Bruce persona stores main residence under
     // `assets.residence` (NOT inside the `property[]` array). The wrapper bar and
     // CategoryTile sums BOTH include residence; the hero strip silently dropped
     // it, displaying Assets £2.28m vs correct £4.08m. Reconciles NW = Assets - Liabilities.
-    t += +(a.residence?.value_gbp || a.residence?.value || a.residence?.market_value || 0)
-    t += (a.business_assets || a.businessAssets || a.business || []).reduce((s, b) => s + +(b.value_gbp || b.value || 0), 0)
+    t += (+(a.residence?.value_gbp || a.residence?.value || a.residence?.market_value || 0)) * (+(a.residence?.ownershipShare || 1))
+    // F-2 fix (2026-06-01): Wonka (persona-e) carries private-business equity at
+    // top-level `entity.business_assets` (read by the CategoryTile via rowsForBPR)
+    // AND/OR `entity.assets.businesses[]` (read by the engine's netWorth/_businessTotal).
+    // The old line read `a.business_assets` (= entity.assets.business_assets, undefined),
+    // so the hero dropped the £3.2m company — strip showed Assets £2.26m while NW was
+    // £5.46m and the Business tile showed £3.20m. Read ONE canonical source (prefer the
+    // top-level array the tiles use; fall back to the engine's `businesses[]` shape) so we
+    // never double-count personas that populate both. Apply ownership/shareholding fraction.
+    {
+      const biz = (entity?.business_assets?.length ? entity.business_assets
+                  : (a.businesses || a.business_assets || a.businessAssets || a.business || []))
+      t += biz.reduce((s, b) => {
+        if (b?.status === 'disposed') return s
+        const raw  = +(b.value_gbp ?? b.value ?? 0) || 0
+        const frac = +(b.beneficial_interest_this_individual ?? b.ownershipShare ?? b.shareholding_pct ?? 1) || 1
+        return s + raw * frac
+      }, 0)
+    }
     t += (a.alternatives || []).reduce((s, x) => s + +(x.value_gbp || x.value || 0), 0)
+    // B7 fix (2026-06-01): persona-c (Tony Stark) stores GIA accounts in a.gia[],
+    // tax-efficient investments in a.taxEfficientInvestments[], and bonds in
+    // a.investmentBonds[]. None of these are inside a.investments[] so they were
+    // silently dropped from the hero assets total (£605k GIA + £533k TEI + £520k bonds
+    // = £1.658m missing). Add all three read-paths here. The engine's investmentsTotal()
+    // also misses them — see B7 rowsFor fix below for the tile-layer; engine fix is
+    // tracked separately (the engine NW is the ripple source and is independently wrong
+    // for Tony Stark, but hero and engine are both consistently wrong — after this fix
+    // the hero will be ahead of the engine NW until engine is patched too, so we use the
+    // corrected asset sum directly rather than the ripple NW when any of these arrays exist).
+    t += (a.gia || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
+    t += (a.taxEfficientInvestments || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
+    t += (a.investmentBonds || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
     // Cash — either flat scalar or nested
     if (Array.isArray(a.cash)) t += a.cash.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
     else if (a.cash?.bank?.length) t += a.cash.bank.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
@@ -3264,14 +3475,46 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
     else if (a.cash?.total) t += +a.cash.total
     return t
   })()
-  const heroTotalLiabilities = (() => {
+  const _heroBaseLiabilities = (() => {
     const l = entity?.liabilities || {}
+    const a = entity?.assets || {}
     let t = 0
     if (l.mortgage) t += +(l.mortgage.outstanding || 0)
     t += (l.otherLoans || []).reduce((s, x) => s + +(x.outstanding || x.outstanding_balance || x.balance || 0), 0)
     if (l.creditCards) t += +l.creditCards
+    // B5 fix (2026-06-01): property mortgages stored on property[] entries
+    // (mortgage_outstanding / mortgage_balance) were never counted in liabilities.
+    // Persona-c has £700k in BTL mortgages under property[].mortgage_outstanding
+    // that only appeared in the tile-layer drill but not in the hero strip.
+    // IMPORTANT: property assets above are GROSS (before mortgage) so adding
+    // mortgage debt here is correct — no double-subtraction.
+    t += (a.property || []).reduce((s, p) => {
+      if (p['$ref'] || p.status === 'disposed') return s
+      return s + +(p.mortgage_outstanding || p.mortgage_balance || 0)
+    }, 0)
     return t
   })()
+  // W1 / Task A2: apply the same growth factor as the NW projection so the
+  // identity Assets - Liab = NW holds at every horizon. The factor is derived
+  // from the projection that was computed above (same path as hero NW).
+  // At years=0 (current lens) factor=1 → no change. Negative years (history)
+  // we also apply the factor (which is <1) to stay consistent with engine.
+  const _heroGrowthFactor = (() => {
+    const yrs = projection?.years ?? 0
+    if (yrs === 0) return 1
+    // For historical and plan-override modes, engine NW and projection.value
+    // may not equal baseAssets*factor - baseLiab*factor. In those cases
+    // derive factor from the displayed NW so the strip stays coherent:
+    //   factor = projection.value / (baseAssets - baseLiab)
+    const baseNW = _heroBaseAssets - _heroBaseLiabilities
+    if (baseNW !== 0 && (projection?.source === 'historical' || projection?.source === 'plan' || projection?.source === 'plan-25x')) {
+      return (projection?.value ?? baseNW) / baseNW
+    }
+    // Default: same 1.04^years compound used by netWorthAtYears()
+    return Math.pow(1.04, yrs)
+  })()
+  const heroTotalAssets      = Math.round(_heroBaseAssets      * _heroGrowthFactor)
+  const heroTotalLiabilities = Math.round(_heroBaseLiabilities * _heroGrowthFactor)
 
   // Plan staleness
   const stalePlans = []
@@ -3617,7 +3860,13 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         // drives the Plan segment of the pension tile's trajectory bar.
         const _penAnnualContrib = _penPots.reduce((s, p) => s + (((+(p.contribution_monthly?.personal) || 0) + (+(p.contribution_monthly?.employer) || 0)) * 12), 0)
         const _penCma = (() => { try { return getActiveCMA() } catch { return {} } })()
-        const _penSeries = _penPots.map(p => projectSeries(+p.value || 0, growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', _penCma), 20))
+        // R5 (MONEY-TILE-TEMPLATE): per-pension sparkline from REAL valuation
+        // history only — one line per pot that actually carries history, so the
+        // lines genuinely diverge. No synthetic projection clones. Pots without
+        // history contribute no line; if none have it, no sparkline.
+        const _penTrend = _penPots
+          .map(p => Array.isArray(p.valuation_history) ? p.valuation_history.map(h => +(h && typeof h === 'object' ? h.value : h) || 0) : null)
+          .filter(s => Array.isArray(s) && s.length > 1)
         const _penColors = ['var(--c-acc2,#5B8DEF)', 'var(--c-gold,#E8B84B)', 'var(--c-violet,#9B8CFF)', 'var(--c-acc,#5ddbc2)', 'var(--c-coral,#FF6F7D)']
         const _penShort = (name = '') => (name.replace(/\([^)]*\)/g, '').replace(/\b(SIPP|DC|Lansdown|Enterprises)\b/gi, '').replace(/\s+/g, ' ').trim() || name)
         const _penItems = _penPots.map((p, i) => ({ name: p.name, short: _penShort(p.name), value: +p.value || 0, color: _penColors[i % _penColors.length] }))
@@ -3629,7 +3878,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         const CATEGORIES = [
           { id: 'pensions',     label: 'Pensions',             domainCodes: 'A · B',     rows: catRows.pensions,     onRowTap: () => setActiveDrill('pension'),
             changeLabel: 'est. 12-mo',
-            trendSeries: _penSeries.length ? _penSeries : null,
+            trendSeries: _penTrend.length ? _penTrend : null,
             composition: _penItems.length ? { noun: 'pension', items: _penItems, onDrill: _openPensionPot } : null,
             // Drawdown link lives in the drill/leaf (detailed analysis), not on
             // the scan-friendly tile (founder 2026-05-31: pill too long).
@@ -3784,7 +4033,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                 : null,
               ...loans.map(l => {
                 const r = +(l.apr || l.interest_rate || 0) * 100
-                return r > 0 ? { label: (l.type || 'Loan').replace(/_/g, ' '), rate: r } : null
+                return r > 0 ? { label: humanizeDebtType(l.type), rate: r } : null
               }),
             ].filter(Boolean).sort((a, b) => b.rate - a.rate)
 
@@ -3845,17 +4094,11 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             const annual = entity.family_obligations.reduce((s, o) => s + (+o.annual_cost || 0), 0)
             if (annual > 0) tile.contextLine = `£${Math.round(annual / 1000)}k/yr in family commitments`
           }
-          // Mock-ish change pct — pulled from trajectory if available, else null
-          const traj = entity?.trajectories?.netWorthHistory
-          if (traj && traj.length >= 2 && c.id !== 'income') {
-            // not category-specific in current data; surface NW change as a hint
-            const lastTwo = traj.slice(-2)
-            const ch = ((lastTwo[1].value - lastTwo[0].value) / Math.max(1, lastTwo[0].value)) * 100
-            // Only assign a change pct if this category is one of the major drivers
-            if (['pensions', 'investments', 'property', 'business'].includes(c.id)) {
-              tile.changePct = +ch.toFixed(1)
-            }
-          }
+          // changePct is set per-category below, AFTER CAT_MONTHLY_DRIFT is
+          // defined — the old code surfaced the SAME net-worth change on every
+          // tile (Savings +0.2% AND Property +0.2%, unlabelled), which founder
+          // (2026-06-01) flagged as a careless stub. Now each category shows its
+          // own honest 12-month estimate from its drift rate, labelled "12-mo est."
           tile.subtotal = subtotals[c.id]
 
           // 12-month sparkline series — back-cast from current subtotal using a
@@ -3863,18 +4106,17 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // carry per-category time series) but shows a directional trend. For
           // liabilities, the line trends DOWN (amortising) so we use a slight
           // negative monthly drift. For income, no sparkline.
-          const CAT_MONTHLY_DRIFT = {
-            pensions:     0.0058,   // ~7% annual
-            investments:  0.0050,   // ~6% annual
-            property:     0.0033,   // ~4% annual
-            business:     0.0070,   // ~9% annual (private equity volatility)
-            protection:   0.0,      // no movement
-            cash:         0.0028,   // ~3.4% annual savings rate
-            liabilities: -0.0042,   // amortising ~5%/yr
-            alternatives: 0.0045,
-            obligations:  0.0,
-            income:       0.0,
+          // R14 (MONEY-TILE-TEMPLATE): growth rate is DYNAMIC — from the active
+          // CMA via growthRateFor(), NOT a hardcoded drift table (founder
+          // 2026-06-01: "nothing hard coded, all dynamic"). Each category maps to
+          // its representative taxonomy node type; growthRateFor resolves that to
+          // the CMA asset-class expected return (updates when the CMA updates).
+          const CAT_NODETYPE = {
+            pensions: 'pension-sipp', investments: 'isa-stocks-shares',
+            property: 'property-residence', business: 'alt-aim',
+            cash: 'cash-savings', alternatives: 'alt-aim',
           }
+          const _catRate = (id) => growthRateFor(CAT_NODETYPE[id] || 'gia', _penCma)
           // Per-tile temporal trajectory (Pattern A, spec 2026-06-01): Now /
           // Future / Plan. The bar's horizon is DECOUPLED from the tax-year window
           // (that coupling is why Future "showed nothing") — every tile always
@@ -3885,8 +4127,13 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // two never disagree.
           if (tile.subtotal && tile.subtotal !== 0 && c.id !== 'income' && c.id !== 'protection') {
             const _toRet = (entity?.retirementAge ?? 67) - (entity?.age ?? 50)
-            const _years = _toRet > 1 ? Math.min(_toRet, 25) : 10
-            const _annual = Math.pow(1 + (CAT_MONTHLY_DRIFT[c.id] ?? 0.001), 12) - 1
+            const _retYears = _toRet > 1 ? Math.min(_toRet, 25) : 10
+            // W1 temporal wiring (2026-06-01): use the selected window's horizon
+            // when the user has chosen a forward window (5y / 10y / 20y /
+            // Lifetime / Next year). For current/historical windows (years ≤ 0)
+            // fall back to the retirement-gap default so "Today" still makes sense.
+            const _years = windowYears > 0 ? windowYears : _retYears
+            const _annual = _catRate(c.id)   // CMA-derived, dynamic (R14)
             const _now = +tile.subtotal
             // Future = grow on autopilot, no new money. Plan = Future + the user's
             // planned ongoing contributions (real, honest distinction — not a
@@ -3895,23 +4142,86 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             // until their planned inflows are captured.
             const _future = Math.round(projectValue(_now, _annual, _years))
             const _contrib = c.id === 'pensions' ? _penAnnualContrib : 0
-            const _plan = _contrib > 0 ? Math.round(projectValue(_now, _annual, _years, _contrib)) : _future
+            // Plan = Future + this category's committed-scenario delta (e.g. a
+            // sold asset removed, released equity added), projected from the
+            // post-decision base. plan === future when no scenario touches it.
+            const _planBase = Math.max(0, _now + (planAdjust[c.id] || 0))
+            const _plan = Math.round(projectValue(_planBase, _annual, _years, _contrib))
             tile.trajectory = { now: _now, future: _future, plan: _plan }
+            // Header 12-month change %: the category's OWN annualised drift —
+            // real and DIFFERENT per category (pensions ~7% · property ~4% ·
+            // cash ~3.4%), not the single net-worth figure stamped on every tile.
+            // It's a back-cast estimate, so it's labelled "12-mo est." (doctrine:
+            // estimates must read as estimates). Consistent with the forward
+            // TrajectoryBar — same drift, so the % and the bar never contradict.
+            tile.changePct = +(_annual * 100).toFixed(1)
+            tile.changeLabel = '12-mo est.'
           }
-          // Founder UX pass 2 (2026-05-26): EVERY tile gets a sparkline.
-          // Previously only growth-story categories (pensions/investments/
-          // property/business/liabilities) had them — but the asymmetric layout
-          // is more confusing than a flat line. Categories with effectively-zero
-          // drift (cash, protection, obligations, alternatives) still show a
-          // gentle near-flat line; the visual rhythm is what matters.
-          if (tile.subtotal && tile.subtotal !== 0) {
-            const drift = CAT_MONTHLY_DRIFT[c.id] ?? 0.001  // near-flat default
-            const cur = +tile.subtotal
-            const sparkSeries = []
-            for (let i = 11; i >= 0; i--) {
-              sparkSeries.push(cur / Math.pow(1 + drift, i))
+          // ── R5 (MONEY-TILE-TEMPLATE): header sparkline, per-holding & dynamic.
+          // Priority: (1) real per-holding valuation_history → one REAL line per
+          // holding (genuinely divergent); else (2) a single category trend line
+          // reconstructed from the CMA category rate (dynamic, R14, labelled est.).
+          // Every multi-value tile gets a sparkline → consistent across tiles
+          // (founder 2026-06-01: "image 1 has no sparklines"); NO synthetic
+          // identical clones (each real line is its holding's own history).
+          if (!tile.trendSeries && tile.subtotal && tile.subtotal !== 0 && c.id !== 'income' && c.id !== 'protection') {
+            // ONE line PER holding so a multi-holding tile shows MULTIPLE lines
+            // (founder 2026-06-01: "Did you fix the multiple spark lines required?").
+            // Per holding: (1) real valuation_history if present, else (2) reconstruct
+            // from THAT holding's own growth_rate_assumption (real, per-holding,
+            // dynamic — R5 priority 2). Different rates → genuinely divergent lines
+            // on the shared-scale renderer; NO identical synthetic clones.
+            const _rows = (c.rows || []).filter(r => (+r.value || 0) > 0)
+            const _lines = _rows.map(r => {
+              // Each tile row keeps the raw holding under `.raw` — read the real
+              // per-holding history / growth assumption from there (the row's own
+              // top-level fields are display-only and don't carry the rate, which
+              // is why every line previously collapsed to the category rate).
+              const src = r.raw || r
+              const hist = Array.isArray(src.valuation_history) ? src.valuation_history
+                : (Array.isArray(r.valuation_history) ? r.valuation_history : r.history)
+              if (Array.isArray(hist) && hist.length > 1) {
+                return hist.map(pt => +((pt && typeof pt === 'object') ? pt.value : pt) || 0)
+              }
+              const own = +src.growth_rate_assumption || +src.growth
+                || +r.growth_rate_assumption || +r.growth || 0
+              const rate = own > 0 ? own : _catRate(c.id)
+              const rM = Math.pow(1 + rate, 1 / 12) - 1
+              const cur = +r.value
+              const line = []
+              for (let i = 11; i >= 0; i--) line.push(Math.round(cur / Math.pow(1 + rM, i)))
+              return line
+            }).filter(l => Array.isArray(l) && l.length > 1)
+            if (_lines.length >= 2) {
+              tile.trendSeries = _lines                  // multiple per-holding lines
+            } else if (_lines.length === 1) {
+              tile.series = _lines[0]                    // single holding → one line
+            } else {
+              // No holdings resolvable — fall back to a single category line.
+              const rM = Math.pow(1 + _catRate(c.id), 1 / 12) - 1
+              const cur = +tile.subtotal
+              const line = []
+              for (let i = 11; i >= 0; i--) line.push(Math.round(cur / Math.pow(1 + rM, i)))
+              tile.series = line
             }
-            tile.series = sparkSeries
+          }
+
+          // ── R6 (MONEY-TILE-TEMPLATE): ONE composition pattern for EVERY
+          // multi-holding tile — "across N {noun}" + a single drillable colour bar.
+          // No wrapper-% legend, no holding names (that's drill detail). Was
+          // pensions-only; every other tile fell back to the legacy wrapper legend
+          // → three different patterns across adjacent tiles (founder caught it).
+          if (!tile.composition) {
+            const _crows = (c.rows || []).filter(r => (+r.value || 0) > 0)
+            if (_crows.length >= 2) {
+              const _NOUN = { pensions: 'pension', investments: 'account', property: 'property', business: 'holding', cash: 'account', alternatives: 'holding', protection: 'policy' }
+              const _COLORS = ['#7AA7FF', '#5DDBC2', '#BA8CFF', '#FF9F0A', '#FF6B6B', '#34C759', '#E77BFF']
+              tile.composition = {
+                noun: _NOUN[c.id] || 'holding',
+                items: _crows.map((r, i) => ({ name: r.label || r.name || (_NOUN[c.id] || 'holding'), value: +r.value || 0, color: _COLORS[i % _COLORS.length] })),
+                onDrill: () => setActiveDrill(c.id === 'pensions' ? 'pension' : c.id),
+              }
+            }
           }
 
           // Canonical per-tile cost-of-inaction string — engine owns the math
@@ -3928,6 +4238,24 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         const totalAssetsBS = ['pensions', 'investments', 'property', 'business', 'cash', 'alternatives']
           .reduce((s, k) => s + (subtotals[k] || 0), 0)
         const totalLiabilitiesBS = subtotals.liabilities || 0
+
+        // Retirement plan target + an inline-editable descriptor. We only expose
+        // `editable` when the dotted path points at an EXISTING numeric field —
+        // applyFieldCorrection's _setByPath won't create missing intermediates,
+        // so marking a non-existent path editable would be a fake affordance.
+        const planTargetInfo = (() => {
+          const plans = entity?.plans || []
+          const i = plans.findIndex(p => p.type === 'retirement' || /retire|fi/i.test(p.label || ''))
+          if (i < 0) return { value: null, editable: null }
+          const t = plans[i].target
+          if (typeof t === 'number') {
+            return { value: t, editable: { path: `plans[${i}].target`, currentValue: t } }
+          }
+          if (t && typeof t === 'object' && typeof t.netWorth === 'number') {
+            return { value: +t.netWorth, editable: { path: `plans[${i}].target.netWorth`, currentValue: +t.netWorth } }
+          }
+          return { value: null, editable: null }
+        })()
 
         return (
           <>
@@ -3957,13 +4285,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             categories={tileCats}
             trajectory={entity?.trajectories?.netWorthHistory}
             monthlyEssentials={monthlyEssentialsForTiles}
-            planTarget={(() => {
-              const retPlan = (entity?.plans || []).find(p => p.type === 'retirement' || /retire|fi/i.test(p.label || ''))
-              if (!retPlan) return null
-              if (typeof retPlan.target === 'number') return retPlan.target
-              if (retPlan.target && typeof retPlan.target === 'object') return +retPlan.target.netWorth || null
-              return null
-            })()}
+            planTarget={planTargetInfo.value}
+            editablePlanTarget={planTargetInfo.editable}
+            onDrillMetric={setMetricDrill}
             onView={(id) => {
               if (id === 'pensions') setActiveDrill('pension')
               else if (['investments', 'property', 'business', 'protection', 'liabilities'].includes(id)) {
@@ -4033,26 +4357,38 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             label: 'Mortgage',
             balance: +mortgage.outstanding,
             apr: mortgage.rate != null ? +mortgage.rate * 100 : null,
-            monthly: +mortgage.monthlyPayment || 0,
+            monthly: +(mortgage.monthlyPayment ?? mortgage.monthly_payment ?? 0) || 0,
+            lender: mortgage.lender || mortgage.provider || null,
+            rateType: mortgage.rateType || mortgage.rate_type || null,
+            sourcePath: 'liabilities.mortgage.outstanding',
           })
         }
-        for (const l of (liab.otherLoans || [])) {
+        ;(liab.otherLoans || []).forEach((l, idx) => {
           const bal = +(l.outstanding || l.outstanding_balance || 0)
-          if (!bal) continue
+          if (!bal) return
           // Personas store the rate as `rate` (0.0385); older shapes use apr/
           // interest_rate. Missing it here was leaving the BTL tile hollow — no
           // APR chip, no £/mo, no interest/yr (the whole block gates on apr).
           const aprRaw = +(l.apr || l.interest_rate || l.rate || 0)
           const rawType = (l.type || 'loan').toLowerCase().replace(/[\s-]+/g, '_')
-          const friendly = (l.type || 'loan').replace(/_/g, ' ').replace(/\bbtl\b/gi, 'BTL').replace(/^\w/, c => c.toUpperCase())
+          const friendly = humanizeDebtType(l.type)
+          // Path to the EXISTING balance field so the leaf's edit folds (R13 —
+          // _setByPath won't create missing intermediates).
+          const balField = l.outstanding != null ? 'outstanding' : 'outstanding_balance'
           items.push({
             type: rawType,
             label: friendly,
             balance: bal,
             apr: aprRaw > 0 ? aprRaw * 100 : null,
-            monthly: +l.monthlyPayment || 0,
+            // Personas use monthlyPayment / monthly_payment / repayment_from_salary_monthly
+            // interchangeably — read all three or 3 of 4 debts read £0 (no payment,
+            // no sparkline, "No payment recorded" in the leaf). Founder 2026-06-01.
+            monthly: +(l.monthlyPayment ?? l.monthly_payment ?? l.repayment_from_salary_monthly ?? 0) || 0,
+            lender: l.lender || l.provider || null,
+            rateType: l.rate_type || l.rateType || null,
+            sourcePath: `liabilities.otherLoans[${idx}].${balField}`,
           })
-        }
+        })
         // Sort by APR desc so the most expensive debt is visible first.
         items.sort((a, b) => (b.apr || 0) - (a.apr || 0))
 
@@ -4062,34 +4398,12 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         const maxApr = items.reduce((m, it) => Math.max(m, it.apr || 0), 0)
         const avalancheLabel = maxApr >= 8 ? items.find(it => it.apr === maxApr)?.label : null
 
-        // 12-month back-cast series per liability. Assume linear amortisation
-        // at a rate derived from monthly payment / balance. If no monthly
-        // payment data, fall back to a flat line (no movement). This lets
-        // the tile render a sparkline at parity with the asset tiles.
-        function backcastSeries(item) {
-          const months = 12
-          const monthlyPay = +item.monthly || 0
-          if (monthlyPay <= 0) return Array.from({ length: months }, () => item.balance)
-          // Crude amortisation: assume principal portion ~ 60% of monthly pay
-          // for early-term mortgages, 100% for credit cards/loans paid above min.
-          // For our back-cast purposes this is good enough — drill panel has
-          // the proper payoff calc.
-          const principalPerMonth = item.apr != null && item.apr > 10
-            ? monthlyPay * 0.85   // higher-APR debt: most of payment is principal once above min
-            : monthlyPay * 0.55   // mortgage band: more of payment is interest
-          const series = []
-          for (let i = months - 1; i >= 0; i--) {
-            series.push(item.balance + (principalPerMonth * i))
-          }
-          return series
-        }
-
         return (
           <FadeInOnMount delay={80}>
             <SectionDelimiter
               eyebrow="What you owe"
               title={`Liabilities · ${fmt(liabsTotal)}${monthlyDebt > 0 ? ` · costs ${fmt(monthlyDebt)}/mo` : ''}`}
-              sub="Tap any tile to open the liabilities drill"
+              sub="Tap a debt to see its detail — rate, cost, and when it clears"
             />
             {items.length === 0 ? (
               <div className="sw-card" style={{ padding: 'var(--space-md)' }}>
@@ -4116,10 +4430,28 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                 gap: 12,
               }}>
                 {items.map((item, i) => {
-                  const series = backcastSeries(item)
-                  // YoY change %: (latest - oldest) / oldest
-                  const oldest = series[0]
-                  const yoy = oldest > 0 ? ((item.balance - oldest) / oldest) * 100 : null
+                  // Single source of debt maths (debtMath.amortise) — same calc
+                  // the tile sparkline, the leaf, and the drill use, so the
+                  // interest-only "470-year payoff" bug can't reappear here.
+                  const am = amortise(item.balance, item.apr, item.monthly)
+                  // Real paydown sparkline: declining balance when amortising;
+                  // honest flat when interest-only (it genuinely isn't reducing);
+                  // no line when no payment is captured (don't fake movement).
+                  const series = am.status === 'amortising' ? am.forward(12)
+                    : am.status === 'interest-only' ? Array.from({ length: 12 }, () => item.balance)
+                    : null
+                  // 12-month change %, from the real amortisation (negative — debt
+                  // falls). Null for interest-only / no-payment (no measurable move,
+                  // so no "+0.0%"): MONEY-TILE-TEMPLATE R5b/R7.
+                  const yoy = am.status === 'amortising'
+                    ? (() => { const f = am.forward(13); return item.balance > 0 ? ((f[12] - item.balance) / item.balance) * 100 : null })()
+                    : null
+                  // Now→Future→Plan trajectory — amortise forward 10y (honest: Plan
+                  // == Future until a committed extra-payment scenario exists).
+                  const _futureBal = am.status === 'amortising' ? am.forward(121)[120] : item.balance
+                  const liabTrajectory = am.status === 'amortising' && _futureBal < item.balance
+                    ? { now: item.balance, future: _futureBal, plan: _futureBal }
+                    : null
                   return (
                     <LiabilityTile
                       key={`${item.label}-${i}`}
@@ -4129,9 +4461,15 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                       apr={item.apr}
                       monthly={item.monthly}
                       series={series}
+                      trajectory={liabTrajectory}
                       yoyChangePct={yoy}
+                      changeLabel={yoy != null ? '12-mo est.' : null}
                       isAvalanche={avalancheLabel != null && item.label === avalancheLabel}
-                      onView={() => setActiveDrill('liabilities')}
+                      onView={() => setDebtLeaf(item)}
+                      onWhatIf={() => window.dispatchEvent(new CustomEvent('sonus:ask', {
+                        detail: { question: `What if I paid down my ${(item.label || 'this debt').toLowerCase()} faster?`, context: { metric: 'liabilityWhatIf', type: item.type, label: item.label, balance: item.balance, apr: item.apr, scope: 'mymoney' } },
+                      }))}
+                      onAdd={() => openBucket('liabilities')}
                     />
                   )
                 })}
@@ -4286,6 +4624,79 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
       {activeDrill === 'networth' && (
         <NetWorthDrill entity={entity} ripple={ripple} onClose={() => setActiveDrill(null)} onHome={onHome} />
       )}
+
+      {/* R13 — Net-Worth-Trend metric provenance drill. Tapping any trend tile
+          (Plan funded, 1-yr growth, Debt ratio, …) or the sparkline opens its
+          source chain here: formula → inputs → user facts → add/modify. The
+          action chips route to the category drill where a holding is actually
+          editable; the ⚡ chip hands the scenario question to Ask Sonu. */}
+      {metricDrill && (
+        <L3PanelHost
+          title={metricDrill.title || 'Detail'}
+          subtitle="How this is calculated · where it comes from"
+          personaId={personaId}
+          onClose={() => setMetricDrill(null)}
+          onHome={onHome}
+        >
+          <L4NumberPanel
+            metric={metricDrill.metric}
+            value={metricDrill.value}
+            formula={metricDrill.formula}
+            source={metricDrill.source}
+            confidence={metricDrill.confidence}
+            breakdown={metricDrill.breakdown}
+            whatIf={metricDrill.whatIf}
+            actions={[
+              ...(metricDrill.actionsSpec || []).map(a => ({
+                key: a.target,
+                label: a.label,
+                onClick: () => {
+                  setMetricDrill(null)
+                  if (a.target === 'networth') setActiveDrill('networth')
+                  else if (a.target === 'liabilities') setActiveDrill('liabilities')
+                  else if (a.target === 'income') setPivot('income')
+                },
+              })),
+              ...(metricDrill.askQuestion ? [{
+                key: 'whatif',
+                label: '⚡ Explore what-if',
+                onClick: () => {
+                  const q = metricDrill.askQuestion
+                  const m = metricDrill.metric
+                  setMetricDrill(null)
+                  window.dispatchEvent(new CustomEvent('sonus:ask', {
+                    detail: { question: q, context: { metric: m, scope: 'mymoney' } },
+                  }))
+                },
+              }] : []),
+            ]}
+            onBack={() => setMetricDrill(null)}
+          />
+        </L3PanelHost>
+      )}
+
+      {/* FK-1 — per-debt leaf. Each liability tile opens ITS debt here (not the
+          shared "What you owe" screen). Clean paydown chart + drill-to-source
+          facts + debt-type context. */}
+      {debtLeaf && (() => {
+        const _dt = `${debtLeaf.type || ''} ${debtLeaf.label || ''}`.toLowerCase().replace(/[_-]+/g, ' ')
+        const isBtl = /\bbtl\b|buy to let/.test(_dt)
+        const ltvContext = (/mortgage/.test(_dt) && !isBtl && (() => {
+          const rv = (+entity?.assets?.residence?.value || 0) * (+entity?.assets?.residence?.ownershipShare || 1)
+          return rv > 0 ? { propertyValue: rv, ltv: debtLeaf.balance / rv } : null
+        })()) || null
+        return (
+          <DebtLeaf
+            debt={debtLeaf}
+            ltvContext={ltvContext}
+            currentYear={new Date().getFullYear()}
+            onBack={() => setDebtLeaf(null)}
+            onHome={onHome}
+            onAddToPlan={(scenario) => onCommit?.({ type: EV.SCENARIO_SAVED, ts: Date.now(), payload: { domain: 'liabilities', asset: debtLeaf?.label, ...scenario } })}
+            _onEdit={(payload) => { onCommit?.({ type: EV.ASSET_FIELD_CORRECTED, ts: Date.now(), payload }); setDebtLeaf(null) }}
+          />
+        )
+      })()}
       {activeDrill === 'cashflow' && (
         <CashFlowDrill entity={entity} ripple={ripple} onClose={() => setActiveDrill(null)} onHome={onHome} />
       )}

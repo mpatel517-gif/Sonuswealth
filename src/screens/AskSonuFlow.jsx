@@ -88,7 +88,7 @@ function QueryInput({ onSubmit, disabled }) {
         <button onClick={() => submit()} disabled={!val.trim() || disabled} style={{
           padding: '12px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
           background: val.trim() && !disabled ? 'var(--c-acc)' : 'var(--c-surface2)',
-          color: val.trim() && !disabled ? '#0B1F3A' : 'var(--c-text3)',
+          color: val.trim() && !disabled ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text3)',
           fontWeight: 800, fontSize: 14, fontFamily: 'inherit',
         }}>Ask</button>
       </div>
@@ -198,7 +198,7 @@ function FollowUpQuestion({ question, hint, options, whyAsking, progress, onAnsw
             <button onClick={() => val.trim() && onAnswer(val.trim(), val.trim())} disabled={!val.trim()} style={{
               padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: val.trim() ? 'var(--c-acc)' : 'var(--c-surface2)',
-              color: val.trim() ? '#0B1F3A' : 'var(--c-text3)',
+              color: val.trim() ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text3)',
               fontWeight: 700, fontSize: 13, fontFamily: 'inherit',
             }}>Continue</button>
           </div>

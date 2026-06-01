@@ -380,7 +380,7 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
         {step < STEPS.length - 1 ? (
           <button onClick={next} disabled={!canAdvance()} className="sw-press" style={{
             flex: 1, padding: '10px 16px', fontSize: 13, fontWeight: 800,
-            background: 'var(--c-acc)', color: '#0B1F3A',
+            background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
             border: 'none', borderRadius: 100,
             cursor: canAdvance() ? 'pointer' : 'not-allowed',
             opacity: canAdvance() ? 1 : 0.5,
@@ -388,7 +388,7 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
         ) : (
           <button onClick={commit} className="sw-press" style={{
             flex: 1, padding: '10px 16px', fontSize: 13, fontWeight: 800,
-            background: 'var(--c-acc)', color: '#0B1F3A',
+            background: 'var(--c-acc)', color: 'var(--c-on-accent, #0B1F3A)',
             border: 'none', borderRadius: 100, cursor: 'pointer',
           }}>Commit decision</button>
         )}
@@ -695,7 +695,7 @@ function StepRanked({ ranked, chosen, onPick }) {
                   fontSize: 10, fontWeight: 800,
                   padding: '2px 8px', borderRadius: 100,
                   background: top ? 'var(--c-acc)' : 'var(--c-surface2)',
-                  color: top ? '#0B1F3A' : 'var(--c-text3)',
+                  color: top ? 'var(--c-on-accent, #0B1F3A)' : 'var(--c-text3)',
                 }}>
                   #{i + 1}
                 </span>
@@ -868,7 +868,7 @@ function StepStressTest({ path, tested, onTested }) {
         style={{
           width: '100%', padding: '10px 14px', fontSize: 13, fontWeight: 700,
           background: tested ? 'var(--c-surface2)' : 'var(--c-acc)',
-          color: tested ? 'var(--c-text2)' : '#0B1F3A',
+          color: tested ? 'var(--c-text2)' : 'var(--c-on-accent, #0B1F3A)',
           border: 'none', borderRadius: 100, cursor: tested ? 'default' : 'pointer',
         }}>
         {tested ? '✓ Stress test complete' : 'Run stress test'}

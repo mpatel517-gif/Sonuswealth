@@ -135,7 +135,14 @@ function GlobalTaxYearChip() {
     try {
       const raw = localStorage.getItem(TY_STORE_KEY)
       const prev = raw ? JSON.parse(raw) : {}
-      const next = { ...prev, window: newWindowId, ts: Date.now() }
+      // W1 coherence (2026-06-01): mirror X28TopBar.pickWindow — when the
+      // selected window has a defaultMode, write viewMode too so the per-screen
+      // X28TopBar instances and MyMoney lens all switch together. Without this
+      // the GlobalTaxYearChip changes the window but tiles stay on 'actual',
+      // so the projected horizon and the lens are out of sync.
+      const selectedWindow = TIME_WINDOWS.find(w => w.id === newWindowId)
+      const newViewMode = selectedWindow?.defaultMode ?? prev.viewMode ?? 'actual'
+      const next = { ...prev, window: newWindowId, viewMode: newViewMode, ts: Date.now() }
       localStorage.setItem(TY_STORE_KEY, JSON.stringify(next))
       // Same-tab consumers (X28TopBar on other routes, useTaxYear() hooks).
       window.dispatchEvent(new Event('sonus:taxyear'))

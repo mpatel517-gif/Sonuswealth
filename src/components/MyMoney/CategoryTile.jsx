@@ -1,8 +1,39 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import ExplainerChip from '../shared/Explainer.jsx'
 import TappableNumber from '../shared/TappableNumber.jsx'
 import { MiniTrendLines } from './L3/MiniTrendLines.jsx'
-import { TrajectoryBar } from './TrajectoryBar.jsx'
+
+const _f = (n) => {
+  const a = Math.abs(Math.round(+n || 0))
+  if (a >= 1e6) return `£${(a / 1e6).toFixed(2)}m`
+  if (a >= 1e3) return `£${(a / 1e3).toFixed(0)}k`
+  return `£${a.toLocaleString('en-GB')}`
+}
+
+// Inline "→ £X" that sits next to the value (founder: not a bar under it). Tap
+// reveals the exact now / future / plan. Plan tip in gold when it adds.
+function InlineFuture({ now = 0, future = 0, plan = null, lens = 'now' }) {
+  const [open, setOpen] = useState(false)
+  const p = plan == null ? future : Math.max(future, +plan)
+  const tip = p > future ? p : future
+  if (!open) {
+    return (
+      <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(true) }}
+        aria-label="Show now, future and plan"
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 800, color: p > future ? 'var(--c-gold,#E8B84B)' : 'var(--c-text3)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', alignSelf: 'center' }}>
+        → {_f(tip)}
+      </button>
+    )
+  }
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(false) }}
+      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 10, fontWeight: 700, color: 'var(--c-text2)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', alignSelf: 'center', display: 'inline-flex', gap: 8 }}>
+      <span><span style={{ color: 'var(--c-acc,#5ddbc2)' }}>now</span> {_f(now)}</span>
+      <span><span style={{ color: 'var(--c-text3)' }}>future</span> {_f(future)}</span>
+      {p > future && <span><span style={{ color: 'var(--c-gold,#E8B84B)' }}>plan</span> {_f(p)}</span>}
+    </button>
+  )
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CategoryTile — rich tile for one of the 10 balance-sheet categories.
@@ -297,36 +328,33 @@ export default function CategoryTile({
         </div>
       </div>
 
-      {/* Hero value — tappable to fire "What if?" sheet (HIGH #4) */}
-      <div
-        onClick={(e) => e.stopPropagation()}
-        data-tieout={id ? `money.cat.${id}` : undefined}
-        data-tieout-raw={!isEmpty ? String(liability ? -Math.abs(total) : total) : undefined}
-        style={{
-          fontSize: 24, fontWeight: 880, color: valueColor,
-          letterSpacing: -0.5, lineHeight: 1, marginBottom: 4,
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-        {isEmpty ? '—' : (
-          <TappableNumber
-            value={Math.abs(total)}
-            display={fmt(liability ? -Math.abs(total) : total)}
-            size="hero"
-            question={`What if my ${(label || id || 'this').toLowerCase()} changed?`}
-            context={{ metric: 'categoryTotal', category: id, liability }}
-          />
+      {/* Hero value + inline future — the now→future sits NEXT TO the value, not
+          as a bar under it (founder 2026-06-01). Tap the "→ £X" to reveal the
+          exact now / future / plan. */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          data-tieout={id ? `money.cat.${id}` : undefined}
+          data-tieout-raw={!isEmpty ? String(liability ? -Math.abs(total) : total) : undefined}
+          style={{
+            fontSize: 24, fontWeight: 880, color: valueColor,
+            letterSpacing: -0.5, lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+          {isEmpty ? '—' : (
+            <TappableNumber
+              value={Math.abs(total)}
+              display={fmt(liability ? -Math.abs(total) : total)}
+              size="hero"
+              question={`What if my ${(label || id || 'this').toLowerCase()} changed?`}
+              context={{ metric: 'categoryTotal', category: id, liability }}
+            />
+          )}
+        </div>
+        {!isEmpty && trajectory && trajectory.future > trajectory.now && (
+          <InlineFuture now={trajectory.now} future={trajectory.future} plan={trajectory.plan} lens={activeLens} />
         )}
       </div>
-      {/* Temporal trajectory (Pattern A) — compact, directly under the value
-          (founder: "place it after the value"). Hidden at current-period horizon
-          (future == now) rather than drawing a flat now-only bar. */}
-      {!isEmpty && trajectory && trajectory.future > trajectory.now ? (
-        <div style={{ marginTop: -2, marginBottom: 12 }} onClick={(e) => e.stopPropagation()}>
-          <TrajectoryBar now={trajectory.now} future={trajectory.future} plan={trajectory.plan} active={activeLens} />
-        </div>
-      ) : (
-        <div style={{ marginBottom: 12 }} />
-      )}
 
       {/* Composition reveal — aggregate IS N items, shown as ONE colour-
           segmented bar (same pattern as the ISA/GIA wrapper bar), each segment

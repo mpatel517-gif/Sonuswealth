@@ -7,7 +7,8 @@ import { InteractiveProjection } from './InteractiveProjection.jsx'
 import { ContributionDecomposition } from './ContributionDecomposition.jsx'
 import { FundDonut } from './FundDonut.jsx'
 import { MiniTrendLines } from './MiniTrendLines.jsx'
-import { growthRateFor, projectSeries } from '../../../engine/projection.js'
+import { TrajectoryBar } from '../TrajectoryBar.jsx'
+import { growthRateFor, projectSeries, projectValue } from '../../../engine/projection.js'
 import { getActiveCMA } from '../../../engine/cma.js'
 import { classifyPot, rankDrawOrder } from '../../../engine/decumulation-plan.js'
 import { TAX } from '../../../engine/fq-calculator.js'
@@ -184,17 +185,23 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
                 const fg = +fnd.growth_rate_assumption || rate
                 const pct = value ? Math.round((fv / value) * 100) : 0
                 return (
-                  <div key={(fnd.name || '') + i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--c-border,rgba(255,255,255,0.08))' }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: FUND_PALETTE[i % FUND_PALETTE.length], display: 'inline-block', flexShrink: 0, opacity: 0.85 }} />
+                  <div key={(fnd.name || '') + i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid var(--c-border,rgba(255,255,255,0.08))' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: FUND_PALETTE[i % FUND_PALETTE.length], display: 'inline-block', flexShrink: 0, opacity: 0.85, marginTop: 4 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700 }}>{fnd.name}</div>
                       <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{fmt(fv)} · {pct}% of pot · {(fg * 100).toFixed(1)}% assumed growth</div>
+                      {/* now→future bar per fund (founder 2026-06-01: "add … now,
+                          future and plan bars for all 3" funds). */}
+                      {fv > 0 && (
+                        <div style={{ marginTop: 6 }}>
+                          <TrajectoryBar now={fv} future={Math.round(projectValue(fv, fg, retireYrs))} height={6} />
+                        </div>
+                      )}
                     </div>
-                    <MiniTrendLines series={[projectSeries(fv, fg, retireYrs)]} width={64} height={22} />
                   </div>
                 )
               })}
-              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6 }}>Each line is that fund projected at its own assumption — not past performance. The pot's blended rate ({(rate * 100).toFixed(1)}%) drives the projection above.</div>
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6 }}>Each bar runs from today's value to its value at retirement, at that fund's own assumption — not past performance. Tap a bar for the exact figures. The pot's blended rate ({(rate * 100).toFixed(1)}%) drives the projection above.</div>
             </div>
           ) : (
             <div style={{ marginTop: 6, padding: 10, borderRadius: 'var(--r-md,10px)', border: '1px dashed var(--c-border,rgba(255,255,255,0.2))' }}>

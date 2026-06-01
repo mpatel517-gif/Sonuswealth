@@ -340,22 +340,46 @@ export default function CategoryTile({
                 />
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', fontSize: 10, color: 'var(--c-text3)' }}>
-              {items.map((it, i) => (
-                <button
-                  key={(it.name || '') + i}
-                  type="button"
-                  className="sw-press"
-                  onClick={drill ? () => drill(it) : undefined}
-                  aria-label={drill ? `Open ${it.name} detail` : undefined}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid transparent', padding: '4px 6px', borderRadius: 6, cursor: drill ? 'pointer' : 'default', color: 'inherit', fontSize: 'inherit', minHeight: 28 }}
-                >
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: it.color || WRAPPER_TONE.OTHER, display: 'inline-block' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>{it.short || it.name}</span>
-                  <span>{Math.round(((+it.value || 0) / totalVal) * 100)}%</span>
-                </button>
-              ))}
-            </div>
+            {/* Legend caps at the top few holdings by value so a many-item
+                category (e.g. 8 pensions) can't balloon the tile and void its
+                row-mates. The rest collapse into a "+N more" chip that opens the
+                drill (founder 2026-05-31: persona-c's 8-pot pension stretched
+                the whole row). Sorted by value so the biggest are always shown. */}
+            {(() => {
+              const CAP = 5
+              const sorted = [...items].sort((a, b) => (+b.value || 0) - (+a.value || 0))
+              const shown = sorted.slice(0, CAP)
+              const moreCount = sorted.length - shown.length
+              return (
+                <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', fontSize: 10, color: 'var(--c-text3)' }}>
+                  {shown.map((it, i) => (
+                    <button
+                      key={(it.name || '') + i}
+                      type="button"
+                      className="sw-press"
+                      onClick={drill ? () => drill(it) : undefined}
+                      aria-label={drill ? `Open ${it.name} detail` : undefined}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid transparent', padding: '4px 6px', borderRadius: 6, cursor: drill ? 'pointer' : 'default', color: 'inherit', fontSize: 'inherit', minHeight: 28 }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: it.color || WRAPPER_TONE.OTHER, display: 'inline-block' }} />
+                      <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>{it.short || it.name}</span>
+                      <span>{Math.round(((+it.value || 0) / totalVal) * 100)}%</span>
+                    </button>
+                  ))}
+                  {moreCount > 0 && (
+                    <button
+                      type="button"
+                      className="sw-press"
+                      onClick={drill ? () => drill(undefined) : undefined}
+                      aria-label={`See ${moreCount} more — open detail`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--c-border)', padding: '4px 8px', borderRadius: 6, cursor: drill ? 'pointer' : 'default', color: 'var(--c-text2)', fontSize: 'inherit', fontWeight: 700, minHeight: 28 }}
+                    >
+                      +{moreCount} more →
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         )
       })()}

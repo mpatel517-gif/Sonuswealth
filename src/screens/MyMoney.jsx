@@ -3613,6 +3613,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         // projected trend, and link the draw-down ACTION to Cashflow (where
         // decumulation lives — mymoney-checklist L18). 20y illustrative horizon.
         const _penPots = entity?.assets?.sipp?.pensions || entity?.assets?.pensions || entity?.assets?.pension?.pots || []
+        // Total planned annual pension contribution (you + employer) across pots —
+        // drives the Plan segment of the pension tile's trajectory bar.
+        const _penAnnualContrib = _penPots.reduce((s, p) => s + (((+(p.contribution_monthly?.personal) || 0) + (+(p.contribution_monthly?.employer) || 0)) * 12), 0)
         const _penCma = (() => { try { return getActiveCMA() } catch { return {} } })()
         const _penSeries = _penPots.map(p => projectSeries(+p.value || 0, growthRateFor(classifyPot(p) === 'self-invested' ? 'pension-sipp' : 'pension-occupational-dc', _penCma), 20))
         const _penColors = ['var(--c-acc2,#5B8DEF)', 'var(--c-gold,#E8B84B)', 'var(--c-violet,#9B8CFF)', 'var(--c-acc,#5ddbc2)', 'var(--c-coral,#FF6F7D)']
@@ -3885,8 +3888,15 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             const _years = _toRet > 1 ? Math.min(_toRet, 25) : 10
             const _annual = Math.pow(1 + (CAT_MONTHLY_DRIFT[c.id] ?? 0.001), 12) - 1
             const _now = +tile.subtotal
+            // Future = grow on autopilot, no new money. Plan = Future + the user's
+            // planned ongoing contributions (real, honest distinction — not a
+            // fabricated target). Only pensions carry per-holding contribution
+            // data today, so other categories show plan == future (no gold tip)
+            // until their planned inflows are captured.
             const _future = Math.round(projectValue(_now, _annual, _years))
-            tile.trajectory = { now: _now, future: _future, plan: _future }
+            const _contrib = c.id === 'pensions' ? _penAnnualContrib : 0
+            const _plan = _contrib > 0 ? Math.round(projectValue(_now, _annual, _years, _contrib)) : _future
+            tile.trajectory = { now: _now, future: _future, plan: _plan }
           }
           // Founder UX pass 2 (2026-05-26): EVERY tile gets a sparkline.
           // Previously only growth-story categories (pensions/investments/

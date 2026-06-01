@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import ExplainerChip from '../shared/Explainer.jsx'
 import TappableNumber from '../shared/TappableNumber.jsx'
 import { MiniTrendLines } from './L3/MiniTrendLines.jsx'
+import { TrajectoryBar } from './TrajectoryBar.jsx'
 
 const _f = (n) => {
   const a = Math.abs(Math.round(+n || 0))
@@ -328,10 +329,11 @@ export default function CategoryTile({
         </div>
       </div>
 
-      {/* Hero value + inline future — the now→future sits NEXT TO the value, not
-          as a bar under it (founder 2026-06-01). Tap the "→ £X" to reveal the
-          exact now / future / plan. */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      {/* Hero value + trajectory bar — the now→future→plan BAR sits NEXT TO the
+          value (founder 2026-06-01: bar next to the value, not under it; show
+          future AND plan, not one figure). Solid = now, faint = future drift,
+          gold tip = plan boost. Tap the bar for the exact 3-way. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <div
           onClick={(e) => e.stopPropagation()}
           data-tieout={id ? `money.cat.${id}` : undefined}
@@ -352,7 +354,9 @@ export default function CategoryTile({
           )}
         </div>
         {!isEmpty && trajectory && trajectory.future > trajectory.now && (
-          <InlineFuture now={trajectory.now} future={trajectory.future} plan={trajectory.plan} lens={activeLens} />
+          <div style={{ flex: 1, minWidth: 130 }} onClick={(e) => e.stopPropagation()}>
+            <TrajectoryBar now={trajectory.now} future={trajectory.future} plan={trajectory.plan} active={activeLens} />
+          </div>
         )}
       </div>
 

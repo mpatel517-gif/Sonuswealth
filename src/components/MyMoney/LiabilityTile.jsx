@@ -51,12 +51,29 @@ const ICONS = {
   hire_purchase:   '⊞',
   buy_now:         '◇',
   bnpl:            '◇',
+  overdraft:       '◌',
+  hmrc:            '⌗',
+  tax:             '⌗',
+  second_charge:   '⌖',
   default:         '⚠',
 }
 
+// Partial match (most specific first) so compound types like
+// 'car-finance-pcp' / 'second-charge-mortgage' / 'hmrc-self-assessment'
+// resolve to a sensible icon instead of the ⚠ default.
 function iconFor(type = '') {
   const t = type.toLowerCase().replace(/[\s-]+/g, '_')
-  return ICONS[t] || ICONS.default
+  if (ICONS[t]) return ICONS[t]
+  if (/bnpl|buy_now/.test(t))        return ICONS.bnpl
+  if (/hmrc|tax|self_assessment/.test(t)) return ICONS.hmrc
+  if (/overdraft/.test(t))           return ICONS.overdraft
+  if (/second_charge/.test(t))       return ICONS.second_charge
+  if (/mortgage/.test(t))            return ICONS.mortgage
+  if (/car|pcp|\bhp\b|hire_purchase|finance|lease/.test(t)) return ICONS.car
+  if (/student/.test(t))             return ICONS.student
+  if (/credit|card/.test(t))         return ICONS.credit_card
+  if (/personal|loan|unsecured/.test(t)) return ICONS.personal_loan
+  return ICONS.default
 }
 
 // APR band — cost severity colour. Below 5% = effectively free money (often

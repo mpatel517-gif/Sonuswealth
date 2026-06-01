@@ -73,7 +73,9 @@ function PaydownChart({ am, balance, currentYear }) {
           strokeLinejoin="round" strokeLinecap="round" />
         {/* x ticks (years) */}
         {tickYears.map((ty) => {
-          const xi = x((ty / years) * (series.length - 1))
+          // Position by month index (each series point = 1 month), clamped — avoids
+          // ty/years dividing by zero when a debt clears in under a year (years=0).
+          const xi = x(Math.min(series.length - 1, ty * 12))
           return (
             <g key={ty}>
               <line x1={xi} y1={y(0)} x2={xi} y2={y(0) + 3} stroke="var(--c-text3)" strokeWidth="0.5" />
@@ -114,7 +116,9 @@ export default function DebtLeaf(props) {
 
 function DebtLeafInner({ debt, ltvContext, currentYear, onBack, onHome, onAddToPlan }) {
   const { pushNumber } = useDrillStackContext()
-  const am = amortise(debt.balance, debt.apr, debt.monthly)
+  // apr null = not captured OR genuinely 0% (BNPL); coerce to 0 so amortise()
+  // doesn't propagate NaN into the paydown chart.
+  const am = amortise(debt.balance, debt.apr || 0, debt.monthly)
 
   // Adapter: DebtLeaf's `debt` shape → the `asset` shape DebtDecisions expects.
   // debt.apr is a PERCENT (24.70); DebtDecisions wants interest_rate as a DECIMAL.
@@ -143,7 +147,7 @@ function DebtLeafInner({ debt, ltvContext, currentYear, onBack, onHome, onAddToP
   const overpay = (() => {
     if (am.status !== 'amortising' || !(debt.monthly > 0) || am.payoffMonths == null) return null
     const extra = Math.max(50, Math.round((debt.monthly * 0.2) / 10) * 10)
-    const am2 = amortise(debt.balance, debt.apr, debt.monthly + extra)
+    const am2 = amortise(debt.balance, debt.apr || 0, debt.monthly + extra)
     if (am2.status !== 'amortising' || am2.payoffMonths == null) return null
     const intOld = am.payoffMonths * debt.monthly - debt.balance
     const intNew = am2.payoffMonths * (debt.monthly + extra) - debt.balance

@@ -404,6 +404,17 @@ function rowsForPensions(entity) {
 // `capitalize` (which mangles hyphens → "Buy-To-Let"). Founder 2026-06-01.
 function humanizeDebtType(type = '') {
   const raw = String(type).toLowerCase().trim()
+  // Acronyms / multi-word types the generic prettifier would mangle.
+  const OVERRIDE = {
+    'hmrc-self-assessment': 'HMRC — Self Assessment',
+    'hmrc': 'HMRC',
+    'bnpl': 'Buy now, pay later',
+    'car-finance-pcp': 'Car finance (PCP)',
+    'car-finance-hp': 'Car finance (HP)',
+    'second-charge-mortgage': 'Second-charge mortgage',
+    'overdraft': 'Overdraft',
+  }
+  if (OVERRIDE[raw]) return OVERRIDE[raw]
   const planMatch = raw.match(/plan[\s_-]?(\d)/)
   let t = raw
     .replace(/plan[\s_-]?\d/g, '')                    // strip "planN" — re-added as "(Plan N)"
@@ -4454,7 +4465,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                   // Single source of debt maths (debtMath.amortise) — same calc
                   // the tile sparkline, the leaf, and the drill use, so the
                   // interest-only "470-year payoff" bug can't reappear here.
-                  const am = amortise(item.balance, item.apr, item.monthly)
+                  // apr is null when not captured OR genuinely 0% (BNPL) — coerce
+                  // to 0 so amortise() doesn't propagate NaN into the sparkline/SVG.
+                  const am = amortise(item.balance, item.apr || 0, item.monthly)
                   // Real paydown sparkline: declining balance when amortising;
                   // honest flat when interest-only (it genuinely isn't reducing);
                   // no line when no payment is captured (don't fake movement).

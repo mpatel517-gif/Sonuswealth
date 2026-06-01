@@ -548,6 +548,79 @@
         "apr": 0.247,
         "interest_rate": 0.247,
         "monthly_payment": 75
+      },
+      {
+        "id": "personal-loan",
+        "type": "personal-loan",
+        "lender": "Zopa",
+        "outstanding_balance": 8400,
+        "outstanding": 8400,
+        "apr": 0.069,
+        "interest_rate": 0.069,
+        "monthly_payment": 255,
+        "rate_type": "fixed",
+        "term_remaining_months": 36
+      },
+      {
+        "id": "car-finance-pcp",
+        "type": "car-finance-pcp",
+        "lender": "Black Horse",
+        "outstanding_balance": 14200,
+        "outstanding": 14200,
+        "apr": 0.089,
+        "interest_rate": 0.089,
+        "monthly_payment": 310,
+        "rate_type": "fixed",
+        "secured_on_vehicle": true,
+        "balloon_payment": 6500,
+        "term_remaining_months": 28,
+        "total_payable_to_date": 9800
+      },
+      {
+        "id": "overdraft",
+        "type": "overdraft",
+        "lender": "Monzo",
+        "outstanding_balance": 1100,
+        "outstanding": 1100,
+        "apr": 0.39,
+        "interest_rate": 0.39,
+        "arranged_limit": 2000
+      },
+      {
+        "id": "hmrc-self-assessment",
+        "type": "hmrc-self-assessment",
+        "lender": "HMRC",
+        "outstanding_balance": 4800,
+        "outstanding": 4800,
+        "apr": 0.085,
+        "interest_rate": 0.085,
+        "monthly_payment": 0,
+        "due_date": "2027-01-31",
+        "time_to_pay_eligible": true
+      },
+      {
+        "id": "second-charge",
+        "type": "second-charge-mortgage",
+        "lender": "Together",
+        "outstanding_balance": 24000,
+        "outstanding": 24000,
+        "apr": 0.074,
+        "interest_rate": 0.074,
+        "monthly_payment": 210,
+        "rate_type": "fixed-until-2029",
+        "secured_on": "residence"
+      },
+      {
+        "id": "bnpl-klarna",
+        "type": "bnpl",
+        "lender": "Klarna",
+        "outstanding_balance": 540,
+        "outstanding": 540,
+        "apr": 0,
+        "interest_rate": 0,
+        "monthly_payment": 180,
+        "instalments_remaining": 3,
+        "late_fee_risk": true
       }
     ]
   },

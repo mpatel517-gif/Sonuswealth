@@ -97,18 +97,23 @@ function loanMeta(asset) {
   const isCar         = t.includes('car') || t.includes('pcp') || t.includes('hp') || t.includes('lease')
   const isPersonal    = t.includes('personal') || t.includes('unsecured')
   const isOverdraft   = t.includes('overdraft')
-  // Unsecured = can consolidate (potentially secured against home — warn)
+  const isHMRC        = t.includes('hmrc') || t.includes('self-assessment') || (t.includes('tax') && !t.includes('after-tax'))
+  const isBNPL        = t.includes('bnpl') || t.includes('buy-now') || t.includes('pay-later')
+  // Unsecured = can consolidate (potentially secured against home — warn).
+  // HMRC (use Time to Pay) and BNPL (just clear it) are NOT consolidation candidates.
   const isUnsecured   = isCard || isCar || isPersonal || isOverdraft
   // Fixed-rate check: rate_type / rateType string contains 'fix' or a year
   const rateType = asset.rate_type || asset.rateType || ''
   const isFixed       = /fix/i.test(rateType) || /20\d{2}/.test(rateType)
   const fixYear       = (/(\d{4})/.exec(rateType) || [])[1]
-  return { isBTL, isResidential, isMortgage, isCard, isCar, isPersonal, isOverdraft, isUnsecured, isFixed, fixYear, rateType }
+  return { isBTL, isResidential, isMortgage, isCard, isCar, isPersonal, isOverdraft, isHMRC, isBNPL, isUnsecured, isFixed, fixYear, rateType }
 }
 
 // ── Decision set per loan type ───────────────────────────────────────────────
 
 function decisionsFor(meta) {
+  if (meta.isHMRC) return ['time-to-pay', 'overpay']  // HMRC: spread or clear
+  if (meta.isBNPL) return ['overpay']                 // BNPL: clear before late fees
   const d = ['overpay']
   if (meta.isMortgage) {
     d.push('remortgage')
@@ -121,10 +126,11 @@ function decisionsFor(meta) {
 }
 
 const LABEL = {
-  overpay:      'Overpay',
-  remortgage:   'Remortgage / switch rate',
-  'switch-rate':'Switch rate type',
-  consolidate:  'Consolidate',
+  overpay:        'Overpay',
+  remortgage:     'Remortgage / switch rate',
+  'switch-rate':  'Switch rate type',
+  consolidate:    'Consolidate',
+  'time-to-pay':  'Time to Pay (HMRC)',
 }
 
 // ── Indicative rate helper ────────────────────────────────────────────────────
@@ -290,6 +296,15 @@ export default function DebtDecisions({ asset = {}, marginalRate = 0.4, surplusC
       {amCurrent.status === 'interest-only' && (
         <Note>This loan is set to interest-only — the balance isn't currently reducing. An overpayment goes directly against principal and will start cutting the balance.</Note>
       )}
+      {meta.isBNPL && (
+        <Note>Buy-now-pay-later is interest-free only while you stay on schedule — a missed instalment can trigger late fees and, since the FCA brought BNPL into regulation in 2026, it can now affect your credit file. Clearing the small remaining balance removes that risk entirely. There is no early-settlement penalty.</Note>
+      )}
+      {meta.isCar && (
+        <Note>On a PCP or HP agreement the car is the lender's security until the final payment. You have a statutory right to voluntary termination once you have paid 50% of the total amount payable (including the balloon) — handing the car back with nothing more to pay. Overpaying or settling early can be worthwhile, but check for an early-settlement figure first.</Note>
+      )}
+      {meta.isOverdraft && (
+        <Note>Arranged overdrafts now carry a single high APR (often ~40% representative since the 2020 FCA reforms) — usually the most expensive borrowing after only some cards. Clearing it, or moving the balance to a 0% money-transfer card or a lower-rate loan, almost always saves money.</Note>
+      )}
     </>)
   }
 
@@ -447,6 +462,28 @@ export default function DebtDecisions({ asset = {}, marginalRate = 0.4, surplusC
         a further advance on a mortgage does. Check which product applies before acting.
         Indicative rate only — your actual rate depends on credit profile.
       </Note>
+    </>)
+  }
+
+  // ── 5. TIME TO PAY (HMRC only) ─────────────────────────────────────────────
+  if (active === 'time-to-pay') {
+    const months = 12
+    const principalPerMonth = Math.round(balance / months)
+    // Interest accrues on the declining balance — approx with the average balance.
+    const interestOverPlan = Math.round((balance / 2) * rateDecimal)
+    const monthlyApprox = principalPerMonth + Math.round(interestOverPlan / months)
+
+    askQ = `If I set up an HMRC Time to Pay arrangement on my ${gbp(balance)} Self Assessment bill over ${months} months, what would the monthly instalment and total interest be?`
+    planLabel = `HMRC Time to Pay — ${gbp(balance)} over ${months} mo`
+    planSummary = `~${gbp(monthlyApprox)}/mo; ~${gbp(interestOverPlan)} interest over the plan`
+    planDeltas = []
+
+    body = (<>
+      <Row label="Outstanding to HMRC" value={gbp(balance)} tone="bad" />
+      <Row label="Late-payment interest rate" value={pct(rateDecimal)} tone="warn" />
+      <Row label={`Instalment (~${months} mo)`} value={`~${gbp(monthlyApprox)}/mo`} strong />
+      <Row label="Approx interest over the plan" value={`~${gbp(interestOverPlan)}`} tone="warn" />
+      <Note>HMRC charges late-payment interest at the Bank of England base rate + 4 percentage points (raised from base + 2.5% in April 2025) — it accrues on the outstanding balance until cleared. A Time to Pay arrangement spreads a Self Assessment bill, typically over up to 12 months, and can be set up online if you owe under £30,000 and your returns are filed. Interest still applies, so clearing sooner costs less. General information — arrange directly with HMRC.</Note>
     </>)
   }
 

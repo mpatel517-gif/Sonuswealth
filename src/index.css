@@ -33,6 +33,7 @@
 
   /* ── Functional 5-colour set ────────────────────────────────── */
   --c-acc:      #5ddbc2;       /* Mathematical Teal — primary accent (Stitch dark) */
+  --c-on-accent: #06231f;      /* readable foreground ON --c-acc (dark ink on light teal) */
   --c-acc2:     #7aa7ff;       /* blue — data-vis only (wrapper segments) */
   --c-acc3:     #ff6f7d;       /* coral — risk / alert signal */
   --c-gold:     #ffbd59;       /* gold — RESERVED FOR DIFF (change since last view) */
@@ -122,6 +123,7 @@
      Per spec: "No green or traditional success indicators are used;
      rely on Action Indigo and iconography for confirmation states." */
   --c-acc:      #1c3fe7;       /* Action Indigo — primary accent + success */
+  --c-on-accent: #ffffff;      /* readable foreground ON --c-acc (white on saturated indigo) — fixes black-on-blue panels in light theme */
   --c-acc2:     #3d5afe;       /* Brighter indigo — secondary interactive */
   --c-acc3:     #ba1a1a;       /* deep red — alert / leak */
   /* 2026-05-12 token recalibration after theme parity audit:

@@ -89,7 +89,7 @@ export function PensionSummaryDrill({ entity, pots = [], personaId, onClose, onH
           type="button"
           onClick={planIncome}
           className="sw-press"
-          style={{ display: 'block', width: '100%', marginTop: 16, padding: '14px 16px', borderRadius: 'var(--r-lg,14px)', border: 'none', background: 'var(--c-acc,#5ddbc2)', color: '#06231f', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}
+          style={{ display: 'block', width: '100%', marginTop: 16, padding: '14px 16px', borderRadius: 'var(--r-lg,14px)', border: 'none', background: 'var(--c-acc,#5ddbc2)', color: 'var(--c-on-accent,#06231f)', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}
         >
           Plan how to turn this into income →
           <span style={{ display: 'block', fontSize: 11, fontWeight: 600, opacity: 0.75, marginTop: 2 }}>across all your money, on Cashflow</span>

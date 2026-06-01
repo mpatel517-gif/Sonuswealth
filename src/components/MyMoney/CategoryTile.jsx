@@ -340,19 +340,32 @@ export default function CategoryTile({
                 />
               ))}
             </div>
-            {/* Legend caps at the top few holdings by value so a many-item
-                category (e.g. 8 pensions) can't balloon the tile and void its
-                row-mates. The rest collapse into a "+N more" chip that opens the
-                drill (founder 2026-05-31: persona-c's 8-pot pension stretched
-                the whole row). Sorted by value so the biggest are always shown. */}
+            {/* Few holdings → show the drillable chips inline (the founder's
+                "ISA / GIA on one line" pattern). Many holdings (e.g. persona-c's
+                8 pensions) → DON'T list them inline; that balloons the tile and
+                voids its row-mates. Show one "See all N → " button that opens the
+                full drill (the breakdown + per-pot leaf screens). Founder
+                2026-06-01: "a button to see the detail and then all the screens
+                we had." The colour bar above still carries the at-a-glance mix. */}
             {(() => {
-              const CAP = 5
+              const LEGEND_MAX = 4
               const sorted = [...items].sort((a, b) => (+b.value || 0) - (+a.value || 0))
-              const shown = sorted.slice(0, CAP)
-              const moreCount = sorted.length - shown.length
+              if (sorted.length > LEGEND_MAX) {
+                return (
+                  <button
+                    type="button"
+                    className="sw-press"
+                    onClick={drill ? () => drill(undefined) : undefined}
+                    aria-label={`See all ${sorted.length} ${composition.noun}s — open detail`}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: 'none', border: '1px solid var(--c-border)', padding: '7px 12px', borderRadius: 8, cursor: drill ? 'pointer' : 'default', color: 'var(--c-acc)', fontSize: 12, fontWeight: 800, minHeight: 32 }}
+                  >
+                    See all {sorted.length} {composition.noun}s →
+                  </button>
+                )
+              }
               return (
                 <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', fontSize: 10, color: 'var(--c-text3)' }}>
-                  {shown.map((it, i) => (
+                  {sorted.map((it, i) => (
                     <button
                       key={(it.name || '') + i}
                       type="button"
@@ -366,17 +379,6 @@ export default function CategoryTile({
                       <span>{Math.round(((+it.value || 0) / totalVal) * 100)}%</span>
                     </button>
                   ))}
-                  {moreCount > 0 && (
-                    <button
-                      type="button"
-                      className="sw-press"
-                      onClick={drill ? () => drill(undefined) : undefined}
-                      aria-label={`See ${moreCount} more — open detail`}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--c-border)', padding: '4px 8px', borderRadius: 6, cursor: drill ? 'pointer' : 'default', color: 'var(--c-text2)', fontSize: 'inherit', fontWeight: 700, minHeight: 28 }}
-                    >
-                      +{moreCount} more →
-                    </button>
-                  )}
                 </div>
               )
             })()}

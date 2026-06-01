@@ -380,41 +380,12 @@ export default function CategoryTile({
                 />
               ))}
             </div>
-            {/* Few holdings → show the drillable chips inline (the founder's
-                "ISA / GIA on one line" pattern). Many holdings (e.g. persona-c's
-                8 pensions) → DON'T list them inline; that balloons the tile and
-                voids its row-mates. Show one "See all N → " button that opens the
-                full drill (the breakdown + per-pot leaf screens). Founder
-                2026-06-01: "a button to see the detail and then all the screens
-                we had." The colour bar above still carries the at-a-glance mix. */}
-            {(() => {
-              const LEGEND_MAX = 4
-              const sorted = [...items].sort((a, b) => (+b.value || 0) - (+a.value || 0))
-              // Many holdings → don't list them and don't add a "See all N" button:
-              // the "across N" count above and the tile's own "View detail →" footer
-              // already carry it (founder 2026-06-01: "across 8" + "see all 8" + "view
-              // detail" is three ways to say one thing — keep one count + View detail).
-              // The colour bar above stays as the at-a-glance mix.
-              if (sorted.length > LEGEND_MAX) return null
-              return (
-                <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', fontSize: 10, color: 'var(--c-text3)' }}>
-                  {sorted.map((it, i) => (
-                    <button
-                      key={(it.name || '') + i}
-                      type="button"
-                      className="sw-press"
-                      onClick={drill ? () => drill(it) : undefined}
-                      aria-label={drill ? `Open ${it.name} detail` : undefined}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid transparent', padding: '4px 6px', borderRadius: 6, cursor: drill ? 'pointer' : 'default', color: 'inherit', fontSize: 'inherit', minHeight: 28 }}
-                    >
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: it.color || WRAPPER_TONE.OTHER, display: 'inline-block' }} />
-                      <span style={{ fontWeight: 700, color: 'var(--c-text2)' }}>{it.short || it.name}</span>
-                      <span>{Math.round(((+it.value || 0) / totalVal) * 100)}%</span>
-                    </button>
-                  ))}
-                </div>
-              )
-            })()}
+            {/* No name legend on the tile. Listing the individual holdings
+                (Vanguard / Hargreaves / Wayne) is surface-level detail that
+                breaks the macOS principle (PP-2: simple surface, depth on tap)
+                and repeats what the drill shows. The colour bar above stays the
+                at-a-glance mix and each segment is still drillable; names live in
+                View detail. (Founder 2026-06-01 — recorded so it stops recurring.) */}
           </div>
         )
       })()}

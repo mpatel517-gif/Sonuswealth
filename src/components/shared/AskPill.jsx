@@ -62,9 +62,11 @@ export default function AskPill({ onTap, hidden = false, tabHint = 'home' }) {
       aria-label="Open Ask AI"
       className="sw-lift sw-press sw-ask-pill"
       style={{
-        position: 'absolute',
-        // left/right live in .sw-ask-pill so desktop can clear the 240px sidebar
-        // (founder 2026-06-01: the pill covered the left nav). Mobile = 16/16.
+        // FIXED (not absolute) so it pins to the viewport bottom and does NOT
+        // scroll up the page over content like the radar (founder 2026-06-01:
+        // "covering the radar, it moves after I scroll"). left/right live in
+        // .sw-ask-pill so desktop clears the 240px sidebar; mobile = 16/16.
+        position: 'fixed',
         bottom: 86, // 78 nav + 8 gap
         height: 52,
         zIndex: 200,

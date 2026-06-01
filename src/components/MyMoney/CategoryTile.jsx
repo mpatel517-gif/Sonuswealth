@@ -350,19 +350,12 @@ export default function CategoryTile({
             {(() => {
               const LEGEND_MAX = 4
               const sorted = [...items].sort((a, b) => (+b.value || 0) - (+a.value || 0))
-              if (sorted.length > LEGEND_MAX) {
-                return (
-                  <button
-                    type="button"
-                    className="sw-press"
-                    onClick={drill ? () => drill(undefined) : undefined}
-                    aria-label={`See all ${sorted.length} ${composition.noun}s — open detail`}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: 'none', border: '1px solid var(--c-border)', padding: '7px 12px', borderRadius: 8, cursor: drill ? 'pointer' : 'default', color: 'var(--c-acc)', fontSize: 12, fontWeight: 800, minHeight: 32 }}
-                  >
-                    See all {sorted.length} {composition.noun}s →
-                  </button>
-                )
-              }
+              // Many holdings → don't list them and don't add a "See all N" button:
+              // the "across N" count above and the tile's own "View detail →" footer
+              // already carry it (founder 2026-06-01: "across 8" + "see all 8" + "view
+              // detail" is three ways to say one thing — keep one count + View detail).
+              // The colour bar above stays as the at-a-glance mix.
+              if (sorted.length > LEGEND_MAX) return null
               return (
                 <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', fontSize: 10, color: 'var(--c-text3)' }}>
                   {sorted.map((it, i) => (

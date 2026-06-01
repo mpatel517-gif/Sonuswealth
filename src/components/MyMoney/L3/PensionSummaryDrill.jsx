@@ -12,13 +12,53 @@ import { TAX } from '../../../engine/fq-calculator.js'
 
 const fmt = (n) => `£${Math.round(+n || 0).toLocaleString('en-GB')}`
 
+// Refined, colour-coded pot-type badge. Replaces the basic dashed boxes
+// (founder 2026-06-01: "the dashed words … look basic"). Each scheme family gets
+// a compact tinted pill — self-invested (blue), defined-benefit (violet =
+// guaranteed, not a pot), workplace/legacy DC (neutral), drawdown (teal). Short
+// code shown; the full type stays in the tooltip.
+function potBadge(pot = {}) {
+  const t = `${pot.type || ''}`.toLowerCase()
+  if (/\bdb\b|defined.?benefit|final.?salary|career.?average/.test(t)) return { code: 'DB', tone: 'var(--c-violet,#9B8CFF)', full: pot.type || 'Defined benefit' }
+  if (/sipp/.test(t)) return { code: 'SIPP', tone: 'var(--c-acc2,#7aa7ff)', full: pot.type || 'SIPP' }
+  if (/ssas/.test(t)) return { code: 'SSAS', tone: 'var(--c-acc2,#7aa7ff)', full: pot.type || 'SSAS' }
+  if (/fad|flexi|drawdown/.test(t)) return { code: 'FAD', tone: 'var(--c-acc,#5ddbc2)', full: pot.type || 'Flexi-access drawdown' }
+  if (/stakeholder/.test(t)) return { code: 'SHP', tone: 'var(--c-text3,#8895a7)', full: pot.type || 'Stakeholder' }
+  if (/gpp|group/.test(t)) return { code: 'GPP', tone: 'var(--c-text3,#8895a7)', full: pot.type || 'Group personal pension' }
+  if (/rac|retirement annuity/.test(t)) return { code: 'RAC', tone: 'var(--c-text3,#8895a7)', full: pot.type || 'Retirement annuity' }
+  if (/personal/.test(t)) return { code: 'PP', tone: 'var(--c-text3,#8895a7)', full: pot.type || 'Personal pension' }
+  if (/dc|workplace|occupational/.test(t)) return { code: 'DC', tone: 'var(--c-text3,#8895a7)', full: pot.type || 'Workplace DC' }
+  return { code: classifyPot(pot) === 'self-invested' ? 'SIPP' : 'DC', tone: 'var(--c-text3,#8895a7)', full: pot.type || 'Pension' }
+}
+
+function PotBadge({ pot }) {
+  const b = potBadge(pot)
+  return (
+    <span title={b.full} style={{
+      flexShrink: 0, width: 46, textAlign: 'center', padding: '4px 0', borderRadius: 7,
+      fontSize: 10, fontWeight: 800, letterSpacing: 0.4,
+      color: b.tone,
+      background: `color-mix(in srgb, ${b.tone} 13%, transparent)`,
+      border: `1px solid color-mix(in srgb, ${b.tone} 32%, transparent)`,
+    }}>{b.code}</span>
+  )
+}
+
 function PotRow({ pot, entity, cma, onOpen }) {
   const isSipp = classifyPot(pot) === 'self-invested'
+  const isDB = /(\bdb\b|defined.?benefit|final.?salary|career.?average)/i.test(`${pot.type || ''} ${pot.scheme || ''}`)
+  const cetv = +pot.cetv || +pot.transfer_value || 0
+  const gInc = +pot.guaranteed_income || +pot.annual_pension || +pot.db_income || 0
+  const value = +pot.value || 0
   const years = Math.max(1, (entity?.retirementAge ?? 67) - (entity?.age ?? 65))
   const rate = growthRateFor(isSipp ? 'pension-sipp' : 'pension-occupational-dc', cma)
-  const series = projectSeries(+pot.value || 0, rate, years)
-  const drag = Math.round((+pot.value || 0) * (+pot.charge || 0))
+  const series = projectSeries(value, rate, years)
+  const drag = Math.round(value * (+pot.charge || 0))
   const stale = pot.nominationDate ? (Date.now() - new Date(pot.nominationDate)) > 2 * 365.25 * 864e5 : true
+  // DB schemes have no spendable pot value — show guaranteed income / CETV, not "£0".
+  const meta = isDB
+    ? (gInc > 0 ? `${fmt(gInc)}/yr guaranteed` : cetv > 0 ? `${fmt(cetv)} CETV` : 'Guaranteed income')
+    : `${fmt(value)} · ${fmt(drag)}/yr fees`
   return (
     <button
       type="button"
@@ -26,12 +66,12 @@ function PotRow({ pot, entity, cma, onOpen }) {
       className="sw-press"
       style={{ display: 'flex', width: '100%', gap: 10, alignItems: 'center', padding: '12px 8px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--c-border,rgba(255,255,255,0.08))', textAlign: 'left', cursor: 'pointer' }}
     >
-      <span className={isSipp ? 'sw-chip-sm sw-chip-blue' : 'sw-chip-sm sw-chip-warn'} style={{ flexShrink: 0 }}>{pot.type || (isSipp ? 'SIPP' : 'Legacy')}</span>
+      <PotBadge pot={pot} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, color: 'var(--c-text)' }}>{pot.name}</div>
-        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{fmt(pot.value)} · {fmt(drag)}/yr fees · <span style={{ color: stale ? 'var(--c-gold,#E8B84B)' : 'var(--c-good,#5DDBA8)' }}>{stale ? 'nomination — review' : 'nomination up to date'}</span></div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{meta} · <span style={{ color: stale ? 'var(--c-gold,#E8B84B)' : 'var(--c-good,#5DDBA8)' }}>{stale ? 'nomination — review' : 'nomination up to date'}</span></div>
       </div>
-      <MiniTrendLines series={[series]} width={64} height={24} />
+      {!isDB && <MiniTrendLines series={[series]} width={64} height={24} />}
       <span style={{ color: 'var(--c-text3)' }}>›</span>
     </button>
   )

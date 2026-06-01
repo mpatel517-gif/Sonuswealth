@@ -115,8 +115,8 @@ export function StatePensionForecastTile({ entity }) {
   const qy = entity.individual?.ni_qualifying_years ?? entity.statePension?.qualifyingYears
   let annual = 0
   try { annual = statePensionAnnual(entity) || 0 } catch (_) { annual = 0 }
-  if (!annual && qy != null) annual = Math.round(qy * (11502 / 35))
-  const perYear = Math.round(11502 / 35)
+  if (!annual && qy != null) annual = Math.round(qy * ((TAX.statePensionFull ?? 12547.60) / 35))
+  const perYear = Math.round((TAX.statePensionFull ?? 12547.60) / 35)
   return (
     <InfoTile
       eyebrow="State pension forecast"

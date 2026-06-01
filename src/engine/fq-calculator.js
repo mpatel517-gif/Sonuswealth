@@ -2150,7 +2150,7 @@ function _wrapperSequencingCoI(e) {
   // Tax-drag from un-wrapped GIA holdings vs ISA. Approx: GIA × dividend-yield × marginal-rate.
   const gia = _giaTotal(e);
   const yield_ = 0.025;  // typical equity dividend yield
-  const rate   = e.isHigherRateTaxpayer ? 0.3375 : 0.0875;  // dividend rate above allowance
+  const rate   = e.isHigherRateTaxpayer ? (TAX.dividendHR ?? 0.3575) : (TAX.dividendBR ?? 0.1075);  // 2026/27 dividend rate above allowance (was hardcoded 33.75/8.75 — stale pre-Apr-2026)
   return Math.round(Math.max(0, gia * yield_ * rate));
 }
 function _contributionCoI(e) {
@@ -2971,8 +2971,8 @@ export function calcIncomeTax(entity, bundle) {
   // Tax dividends (with allowance)
   const da = TAX_JSON.income.dividendAllowance || 500;
   const dvTaxable = Math.max(0, dv - da);
-  const dbr = TAX_JSON.income.dividendBasicRate || 0.0875;
-  const dhr = TAX_JSON.income.dividendHigherRate || 0.3375;
+  const dbr = TAX_JSON.income.dividendBasicRate || 0.1075;
+  const dhr = TAX_JSON.income.dividendHigherRate || 0.3575;
   const dar = TAX_JSON.income.dividendAdditionalRate || 0.3935;
   const dvBasic = Math.min(dvTaxable, Math.max(0, BRL - nsBasic - svBasic));
   const dvHigher = Math.max(0, dvTaxable - dvBasic);
@@ -3003,8 +3003,8 @@ export function calcIncomeTax(entity, bundle) {
  */
 export function calcDividendTax(divIncome, otherTaxable, bundle) {
   const da = TAX_JSON.income.dividendAllowance || 500;
-  const dbr = TAX_JSON.income.dividendBasicRate || 0.0875;
-  const dhr = TAX_JSON.income.dividendHigherRate || 0.3375;
+  const dbr = TAX_JSON.income.dividendBasicRate || 0.1075;
+  const dhr = TAX_JSON.income.dividendHigherRate || 0.3575;
   const dar = TAX_JSON.income.dividendAdditionalRate || 0.3935;
   const BRL = TAX_JSON.income.basicRateBand || 37700;
   const ART = TAX_JSON.income.additionalRateThreshold || 125140;

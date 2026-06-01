@@ -67,7 +67,7 @@ function _buildTAX(b) {
     psaHigher:     b.income?.savingsAllowanceHigherRate                  ?? 500,
     psaAdditional: b.income?.savingsAllowanceAdditionalRate              ?? 0,
     hicbcTaperWidth: b.income?.hicbcTaperWidth                           ?? 20000,
-    lsa:           b.lsa           ?? 268275,
+    lsa:           b.lsa           ?? b.pension?.lumpSumAllowance ?? 268275,
     lsdba:         b.lsdba         ?? 1073100,
     spa:           b.pension?.statePensionAge                            ?? 66,
     ver:           b.version       ?? b._meta?.version                   ?? 'UK-2026.1',
@@ -120,7 +120,16 @@ function _buildTAX(b) {
     cgtHigher:              b.cgt?.higherRate                  ?? 0.24,          // Post-Autumn Budget 2024
     badrRate:               b.cgt?.badrRate                    ?? 0.18,          // FA 2026 — Business Asset Disposal Relief (was 14% pre-2026)
     sdltAdditionalProperty: b.sdlt?.additionalPropertySurcharge ?? 0.05,         // FA 2024 — from 31 Oct 2024 (+5%, was +3%)
-    vctITRate:              b.vct?.incomeTaxReliefRate         ?? 0.20,          // FA 2026 — VCT IT relief (was 30% pre-April 2026)
+    vctITRate:              b.vct?.incomeTaxReliefRate ?? b.taxEfficientInvestments?.vct?.incomeTaxRelief ?? 0.20,  // FA 2026 — VCT IT relief (was 30% pre-April 2026)
+    eisITRate:              b.taxEfficientInvestments?.eis?.incomeTaxRelief  ?? 0.30,  // ITA 2007 — EIS IT relief (unchanged by FA 2026)
+    seisITRate:             b.taxEfficientInvestments?.seis?.incomeTaxRelief ?? 0.50,  // ITA 2007 — SEIS IT relief
+    corpMainRate:           b.corporationTax?.mainRate         ?? 0.25,          // FA 2021 — CT main rate (profits ≥ £250k)
+    corpSmallRate:          b.corporationTax?.smallProfitsRate ?? 0.19,          // FA 2021 — CT small-profits rate (≤ £50k)
+    // Normal Minimum Pension Age: 55 until 6 Apr 2028, then 57 (FA 2021). Date-aware
+    // so the pension draw-order flag is correct without a per-call-site literal.
+    nmpa:                   (new Date() < new Date('2028-04-06')
+                              ? (b.pension?.nmpaCurrentTo2028 ?? 55)
+                              : (b.pension?.nmpaFrom2028 ?? 57)),
 
     // Allowance freeze -----------------------------------------------------
     paFreezeUntil:          b.income?.paFreezeUntil ?? b._meta?.paFreezeUntil ?? '2031-04-05', // Autumn Budget 2025 — freeze to end of 2030/31 tax year

@@ -193,14 +193,27 @@ export function giaTotal(entity) {
  */
 export function alternativesTotal(entity) {
   const a = entity?.assets || {};
+  // Mirror rowsForAlternatives (screens/MyMoney.jsx): alt holdings live at BOTH
+  // top-level `entity.alternatives[]` (Mr T's wine) and nested `assets.alternatives[]`
+  // (persona-c's crypto/gold). Merge and de-dupe by id (then name) so a persona
+  // populating either — or both — is counted exactly once. Before this fix the
+  // selector read ONLY the nested array, so Mr T's £8.4k wine was dropped from
+  // netWorth() while the Alternatives tile counted it (sum-of-tiles £1.156m vs
+  // hero Assets £1.13m — the residual §9.5 Σtiles=Assets gap). No persona currently
+  // populates both shapes, so this changes only mrT-core. (2026-06-01.)
+  const seen = new Set();
   let total = 0;
-  if (Array.isArray(a.alternatives)) {
-    for (const alt of a.alternatives) {
-      if (alt?.status === 'disposed') continue;
-      const raw  = +(alt.value_gbp ?? alt.value ?? alt.estimated_value ?? 0) || 0;
-      const frac = +(alt.beneficial_interest_this_individual ?? alt.ownershipShare ?? 1) || 1;
-      total += raw * frac;
-    }
+  for (const alt of [
+    ...(Array.isArray(entity?.alternatives) ? entity.alternatives : []),
+    ...(Array.isArray(a.alternatives) ? a.alternatives : []),
+  ]) {
+    const key = alt?.id ?? alt?.name ?? JSON.stringify(alt);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (alt?.status === 'disposed') continue;
+    const raw  = +(alt.value_gbp ?? alt.value ?? alt.estimated_value ?? 0) || 0;
+    const frac = +(alt.beneficial_interest_this_individual ?? alt.ownershipShare ?? 1) || 1;
+    total += raw * frac;
   }
   return total;
 }
@@ -241,6 +254,13 @@ export function businessTotal(entity) {
       total += raw * frac;
     }
   }
+  // Director's-loan account in credit (director has lent money TO the company) is a
+  // receivable — an asset of the individual. The Business tile counts it via
+  // rowsForDirector (screens/MyMoney.jsx — Mr T's £18.5k → tile shows £163k), but the
+  // engine omitted it, so netWorth() ran £18.5k light of the tile. Add it when in
+  // credit so engine = tile = hero. (Only mrT-core carries a DLA.) (2026-06-01.)
+  const dla = entity?.directors_loan;
+  if (dla && dla.in_credit && +dla.balance) total += +dla.balance;
   return total;
 }
 
@@ -425,7 +445,7 @@ export function statePensionAnnual(entity) {
   const TAX_JSON = getBundle();
   const full = TAX_JSON.nationalInsurance?.stateNewPensionFullAmount
             ?? TAX_JSON.pension?.statePensionFullAmount
-            ?? 11502;
+            ?? 12547.60;
   const yrs  = TAX_JSON.nationalInsurance?.statePensionQualifyingYears
             ?? TAX_JSON.pension?.statePensionQualifyingYears
             ?? 35;

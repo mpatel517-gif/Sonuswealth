@@ -544,7 +544,7 @@ export function drawdownMatrix(entity, range = { from: 0, to: 150000, step: 5000
     return { insufficient_data: true, reason: 'No SIPP balance', rows: [], confidence: 'LOW' };
   }
 
-  const sp        = statePension ? (PEN.statePensionFullAmount || 11502) : 0;
+  const sp        = statePension ? (PEN.statePensionFullAmount || 12547.60) : 0;
   const age       = calcAge(entity.dob);
   const horizon   = Math.max(10, 90 - age);
   const growth    = 0.05;

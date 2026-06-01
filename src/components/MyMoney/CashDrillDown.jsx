@@ -132,9 +132,9 @@ function Disclosure({ title, children }) {
 // Mirrors fq-calculator semantics: PA → BR → HR → AR using TAX bands.
 function computeMarginalRate(entity) {
   const inc = +annualIncome(entity) || 0
-  const pa  = +TAX.personalAllowance || 12570
-  const hrt = +TAX.hrThreshold      || 50270
-  const art = +TAX.additionalRateThreshold || 125140
+  const pa  = +TAX.pa  || 12570   // bundle keys are pa/brt/art (not personalAllowance/hrThreshold/…)
+  const hrt = +TAX.brt || 50270
+  const art = +TAX.art || 125140
   if (inc <= pa)  return 0
   if (inc <= hrt) return 0.20
   if (inc <= art) return 0.40
@@ -365,7 +365,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
                     <div style={{ minWidth: 0 }}>
                       <button
                         type="button"
-                        onClick={() => setSelected({ ...a, value: a.balance, _marginalRate: marginal, _psa: psa, _monthlyEssentials: monthlyEss, _totalCash: totalCash, _isaRoom: 20000 })}
+                        onClick={() => setSelected({ ...a, value: a.balance, _marginalRate: marginal, _psa: psa, _monthlyEssentials: monthlyEss, _totalCash: totalCash, _isaRoom: (TAX.isaAllowance || 20000) })}
                         className="sw-press"
                         style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left',
                           cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--c-text)',

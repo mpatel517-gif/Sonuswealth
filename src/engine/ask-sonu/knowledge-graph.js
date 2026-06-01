@@ -155,7 +155,7 @@ const PLAYS = [
     counter_indications: { health_status: ['poor', 'serious'] },
     needs_fact: [FACTS.HEALTH_STATUS, FACTS.TARGET_INCOME],
     compute_impact: () => {
-      const fullSp = 11502
+      const fullSp = 12547.60 // 2026/27 full new State Pension (was stale £11,502)
       const upliftPerYear = fullSp * 0.058
       return {
         gbp_saved: Math.round(upliftPerYear * 20),  // 20 yrs of higher income

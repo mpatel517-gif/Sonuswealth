@@ -1563,8 +1563,8 @@ function ANIPanel({ entity }) {
         display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10,
       }}>
         <MetricTile label="Tax-free slice of income"
-          value={fmt(pa)} sub={pa < (TAX.personalAllowance ?? 0) ? 'Reduced because income is over the cliff' : `Full ${fmt(TAX.personalAllowance ?? 0)}`}
-          colour={pa < (TAX.personalAllowance ?? 0) ? '#FFB347' : 'var(--c-text)'} />
+          value={fmt(pa)} sub={pa < (TAX.pa ?? 12570) ? 'Reduced because income is over the cliff' : `Full ${fmt(TAX.pa ?? 12570)}`}
+          colour={pa < (TAX.pa ?? 12570) ? '#FFB347' : 'var(--c-text)'} />
         <MetricTile label="Tax-free interest each year" value={fmt(psa.allowance)} sub={psa.band} />
         <MetricTile label="Child benefit clawback" value={fmt(hicbc.charge)}
           sub={hicbc.eligible ? `${hicbc.dependantsCount} child${hicbc.dependantsCount === 1 ? '' : 'ren'}` : 'Not applicable'}
@@ -1574,7 +1574,7 @@ function ANIPanel({ entity }) {
           sub={ma.eligible ? 'You qualify — saves the tax shown' : (ma.reason || '')} />
       </div>
       {/* Tax-cliff awareness */}
-      {a.ani > (TAX.adjustedNetIncomeCliff ?? Infinity) && a.ani < ((TAX.adjustedNetIncomeCliff ?? 0) + (TAX.personalAllowance ?? 0) * 2) && (
+      {a.ani > (TAX.adjustedNetIncomeCliff ?? Infinity) && a.ani < ((TAX.adjustedNetIncomeCliff ?? 0) + (TAX.pa ?? 12570) * 2) && (
         <div style={{
           marginTop: 10, padding: '8px 10px',
           background: 'rgba(255,179,71,0.10)',
@@ -3454,7 +3454,28 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         return s + raw * frac
       }, 0)
     }
-    t += (a.alternatives || []).reduce((s, x) => s + +(x.value_gbp || x.value || 0), 0)
+    // B-residual fix (2026-06-01): alt holdings live at BOTH top-level
+    // `entity.alternatives[]` (Mr T's wine £8.4k) and nested `a.alternatives[]`
+    // (persona-c crypto/gold). The hero read only the nested array, so wine was
+    // dropped from hero Assets while the Alternatives tile counted it — the
+    // residual §9.5 Σtiles=Assets gap. Merge + de-dupe by id, mirroring the engine
+    // alternativesTotal() and the rowsForAlternatives tile classifier. No persona
+    // populates both shapes, so this changes only Mr T.
+    {
+      const _altSeen = new Set()
+      for (const x of [...(Array.isArray(entity?.alternatives) ? entity.alternatives : []),
+                       ...(a.alternatives || [])]) {
+        const _k = x?.id ?? x?.name ?? JSON.stringify(x)
+        if (_altSeen.has(_k)) continue
+        _altSeen.add(_k)
+        if (x?.status === 'disposed') continue
+        t += +(x.value_gbp || x.value || 0)
+      }
+    }
+    // Director's-loan in credit is a receivable (asset) — counted by the Business
+    // tile's rowsForDirector but previously dropped by the hero + engine. Mirrors
+    // the engine businessTotal() DLA fix so hero = engine = tile (£163k). (2026-06-01.)
+    if (entity?.directors_loan?.in_credit && +entity.directors_loan.balance) t += +entity.directors_loan.balance
     // B7 fix (2026-06-01): persona-c (Tony Stark) stores GIA accounts in a.gia[],
     // tax-efficient investments in a.taxEfficientInvestments[], and bonds in
     // a.investmentBonds[]. None of these are inside a.investments[] so they were

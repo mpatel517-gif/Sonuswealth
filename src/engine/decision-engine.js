@@ -97,8 +97,8 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-05': { // Salary sacrifice: increase / decrease
       const salary     = entity?.income?.salary || income
       const sacrificed = Math.min(salary * 0.05, 5000)
-      // NI saved on sacrificed amount: 8% employee + 13.8% employer on portion
-      const niSaved    = sacrificed * 0.138
+      // NI saved on sacrificed amount: 8% employee + 15% employer on portion (2026/27)
+      const niSaved    = sacrificed * (TAX.employerNICRate ?? 0.15)
       nwDelta    = niSaved * Math.min(20, Math.max(0, 65 - age))
       fqDelta    = niSaved > 500 ? 3 : 1
       ihtDelta   = -(sacrificed * Math.max(0, 80 - age))
@@ -344,13 +344,13 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-25': { // Dividend vs salary mix (Ltd Co director)
       const salary   = entity?.income?.salary || income
-      const divRate  = 0.0875 // basic rate dividend tax (2026)
-      const corpTax  = 0.25
+      const divRate  = TAX.dividendBR ?? 0.1075 // 2026/27 basic-rate dividend (was stale 8.75%)
+      const corpTax  = TAX.corpMainRate ?? 0.25
       // Optimal: salary to NI secondary threshold, rest as dividends
-      const niThresh    = 9100
+      const niThresh    = TAX.employerNICThreshold ?? 5000 // 2026/27 secondary threshold (was stale £9,100)
       const optSalary   = Math.min(salary, niThresh)
       const divIncome   = salary - optSalary
-      const niSaved     = (salary - optSalary) * 0.138
+      const niSaved     = (salary - optSalary) * (TAX.employerNICRate ?? 0.15) // 2026/27 employer NI 15% (was stale 13.8%)
       nwDelta    = niSaved * 5
       fqDelta    = 3
       ihtDelta   = 0
@@ -374,7 +374,7 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-27': { // VCT: build a tax-relief ladder
       const vctAmount = params.vctAmount || 20000
-      const relief    = vctAmount * 0.30  // 30% income tax relief
+      const relief    = vctAmount * (TAX.vctITRate ?? 0.20)  // 2026/27 VCT IT relief 20% (was stale 30% — FA 2026)
       nwDelta    = relief
       fqDelta    = 1
       ihtDelta   = 0
@@ -492,7 +492,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       // Section 455 tax: 33.75% if not repaid within 9 months of year end
       const s455 = dlBalance * 0.3375
       // Repay vs declare dividend to clear
-      const divTax = dlBalance * 0.0875
+      const divTax = dlBalance * (TAX.dividendBR ?? 0.1075)
       nwDelta    = s455 - divTax  // dividend cheaper than 455 charge
       fqDelta    = 2
       ihtDelta   = 0
@@ -609,7 +609,7 @@ export function enumeratePaths(entity, decisionType) {
     ],
     'DE-05': [
       { id: 'no_sacrifice', label: 'No salary sacrifice',           riskLevel: 'high',   detail: 'Pay full NI on earnings above primary threshold.' },
-      { id: 'partial',      label: 'Sacrifice 5% of salary',        riskLevel: 'medium', detail: `Saves employer NI (13.8%) which may be passed back as extra pension.` },
+      { id: 'partial',      label: 'Sacrifice 5% of salary',        riskLevel: 'medium', detail: `Saves employer NI (15%) which may be passed back as extra pension.` },
       { id: 'maximum',      label: 'Maximise sacrifice to pension AA', riskLevel: 'low', detail: 'Combine salary sacrifice + SIPP to hit full annual allowance tax-efficiently.' },
     ],
     'DE-09': [
@@ -826,7 +826,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     'DE-02': `Deferring annuity purchase by ${sim.horizon} years could increase your guaranteed income by 20–30% at today's gilt rates. The break-even depends on longevity — get a quote at each review year before committing.`,
     'DE-03': `Increasing your pension contribution exploits tax relief at your marginal rate — every £1 contributed costs less than £1 net. At age ${age} you have ${Math.max(0, 57 - age)} years of sheltered compounding before minimum access age.`,
     'DE-04': `Routing overflow above your workplace scheme into a SIPP gives you investment flexibility while still capturing the employer match. SIPP also removes the pot from your estate (relevant from April 2027).`,
-    'DE-05': `Salary sacrifice reduces your National Insurance bill (13.8% employer + 8% employee on the sacrificed portion). The NI saving alone — ${_fmt(income * 0.05 * 0.138)} annually at 5% sacrifice — is pure gain before investment returns.`,
+    'DE-05': `Salary sacrifice reduces your National Insurance bill (15% employer + 8% employee on the sacrificed portion). The NI saving alone — ${_fmt(income * 0.05 * (TAX.employerNICRate ?? 0.15))} annually at 5% sacrifice — is pure gain before investment returns.`,
     'DE-09': `Based on the ranked paths, ${chosenPath?.label || 'the top path'} scores highest against your weights. ${nwGain > 0 ? `Projected net-worth benefit: ${_fmt(nwGain)} over ${sim.horizon} years.` : ''} ${ihtSave > 0 ? `IHT exposure reduced by ~${_fmt(ihtSave)}.` : ''}`,
     'DE-06': `Stocks & shares ISAs outperform cash over horizons of 5+ years — the real return differential is ~3%/yr historically. A LISA adds a 25% government bonus but locks capital until first home purchase or age 60. Blend S&S ISA with a cash buffer only if you need access within 2–3 years.`,
     'DE-07': `Bed-and-ISA crystallises a small CGT charge now in exchange for sheltering all future gains inside the ISA wrapper. At the £20k annual allowance it takes ${Math.max(1, Math.round((entity?.assets?.gia?.value || 50000) / 20000))} tax years to migrate a typical GIA. Spreading over multiple years uses the annual exempt amount (£3k) each time to reduce the CGT cost.`,
@@ -891,7 +891,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     ],
     'DE-05': [
       'Check your employer offers salary sacrifice (most do)',
-      'Calculate NI saving: sacrificed amount × 0.138 (employer NI saved)',
+      'Calculate NI saving: sacrificed amount × 0.15 (employer NI saved)',
       'Submit sacrifice election before payroll cut-off',
       'Review annually if salary or allowances change',
     ],

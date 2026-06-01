@@ -255,7 +255,7 @@ export function statePensionForecast(entity) {
   const qualifyingYears = +qy || 0;
 
   const yearsRequired = TAX.statePensionQualYears ?? 35;
-  const fullAnnual = TAX.statePensionFull ?? TAX.statePensionAnnual ?? 11502;
+  const fullAnnual = TAX.statePensionFull ?? 12547.60;
 
   const annual = Math.round((qualifyingYears / yearsRequired) * fullAnnual);
   const weeklyPension = Math.round((annual / 52) * 100) / 100;

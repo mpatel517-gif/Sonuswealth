@@ -129,7 +129,7 @@ function BusinessDrillDownInner({ entity, personaId, onBack, onHome }) {
     ...companies.filter(c => c.trading_status === 'trading').map(c => +c.share_value_gbp || +c.value || 0),
     ...businessAssets.filter(b => b.qualifies_for_bpr).map(b => +b.value || +b.value_gbp || 0),
   ].reduce((s, v) => s + v, 0)
-  const bprCap = TAX?.bprCap ?? 2_500_000
+  const bprCap = TAX?.bprCombinedCap ?? 2_500_000
   const bprAboveCap = Math.max(bprQualifying - bprCap, 0)
 
   // ── Groups (the peel) ─────────────────────────────────────────────────────

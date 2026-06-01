@@ -43,13 +43,17 @@ export default function BusinessDecisions({ asset = {}, isHigherRate = true, onA
   const isScheme = /emi|csop|saye|sip|rsu|share.?scheme|option/.test(type)
 
   // Researched rates (fallbacks = current 2026/27).
-  const divHigher = TAX?.dividendHigher ?? 0.3575
-  const divBasic = TAX?.dividendBasic ?? 0.1075
+  // Audit fix (2026-06-01): keys were TAX.dividendHigher/dividendBasic/bprCap —
+  // none exist in the bundle, so these silently fell back to the literals (correct
+  // by luck). Correct keys are dividendHR/dividendBR/bprCombinedCap so the modeller
+  // now tracks bundle updates.
+  const divHigher = TAX?.dividendHR ?? 0.3575
+  const divBasic = TAX?.dividendBR ?? 0.1075
   const divRate = isHigherRate ? divHigher : divBasic
   const corp = TAX?.corpMainRate ?? 0.25
   const badr = TAX?.badrRate ?? 0.18
   const cgt = isHigherRate ? (TAX?.cgtHigher ?? 0.24) : (TAX?.cgtBasic ?? 0.18)
-  const bprCap = TAX?.bprCap ?? 2_500_000
+  const bprCap = TAX?.bprCombinedCap ?? 2_500_000
   // shareholding_pct is stored as a fraction (1.0 = 100%); normalise so a 100%
   // director isn't read as 1% and wrongly denied BADR.
   const _rawPct = asset.shareholding_pct ?? asset.ownership_pct
@@ -105,7 +109,8 @@ export default function BusinessDecisions({ asset = {}, isHigherRate = true, onA
   if (active === 'gift') {
     const reliefed = Math.min(value, bprCap)
     const above = Math.max(0, value - bprCap)
-    const ihtSaved = Math.round(reliefed * 0.40 + above * 0.20)
+    const _ihtRate = TAX?.ihtRate ?? 0.40
+    const ihtSaved = Math.round(reliefed * _ihtRate + above * (_ihtRate * 0.5)) // 100% relief within cap; 50% relief above = half-rate IHT
     askQ = `If I gifted my company shares to my children, how much Business Property Relief applies and what's the IHT and CGT position?`
     planLabel = 'Gift shares'; planSummary = `${gbp(reliefed)} at 100% BPR; 7-yr PET`
     planDeltas = [{ category: 'business', deltaNow: -value }]
@@ -142,7 +147,7 @@ export default function BusinessDecisions({ asset = {}, isHigherRate = true, onA
       <Note>The company owes you {gbp(value)}. You can draw it back at any time with no personal tax — it's the return of money you lent in, not income. Useful as a tax-free buffer when company cash allows.</Note>
     </>) : (<>
       <Row label="You owe the company" value={gbp(value)} tone="bad" />
-      <Row label="S455 charge if not cleared 9m+1d after year-end" value={gbp(Math.round(value * 0.3375))} tone="bad" strong />
+      <Row label="S455 charge if not cleared 9m+1d after year-end" value={gbp(Math.round(value * (TAX?.s455Rate ?? 0.3375)))} tone="bad" strong />
       <Note>An overdrawn loan over £10,000 is also a benefit-in-kind unless you pay the official rate of interest. Clearing it before 9 months and 1 day after the year end avoids the 33.75% S455 charge (which is reclaimable once repaid).</Note>
     </>)
   }

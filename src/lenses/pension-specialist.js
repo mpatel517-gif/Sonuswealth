@@ -25,7 +25,7 @@ const REF = {
   MPAA: 10000,
   LSA: 268275,
   STATE_PENSION_AGE: 67,
-  STATE_PENSION_FULL: 11502,                 // 2025-26 full new State Pension
+  STATE_PENSION_FULL: 12547.60,              // 2026/27 full new State Pension (£241.30/wk × 52; was stale £11,502)
   STATE_PENSION_QUALIFY_YEARS: 35,           // for full nSP
   STATE_PENSION_MIN_YEARS: 10,               // minimum for any nSP
   DEFERMENT_UPLIFT_PCT: 0.058,               // 5.8% per year deferred (1% per 9 weeks)

@@ -201,7 +201,7 @@ export function PanelPreviewGallery({ entity, panel, personaId, onBack }) {
       { label: 'BTL property (grows)',     now: 350000, future: 470000, plan: 470000, direction: 'grow' },
       { label: 'Current account (flat)',   now: 18000,  future: 18500,  plan: 18500,  direction: 'grow' },
       { label: 'Mortgage (pays down)',     now: 240000, future: 180000, plan: 120000, direction: 'shrink' },
-      { label: 'State pension (switches on)', now: 0,    future: 11502,  plan: 11502,  direction: 'grow' },
+      { label: 'State pension (switches on)', now: 0,    future: 12548,  plan: 12548,  direction: 'grow' },
     ]
     return (
       <div data-preview-gallery="trajectory" style={{ minHeight: '100vh', background: 'var(--c-bg,#0a0e14)', color: 'var(--c-text,#fff)', padding: 16 }}>

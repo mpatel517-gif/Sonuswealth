@@ -38,11 +38,15 @@ function gbp(v) {
 // purchase at market value).
 function sdltAdditional(price) {
   const p = Math.max(0, +price || 0)
+  // Standard residential bands + 5% additional-property surcharge on EVERY band
+  // (0% / 2% / 5% / 10% / 12% standard, each +5%). The £125k–£250k slice was
+  // previously missing — it was charged at 5% instead of 7% (2% + 5%). (Audit 2026-06-01.)
   const bands = [
-    [250000, 0.05],
-    [925000, 0.10],
-    [1500000, 0.15],
-    [Infinity, 0.17],
+    [125000, 0.05],   // 0% + 5%
+    [250000, 0.07],   // 2% + 5%
+    [925000, 0.10],   // 5% + 5%
+    [1500000, 0.15],  // 10% + 5%
+    [Infinity, 0.17], // 12% + 5%
   ]
   let tax = 0, prev = 0
   for (const [cap, rate] of bands) {
@@ -67,9 +71,15 @@ export default function PropertyDecisions({ asset = {}, debt = 0, costBasis = 0,
   const basis = +costBasis || +asset.purchase_price || +asset.cost_base || 0
   const equity = Math.max(0, value - mortgage)
 
-  const exempt = TAX?.cgaAllowance ?? TAX?.cgtAnnualExempt ?? 3000
-  const cgtHigher = TAX?.cgtResidentialHigher ?? 0.24
-  const cgtRate = isHigherRate ? cgtHigher : (TAX?.cgtResidentialBasic ?? 0.18)
+  const exempt = TAX?.cgaAllowance ?? 3000
+  // Residential CGT = general CGT bands (18%/24%) since Oct 2024; bundle exposes
+  // cgtBasic/cgtHigher (no residential-specific key). Was reading non-existent
+  // cgtResidentialHigher/Basic → fell back to literals. (Audit 2026-06-01.)
+  const cgtHigher = TAX?.cgtHigher ?? 0.24
+  const cgtBasic = TAX?.cgtBasic ?? 0.18
+  const cgtRate = isHigherRate ? cgtHigher : cgtBasic
+  const ihtRate = TAX?.ihtRate ?? 0.40
+  const basicRate = TAX?.br ?? 0.20
   const nrb = TAX?.nrb ?? 325000
   const gain = Math.max(0, value - basis)
 
@@ -138,7 +148,7 @@ export default function PropertyDecisions({ asset = {}, debt = 0, costBasis = 0,
 
   if (active === 'spouse') {
     const halfGain = gain / 2
-    const saving = Math.round(halfGain * (cgtHigher - 0.18) + exempt * cgtHigher)   // half taxed at 18% not 24% + a 2nd exemption
+    const saving = Math.round(halfGain * (cgtHigher - cgtBasic) + exempt * cgtHigher)   // half taxed at basic not higher + a 2nd exemption
     askQ = `If I moved half of ${asset.name || 'this let'} to my spouse before selling, how much CGT would we save and what about the mortgage/SDLT?`
     planLabel = 'Transfer half to spouse'; planSummary = `~${gbp(saving)} CGT saved on a future sale`
     body = (<>
@@ -155,7 +165,7 @@ export default function PropertyDecisions({ asset = {}, debt = 0, costBasis = 0,
     const sdlt = sdltAdditional(value)
     const dryTax = cgtNow + sdlt
     const interest = +asset.mortgage_interest_annual || Math.round(mortgage * 0.05)
-    const annualSaving = Math.round(interest * 0.20)   // higher-rate relief restored vs the 20% credit
+    const annualSaving = Math.round(interest * basicRate)   // higher-rate relief restored vs the 20% S24 credit
     const payback = annualSaving > 0 ? (dryTax / annualSaving) : null
     askQ = `Is it worth moving ${asset.name || 'this let'} into a limited company? Model the dry tax now versus the Section 24 saving — and whether s162 relief could apply to me.`
     planLabel = 'Incorporate (Ltd)'; planSummary = `Dry tax ${gbp(dryTax)} now, ~${gbp(annualSaving)}/yr saved`
@@ -172,7 +182,7 @@ export default function PropertyDecisions({ asset = {}, debt = 0, costBasis = 0,
 
   if (active === 'gift') {
     const cgtNow = isResidence ? 0 : Math.round(Math.max(0, gain - exempt) * cgtHigher)
-    const ihtSaved = Math.round(value * 0.40)
+    const ihtSaved = Math.round(value * ihtRate)
     askQ = `If I gifted ${asset.name || 'this property'} to my children, what CGT is due now and how much IHT would it save if I survive seven years?`
     planLabel = 'Gift to family'; planSummary = `CGT now ${gbp(cgtNow)}; saves ~${gbp(ihtSaved)} IHT after 7y`
     planDeltas = [{ category: 'property', deltaNow: -value }]
@@ -186,7 +196,7 @@ export default function PropertyDecisions({ asset = {}, debt = 0, costBasis = 0,
 
   if (active === 'hold') {
     const ihtable = Math.max(0, value - (isResidence ? nrb : 0))
-    const iht = Math.round(ihtable * 0.40)
+    const iht = Math.round(ihtable * ihtRate)
     askQ = `If I just hold ${asset.name || 'this property'} until death, what happens to CGT and IHT versus selling or gifting now?`
     planLabel = 'Hold to death'; planSummary = `£0 CGT (uplift); ~${gbp(iht)} IHT at 40%`
     body = (<>

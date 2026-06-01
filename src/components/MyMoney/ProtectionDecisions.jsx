@@ -92,8 +92,8 @@ export default function ProtectionDecisions({
   const rnrb = TAX?.rnrb ?? 175_000   // ENACTED — rules-uk.js iht.residence_nil_rate_band
   const ihtRate = TAX?.ihtRate ?? 0.40  // 40% above nil-rate bands
 
-  // Annual gift exemption from rules-uk.js iht.annual_gift_exemption = £3,000
-  const annualGiftExempt = 3_000
+  // Annual gift exemption — read from the live TAX bundle (IHTA 1984 s19 = £3,000)
+  const annualGiftExempt = TAX?.annualGiftExemption ?? 3_000
 
   // IHT impact of the sum assured:
   // "If your estate is taxable" — payout at 40% IHT if NOT in trust.

@@ -275,12 +275,12 @@ function buildSankeyModel({ items, tax, class1, class4, netIncome }) {
   // Sankey overstated net by £3,750. Now we sum band × (1 − band rate)
   // contributions from `taxableDiv`, which the engine already splits.
   const dividendRateByBand = {
-    'div_basic':      TAX.dividendBR ?? 0.0875,
-    'div_higher':     TAX.dividendHR ?? 0.3375,
+    'div_basic':      TAX.dividendBR ?? 0.1075,
+    'div_higher':     TAX.dividendHR ?? 0.3575,
     'div_additional': TAX.dividendAR ?? 0.3935,
   }
   const divNet = taxableDiv.reduce((sum, b) => {
-    const rate = dividendRateByBand[b.type] ?? TAX.dividendBR ?? 0.0875
+    const rate = dividendRateByBand[b.type] ?? TAX.dividendBR ?? 0.1075
     return sum + (+b.amount || 0) * (1 - rate)
   }, 0)
   const savNet = savIn * (1 - TAX.br)

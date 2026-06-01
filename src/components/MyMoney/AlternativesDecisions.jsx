@@ -263,7 +263,7 @@ export default function AlternativesDecisions({ asset = {}, wrapper, isHigherRat
       : null
     const yearsRemaining = yearsHeld != null ? Math.max(0, MIN_YEARS - yearsHeld) : null
     const reliefAtRisk = yearsHeld == null || yearsHeld < MIN_YEARS
-    const itReliefRate = 0.30  // EIS income-tax relief: 30% (current rate)
+    const itReliefRate = TAX?.eisITRate ?? 0.30  // EIS income-tax relief: 30% (unchanged by FA 2026)
     const impliedRelief = Math.round(value * itReliefRate * 0.7)  // approximate IT relief at cost (cannot know cost reliably — illustrative)
 
     askQ = `I hold EIS shares in ${name}. How long do I have left to hold before I can sell without losing the income-tax relief, and what happens to CGT if I do?`

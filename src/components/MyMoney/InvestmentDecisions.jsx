@@ -38,7 +38,7 @@ export default function InvestmentDecisions({ asset = {}, wrapper = 'GIA', isHig
   const value = +(asset.value ?? asset.balance ?? asset.balance_gbp ?? 0)
   const basis = +asset.cost_base || (asset.embedded_gain != null ? value - +asset.embedded_gain : 0)
   const gain = Math.max(0, value - (basis || 0))
-  const exempt = TAX?.cgaAllowance ?? TAX?.cgtAnnualExempt ?? 3000
+  const exempt = TAX?.cgaAllowance ?? 3000
   const cgtRate = isHigherRate ? (TAX?.cgtHigher ?? 0.24) : (TAX?.cgtBasic ?? 0.18)   // non-residential 24/18
   const isaAllow = TAX?.isaAllowance ?? 20000
   const isaUsed = +asset.contribution_current_tax_year || 0
@@ -101,7 +101,7 @@ export default function InvestmentDecisions({ asset = {}, wrapper = 'GIA', isHig
     </>)
   }
   if (active === 'hold' && isRelief) {
-    const held = asset.year_purchased ? (2026 - +asset.year_purchased) : null
+    const held = asset.year_purchased ? (new Date().getFullYear() - +asset.year_purchased) : null
     const need = +asset.minimum_hold_years || (W === 'VCT' ? 5 : 3)
     const relief = +asset.income_tax_relief_claimed || 0
     const clears = asset.year_purchased ? +asset.year_purchased + need : null
@@ -116,7 +116,7 @@ export default function InvestmentDecisions({ asset = {}, wrapper = 'GIA', isHig
   }
   if (active === 'sellnow') {
     const relief = +asset.income_tax_relief_claimed || 0
-    const held = asset.year_purchased ? (2026 - +asset.year_purchased) : null
+    const held = asset.year_purchased ? (new Date().getFullYear() - +asset.year_purchased) : null
     const need = +asset.minimum_hold_years || (W === 'VCT' ? 5 : 3)
     const early = held != null && held < need
     askQ = `If I sold ${asset.name || 'this scheme'} now, would I lose the tax relief, and what would I net?`

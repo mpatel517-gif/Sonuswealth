@@ -6,6 +6,7 @@ import {
   extractDecumulationContext, simulatePath, generateCandidatePaths, scorePaths, solveDecumulation,
 } from '../src/engine/decumulation-solver.js'
 import { goalSpec, normalizeGoal } from '../src/engine/goal-engine.js'
+import { TAX } from '../src/engine/fq-calculator.js'
 import { readFileSync } from 'node:fs'
 
 let fails = 0, passes = 0
@@ -74,21 +75,35 @@ console.log('\n── the 2027 flip ──')
   log(post.ihtExposure > pre.ihtExposure, `preserved pension raises IHT post-2027 (post £${post.ihtExposure} > pre £${pre.ihtExposure})`)
 }
 
+console.log('\n── net-target funding (gross-up) + PCLS [C1/C2 audit fixes] ──')
+{
+  // A client asking for £96k NET must RECEIVE ~£96k net — not £96k less tax.
+  const ctx = extractDecumulationContext(BRUCE, { inflation: 0 }) // flat target to assert tie-out
+  const s = simulatePath(ctx, ['cash', 'gia', 'isa', 'pension'], { now: NOW, iht2027: IHT2027 })
+  const y0 = s.schedule[0]
+  log(Math.abs(y0.net - 96000) <= 1500, `year 1 delivers the £96k NET target (got £${Math.round(y0.net/1000)}k, gross-up working)`)
+  log(y0.grossFromPots > (96000 - 35200), `gross drawn exceeds the net gap (£${Math.round(y0.grossFromPots/1000)}k > £61k) — i.e. it grosses up for tax`)
+  // PCLS: a pension-first path must use tax-free cash, so early pension years pay little/no tax.
+  const pf = simulatePath(ctx, ['pension', 'gia', 'isa', 'cash'], { now: NOW, iht2027: IHT2027 })
+  log(pf.schedule.slice(0, 3).some(y => y.pclsTaxFree > 0), `pension-first path draws 25% tax-free cash (PCLS modelled) — yr1 £${Math.round(pf.schedule[0].pclsTaxFree/1000)}k`)
+  log(ctx.pclsLsaCap > 0 && ctx.pclsLsaCap <= TAX.lsa, `PCLS cap = 25% of pot, bounded by LSA (£${Math.round(ctx.pclsLsaCap/1000)}k)`)
+}
+
 console.log('\n── pension DOUBLE TAX (death ≥75, post-2027) ──')
 {
-  // Preserving a pension to a post-75 death is WORSE than draining it: the
-  // pot suffers IHT *and* beneficiary income tax. (The bug the founder caught.)
-  const ctx = extractDecumulationContext(BRUCE, { horizonAge: 88 }) // dies at 88, >75
-  const preserve = simulatePath(ctx, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 }) // pension last → big pot at death
-  const drain    = simulatePath(ctx, ['pension', 'gia', 'cash', 'isa'], { now: NOW, iht2027: IHT2027 }) // pension first → small pot at death
+  // Controlled so the pension genuinely SURVIVES under the preserve order:
+  // modest net target, short horizon (death 76, post-75), no inflation drift.
+  const ctx = extractDecumulationContext(BRUCE, { incomeTarget: 50000, horizonAge: 76, inflation: 0 })
+  const preserve = simulatePath(ctx, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 }) // pension last → intact at death
+  const drain    = simulatePath(ctx, ['pension', 'gia', 'cash', 'isa'], { now: NOW, iht2027: IHT2027 }) // pension first → less at death
   log(preserve.pensionRemainingAtDeath > drain.pensionRemainingAtDeath, `preserve leaves more pension at death (£${Math.round(preserve.pensionRemainingAtDeath/1000)}k vs £${Math.round(drain.pensionRemainingAtDeath/1000)}k)`)
   log(preserve.pensionDeathIncomeTax > 0, `preserved pension triggers beneficiary income tax (£${Math.round(preserve.pensionDeathIncomeTax/1000)}k)`)
   log(preserve.totalDeathTax > drain.totalDeathTax, `preserving pension costs MORE total death tax (£${Math.round(preserve.totalDeathTax/1000)}k vs £${Math.round(drain.totalDeathTax/1000)}k)`)
-  log(drain.afterIhtEstate > preserve.afterIhtEstate, `draining the pension leaves heirs MORE after tax (drain £${Math.round(drain.afterIhtEstate/1e6)}m > preserve £${Math.round(preserve.afterIhtEstate/1e6)}m) — fixes the founder-caught bug`)
+  log(drain.afterIhtEstate > preserve.afterIhtEstate, `draining the pension leaves heirs MORE after tax (drain £${Math.round(drain.afterIhtEstate/1e6)}m > preserve £${Math.round(preserve.afterIhtEstate/1e6)}m)`)
 }
 {
   // Death BEFORE 75 → no beneficiary income tax (IHT only).
-  const young = extractDecumulationContext({ ...BRUCE, age: 60 }, { horizonAge: 72 })
+  const young = extractDecumulationContext({ ...BRUCE, age: 60 }, { incomeTarget: 50000, horizonAge: 72, inflation: 0 })
   const s = simulatePath(young, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 })
   log(s.pensionDeathIncomeTax === 0, 'death before 75 → no inherited-pension income tax (IHT only)')
 }

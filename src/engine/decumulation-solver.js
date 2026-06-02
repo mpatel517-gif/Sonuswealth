@@ -66,6 +66,10 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     || propertyList.reduce((s, p) => s + (+(p.rentalNetAnnual ?? (p.isRental ? p.rentalGrossAnnual : 0)) || 0), 0)
   const dividends = +inc.dividends || 0
   const growth = +opts.growth || +a.sipp?.growth || 0.05
+  const inflation = opts.inflation != null ? +opts.inflation : 0.025
+  // Tax-free-cash (PCLS) available = 25% of the pot, capped by the Lump Sum
+  // Allowance (£268,275), less any already taken.
+  const pclsLsaCap = Math.max(0, Math.min(pensionDC * 0.25, TAX.lsa) - (+a.sipp?.tfcTaken || 0))
 
   // Net annual spending target the plan must deliver.
   const incomeTargetAnnual = +opts.incomeTarget
@@ -75,7 +79,7 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     || 0
 
   return {
-    age, horizonAge, spa, growth, giaGainFraction, giaLossesBf,
+    age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
     pots: { pension: pensionDC, isa: isaVal, gia, cash },
     property, liabilities, dbIncome,
     secure: { statePensionAnnual, rental, dividends },
@@ -123,57 +127,80 @@ export function simulatePath(ctx, order, opts = {}) {
 
   let bal = { ...ctx.pots }
   let lossesBf = ctx.giaLossesBf
+  let lsaRemaining = ctx.pclsLsaCap          // tax-free-cash (PCLS) lifetime cap left
   let totalTax = 0, totalNetDelivered = 0
   const schedule = []
   let depletedAtAge = null
+  const startYear = opts.now ? opts.now.getFullYear() : 2026
 
   for (let age = ctx.age; age <= ctx.horizonAge; age++) {
-    // Grow pots at start of year.
+    const yIdx = age - ctx.age
+    // Grow pots at start of year (nominal).
     for (const k of Object.keys(bal)) bal[k] = bal[k] * (1 + ctx.growth)
 
     const sp = age >= ctx.spa ? ctx.secure.statePensionAnnual : 0
-    const secureGross = sp + ctx.secure.rental + ctx.secure.dividends + ctx.dbIncome
-    const grossNeed = Math.max(0, ctx.incomeTargetAnnual - secureGross)
+    const secureTaxable = sp + ctx.secure.rental + ctx.dbIncome   // taxed as non-savings
+    const secureGross = secureTaxable + ctx.secure.dividends
+    // NET spending target, uprated by inflation so real spending power holds.
+    const netTarget = ctx.incomeTargetAnnual * Math.pow(1 + ctx.inflation, yIdx)
 
-    // Draw the gross need from pots in order.
-    let need = grossNeed
-    const draws = { pension: 0, isa: 0, cash: 0, gia: 0 }
-    for (const pot of order) {
-      if (need <= 0) break
-      const take = Math.min(need, bal[pot] || 0)
-      draws[pot] += take
-      bal[pot] -= take
-      need -= take
+    // ── Fund the year to hit the NET target. We gross up taxable draws because
+    // £1 of pension drawdown delivers < £1 net. Pension's first slice is 25%
+    // tax-free (PCLS) up to the LSA cap. Binary-search the total gross pulled
+    // from pots (net is monotonic in it) so net delivered == netTarget.
+    const potCap = order.reduce((s, p) => s + (bal[p] || 0), 0)
+    const evalGross = (totalGross) => {
+      let rem = totalGross
+      const d = { pension: 0, isa: 0, cash: 0, gia: 0 }
+      for (const pot of order) { const t = Math.min(rem, bal[pot] || 0); d[pot] += t; rem -= t; if (rem <= 0) break }
+      const pclsTaxFree = Math.min(d.pension * 0.25, lsaRemaining)
+      const pensionTaxable = d.pension - pclsTaxFree
+      const giaGain = d.gia * ctx.giaGainFraction
+      const tx = withdrawalTaxForYear({
+        pensionDrawdown: pensionTaxable, statePension: sp,
+        otherTaxableIncome: ctx.secure.rental + ctx.dbIncome, dividends: ctx.secure.dividends,
+        giaGainRealised: giaGain, isaWithdrawal: d.isa, cgtLossesBroughtForward: lossesBf,
+        isHigherRateTaxpayer: ctx.isHigherRateTaxpayer,
+      })
+      return { d, pclsTaxFree, pensionTaxable, giaGain, tx, net: secureGross + totalGross - tx.total }
     }
-    const sourceSwitch = order.find(p => draws[p] > 0 && bal[p] <= 1) || null
-    if (need > 0 && depletedAtAge == null) depletedAtAge = age
 
-    // Tax on the year's composition.
-    const giaGain = draws.gia * ctx.giaGainFraction
-    const tx = withdrawalTaxForYear({
-      pensionDrawdown: draws.pension,
-      statePension: sp,
-      otherTaxableIncome: ctx.secure.rental,
-      dividends: ctx.secure.dividends,
-      giaGainRealised: giaGain,
-      isaWithdrawal: draws.isa,
-      cgtLossesBroughtForward: lossesBf,
-      isHigherRateTaxpayer: ctx.isHigherRateTaxpayer,
-    }, { })
-    lossesBf = tx.taxFreeUsed.cgtLossesRemaining
-    totalTax += tx.total
-    const netDelivered = secureGross + grossNeed - tx.total
+    let chosen, gross
+    const atCap = evalGross(potCap)
+    if (atCap.net <= netTarget) {                       // even draining everything can't meet target
+      chosen = atCap; gross = potCap
+      if (depletedAtAge == null && potCap < (netTarget - secureGross)) depletedAtAge = age
+      if (atCap.net < netTarget - 1 && depletedAtAge == null) depletedAtAge = age
+    } else {
+      let lo = 0, hi = potCap
+      for (let i = 0; i < 40; i++) {                    // bisection on total gross
+        const mid = (lo + hi) / 2
+        const r = evalGross(mid)
+        if (r.net < netTarget) lo = mid; else hi = mid
+        if (Math.abs(r.net - netTarget) < 1) { chosen = r; gross = mid; break }
+      }
+      if (!chosen) { gross = hi; chosen = evalGross(hi) }
+    }
+
+    // Commit the chosen draws.
+    for (const pot of Object.keys(chosen.d)) bal[pot] -= chosen.d[pot]
+    lsaRemaining = Math.max(0, lsaRemaining - chosen.pclsTaxFree)
+    lossesBf = chosen.tx.taxFreeUsed.cgtLossesRemaining
+    totalTax += chosen.tx.total
+    const netDelivered = chosen.net
     totalNetDelivered += netDelivered
+    const sourceSwitch = order.find(p => chosen.d[p] > 0 && (bal[p] || 0) <= 1) || null
 
     schedule.push({
-      year: (opts.now ? opts.now.getFullYear() : 2026) + (age - ctx.age),
-      age,
-      fromAsset: order.find(p => draws[p] > 0) || 'secure-only',
-      draws: { ...draws },
-      gross: Math.round(grossNeed),
-      tax: tx.total,
+      year: startYear + yIdx, age,
+      fromAsset: order.find(p => chosen.d[p] > 0) || 'secure-only',
+      draws: { pension: Math.round(chosen.d.pension), isa: Math.round(chosen.d.isa), cash: Math.round(chosen.d.cash), gia: Math.round(chosen.d.gia) },
+      pclsTaxFree: Math.round(chosen.pclsTaxFree),
+      grossFromPots: Math.round(gross),
+      target: Math.round(netTarget),
+      tax: chosen.tx.total,
       net: Math.round(netDelivered),
-      ihtDelta: 0, // filled at horizon below
+      ihtDelta: 0,
       sourceSwitch,
     })
   }
@@ -200,7 +227,11 @@ export function simulatePath(ctx, order, opts = {}) {
   // Beneficiary income tax on the inherited pension (death age ≥ 75 only),
   // charged on the pension net of its proportional share of the IHT.
   const benRate = opts.beneficiaryMarginalRate ?? ctx.beneficiaryRate ?? TAX.hr
-  const pensionIHTShare = estate > 0 ? pensionInEstateVal * (ihtExposure / estate) : 0
+  // The pension sits on TOP of the nil-rate bands (those shelter other estate),
+  // so its IHT is the marginal 40% — apportion on the TAXABLE estate, capped at
+  // the full rate (audit fix: gross-estate apportionment understated this and so
+  // overstated the income-tax base on the net-of-IHT slice).
+  const pensionIHTShare = Math.min(pensionInEstateVal * ihtRate, ihtExposure)
   const pensionDeathIncomeTax = (pensionInEstate && ctx.horizonAge >= 75)
     ? Math.round((pensionInEstateVal - pensionIHTShare) * benRate)
     : 0
@@ -432,12 +463,14 @@ function buildMethodology(ctx, ledger, goalSpec) {
 }
 
 function coverageSurface(ctx, ledger, unknowns) {
+  const extra = []
+  if (ctx?.property > 0) extra.push(`£${Math.round(ctx.property / 1000)}k of property is NOT modelled as an income source (downsizing / equity release / sale + property CGT are excluded) — runway shown is from liquid pots only.`)
   return {
-    household: 'single', // couples handled in a later pass
+    household: 'single', // couples handled in a later pass; spousal IHT exemption not yet applied
     pensionKinds: ctx.flags.hasDB ? ['DB (income, not a pot)', 'DC'] : ['DC'],
     wrappers: Object.entries(ctx.pots).filter(([, v]) => v > 0).map(([k]) => k),
     dataRichness: ctx.flags.sparse ? 'sparse' : 'sufficient',
-    assumptions: [`deterministic ${Math.round(ctx.growth * 100)}% nominal growth`, `GIA embedded-gain ${Math.round(ctx.giaGainFraction * 100)}%`, `horizon age ${ctx.horizonAge}`, `beneficiary income-tax rate ${Math.round(ctx.beneficiaryRate * 100)}% (inherited-pension charge if death ≥75)`],
-    unknowns: [...unknowns, ...(ledger.notes || [])],
+    assumptions: [`deterministic ${Math.round(ctx.growth * 100)}% nominal growth`, `${Math.round(ctx.inflation * 100)}% inflation (spending target uprated each year)`, `25% tax-free cash used up to the £${Math.round((ctx.pclsLsaCap || 0) / 1000)}k Lump Sum Allowance`, `GIA embedded-gain ${Math.round(ctx.giaGainFraction * 100)}%`, `horizon age ${ctx.horizonAge}`, `beneficiary income-tax rate ${Math.round(ctx.beneficiaryRate * 100)}% (inherited-pension charge if death ≥75)`],
+    unknowns: [...unknowns, ...extra, ...(ledger.notes || [])],
   }
 }

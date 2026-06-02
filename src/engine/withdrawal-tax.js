@@ -61,22 +61,25 @@ export function withdrawalTaxForYear(y = {}, opts = {}) {
   // basic-rate band the gains/dividends can still use.
   const taxableAbovePA = Math.max(0, taxableNonSavings + statePension - effPA)
 
-  // ── Dividend tax (own allowance + bands; stacks above non-savings)
-  const dvTax = dividends > 0 ? calcDividendTax(dividends, taxableAbovePA).tax : 0
+  // HMRC statutory ordering (ITA 2007 s16): non-savings → SAVINGS → DIVIDENDS,
+  // with dividends the TOP slice. (Audit fix 2026-06-02: savings were wrongly
+  // stacked above dividends, and the basic-rate band was handed to both.)
 
-  // ── Savings tax (PSA by band; stacks above non-savings + dividends)
+  // ── Savings tax (PSA by band; stacks directly above non-savings).
   const ART = TAX.art, BRT = TAX.brt
   const aniProxy = grossForTaper
   const psa = aniProxy >= ART ? (TAX.psaAdditional || 0)
             : aniProxy >= BRT ? (TAX.psaHigher || 500)
             : (TAX.psaBasic || 1000)
   const savingsTaxable = Math.max(0, savings - psa)
-  // Savings band: stack above (non-savings + dividends taxable).
-  const stackBelowSavings = taxableAbovePA + Math.max(0, dividends - (TAX.dividendAllowance || 500))
-  const svBasicRoom = Math.max(0, TAX.brl - stackBelowSavings)
+  const svBasicRoom = Math.max(0, TAX.brl - taxableAbovePA)
   const svBasic = Math.min(savingsTaxable, svBasicRoom)
   const svHigher = Math.max(0, savingsTaxable - svBasic)
   const savingsTax = Math.round(svBasic * TAX.br + svHigher * TAX.hr)
+
+  // ── Dividend tax — the genuine TOP slice: stacks above non-savings + taxable
+  // savings, so it only reaches the basic-rate band that those leave unused.
+  const dvTax = dividends > 0 ? calcDividendTax(dividends, taxableAbovePA + savingsTaxable).tax : 0
 
   // ── CGT on realised GIA gains. Brought-forward losses reduce the gain only
   // down TO the annual exempt amount, never below (CG21500). Gains are the top

@@ -1,0 +1,252 @@
+{
+  "_meta": {
+    "capturedAt": "2026-06-02T09:46:26.057Z",
+    "personaCount": 30,
+    "yearCount": 1,
+    "cellCount": 30,
+    "errors": 0,
+    "note": "L4-4 baseline. Re-capture only when you DELIBERATELY change rules or fixtures."
+  },
+  "cells": [
+    {
+      "personaId": "persona-a",
+      "taxYear": "2026/27",
+      "fq": 67,
+      "risk": 71,
+      "netWorth": 3900000,
+      "snapshotHash": "fa20b825"
+    },
+    {
+      "personaId": "persona-b",
+      "taxYear": "2026/27",
+      "fq": 42,
+      "risk": 62,
+      "netWorth": 1195000,
+      "snapshotHash": "e1643070"
+    },
+    {
+      "personaId": "persona-c",
+      "taxYear": "2026/27",
+      "fq": 75,
+      "risk": 78,
+      "netWorth": 10919000,
+      "snapshotHash": "32c0a4c3"
+    },
+    {
+      "personaId": "persona-d",
+      "taxYear": "2026/27",
+      "fq": 49,
+      "risk": 47,
+      "netWorth": 51600,
+      "snapshotHash": "64639163"
+    },
+    {
+      "personaId": "persona-e",
+      "taxYear": "2026/27",
+      "fq": 100,
+      "risk": 82,
+      "netWorth": 5460000,
+      "snapshotHash": "fc9f634f"
+    },
+    {
+      "personaId": "persona-f",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "a5302737"
+    },
+    {
+      "personaId": "persona-g",
+      "taxYear": "2026/27",
+      "fq": 53,
+      "risk": 27,
+      "netWorth": 366000,
+      "snapshotHash": "f37981f2"
+    },
+    {
+      "personaId": "mrT-aged-out",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 40,
+      "netWorth": 10120,
+      "snapshotHash": "20b8bde5"
+    },
+    {
+      "personaId": "mrT-beneficiary",
+      "taxYear": "2026/27",
+      "fq": 54,
+      "risk": 36,
+      "netWorth": 1327000,
+      "snapshotHash": "86f03e86"
+    },
+    {
+      "personaId": "mrT-bereavement",
+      "taxYear": "2026/27",
+      "fq": 56,
+      "risk": 30,
+      "netWorth": 160000,
+      "snapshotHash": "2a91f9e6"
+    },
+    {
+      "personaId": "mrT-child-dependent",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 30,
+      "netWorth": 52500,
+      "snapshotHash": "24813ab8"
+    },
+    {
+      "personaId": "mrT-cohab-sep",
+      "taxYear": "2026/27",
+      "fq": 54,
+      "risk": 36,
+      "netWorth": 290700,
+      "snapshotHash": "422dd651"
+    },
+    {
+      "personaId": "mrT-core",
+      "taxYear": "2026/27",
+      "fq": 86,
+      "risk": 79,
+      "netWorth": 1747850,
+      "snapshotHash": "51f7b3c3"
+    },
+    {
+      "personaId": "mrT-couple",
+      "taxYear": "2026/27",
+      "fq": 58,
+      "risk": 28,
+      "netWorth": 1108900,
+      "snapshotHash": "7eaa937f"
+    },
+    {
+      "personaId": "mrT-decum-complex",
+      "taxYear": "2026/27",
+      "fq": 58,
+      "risk": 36,
+      "netWorth": 4147000,
+      "snapshotHash": "90bb59d0"
+    },
+    {
+      "personaId": "mrT-divorced",
+      "taxYear": "2026/27",
+      "fq": 53,
+      "risk": 36,
+      "netWorth": 513300,
+      "snapshotHash": "a1501b76"
+    },
+    {
+      "personaId": "mrT-family",
+      "taxYear": "2026/27",
+      "fq": 54,
+      "risk": 28,
+      "netWorth": 426700,
+      "snapshotHash": "675d0f17"
+    },
+    {
+      "personaId": "mrT-landlord",
+      "taxYear": "2026/27",
+      "fq": 56,
+      "risk": 28,
+      "netWorth": 923000,
+      "snapshotHash": "02738880"
+    },
+    {
+      "personaId": "mrT-ltd-director",
+      "taxYear": "2026/27",
+      "fq": 64,
+      "risk": 28,
+      "netWorth": 4213000,
+      "snapshotHash": "214ac9bf"
+    },
+    {
+      "personaId": "mrT-mental-capacity",
+      "taxYear": "2026/27",
+      "fq": 76,
+      "risk": 40,
+      "netWorth": 285000,
+      "snapshotHash": "a7d7f4ef"
+    },
+    {
+      "personaId": "mrT-sole-trader",
+      "taxYear": "2026/27",
+      "fq": 54,
+      "risk": 28,
+      "netWorth": 411200,
+      "snapshotHash": "8f103584"
+    },
+    {
+      "personaId": "mrT-uk-in",
+      "taxYear": "2026/27",
+      "fq": 53,
+      "risk": 36,
+      "netWorth": 597355,
+      "snapshotHash": "d2a520c8"
+    },
+    {
+      "personaId": "mrT-uk-th",
+      "taxYear": "2026/27",
+      "fq": 56,
+      "risk": 28,
+      "netWorth": 2248182,
+      "snapshotHash": "f9153324"
+    },
+    {
+      "personaId": "persona-series-A",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "1fbd9a02"
+    },
+    {
+      "personaId": "persona-series-B",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "94d53add"
+    },
+    {
+      "personaId": "persona-series-C",
+      "taxYear": "2026/27",
+      "fq": 46,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "c552912c"
+    },
+    {
+      "personaId": "persona-series-D",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "e8e96807"
+    },
+    {
+      "personaId": "persona-series-E",
+      "taxYear": "2026/27",
+      "fq": 46,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "19e72b4e"
+    },
+    {
+      "personaId": "persona-series-F",
+      "taxYear": "2026/27",
+      "fq": 48,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "959f1021"
+    },
+    {
+      "personaId": "persona-series-G",
+      "taxYear": "2026/27",
+      "fq": 46,
+      "risk": 36,
+      "netWorth": 0,
+      "snapshotHash": "02502f98"
+    }
+  ]
+}

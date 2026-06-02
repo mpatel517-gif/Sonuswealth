@@ -122,10 +122,21 @@ export function hashSnapshot(snapshot) {
   return h.toString(16).padStart(8, '0')
 }
 
+// Run-metadata that changes every run regardless of the financial computation —
+// excluded from the hash so a baseline doesn't drift on its own check. Without
+// this, two consecutive captures differed on ALL cells (computed_at timestamp,
+// _ripple.elapsedMs timing, _ripple.bundleVersion load counter) — which is why
+// the regression baseline could never be committed. The fq/risk/netWorth and all
+// real computation ARE deterministic; only these wrappers were not.
+const VOLATILE_KEYS = new Set([
+  'computed_at', 'computedAt', 'capturedAt', 'generatedAt',
+  'elapsedMs', '_elapsedMs', 'durationMs', 'bundleVersion',
+])
+
 function stableStringify(value) {
   if (value === null || typeof value !== 'object') return JSON.stringify(value)
   if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']'
-  const keys = Object.keys(value).sort()
+  const keys = Object.keys(value).filter(k => !VOLATILE_KEYS.has(k)).sort()
   return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}'
 }
 

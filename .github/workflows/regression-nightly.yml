@@ -24,16 +24,16 @@ on:
   # Nightly drift check (alerts, does not block) + manual dispatch.
   schedule:
     - cron: '17 3 * * *'   # 03:17 UTC every day
-  # The PUSH trigger (merge gate) is intentionally still commented: enable it ONLY
-  # after one green nightly confirms Linux CI hashes match the committed baseline
-  # (platform float/locale parity is unverified from the Windows capture). Gating
-  # merges on a baseline that hasn't passed once on CI would block all pushes.
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - 'src/engine/**'
-  #     - 'src/rules/**'
-  #     - 'tests/regression-baseline.json'
+  # PUSH trigger (merge gate) — ARMED 2026-06-02 after run 26819841170 confirmed
+  # Linux CI matches the Windows-captured baseline 180/180 (platform float parity
+  # achieved by the 6-decimal hash normalization in regression-diff.mjs). A push to
+  # main that drifts any engine/rules computation now fails CI.
+  push:
+    branches: [main]
+    paths:
+      - 'src/engine/**'
+      - 'src/rules/**'
+      - 'tests/regression-baseline.json'
   workflow_dispatch:
 
 permissions:

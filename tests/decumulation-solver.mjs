@@ -136,6 +136,18 @@ console.log('\n── output contract: visible path · why-it-won · branches �
   log(/not a forecast|not a personal recommendation/i.test(r.disclaimer), 'FCA disclaimer present')
 }
 
+console.log('\n── methodology transparency (show the working to the user) ──')
+{
+  const r = solveDecumulation({ entity: BRUCE, goalSpec: goalSpec(BRUCE), opts: { now: NOW, iht2027: IHT2027 } })
+  const m = r.methodology
+  log(Array.isArray(m.rules) && m.rules.length >= 5, `methodology lists the rules applied (${m.rules.length})`)
+  log(m.rules.every(rule => rule.source && rule.status && rule.plainEnglish), 'every rule carries a named source + status + plain-English explanation')
+  log(m.rules.some(rule => /Finance Act 2026/.test(rule.source) && /2027/.test(rule.plainEnglish)), 'names the 2027 pension-in-estate rule with its legal source')
+  log(m.rules.some(rule => rule.id === 'pension-double-tax' && /64%/.test(rule.plainEnglish)), 'explains the inherited-pension double tax (the bug, now a visible rule)')
+  log(m.assumptions.some(a => a.editable && /growth/i.test(a.name)) && m.assumptions.some(a => /beneficiary/i.test(a.name)), 'assumptions surfaced as editable (growth, beneficiary rate, …)')
+  log(/illustrative|not a forecast/i.test(m.note), 'FCA framing on the methodology note')
+}
+
 console.log('\n── coverage: honest degradation ──')
 {
   const sparse = solveDecumulation({ entity: { age: 70, assets: {} }, goalSpec: goalSpec({ age: 70 }), opts: { now: NOW } })

@@ -323,6 +323,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     return {
       rankedPaths: [], network: { nodes: [], edges: [], alternatives: [] }, perGoal: [],
       coverage: coverageSurface(ctx, ledger, ['no drawable assets captured']),
+      methodology: buildMethodology(ctx, ledger, goalSpec),
       ledger, binding: null, disclaimer: FCA_DISCLAIMER,
     }
   }
@@ -358,6 +359,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     network: buildNetwork(ctx, rankedPaths),
     perGoal,
     coverage: coverageSurface(ctx, ledger, []),
+    methodology: buildMethodology(ctx, ledger, goalSpec),
     ledger,
     binding: { primaryGoal: goalSpec?.primary?.type || null, lexicographicOrder: (goalSpec?.goals || []).filter(g => !g.alwaysOn).map(g => g.type) },
     disclaimer: FCA_DISCLAIMER,
@@ -377,6 +379,56 @@ function buildRationale(r, ctx, ledger, goalSpec) {
   if (ledger.notes?.length) steps.push(...ledger.notes)
   if (!r.sim.survived) steps.push(`On these assumptions the plan funds to age ${r.sim.depletedAtAge} before the pots run low — a flag, not a forecast.`)
   return steps
+}
+
+// ─── Methodology provenance — the "How we worked this out" data (founder
+// 2026-06-02: surface the logic so the user trusts the method). Every rule
+// named with its legal source + status; every assumption listed. The UI renders
+// this as a transparency panel. FCA: shown as method/illustration, not advice.
+function buildMethodology(ctx, ledger, goalSpec) {
+  const order = (goalSpec?.goals || []).filter(g => !g.alwaysOn).map(g => g.type)
+  const rules = [
+    {
+      id: 'goal-priority', rule: 'We rank paths by your stated priorities',
+      plainEnglish: `Your goals, in order: ${order.join(' → ') || 'income first'}. We find the withdrawal path that best serves the top priority, breaking ties by the next — so a higher goal is never sacrificed for a lower one.`,
+      source: 'Goals-based budgeting rule (MSCI WealthBench; Vanguard VLCM)', status: 'METHOD',
+    },
+    {
+      id: 'income-tax', rule: 'UK income tax on pension drawdown',
+      plainEnglish: `Drawdown is taxed after your personal allowance (£${Math.round(TAX.pa).toLocaleString()}), at ${Math.round(TAX.br * 100)}% / ${Math.round(TAX.hr * 100)}% / ${Math.round(TAX.ar * 100)}% bands. ISA and the 25% tax-free cash are not taxed.`,
+      source: 'Income Tax Act 2007', status: 'ENACTED',
+    },
+    {
+      id: 'cgt', rule: 'Capital Gains Tax on GIA disposals',
+      plainEnglish: `Gains above the £${Math.round(TAX.cgaAllowance).toLocaleString()} annual exemption are taxed at ${Math.round(TAX.cgtBasic * 100)}%/${Math.round(TAX.cgtHigher * 100)}%; carried-forward losses offset gains down to the exemption.`,
+      source: 'TCGA 1992; HMRC CG21500', status: 'ENACTED',
+    },
+    {
+      id: 'iht-2027', rule: 'Pensions enter the estate for inheritance tax',
+      plainEnglish: `From 6 April 2027, unused pensions count toward your estate and may be taxed at ${Math.round((TAX.ihtRate || 0.4) * 100)}% inheritance tax. Before then they sit outside it.`,
+      source: 'Finance Act 2026 (Royal Assent 18 Mar 2026)', status: 'ENACTED',
+    },
+    {
+      id: 'pension-double-tax', rule: 'Inherited-pension double tax after age 75',
+      plainEnglish: `If you die at or after 75, an unused pension is taxed for inheritance AND your beneficiary pays income tax (assumed ${Math.round(ctx.beneficiaryRate * 100)}%) when they draw it — a combined hit that can exceed 64%. This is why drawing the pension down in life often leaves more behind.`,
+      source: 'Finance Act 2026; ITEPA 2003', status: 'ENACTED',
+    },
+  ]
+  if (ledger?.allowances?.pension_aa) rules.push({
+    id: 'carry-forward', rule: 'Unused allowances carried from prior years',
+    plainEnglish: 'Pension allowance unused in the last 3 years can be added to this year (unless the Money Purchase Annual Allowance has been triggered, which voids it). Other allowances carry forward, carry back, or reset — we apply each correctly.',
+    source: 'FA 2011 Sch 17; FA 2004', status: 'ENACTED',
+  })
+  return {
+    rules,
+    assumptions: ctx ? [
+      { name: 'Investment growth', value: `${Math.round(ctx.growth * 100)}% nominal/yr`, editable: true },
+      { name: 'Planning horizon', value: `age ${ctx.horizonAge}`, editable: true },
+      { name: 'Beneficiary income-tax rate', value: `${Math.round(ctx.beneficiaryRate * 100)}%`, editable: true },
+      { name: 'GIA embedded gain', value: `${Math.round(ctx.giaGainFraction * 100)}% of disposals`, editable: true },
+    ] : [],
+    note: 'Illustrative under your assumptions — not a forecast or personal recommendation.',
+  }
 }
 
 function coverageSurface(ctx, ledger, unknowns) {

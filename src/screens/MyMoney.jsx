@@ -2544,9 +2544,9 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                   label="Effective annual allowance"
                   value={fmt(aa.aa)}
                   sub={
-                    aa.reason === 'mpaa'    ? 'MPAA active — £10,000 cap (flexible drawdown triggered)' :
-                    aa.reason === 'tapered' ? `Tapered from £60,000 — adjusted income £${(aa.adjustedIncome || 0).toLocaleString()}` :
-                                              'Standard £60,000 cap · 2026/27'
+                    aa.reason === 'mpaa'    ? `MPAA active — ${fmt(TAX.mpaa)} cap (flexible drawdown triggered)` :
+                    aa.reason === 'tapered' ? `Tapered from ${fmt(TAX.pensionAA)} — adjusted income £${(aa.adjustedIncome || 0).toLocaleString()}` :
+                                              `Standard ${fmt(TAX.pensionAA)} cap · 2026/27`
                   }
                   colour={aa.reason === 'standard' ? '#4D8EFF' : '#FF9500'}
                 />
@@ -2570,7 +2570,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                     <MetricTile key={lbl}
                       label={lbl}
                       value={fmt(val || 0)}
-                      sub="unused of £60,000"
+                      sub={`unused of ${fmt(TAX.pensionAA)}`}
                       colour="var(--c-text)" />
                   ))}
                 </div>
@@ -2951,7 +2951,7 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
       sub: `ISA ${tax.breakdown?.isa || 0}% used · Pension ${tax.breakdown?.aa || 0}% used`,
       band: taxBand, pct: Math.min(tax.total || 0, 100),
       action: (tax.total || 0) < 40
-        ? `ISA annual allowance £20,000 · pension annual allowance £60,000 (tapered above £260,000 adjusted income). Both reset 6 April. Pension AA carries forward 3 years; ISA does not.`
+        ? `ISA annual allowance ${fmt(TAX.isaAllowance)} · pension annual allowance ${fmt(TAX.pensionAA)} (tapered above ${fmt(TAX.taperedAAAdj)} adjusted income). Both reset 6 April. Pension AA carries forward 3 years; ISA does not.`
         : `Pension AA carries forward unused allowance from the past 3 tax years — affects total shelter capacity.`,
     },
   ]

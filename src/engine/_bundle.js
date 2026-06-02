@@ -89,10 +89,12 @@ function _buildTAX(b) {
     nicClass4Main:          b.nationalInsurance?.class4MainRate ?? 0.06,         // Post-2024 NIC cut (9% → 6%)
     employerNICRate:        b.nationalInsurance?.employerRate   ?? 0.15,         // Budget 2024 — effective April 2025
     employerNICThreshold:   b.nationalInsurance?.employerThreshold ?? 5000,      // Budget 2024 — effective April 2025
+    employmentAllowance:    b.nationalInsurance?.employmentAllowance ?? 10500,   // April 2025 — employer NIC relief (was £5,000)
     hicbcFloor:             b.income?.hicbcFloor               ?? 60000,         // Spring Budget 2024
     hicbcCeiling:           b.income?.hicbcCeiling             ?? 80000,         // Spring Budget 2024 (taper width 20k)
 
     // Dividends — Budget 2025 (rates take effect from April 2026) -----------
+    dividendAllowance:      b.income?.dividendAllowance        ?? 500,           // FA — dividend nil-rate allowance
     dividendBR:             b.income?.dividendBasicRate        ?? 0.1075,
     dividendHR:             b.income?.dividendHigherRate       ?? 0.3575,
     dividendAR:             b.income?.dividendAdditionalRate   ?? 0.3935,

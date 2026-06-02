@@ -751,7 +751,7 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
     || (+entity?.income?.rentalIncome || 0) > 0
     || (+entity?.income?.directorSalary || 0) > 0
     || !!entity?.company
-    || (entity?.income?.employment || 0) > (TAX?.basicRateThreshold || 50270)
+    || (entity?.income?.employment || 0) > (TAX?.brt || 50270)
   )
   if (saDay > 0 && saDay < 400 && saDay <= horizonDays && hasSAObligation) {
     entries.push({

@@ -71,7 +71,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-03': { // Pension contribution: top up vs MPAA risk
-      const aa          = TAX.aa || 60000
+      const aa          = TAX.pensionAA || 60000
       const currentContrib = entity?.assets?.sipp?.annualContrib || 0
       const headroom    = Math.max(0, Math.min(aa, income) - currentContrib)
       nwDelta    = headroom * 1.45   // 45% tax relief (HR taxpayer) rough compound
@@ -108,7 +108,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-06': { // ISA: stocks & shares vs cash vs LISA split
-      const cap = TAX.isaCap || 20000
+      const cap = TAX.isaAllowance || 20000
       const existingIsa = entity?.assets?.isa?.value || 0
       // S&S ISA over cash: ~3% real return differential over 10yr
       nwDelta    = cap * 0.03 * 10
@@ -121,10 +121,10 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-07': { // GIA → ISA bed-and-ISA execution
       const gia = entity?.assets?.gia?.value || 50000
-      const cap = TAX.isaCap || 20000
+      const cap = TAX.isaAllowance || 20000
       const wrapped = Math.min(gia, cap)
       // CGT exempt on future gains once wrapped; cgt on gains above annual exempt on bed
-      const cgtOnBed = Math.max(0, wrapped * 0.15 - (TAX.cgt || 3000)) * 0.24
+      const cgtOnBed = Math.max(0, wrapped * 0.15 - (TAX.cgaAllowance || 3000)) * 0.24
       nwDelta    = wrapped * 0.05 * 10 - cgtOnBed  // 5%/yr sheltered minus bed cost
       fqDelta    = 2
       ihtDelta   = 0
@@ -307,7 +307,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-22': { // CGT crystallisation: harvest allowance now
-      const cgtExempt = TAX.cgt || 3000
+      const cgtExempt = TAX.cgaAllowance || 3000
       const gains     = entity?.assets?.gia?.unrealisedGain || 20000
       const harvested = Math.min(gains, cgtExempt)
       // Future CGT saved by crystallising at 0% now
@@ -440,7 +440,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       // Optimal: pension + ISA wrap of post-tax balance
       nwDelta    = taxFree * 0.07 * 10 + (taxable * 0.55) * 0.07 * 10
       fqDelta    = 4
-      ihtDelta   = -(Math.min(lumpSum, TAX.aa || 60000) * (Math.max(0, 80 - age)))
+      ihtDelta   = -(Math.min(lumpSum, TAX.pensionAA || 60000) * (Math.max(0, 80 - age)))
       horizon    = 10
       confidence = 'MED'
       break
@@ -448,8 +448,8 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-33': { // Inheritance receipt: deploy £X received
       const received  = params.inheritanceAmount || 100000
-      const pensionAA = Math.min(TAX.aa || 60000, income)
-      const toISA     = TAX.isaCap || 20000
+      const pensionAA = Math.min(TAX.pensionAA || 60000, income)
+      const toISA     = TAX.isaAllowance || 20000
       const toSIPP    = Math.min(pensionAA, received - toISA)
       nwDelta    = toSIPP * 0.45 + toISA * 0.05 * 10
       fqDelta    = 5
@@ -582,7 +582,7 @@ export function simulateAction(entity, decisionType, params = {}) {
 export function enumeratePaths(entity, decisionType) {
   const income = _annualIncome(entity)
   const age    = _age(entity)
-  const aa     = TAX.aa || 60000
+  const aa     = TAX.pensionAA || 60000
 
   const _fmt = (n) => n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${n}`
 
@@ -817,7 +817,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
   const ihtSave = Math.abs(sim.delta.iht)
   const age     = _age(entity)
   const income  = _annualIncome(entity)
-  const aa      = TAX.aa || 60000
+  const aa      = TAX.pensionAA || 60000
 
   const _fmt = (n) => n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${Math.round(n)}`
 

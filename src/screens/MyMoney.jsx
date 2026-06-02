@@ -1162,8 +1162,8 @@ function CliffEdgeWarning({ entity }) {
   let ani = 0
   try { ani = calcANI(entity)?.ani || 0 } catch { return null }
 
-  // Bundle keys TAX.adjustedNetIncomeCliff / TAX.paTaperStart are missing — fallback to literal.
-  const cliff = TAX.adjustedNetIncomeCliff ?? TAX.paTaperStart ?? 100_000
+  // PA taper starts at ANI £100k (ITA 2007 s35) — TAX.adjustedNetIncomeCliff.
+  const cliff = TAX.adjustedNetIncomeCliff ?? 100_000
   const distance = cliff - ani
 
   // Only show when approaching (within £20k below) or already past.
@@ -2027,7 +2027,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
     +(entity.income?.selfEmployed || 0) +
     +(entity.statePension?.annual || entity.income?.statePension?.annual || 0)
   )
-  const bandFitAmount = Math.max(0, (TAX.brt ?? TAX.basicRateTop ?? 0) - otherTaxableIncome)
+  const bandFitAmount = Math.max(0, (TAX.brt ?? 0) - otherTaxableIncome)
 
   const committedSchedule = entity.drawdownSchedule
   const [schedule, setSchedule] = useState(() => {

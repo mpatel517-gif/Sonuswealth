@@ -1,20 +1,5 @@
 {
   "_note": "Pre-existing tax-wiring violations (backlog). Burn to []. Regenerate via --update-baseline.",
   "generated": "manual",
-  "ids": [
-    "A:src/components/MyMoney/BusinessDrillDown.jsx::employmentAllowance",
-    "A:src/components/MyMoney/PivotView.jsx::dividendAllowance",
-    "A:src/engine/decision-engine.js::aa",
-    "A:src/engine/decision-engine.js::cgt",
-    "A:src/engine/decision-engine.js::isaCap",
-    "A:src/engine/persona-helpers.js::taperedAnnualAllowanceAdjustedIncome",
-    "A:src/screens/MyMoney.jsx::basicRateTop",
-    "A:src/screens/MyMoney.jsx::paTaperStart",
-    "A:src/screens/TaxEstate.jsx::cgt",
-    "A:src/screens/TaxEstate.jsx::cgt_exemption",
-    "A:src/screens/TaxEstate.jsx::dividend_allowance",
-    "A:src/screens/TaxEstate.jsx::isa_limit",
-    "A:src/screens/TaxEstate.jsx::personal_allowance",
-    "A:src/screens/Timeline.jsx::basicRateThreshold"
-  ]
+  "ids": []
 }

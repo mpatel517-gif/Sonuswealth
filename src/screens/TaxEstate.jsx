@@ -2039,10 +2039,10 @@ function CGTDrillPanel({ entity, onClose }) {
   const invGain = +(entity?.assets?.investments?.unrealisedGain || 0)
   const giaGain = +(entity?.assets?.gia?.unrealisedGain || 0)
   const totalGains = invGain + giaGain
-  const exempt = +(TAX?.cgt?.exempt ?? TAX?.cgt?.annual_exempt_amount ?? 3000)
+  const exempt = +(TAX?.cgaAllowance ?? 3000)
   const taxable = Math.max(0, totalGains - exempt)
-  const taxBasic  = Math.round(taxable * 0.18)
-  const taxHigher = Math.round(taxable * 0.24)
+  const taxBasic  = Math.round(taxable * (TAX?.cgtBasic ?? 0.18))
+  const taxHigher = Math.round(taxable * (TAX?.cgtHigher ?? 0.24))
 
   return (
     <div
@@ -2310,11 +2310,11 @@ function AllowanceDrillPanel({ entity, onClose }) {
   const at = safe(() => allowanceTracker(entity), null)
 
   const items = at ? [
-    { id: 'isa',       label: 'ISA',                limit: TAX.isa_limit ?? 20000,  d: at.isa,      colour: 'var(--c-acc)',     desc: `Annual ISA limit: ${fmt(TAX.isa_limit ?? 20000)}. Contributions don't reduce ANI.` },
+    { id: 'isa',       label: 'ISA',                limit: TAX.isaAllowance ?? 20000,  d: at.isa,      colour: 'var(--c-acc)',     desc: `Annual ISA limit: ${fmt(TAX.isaAllowance ?? 20000)}. Contributions don't reduce ANI.` },
     { id: 'psa',       label: 'Personal Savings',   limit: null,                    d: at.psa,      colour: 'var(--c-success)', desc: 'PSA: £1,000 basic rate · £500 higher rate · £0 additional. Interest below threshold is tax-free.' },
-    { id: 'cgt',       label: 'CGT exemption',      limit: TAX.cgt_exemption ?? 3000, d: at.cgt,    colour: 'var(--c-warning)', desc: `Annual CGT exemption: ${fmt(TAX.cgt_exemption ?? 3000)}. Unused allowance cannot carry forward.` },
-    { id: 'dividend',  label: 'Dividend allowance', limit: TAX.dividend_allowance ?? 500, d: at.dividend, colour: 'var(--c-gold)', desc: `Dividend allowance: ${fmt(TAX.dividend_allowance ?? 500)}/yr. Fully used = higher tax next threshold.` },
-    { id: 'pa',        label: 'Personal Allowance', limit: TAX.personal_allowance ?? 12570, d: at.pa, colour: 'var(--c-text2)', desc: 'Reduces by £1 for every £2 over £100k ANI. Fully lost at £125,140.' },
+    { id: 'cgt',       label: 'CGT exemption',      limit: TAX.cgaAllowance ?? 3000, d: at.cgt,    colour: 'var(--c-warning)', desc: `Annual CGT exemption: ${fmt(TAX.cgaAllowance ?? 3000)}. Unused allowance cannot carry forward.` },
+    { id: 'dividend',  label: 'Dividend allowance', limit: TAX.dividendAllowance ?? 500, d: at.dividend, colour: 'var(--c-gold)', desc: `Dividend allowance: ${fmt(TAX.dividendAllowance ?? 500)}/yr. Fully used = higher tax next threshold.` },
+    { id: 'pa',        label: 'Personal Allowance', limit: TAX.pa ?? 12570, d: at.pa, colour: 'var(--c-text2)', desc: 'Reduces by £1 for every £2 over £100k ANI. Fully lost at £125,140.' },
   ].filter(x => x.d) : []
 
   const composite = at?.utilization ?? 0

@@ -37,7 +37,7 @@ import { TAX } from './_bundle.js';
 export function effectiveAA(entity) {
   const standardAA = TAX.pensionAA ?? 60000;
   const mpaa       = TAX.mpaa ?? 10000; // FA 2017 MPAA — literal fallback if bundle omits.
-  const taperThreshold = TAX.taperedAnnualAllowanceAdjustedIncome ?? 260000;
+  const taperThreshold = TAX.taperedAAAdj ?? 260000;
   const taperFloor = 10000; // Statutory floor under tapered AA regime.
 
   const mpaaActive = !!(

@@ -1238,8 +1238,8 @@ function CliffEdgeWarning({ entity }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color }}>
               {past
-                ? `£100k income threshold passed — 60% marginal rate in effect`
-                : `£${fmt(distance)} from the £100k income cliff`}
+                ? `${fmt(cliff)} income threshold passed — 60% marginal rate in effect`
+                : `${fmt(distance)} from the ${fmt(cliff)} income cliff`}
             </div>
             <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>
               {/* Tax+FCA audit 2026-05-26: the personalised £-solve
@@ -1248,8 +1248,8 @@ function CliffEdgeWarning({ entity }) {
                   reduces £-for-£ via pension/charity contributions; full PA
                   restored below £100,000. */}
               {past
-                ? `Adjusted net income above £100,000 tapers the personal allowance at 50p per £ (effective 60% marginal). Pension and Gift Aid contributions reduce ANI £-for-£; ANI below £100,000 restores the full PA.`
-                : `At £100,000 adjusted net income the personal allowance begins to taper at 50p per £, producing a 60% effective marginal rate up to £125,140. Pension and Gift Aid contributions reduce ANI £-for-£.`}
+                ? `Adjusted net income above ${fmt(cliff)} tapers the personal allowance at 50p per £ (effective 60% marginal). Pension and Gift Aid contributions reduce ANI £-for-£; ANI below ${fmt(cliff)} restores the full PA.`
+                : `At ${fmt(cliff)} adjusted net income the personal allowance begins to taper at 50p per £, producing a 60% effective marginal rate up to ${fmt(TAX.art)}. Pension and Gift Aid contributions reduce ANI £-for-£.`}
             </div>
           </div>
         </div>
@@ -1269,7 +1269,7 @@ function CliffEdgeWarning({ entity }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
           <span style={{ fontSize: 8, color: 'var(--c-text3)' }}>Your income {fmt(ani)}</span>
-          <span style={{ fontSize: 8, color, fontWeight: 700 }}>Cliff £100k</span>
+          <span style={{ fontSize: 8, color, fontWeight: 700 }}>Cliff {fmt(cliff)}</span>
         </div>
       </div>
     </FadeInOnMount>
@@ -1638,7 +1638,7 @@ function ANIPanel({ entity }) {
           border: '1px solid rgba(255,179,71,0.30)',
           borderRadius: 10, fontSize: 12, color: '#FFB347', lineHeight: 1.5,
         }}>
-          ⚠ <strong>£100k–£125,140 PA taper</strong>: every £1 of adjusted net income above £100,000 reduces PA by £0.50 — effective marginal rate 60% in this band. Pension and Gift Aid contributions reduce ANI £-for-£.
+          ⚠ <strong>{fmt(TAX.adjustedNetIncomeCliff)}–{fmt(TAX.art)} PA taper</strong>: every £1 of adjusted net income above {fmt(TAX.adjustedNetIncomeCliff)} reduces PA by £0.50 — effective marginal rate 60% in this band. Pension and Gift Aid contributions reduce ANI £-for-£.
         </div>
       )}
       {hicbc.charge > 0 && (
@@ -1648,7 +1648,7 @@ function ANIPanel({ entity }) {
           border: '1px solid rgba(255,107,107,0.30)',
           borderRadius: 10, fontSize: 12, color: '#FF6B6B', lineHeight: 1.5,
         }}>
-          ⚠ <strong>High-income child benefit charge active</strong>: adjusted net income above £60,000 triggers a partial claw-back; full claw-back at £80,000+. The charge is reconciled via self-assessment. Pension contributions (including salary sacrifice) reduce ANI £-for-£, which affects the charge calculation.
+          ⚠ <strong>High-income child benefit charge active</strong>: adjusted net income above {fmt(TAX.hicbcFloor)} triggers a partial claw-back; full claw-back at {fmt(TAX.hicbcCeiling)}+. The charge is reconciled via self-assessment. Pension contributions (including salary sacrifice) reduce ANI £-for-£, which affects the charge calculation.
         </div>
       )}
     </RevealCard>

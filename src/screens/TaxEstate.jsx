@@ -485,8 +485,8 @@ function IncomeTaxDetail({ entity }) {
   const wel = safe(() => welshIncomeTax(entity), { applies: false })
 
   // 60% taper window — thresholds hardcoded as TAX does not export paTaperStart/paTaperEnd.
-  // FLAG: add TAX.paTaperStart (100000) and TAX.paTaperEnd (TAX.art) to fq-calculator.js export.
-  const inTaper = ani >= 100000 && ani <= TAX.art
+  // Resolved 2026-06-02 (P2): PA taper band now reads TAX.adjustedNetIncomeCliff (start) and TAX.art (end).
+  const inTaper = ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art
 
   // Build a simple rate-chart from bands
   const bands = itd.bands || []
@@ -730,9 +730,9 @@ function DividendDetail({ entity }) {
         <GaugeBar pct={aPct} colour="var(--c-warning)" />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, fontSize: 12 }}>
-        <Chip tone="neutral">Basic 10.75%</Chip>
-        <Chip tone="warn">Higher 35.75%</Chip>
-        <Chip tone="bad">Add'l 39.35%</Chip>
+        <Chip tone="neutral">Basic {+(TAX.dividendBR * 100).toFixed(2)}%</Chip>
+        <Chip tone="warn">Higher {+(TAX.dividendHR * 100).toFixed(2)}%</Chip>
+        <Chip tone="bad">Add'l {+(TAX.dividendAR * 100).toFixed(2)}%</Chip>
       </div>
       <div style={{
         marginTop: 10, display: 'flex', justifyContent: 'space-between',
@@ -854,7 +854,7 @@ function DrawdownMatrix({ entity }) {
         <RevealStagger interval={40} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {ddm.rows.map((r, i) => {
             const isCurrent = currentDD && Math.abs(r.drawdown - currentDD) < 2500
-            const inDepth = r.drawdown >= 100000 && r.drawdown <= TAX.art
+            const inDepth = r.drawdown >= TAX.adjustedNetIncomeCliff && r.drawdown <= TAX.art
             const isRecommended = r.drawdown === ddm.recommended
             const netPct = Math.round(((r.net || 0) / maxNet) * 100)
             const rowCls = isCurrent ? 'sw-pulse-glow' : ''
@@ -1617,8 +1617,8 @@ function RNRBPlanning({ entity }) {
   if (!taper) return null
   const grossIht = safe(() => ihtDynamic(entity, true), { gross: 0 })
   const grossEstate = grossIht.gross || 0
-  const taperStart = 2000000
-  const taperEnd = 2350000
+  const taperStart = TAX.rnrbTaper
+  const taperEnd = TAX.rnrbTaper + 2 * TAX.rnrb   // RNRB fully tapered £1 per £2 over the threshold
   const inTaper = grossEstate >= taperStart
   const pctv = Math.min(100, ((grossEstate - taperStart) / (taperEnd - taperStart)) * 100)
   return (
@@ -1666,7 +1666,7 @@ function BPRAPRMechanics({ entity }) {
   const allow = safe(() => bprAprAllowance(entity), null)
   const apr = safe(() => aprQualification(entity), null)
   if (!bpr) return null
-  const cap = (entity?.isCouple ? (allow?.couple || 5000000) : (allow?.individual || 2500000))
+  const cap = (entity?.isCouple ? (allow?.couple || 2 * TAX.bprCombinedCap) : (allow?.individual || TAX.bprCombinedCap))
   const usedPct = cap > 0 ? Math.round(((bpr.used || 0) / cap) * 100) : 0
   return (
     <div className="card sw-card-elevated">
@@ -1692,7 +1692,7 @@ function BPRAPRMechanics({ entity }) {
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         <Chip tone="info">Pre-30-Oct-2024 trusts: 100% relief</Chip>
-        <Chip tone="warn">Post-30-Oct-2024 trusts: 50% above {fmt(allow?.individual || 2500000)}</Chip>
+        <Chip tone="warn">Post-30-Oct-2024 trusts: {+(TAX.aimBPRRate * 100).toFixed(0)}% above {fmt(allow?.individual || TAX.bprCombinedCap)}</Chip>
         <Chip tone="info">7-yr refresh applies</Chip>
         <Chip tone="neutral">Instalment option available</Chip>
         <Chip tone="neutral">CPI indexation (post-2030)</Chip>
@@ -1843,7 +1843,7 @@ function BPRDrillPanel({ entity, onClose }) {
     const value = +(b.currentValue || b.value || 0)
     // 100% for qualifying trading businesses, 50% for mixed/investment
     const isMixed = /mixed|investment|property/i.test(b.type || b.assetType || '')
-    const rate = isMixed ? 0.5 : 1.0
+    const rate = isMixed ? TAX.aimBPRRate : 1.0
     const relief = Math.round(value * rate)
     return { name: b.name || b.description || 'Business asset', value, rate, relief }
   }).filter(r => r.value > 0)
@@ -1937,7 +1937,7 @@ function BPRDrillPanel({ entity, onClose }) {
                 the allowance position AND the earliest refresh date — figures an
                 IFA would lead with for any client with private company shares. */}
             {(() => {
-              const ALLOWANCE = 2_500_000
+              const ALLOWANCE = TAX.bprCombinedCap
               const totalBprValue = rows.reduce((s, r) => s + r.value, 0)
               const allowanceUsed = Math.min(totalBprValue, ALLOWANCE)
               const allowanceLeft = Math.max(0, ALLOWANCE - allowanceUsed)
@@ -2314,7 +2314,7 @@ function AllowanceDrillPanel({ entity, onClose }) {
     { id: 'psa',       label: 'Personal Savings',   limit: null,                    d: at.psa,      colour: 'var(--c-success)', desc: 'PSA: £1,000 basic rate · £500 higher rate · £0 additional. Interest below threshold is tax-free.' },
     { id: 'cgt',       label: 'CGT exemption',      limit: TAX.cgaAllowance ?? 3000, d: at.cgt,    colour: 'var(--c-warning)', desc: `Annual CGT exemption: ${fmt(TAX.cgaAllowance ?? 3000)}. Unused allowance cannot carry forward.` },
     { id: 'dividend',  label: 'Dividend allowance', limit: TAX.dividendAllowance ?? 500, d: at.dividend, colour: 'var(--c-gold)', desc: `Dividend allowance: ${fmt(TAX.dividendAllowance ?? 500)}/yr. Fully used = higher tax next threshold.` },
-    { id: 'pa',        label: 'Personal Allowance', limit: TAX.pa ?? 12570, d: at.pa, colour: 'var(--c-text2)', desc: 'Reduces by £1 for every £2 over £100k ANI. Fully lost at £125,140.' },
+    { id: 'pa',        label: 'Personal Allowance', limit: TAX.pa ?? 12570, d: at.pa, colour: 'var(--c-text2)', desc: `Reduces by £1 for every £2 over ${fmt(TAX.adjustedNetIncomeCliff)} ANI. Fully lost at ${fmt(TAX.art)}.` },
   ].filter(x => x.d) : []
 
   const composite = at?.utilization ?? 0
@@ -2585,7 +2585,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       if ((at.dividend?.remaining || 0) === 0) n++   // div allowance fully used
     }
     const ani = safe(() => calcANI(entity).ani, 0)
-    if (ani >= 100000 && ani <= TAX.art) n++  // 60% taper
+    if (ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art) n++  // 60% taper
     return n
   }, [entity, bv])
 
@@ -2650,7 +2650,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
              ? <DiffBadge value={(totalTaxNow || 0) - taxSince} since={null} format="currency" />
              : null },
       b: { label: 'ANI', value: fmt(ani || 0),
-           sub: ani >= 100000 && ani <= TAX.art ? '⚠ 60% taper band' : '' },
+           sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band' : '' },
       c: { label: 'Allowances', value: `${allow?.utilization || 0}%`,
            sub: 'composite usage' },
     }

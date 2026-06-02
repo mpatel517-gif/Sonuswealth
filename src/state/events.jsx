@@ -478,6 +478,22 @@ function applyAssetEvent(e, payload) {
       }
       if (idx >= 0) arr[idx] = { ...arr[idx], ...obj }
       else arr.push(obj)
+      // Mirror into business_assets[] — the IHT/hero read-path. companies[] is
+      // the drill's canonical source; the hero strip + netWorth sum
+      // business_assets[]. Without this mirror a new interest shows in the drill
+      // but is INVISIBLE to the hero (tie-out break, caught in A4 verification).
+      // Mirrors the PSC_EQUITY pattern above; BusinessDrillDown uses
+      // companies-OR-business_assets so it never double-counts.
+      const baArr2 = ensureArray(e, 'business_assets')
+      const baId = `${newId}-bpr`
+      const bIdx2 = baArr2.findIndex(b => b.id === baId)
+      const ba2 = {
+        id: baId, name: obj.name, value, value_gbp: value,
+        qualifies_for_bpr: !nonTrading, qualifies_for_badr: !nonTrading,
+        trading_status: obj.trading_status, provenance,
+      }
+      if (bIdx2 >= 0) baArr2[bIdx2] = ba2
+      else baArr2.push(ba2)
       return
     }
   }

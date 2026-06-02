@@ -44,6 +44,7 @@
     "test:decumulation": "node tests/decumulation-plan.mjs",
     "test:goal-engine": "node tests/goal-engine.mjs",
     "test:withdrawal-tax": "node tests/withdrawal-tax.mjs",
+    "test:decum-solver": "node tests/decumulation-solver.mjs",
     "test:coverage": "c8 --reporter=text --reporter=lcov --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --check-coverage=false node tests/dynamic-onboarding.mjs",
     "test:coverage:gate": "c8 --reporter=text --include=src/engine/**/*.js --include=src/lib/**/*.js --exclude=src/engine/**/test-*.js --lines=40 --statements=40 node tests/dynamic-onboarding.mjs",
     "regression:capture": "node tests/harness/regression-capture.mjs",

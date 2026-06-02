@@ -21,11 +21,13 @@
 name: regression-nightly
 
 on:
-  # When ready, uncomment the schedule trigger and the push trigger.
-  # Leave workflow_dispatch always enabled so you can re-run on demand.
-  #
-  # schedule:
-  #   - cron: '17 3 * * *'   # 03:17 UTC every day
+  # Nightly drift check (alerts, does not block) + manual dispatch.
+  schedule:
+    - cron: '17 3 * * *'   # 03:17 UTC every day
+  # The PUSH trigger (merge gate) is intentionally still commented: enable it ONLY
+  # after one green nightly confirms Linux CI hashes match the committed baseline
+  # (platform float/locale parity is unverified from the Windows capture). Gating
+  # merges on a baseline that hasn't passed once on CI would block all pushes.
   # push:
   #   branches: [main]
   #   paths:

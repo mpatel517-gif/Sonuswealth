@@ -47,8 +47,7 @@
     "regression:capture": "node tests/harness/regression-capture.mjs",
     "regression:check": "node tests/harness/regression-check.mjs",
     "snap": "node scripts/snap.mjs",
-    "sync:tax": "node scripts/sync-tax-bundle.mjs",
-    "update-rules": "node scripts/update-rules-uk.mjs"
+    "sync:tax": "node scripts/sync-tax-bundle.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

@@ -165,4 +165,4 @@ If you discover after deployment that a value is wrong:
 | `0-Active/BUDGET-DAY-RUNBOOK.md` | This file |
 | `tests/regression-baseline.json` | The L4-4 baseline (re-captured every bundle bump) |
 | `src/engine/_bundle.js` | Selects the active bundle based on `asOfDate` |
-| `scripts/update-rules-uk.mjs` | LEGACY auto-update script — points at the old `app-prototype/rules-uk.js` path. Don't use; use this runbook instead. |
+| `scripts/sync-tax-bundle.mjs` (`npm run sync:tax`) | Verify-and-patch sync: researches the ~35 headline figures vs gov.uk/HMRC and diffs/patches `src/rules/UK-2026.1.1.json` in place. Safe by default (offline check); `--live` to research, `--apply` to patch. Replaces the deleted `update-rules-uk.mjs` (which wrote the prototype-only `app-prototype/rules-uk.js`). |

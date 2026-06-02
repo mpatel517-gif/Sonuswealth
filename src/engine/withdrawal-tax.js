@@ -135,9 +135,13 @@ export function buildAllowanceLedger(entity = {}, opts = {}) {
   // Pension AA — current year (possibly tapered) + 3yr carry-forward, unless MPAA.
   const aaCurrent = tracker.pension_aa?.current_year || { total: TAX.pensionAA, used: 0, remaining: TAX.pensionAA, tapered: false }
   const tapered = !!aaCurrent.tapered
+  // MPAA triggers ONLY on taking taxable income via flexi-access drawdown/UFPLS
+  // — NOT on taking the 25% tax-free cash, a small-pot lump sum, or a DB/annuity
+  // (audit fix: keying on drawdown>0 over-fired and wrongly voided carry-forward
+  // for anyone who had only taken PCLS).
   const mpaaTriggered = opts.mpaaTriggered != null
     ? !!opts.mpaaTriggered
-    : !!(entity.pension?.mpaaTriggered || entity.mpaaTriggered || +(entity.drawdown || 0) > 0 && entity.pension?.flexiblyAccessed)
+    : !!(entity.pension?.mpaaTriggered || entity.mpaaTriggered || entity.pension?.flexiAccessIncomeTaken)
   const cfByYear = carryForwardByYear(entity) // [y-3, y-2, y-1] oldest-first, or null
   const cfTotal = Array.isArray(cfByYear)
     ? cfByYear.reduce((s, v) => s + (+v || 0), 0)

@@ -381,11 +381,16 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
   const perGoal = (goalSpec?.goals || []).filter(g => !g.alwaysOn).map(g => {
     const od = OBJECTIVE_DIRECTION[g.objective]
     const top = rankedPaths[0]
-    return {
-      goalId: g.id || g.type, type: g.type, objective: g.objective,
-      value: od && top ? top.sim[od.key === '_taxPlusIht' ? 'totalTax' : od.key] ?? null : null,
-      successPct: top?.sim.successPct ?? null,
-    }
+    // Report the SAME quantity the ranking optimised on — for min_lifetime_tax
+    // that is income tax + IHT + inherited-pension income tax, not income tax
+    // alone (audit tie-out fix: the displayed number must reconcile with the
+    // logic that ranked the path).
+    const value = od && top
+      ? (od.key === '_taxPlusIht'
+          ? top.sim.totalTax + top.sim.ihtExposure + (top.sim.pensionDeathIncomeTax || 0)
+          : top.sim[od.key]) ?? null
+      : null
+    return { goalId: g.id || g.type, type: g.type, objective: g.objective, value, successPct: top?.sim.successPct ?? null }
   })
 
   return {

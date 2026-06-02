@@ -138,6 +138,15 @@ console.log('\n── lexicographic scoring: the primary goal picks the winner �
   // And with the double-tax fix, the legacy winner is NOT the pension-preserving one.
   log(r.rankedPaths[0].method !== 'isa_first', `legacy winner is not preserve-pension (it is ${r.rankedPaths[0].method})`)
 }
+{
+  // perGoal tie-out: the reported value reconciles with the ranking metric.
+  const taxFirst = goalSpec(BRUCE, { goals: [{ type: 'min_lifetime_tax', priority: 1 }, { type: 'income_floor', priority: 5, target: { income: 96000 } }] })
+  const r = solveDecumulation({ entity: BRUCE, goalSpec: taxFirst, opts: { now: NOW, iht2027: IHT2027 } })
+  const top = r.rankedPaths[0]
+  const pg = r.perGoal.find(g => g.type === 'min_lifetime_tax')
+  const expected = top.totalTaxCost + top.ihtExposure + (top.pensionDeathIncomeTax || 0)
+  log(pg.value === expected, `min_lifetime_tax perGoal value = income tax + IHT + pension-death-IT (£${Math.round(pg.value/1000)}k), reconciles with ranking metric`)
+}
 
 console.log('\n── output contract: visible path · why-it-won · branches ──')
 {

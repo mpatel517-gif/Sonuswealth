@@ -85,6 +85,14 @@ console.log('\n── buildAllowanceLedger: the two traps ──')
   log(pensionAAAvailable === expect, `no MPAA → available = current + carry-forward (${pensionAAAvailable})`)
 }
 {
+  // Audit fix: taking only the 25% tax-free cash (drawdown>0) must NOT trigger
+  // MPAA — only taxable flexi-access income does.
+  const pclsOnly = { ...BRUCE, drawdown: 50000, pension: { flexiblyAccessed: true } }
+  log(buildAllowanceLedger(pclsOnly).allowances.pension_aa.mpaaTriggered === false, 'PCLS-only drawdown does NOT trigger MPAA (carry-forward preserved)')
+  const flexiIncome = { ...BRUCE, pension: { flexiAccessIncomeTaken: true } }
+  log(buildAllowanceLedger(flexiIncome).allowances.pension_aa.mpaaTriggered === true, 'taxable flexi-access income DOES trigger MPAA')
+}
+{
   // IHT gift exemption carry-forward(1): available = current + min(current, lastYearUnused).
   const e = { ...BRUCE, giftExemptionLastYearUnused: 3000 }
   const { allowances } = buildAllowanceLedger(e)

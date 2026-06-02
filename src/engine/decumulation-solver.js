@@ -81,6 +81,9 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     secure: { statePensionAnnual, rental, dividends },
     incomeTargetAnnual,
     isHigherRateTaxpayer: !!entity.isHigherRateTaxpayer,
+    // Beneficiary's marginal income-tax rate for the post-75 inherited-pension
+    // charge (assumption — large inherited pots often push heirs to higher rate).
+    beneficiaryRate: +opts.beneficiaryMarginalRate || +entity.beneficiaryMarginalRate || TAX.hr,
     flags: {
       hasDB: dbPots.length > 0 || dbIncome > 0,
       sparse: pensionDC + isaVal + gia + cash === 0,
@@ -175,14 +178,34 @@ export function simulatePath(ctx, order, opts = {}) {
     })
   }
 
-  // Estate / IHT at the horizon (the 2027 flip lives here).
+  // Estate / death tax at the horizon. Two effects live here:
+  //   (1) the 6-Apr-2027 flip — unused pensions enter the estate for IHT;
+  //   (2) the pension DOUBLE TAX — a DC pension inherited on death at/after
+  //       age 75 is ALSO income-taxable at the beneficiary's marginal rate, on
+  //       top of IHT. Combined 64–67%+ (worse once the RNRB tapers away above
+  //       £2m). An inherited ISA suffers IHT only. This is WHY post-2027 the
+  //       guidance is to draw the pension down in life, not preserve it.
+  //   Mechanism (FA 2026 / gov.uk technical note): income tax is charged on the
+  //   pension NET of the IHT attributable to it — no true double charge on the
+  //   same slice. Death < 75: pension is income-tax-free (IHT only).
+  //   (Spousal exemption for couples handled in a later coverage pass.)
   const liquidRemaining = (bal.isa || 0) + (bal.gia || 0) + (bal.cash || 0)
   const pensionRemaining = bal.pension || 0
-  const estate = ctx.property + liquidRemaining + (pensionInEstate ? pensionRemaining : 0) - ctx.liabilities
+  const pensionInEstateVal = pensionInEstate ? pensionRemaining : 0
+  const estate = ctx.property + liquidRemaining + pensionInEstateVal - ctx.liabilities
   const rnrb = estate > (TAX.rnrbTaper || 2000000) ? Math.max(0, (TAX.rnrb || 175000) - (estate - (TAX.rnrbTaper || 2000000)) / 2) : (TAX.rnrb || 175000)
   const nilBands = (TAX.nrb || 325000) + rnrb
-  const ihtExposure = Math.round(Math.max(0, estate - nilBands) * (TAX.ihtRate || 0.40))
-  const afterIhtEstate = Math.round(estate - ihtExposure)
+  const ihtRate = TAX.ihtRate || 0.40
+  const ihtExposure = Math.round(Math.max(0, estate - nilBands) * ihtRate)
+  // Beneficiary income tax on the inherited pension (death age ≥ 75 only),
+  // charged on the pension net of its proportional share of the IHT.
+  const benRate = opts.beneficiaryMarginalRate ?? ctx.beneficiaryRate ?? TAX.hr
+  const pensionIHTShare = estate > 0 ? pensionInEstateVal * (ihtExposure / estate) : 0
+  const pensionDeathIncomeTax = (pensionInEstate && ctx.horizonAge >= 75)
+    ? Math.round((pensionInEstateVal - pensionIHTShare) * benRate)
+    : 0
+  const totalDeathTax = ihtExposure + pensionDeathIncomeTax
+  const afterIhtEstate = Math.round(estate - totalDeathTax)
 
   const survived = depletedAtAge == null
   const yearsCovered = (depletedAtAge ?? (ctx.horizonAge + 1)) - ctx.age
@@ -197,6 +220,7 @@ export function simulatePath(ctx, order, opts = {}) {
   return {
     schedule, totalTax: Math.round(totalTax), totalNetDelivered: Math.round(totalNetDelivered),
     finalEstate: Math.round(estate), afterIhtEstate, ihtExposure,
+    pensionDeathIncomeTax, totalDeathTax, pensionRemainingAtDeath: Math.round(pensionInEstateVal),
     survived, depletedAtAge, successPct, pensionInEstate, terminalBuffer: Math.round(terminalBuffer),
   }
 }
@@ -248,7 +272,7 @@ export function scorePaths(simulated, goalSpec) {
   const goals = (goalSpec?.goals || []).filter(g => !g.alwaysOn && OBJECTIVE_DIRECTION[g.objective])
   const withMetrics = simulated.map(s => ({
     ...s,
-    metrics: { ...s.sim, _taxPlusIht: s.sim.totalTax + s.sim.ihtExposure },
+    metrics: { ...s.sim, _taxPlusIht: s.sim.totalTax + s.sim.ihtExposure + (s.sim.pensionDeathIncomeTax || 0) },
   }))
   const cmp = (a, b) => {
     for (const g of goals) {
@@ -310,6 +334,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
   const rankedPaths = ranked.map(r => ({
     id: r.path.id, name: r.path.name, method: r.path.method, rank: r.rank,
     successPct: r.sim.successPct, totalTaxCost: r.sim.totalTax, ihtExposure: r.sim.ihtExposure,
+    pensionDeathIncomeTax: r.sim.pensionDeathIncomeTax, totalDeathTax: r.sim.totalDeathTax,
     afterIhtEstate: r.sim.afterIhtEstate, survived: r.sim.survived, depletedAtAge: r.sim.depletedAtAge,
     scoreBreakdown: r.scoreBreakdown,
     rationale: buildRationale(r, ctx, ledger, goalSpec),
@@ -346,6 +371,9 @@ function buildRationale(r, ctx, ledger, goalSpec) {
   if (r.path.method.includes('pension') && r.sim.pensionInEstate) {
     steps.push('From 6 April 2027 unused pensions count toward inheritance tax, so drawing the pension during life can reduce the estate.')
   }
+  if (r.sim.pensionDeathIncomeTax > 0) {
+    steps.push(`On these assumptions ~£${Math.round(r.sim.pensionRemainingAtDeath / 1000)}k of pension is left at death (age ${ctx.horizonAge}, after 75): it is taxed for inheritance AND the beneficiary pays income tax — a combined hit of roughly £${Math.round(r.sim.totalDeathTax / 1000)}k. Drawing it down sooner generally reduces this.`)
+  }
   if (ledger.notes?.length) steps.push(...ledger.notes)
   if (!r.sim.survived) steps.push(`On these assumptions the plan funds to age ${r.sim.depletedAtAge} before the pots run low — a flag, not a forecast.`)
   return steps
@@ -357,7 +385,7 @@ function coverageSurface(ctx, ledger, unknowns) {
     pensionKinds: ctx.flags.hasDB ? ['DB (income, not a pot)', 'DC'] : ['DC'],
     wrappers: Object.entries(ctx.pots).filter(([, v]) => v > 0).map(([k]) => k),
     dataRichness: ctx.flags.sparse ? 'sparse' : 'sufficient',
-    assumptions: [`deterministic ${Math.round(ctx.growth * 100)}% nominal growth`, `GIA embedded-gain ${Math.round(ctx.giaGainFraction * 100)}%`, `horizon age ${ctx.horizonAge}`],
+    assumptions: [`deterministic ${Math.round(ctx.growth * 100)}% nominal growth`, `GIA embedded-gain ${Math.round(ctx.giaGainFraction * 100)}%`, `horizon age ${ctx.horizonAge}`, `beneficiary income-tax rate ${Math.round(ctx.beneficiaryRate * 100)}% (inherited-pension charge if death ≥75)`],
     unknowns: [...unknowns, ...(ledger.notes || [])],
   }
 }

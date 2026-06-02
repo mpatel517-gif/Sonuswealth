@@ -3,7 +3,7 @@
 // behaviours: 2027 flips the order, re-ranking goals changes the top path,
 // schedules are visible, branches exist, coverage is honest.
 import {
-  extractDecumulationContext, simulatePath, generateCandidatePaths, solveDecumulation,
+  extractDecumulationContext, simulatePath, generateCandidatePaths, scorePaths, solveDecumulation,
 } from '../src/engine/decumulation-solver.js'
 import { goalSpec, normalizeGoal } from '../src/engine/goal-engine.js'
 import { readFileSync } from 'node:fs'
@@ -74,20 +74,54 @@ console.log('\n── the 2027 flip ──')
   log(post.ihtExposure > pre.ihtExposure, `preserved pension raises IHT post-2027 (post £${post.ihtExposure} > pre £${pre.ihtExposure})`)
 }
 
-console.log('\n── lexicographic re-ranking changes the top path ──')
+console.log('\n── pension DOUBLE TAX (death ≥75, post-2027) ──')
 {
-  const incomeFirst = goalSpec(BRUCE) // primary = income_floor
+  // Preserving a pension to a post-75 death is WORSE than draining it: the
+  // pot suffers IHT *and* beneficiary income tax. (The bug the founder caught.)
+  const ctx = extractDecumulationContext(BRUCE, { horizonAge: 88 }) // dies at 88, >75
+  const preserve = simulatePath(ctx, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 }) // pension last → big pot at death
+  const drain    = simulatePath(ctx, ['pension', 'gia', 'cash', 'isa'], { now: NOW, iht2027: IHT2027 }) // pension first → small pot at death
+  log(preserve.pensionRemainingAtDeath > drain.pensionRemainingAtDeath, `preserve leaves more pension at death (£${Math.round(preserve.pensionRemainingAtDeath/1000)}k vs £${Math.round(drain.pensionRemainingAtDeath/1000)}k)`)
+  log(preserve.pensionDeathIncomeTax > 0, `preserved pension triggers beneficiary income tax (£${Math.round(preserve.pensionDeathIncomeTax/1000)}k)`)
+  log(preserve.totalDeathTax > drain.totalDeathTax, `preserving pension costs MORE total death tax (£${Math.round(preserve.totalDeathTax/1000)}k vs £${Math.round(drain.totalDeathTax/1000)}k)`)
+  log(drain.afterIhtEstate > preserve.afterIhtEstate, `draining the pension leaves heirs MORE after tax (drain £${Math.round(drain.afterIhtEstate/1e6)}m > preserve £${Math.round(preserve.afterIhtEstate/1e6)}m) — fixes the founder-caught bug`)
+}
+{
+  // Death BEFORE 75 → no beneficiary income tax (IHT only).
+  const young = extractDecumulationContext({ ...BRUCE, age: 60 }, { horizonAge: 72 })
+  const s = simulatePath(young, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 })
+  log(s.pensionDeathIncomeTax === 0, 'death before 75 → no inherited-pension income tax (IHT only)')
+}
+
+console.log('\n── lexicographic scoring: the primary goal picks the winner ──')
+{
+  // Pure mechanism test (persona-independent): two paths that trade off, so the
+  // active primary goal genuinely changes which wins. A leaves more estate +
+  // less tax; B delivers more lifetime income.
+  const sims = [
+    { path: { id: 'A' }, sim: { successPct: 100, totalNetDelivered: 200, afterIhtEstate: 500, totalTax: 50, ihtExposure: 10, pensionDeathIncomeTax: 0 } },
+    { path: { id: 'B' }, sim: { successPct: 100, totalNetDelivered: 300, afterIhtEstate: 400, totalTax: 80, ihtExposure: 10, pensionDeathIncomeTax: 0 } },
+  ]
+  const legacy = scorePaths(sims, { goals: [normalizeGoal({ type: 'legacy', priority: 1 })] })
+  const spend  = scorePaths(sims, { goals: [normalizeGoal({ type: 'max_lifetime_spend', priority: 1 })] })
+  const minTax = scorePaths(sims, { goals: [normalizeGoal({ type: 'min_lifetime_tax', priority: 1 })] })
+  log(legacy[0].path.id === 'A', 'legacy primary → A (higher after-IHT estate)')
+  log(spend[0].path.id === 'B', 'max-spend primary → B (higher lifetime income)')
+  log(minTax[0].path.id === 'A', 'min-lifetime-tax primary → A (lower total tax)')
+}
+{
+  // Persona-level invariant: the #1 path is the optimum of the primary objective.
   const legacyFirst = goalSpec(BRUCE, { goals: [
     { type: 'legacy', priority: 1 },
     { type: 'income_floor', priority: 5, target: { income: 96000 } },
-    { type: 'min_lifetime_tax', priority: 8 },
   ] })
-  const rIncome = solveDecumulation({ entity: BRUCE, goalSpec: incomeFirst, opts: { now: NOW, iht2027: IHT2027 } })
-  const rLegacy = solveDecumulation({ entity: BRUCE, goalSpec: legacyFirst, opts: { now: NOW, iht2027: IHT2027 } })
-  log(rIncome.rankedPaths.length === 4 && rLegacy.rankedPaths.length === 4, 'four selectable candidate paths each run')
-  log(rIncome.binding.primaryGoal === 'income_floor' && rLegacy.binding.primaryGoal === 'legacy', 'binding records the primary goal')
-  log(rIncome.rankedPaths[0].id !== rLegacy.rankedPaths[0].id, `top path changes with goal priority (income→${rIncome.rankedPaths[0].id}, legacy→${rLegacy.rankedPaths[0].id})`)
-  log(rLegacy.rankedPaths[0].afterIhtEstate >= rLegacy.rankedPaths[rLegacy.rankedPaths.length - 1].afterIhtEstate, 'legacy-primary: top path leaves ≥ the worst path after IHT')
+  const r = solveDecumulation({ entity: BRUCE, goalSpec: legacyFirst, opts: { now: NOW, iht2027: IHT2027 } })
+  log(r.rankedPaths.length === 4, 'four selectable candidate paths run')
+  log(r.binding.primaryGoal === 'legacy', 'binding records the primary goal')
+  const maxEstate = Math.max(...r.rankedPaths.map(p => p.afterIhtEstate))
+  log(r.rankedPaths[0].afterIhtEstate === maxEstate, 'legacy-primary: #1 path maximises after-IHT estate (the contract)')
+  // And with the double-tax fix, the legacy winner is NOT the pension-preserving one.
+  log(r.rankedPaths[0].method !== 'isa_first', `legacy winner is not preserve-pension (it is ${r.rankedPaths[0].method})`)
 }
 
 console.log('\n── output contract: visible path · why-it-won · branches ──')

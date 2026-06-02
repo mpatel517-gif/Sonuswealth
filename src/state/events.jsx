@@ -21,6 +21,15 @@
 
 import { createContext, useContext, useReducer, useCallback, useMemo } from 'react'
 import { ADD_ID_TO_TYPE } from '../engine/liability-taxonomy.js'
+import { classifyAsset } from '../engine/asset-taxonomy.js'
+
+// Canonical sub-class of an Add-menu itemType (e.g. 'DB_PUBLIC' → 'db-pension').
+// Drives event routing so the FULL asset spectrum lands in the right entity slot
+// — a DB scheme must never become a spendable DC pot, decumulation products go to
+// decumulation[], etc. Falls back to null for non-asset itemTypes.
+function assetClassOf(itemType) {
+  return classifyAsset(itemType)?.class || null
+}
 
 // ─── Event types + validator ────────────────────────────────────────────────
 // Added 2026-05-12: ASSET_VALUE_UPDATED + ASSET_REMOVED + DOCUMENT_CAPTURED.
@@ -219,7 +228,11 @@ function applyAssetEvent(e, payload) {
       }
       return
     }
-    if (itemType === 'DB') {
+    // DEFINED BENEFIT (final-salary / CARE / public-sector / hybrid) — a
+    // guaranteed income + CETV, NOT a spendable pot. Routed to assets.pensions[]
+    // so it is NEVER rendered as a drawable fund (IFA-critical). Class-driven so
+    // every DB variant from the menu lands here, not just the bare 'DB'.
+    if (assetClassOf(itemType) === 'db-pension') {
       const arr = ensureArray(e.assets, 'pensions')
       const idx = arr.findIndex(p => p.id === newId)
       const obj = {
@@ -227,23 +240,28 @@ function applyAssetEvent(e, payload) {
         name: fields.scheme || 'DB pension',
         scheme_name: fields.scheme || 'DB pension',
         type: 'occupational-DB',
+        db_variant: itemType,                         // DB | DB_CARE | DB_PUBLIC | DB_HYBRID
         status: 'active',
         projected_annual_pension: +fields.projectedAnnual || 0,
-        cetv: 0,
-        balance: 0,
+        cetv: +fields.cetv || 0,
+        balance: 0,                                   // never a spendable balance
         provenance,
       }
       if (idx >= 0) arr[idx] = { ...arr[idx], ...obj }
       else arr.push(obj)
       return
     }
-    if (itemType === 'FAD' || itemType === 'ANNUITY') {
-      // Decumulation products — store under assets.decumulation[]
+    // DECUMULATION (FAD / UFPLS / annuity / enhanced annuity) — assets.decumulation[]
+    if (assetClassOf(itemType) === 'pension-access') {
+      const accessTypeMap = {
+        FAD: 'flexi-access-drawdown', UFPLS: 'ufpls',
+        ANNUITY: 'annuity', ANNUITY_ENHANCED: 'enhanced-annuity',
+      }
       const arr = ensureArray(e.assets, 'decumulation')
       const idx = arr.findIndex(p => p.id === newId)
       const obj = {
         id: newId,
-        type: itemType === 'FAD' ? 'flexi-access-drawdown' : 'annuity',
+        type: accessTypeMap[itemType] || 'flexi-access-drawdown',
         provider: fields.provider || '',
         value: +fields.value || 0,
         annualWithdrawal: +fields.annualWithdrawal || 0,
@@ -254,7 +272,9 @@ function applyAssetEvent(e, payload) {
       else arr.push(obj)
       return
     }
-    // SIPP / SSAS / Workplace DC / GPP — go in assets.sipp.pensions[]
+    // ACCUMULATION DC pots — SIPP / SSAS / Workplace DC / GPP / Master Trust /
+    // Stakeholder / Personal / Deferred / RAC / Section 32 / QROPS — all spendable
+    // pots → assets.sipp.pensions[].
     if (!e.assets.sipp) e.assets.sipp = { total: 0, growth: 0.05, pensions: [] }
     const arr = ensureArray(e.assets.sipp, 'pensions')
     const idx = arr.findIndex(p => p.id === newId)
@@ -391,7 +411,7 @@ function applyAssetEvent(e, payload) {
       if (bIdx >= 0) baArr[bIdx] = ba; else baArr.push(ba)
       return
     }
-    if (['EMI', 'RSU', 'SAYE', 'CSOP', 'SIP'].includes(itemType)) {
+    if (assetClassOf(itemType) === 'share-scheme') {
       const arr = ensureArray(e, 'share_schemes')
       const idx = arr.findIndex(s => s.id === newId)
       const obj = {
@@ -435,7 +455,31 @@ function applyAssetEvent(e, payload) {
       else arr.push(obj)
       return
     }
-    return
+    // Other business interests (sole trader / partnership / LLP / investment
+    // company / EOT / IP) — land in companies[] with their value so the tile and
+    // IHT see them. BPR/BADR flags set from the canonical type (investment
+    // companies don't qualify). Without this they were silently dropped.
+    {
+      const nonTrading = itemType === 'LTD_INVESTMENT'
+      const arr = ensureArray(e, 'companies')
+      const idx = arr.findIndex(c => c.id === newId)
+      const value = +fields.estimatedValue || +fields.value || 0
+      const obj = {
+        id: newId,
+        name: fields.companyName || fields.business || fields.name || fields.description || itemType,
+        role: fields.role || 'Owner',
+        interest_type: itemType,
+        shareholding_pct: +fields.sharePct / 100 || null,
+        share_value_gbp: value,
+        value,
+        trading_status: nonTrading ? 'investment' : 'trading',
+        qualifies_for_bpr: !nonTrading,
+        provenance,
+      }
+      if (idx >= 0) arr[idx] = { ...arr[idx], ...obj }
+      else arr.push(obj)
+      return
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -487,6 +531,38 @@ function applyAssetEvent(e, payload) {
       }
       if (idx >= 0) arr[idx] = { ...arr[idx], ...obj }
       else arr.push(obj)
+    } else {
+      // Any other protection / insurance type from the menu (decreasing term,
+      // FIB, whole-of-life, group life, short-term IP, MPPI, health cash plan,
+      // shareholder protection, travel) — route by canonical class so nothing is
+      // dropped. Without this the new menu could add a policy that vanished.
+      const cls = assetClassOf(itemType)
+      if (cls === 'general-insurance') {
+        const arr = ensureArray(e, 'general_insurance')
+        const idx = arr.findIndex(g => g.id === newId)
+        const obj = { id: newId, type: itemType.toLowerCase(), provider: fields.provider || '',
+          cover_amount: +fields.coverAmount || 0, premium_annual: +fields.annualPremium || 0, provenance }
+        if (idx >= 0) arr[idx] = { ...arr[idx], ...obj }; else arr.push(obj)
+      } else if (cls === 'business-protection') {
+        const arr = ensureArray(e, 'business_insurance')
+        const idx = arr.findIndex(b => b.id === newId)
+        const obj = { id: newId, type: itemType.toLowerCase(), provider: fields.provider || '',
+          cover_amount: +fields.coverAmount || 0, premium_annual: +fields.annualPremium || 0, provenance }
+        if (idx >= 0) arr[idx] = { ...arr[idx], ...obj }; else arr.push(obj)
+      } else {
+        // life-cover / health-income — a keyed policy on assets.protection
+        const key = itemType.toLowerCase().replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+        p[key] = {
+          exists: true,
+          policy_type: itemType,
+          amount: +fields.coverAmount || 0,
+          monthlyBenefit: +fields.monthlyBenefit || 0,
+          premium: (+fields.annualPremium ? (+fields.annualPremium / 12) : (+fields.premium || 0)),
+          provider: fields.provider || '',
+          inTrust: String(fields.inTrust).toLowerCase() === 'true',
+          provenance,
+        }
+      }
     }
     return
   }

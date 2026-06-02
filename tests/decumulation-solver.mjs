@@ -22,7 +22,11 @@ console.log('\n── context extraction (coverage: DB never a pot) ──')
   log(ctx.pots.pension === 850000, `Bruce pension DC = £850k (${ctx.pots.pension})`)
   log(ctx.pots.isa === 420000 && ctx.pots.gia === 380000 && ctx.pots.cash === 180000, 'ISA/GIA/cash extracted')
   log(ctx.incomeTargetAnnual === 96000, 'income target from drawdownPlan (£96k)')
-  log(ctx.property === 1800000, 'residence counted as estate property (not a pot)')
+  log(ctx.property === 1800000 + 450000, `estate property = residence £1.8m + BTL £450k (${ctx.property})`)
+  log(ctx.secure.rental === 19200, `rental income picked up from income.rentalIncome (£${ctx.secure.rental})`)
+  log(ctx.secure.dividends === 16000 && ctx.secure.statePensionAnnual === 11973, 'dividends + state pension extracted')
+  log(ctx.spa === 67, 'state-pension age read from the persona record (67)')
+  log(ctx.liabilities === 180000, `BTL mortgage £180k captured from {otherLoans:[{outstanding}]} (${ctx.liabilities})`)
 }
 {
   // DB scheme = guaranteed income + CETV, NEVER a drawable pot.

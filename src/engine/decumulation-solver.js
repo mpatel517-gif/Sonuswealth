@@ -32,7 +32,8 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
   const inc = entity.income || {}
   const age = +(entity.age ?? entity.individual?.age) || 65
   const horizonAge = +opts.horizonAge || +entity.planningHorizonAge || 95
-  const spa = +opts.statePensionAge || TAX.spa || 67
+  // State Pension age from the persona's own record first, then the bundle.
+  const spa = +opts.statePensionAge || +inc.statePension?.startAge || TAX.spa || 67
 
   // Spendable DC/SIPP pots only. DB schemes are guaranteed INCOME + a CETV —
   // never a drawable pot (the classic bug). Their income joins secureIncome.
@@ -45,17 +46,24 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
   const dbIncome = dbPots.reduce((s, p) => s + (+p.annualIncome || +p.income || 0), 0)
     + (+a.dbPension?.annualIncome || +inc.dbPension || 0)
 
-  const isa  = +a.isa?.value ?? 0; const isaVal = +(a.isa?.value ?? a.isa?.total ?? 0)
+  const isaVal = +(a.isa?.value ?? a.isa?.total ?? 0)
   const gia  = +(a.portfolio?.value ?? a.gia?.value ?? a.investments?.value ?? 0)
   const cash = +(a.cash?.total ?? a.cash?.own ?? a.cash?.value ?? 0)
-  const property = (+a.residence?.value || 0) + (+a.btl?.value || 0) + (+a.buyToLet?.value || 0)
+  // Estate property = main residence + every held property (BTLs live in
+  // assets.property[]) + legacy btl/buyToLet keys. Illiquid → estate, not drawn.
+  const propertyList = Array.isArray(a.property) ? a.property : []
+  const property = (+a.residence?.value || 0)
+    + propertyList.reduce((s, p) => s + (+(p.value ?? p.value_gbp) || 0), 0)
+    + (+a.btl?.value || 0) + (+a.buyToLet?.value || 0)
   const liabilities = +entity.totalLiabilities || sumLiabilities(entity)
   const giaLossesBf = +(a.cgt?.carryForwardLosses || a.cgt?.carry_forward_losses || 0)
   // Embedded-gain fraction of a GIA disposal (assumption — surfaced).
   const giaGainFraction = +opts.giaGainFraction || 0.4
 
-  const statePensionAnnual = +inc.statePension?.annual || TAX.statePensionFull
-  const rental = +inc.rental || +inc.rent || 0
+  const statePensionAnnual = +inc.statePension?.annual || +inc.statePension || TAX.statePensionFull
+  // Rental: income field first, else net rent summed off the property records.
+  const rental = +inc.rentalIncome || +inc.rental || +inc.rent
+    || propertyList.reduce((s, p) => s + (+(p.rentalNetAnnual ?? (p.isRental ? p.rentalGrossAnnual : 0)) || 0), 0)
   const dividends = +inc.dividends || 0
   const growth = +opts.growth || +a.sipp?.growth || 0.05
 
@@ -80,11 +88,24 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
   }
 }
 
-function sumLiabilities(entity) {
-  const L = entity.liabilities || entity.assets?.liabilities
-  if (Array.isArray(L)) return L.reduce((s, l) => s + (+l.balance || +l.amount || 0), 0)
-  if (L && typeof L === 'object') return Object.values(L).reduce((s, v) => s + (+(v?.balance ?? v) || 0), 0)
+// Robust across the liability shapes that drift across personas:
+//   · flat array [{balance|amount|outstanding}]
+//   · nested object { mortgage:{outstanding}, otherLoans:[{outstanding}] }
+//   · plain numbers
+function _liabAmount(v) {
+  if (v == null) return 0
+  if (typeof v === 'number') return v
+  if (Array.isArray(v)) return v.reduce((s, x) => s + _liabAmount(x), 0)
+  if (typeof v === 'object') {
+    if (v.outstanding != null || v.balance != null || v.amount != null) {
+      return +(v.outstanding ?? v.balance ?? v.amount) || 0
+    }
+    return Object.values(v).reduce((s, x) => s + _liabAmount(x), 0) // recurse one level (mortgage, otherLoans, …)
+  }
   return 0
+}
+function sumLiabilities(entity) {
+  return _liabAmount(entity.liabilities || entity.assets?.liabilities)
 }
 
 // ─── Deterministic single-path simulation ────────────────────────────────────

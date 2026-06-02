@@ -3481,27 +3481,63 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // already counts mortgage + otherLoans + property[].mortgage_outstanding (the
   // B5 fix), so the hand-rolled IIFE was duplicating engine logic. One source.
   const _heroBaseLiabilities = _selLiabilitiesTotal(entity)
-  // W1 / Task A2: apply the same growth factor as the NW projection so the
-  // identity Assets - Liab = NW holds at every horizon. The factor is derived
-  // from the projection that was computed above (same path as hero NW).
-  // At years=0 (current lens) factor=1 → no change. Negative years (history)
-  // we also apply the factor (which is <1) to stay consistent with engine.
-  const _heroGrowthFactor = (() => {
-    const yrs = projection?.years ?? 0
-    if (yrs === 0) return 1
-    // For historical and plan-override modes, engine NW and projection.value
-    // may not equal baseAssets*factor - baseLiab*factor. In those cases
-    // derive factor from the displayed NW so the strip stays coherent:
-    //   factor = projection.value / (baseAssets - baseLiab)
+  // P1/F2 fix (2026-06-02): liabilities AMORTISE — they do NOT grow.
+  // The previous model scaled BOTH assets and liabilities by 1.04^years to keep
+  // the Assets−Liab=NW identity tight, on the (now stale) premise that "no
+  // amortisation model exists for liabilities". One DOES: debtMath.amortise() —
+  // the same calc every debt tile uses to trend balances → £0. Scaling debt up
+  // compounded it the wrong way (£410k→£606k at 10y) and contradicted the tiles.
+  // Now: assets grow (forecast 1.04^y aggregate; plan/historical NW-derived
+  // factor), liabilities amortise through amortise(), and hero NW is DERIVED as
+  // Assets − Liabilities so the strip ties out by construction at every horizon.
+  const _heroProjYears = projection?.years ?? 0
+  const _heroIsTargetMode = projection?.source === 'historical'
+    || projection?.source === 'plan' || projection?.source === 'plan-25x'
+  // Asset growth factor.
+  const _heroAssetFactor = (() => {
+    if (_heroProjYears === 0) return 1
     const baseNW = _heroBaseAssets - _heroBaseLiabilities
-    if (baseNW !== 0 && (projection?.source === 'historical' || projection?.source === 'plan' || projection?.source === 'plan-25x')) {
-      return (projection?.value ?? baseNW) / baseNW
-    }
-    // Default: same 1.04^years compound used by netWorthAtYears()
-    return Math.pow(1.04, yrs)
+    if (baseNW !== 0 && _heroIsTargetMode) return (projection?.value ?? baseNW) / baseNW
+    return Math.pow(1.04, _heroProjYears)   // forecast: aggregate compound
   })()
-  const heroTotalAssets      = Math.round(_heroBaseAssets      * _heroGrowthFactor)
-  const heroTotalLiabilities = Math.round(_heroBaseLiabilities * _heroGrowthFactor)
+  const heroTotalAssets = Math.round(_heroBaseAssets * _heroAssetFactor)
+  // Liability projection: amortise each captured debt to the horizon (same maths
+  // as the tiles). Plan/historical keep the NW-derived factor so the target /
+  // historical balance-sheet identity is preserved. Today (years≤0) = base.
+  const heroTotalLiabilities = (() => {
+    if (_heroProjYears <= 0) return Math.round(_heroBaseLiabilities)
+    if (_heroIsTargetMode) return Math.round(_heroBaseLiabilities * _heroAssetFactor)
+    const months = Math.round(_heroProjYears * 12)
+    const liab = entity?.liabilities || {}
+    const debts = []
+    const m = liab.mortgage
+    if (m && +m.outstanding > 0) debts.push({
+      balance: +m.outstanding,
+      apr: m.rate != null ? +m.rate * 100 : 0,
+      monthly: +(m.monthlyPayment ?? m.monthly_payment ?? 0) || 0,
+    })
+    ;(liab.otherLoans || []).forEach(l => {
+      const bal = +(l.outstanding || l.outstanding_balance || 0)
+      if (!bal) return
+      const aprRaw = +(l.apr || l.interest_rate || l.rate || 0)
+      debts.push({
+        balance: bal,
+        apr: aprRaw > 0 ? aprRaw * 100 : 0,
+        monthly: +(l.monthlyPayment ?? l.monthly_payment ?? l.repayment_from_salary_monthly ?? 0) || 0,
+      })
+    })
+    const projected = debts.reduce((s, d) => {
+      const series = amortise(d.balance, d.apr, d.monthly).forward(months + 1)
+      return s + (series[months] ?? d.balance)
+    }, 0)
+    // Any selector-only residual we can't enumerate (e.g. property[].mortgage_-
+    // outstanding) is held FLAT — never grown — so we don't understate debt.
+    const enumeratedNow = debts.reduce((s, d) => s + d.balance, 0)
+    const residual = Math.max(0, _heroBaseLiabilities - enumeratedNow)
+    return Math.round(projected + residual)
+  })()
+  // Hero NW derived from the (correctly projected) parts — Gate-2 ties by build.
+  const heroNetWorth = heroTotalAssets - heroTotalLiabilities
 
   // Plan staleness
   const stalePlans = []
@@ -3715,7 +3751,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           surface at the top of MyMoney. */}
       <FinancesHeroCard
         entity={entity}
-        netWorth={projection?.value ?? nw}
+        netWorth={heroNetWorth}
         totalAssets={heroTotalAssets}
         totalLiabilities={heroTotalLiabilities}
         windowLabel={projection?.windowLabel}
@@ -4258,7 +4294,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
               fallback at the AllowanceTracker section. */}
           <div id="mm-insurance" />
           <TileGrid
-            netWorth={projection.value}
+            netWorth={isProjected ? heroNetWorth : nw}
             entity={entity}
             projection={isProjected ? {
               years: projection.years,

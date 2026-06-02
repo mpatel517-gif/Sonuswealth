@@ -1136,6 +1136,15 @@ function formatPlanTarget(row) {
   return ''
 }
 
+// F6 (2026-06-02): plan types whose goal-seek maps to a metric the solver
+// actually supports (SUPPORTED_METRICS in GoalSeek: wealthScore/riskScore/
+// netWorth/iht). The other plan types (cashflow/debt/gift/protection/tax/
+// custom) have no real solver path yet, so the per-plan "Edit · Goal-seek"
+// button is gated OFF rather than routed to a dead "coming soon" panel. The
+// dropdown was hardened the same way (P1-23); the row Edit button had re-opened
+// the §9 affordance-pretends hole — this closes it.
+const PLAN_GOALSEEK_METRIC = { retirement: 'netWorth', estate: 'iht' }
+
 function PlanRow({ row, isLast, onEditGoalSeek }) {
   const { pt, plan, staleness, exists } = row
   const [open, setOpen] = useState(false)
@@ -1192,23 +1201,31 @@ function PlanRow({ row, isLast, onEditGoalSeek }) {
           {staleness?.severity && staleness.severity !== 'none' && (
             <div><b>Staleness:</b> {staleness.severity} — {staleness.reason}</div>
           )}
-          {/* HIGH 5.3 — per-plan interactive entry per spec §PLAN-ANCHOR-TL §E mode 3 */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onEditGoalSeek?.(pt.id)
-            }}
-            className="sw-press"
-            style={{
-              marginTop: 8, padding: '6px 12px', borderRadius: 'var(--r-pill)',
-              fontSize: 11, fontWeight: 700,
-              border: '1px solid var(--c-acc)',
-              background: 'var(--c-acc-bg)', color: 'var(--c-acc)',
-              cursor: 'pointer',
-            }}
-          >
-            Edit · Goal-seek
-          </button>
+          {/* HIGH 5.3 — per-plan interactive entry per spec §PLAN-ANCHOR-TL §E mode 3.
+              F6: only shown for plan types with a real solver metric; others get
+              no dead button (the goal-seek for them genuinely isn't built). */}
+          {PLAN_GOALSEEK_METRIC[pt.id] ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEditGoalSeek?.(PLAN_GOALSEEK_METRIC[pt.id])
+              }}
+              className="sw-press"
+              style={{
+                marginTop: 8, padding: '6px 12px', borderRadius: 'var(--r-pill)',
+                fontSize: 11, fontWeight: 700,
+                border: '1px solid var(--c-acc)',
+                background: 'var(--c-acc-bg)', color: 'var(--c-acc)',
+                cursor: 'pointer',
+              }}
+            >
+              Edit · Goal-seek
+            </button>
+          ) : (
+            <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>
+              Goal-seek for this plan type isn’t available yet.
+            </div>
+          )}
         </div>
       )}
     </div>

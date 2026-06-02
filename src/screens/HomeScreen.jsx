@@ -823,37 +823,38 @@ function PlanProgressStrip({ entity, onNav }) {
   let pct = 0
   let statusLabel = 'Not started'
   let statusColor = 'var(--c-text3)'
+  let progressKind = 'none'   // 'money' | 'time'
 
-  if (targetDate) {
+  // Prefer MONEY progress (how far toward your £ number). Calendar-time-elapsed
+  // is a weak proxy and was shown FIRST under a "Plan progress" header, so a
+  // user read e.g. "47%" as "47% of the way to my number" when it actually
+  // meant "47% of the timeline has passed" (audit 2026-06-02). Money wins;
+  // time-elapsed is only a fallback and is now labelled as such.
+  const planCurrent = plan.progress?.current ?? plan.current ?? safe(() => netWorth(entity), 0)
+  if (targetValue > 0) {
+    pct = Math.min(100, Math.max(0, Math.round((planCurrent / targetValue) * 100)))
+    const onTrack = plan.progress?.onTrack ?? plan.onTrack ?? null
+    progressKind = 'money'
+    statusLabel = drawdownStarted ? 'In progress' : onTrack === false ? 'Behind plan' : onTrack ? 'On course' : 'Saving'
+    statusColor = onTrack === false ? 'var(--c-acc3)' : 'var(--c-acc)'
+  } else if (targetDate) {
     const deadline  = new Date(targetDate)
     const created   = plan.createdAt ? new Date(plan.createdAt) : new Date(Date.now() - 86_400_000 * 365)
     const totalSpan = deadline - created
     const elapsed   = Date.now() - created
-    const timeProgress = totalSpan > 0
-      ? Math.min(100, Math.max(0, Math.round((elapsed / totalSpan) * 100)))
-      : 0
-    if (drawdownStarted) {
-      pct = timeProgress
-      statusLabel = 'In progress'
-      statusColor = 'var(--c-acc)'
-    } else {
-      pct = 0
-      statusLabel = 'Action required'
-      statusColor = 'var(--c-acc3)'
-    }
-  } else if (targetValue > 0) {
-    const current = plan.progress?.current ?? plan.current ?? 0
-    pct = Math.min(100, Math.round((current / targetValue) * 100))
-    const onTrack = plan.progress?.onTrack ?? plan.onTrack ?? false
-    statusLabel = onTrack ? 'On course' : 'Behind plan'
-    statusColor = onTrack ? 'var(--c-acc)' : 'var(--c-acc3)'
+    pct = totalSpan > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / totalSpan) * 100))) : 0
+    progressKind = 'time'
+    statusLabel = drawdownStarted ? 'In progress' : 'Timeline'
+    statusColor = 'var(--c-text3)'
   }
 
   const daysLeft = targetDate
     ? Math.max(0, Math.ceil((new Date(targetDate) - new Date()) / 86_400_000))
     : null
 
-  const barColor = drawdownStarted || (!targetDate && pct > 0) ? 'var(--c-acc)' : 'var(--c-acc3)'
+  const barColor = progressKind === 'time' ? 'var(--c-text3)'
+    : statusLabel === 'Behind plan' ? 'var(--c-acc3)'
+    : 'var(--c-acc)'
 
   return (
     <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>
@@ -877,13 +878,11 @@ function PlanProgressStrip({ entity, onNav }) {
         <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 100, transition: 'width 0.6s ease' }} />
       </div>
       <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 6 }}>
-        {targetDate && !drawdownStarted
-          ? `Drawdown not yet started — ${daysLeft} days until deadline`
-          : targetDate && drawdownStarted
-            ? `Drawdown active · ${daysLeft} days to deadline`
-            : targetValue > 0
-              ? <><strong style={{ color: 'var(--c-text)' }}>{pct}%</strong> · {fmt(plan.progress?.current ?? 0)} of {fmt(targetValue)}</>
-              : null
+        {progressKind === 'money'
+          ? <><strong style={{ color: 'var(--c-text)' }}>{pct}%</strong> · {fmt(planCurrent)} of {fmt(targetValue)}{daysLeft != null ? ` · ${daysLeft} days left` : ''}</>
+          : progressKind === 'time'
+            ? <><strong style={{ color: 'var(--c-text)' }}>{pct}%</strong> of your timeline elapsed{daysLeft != null ? ` · ${daysLeft} days to deadline` : ''} · set a target amount to track savings</>
+            : null
         }
       </div>
     </div>

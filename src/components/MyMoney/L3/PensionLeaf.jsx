@@ -89,7 +89,7 @@ export function PensionLeaf({ pot, entity, pots = [], personaId, onClose, onHome
           <div className="sw-eyebrow">{isDB ? 'GUARANTEED INCOME SCHEME' : 'VALUE TODAY'}</div>
           {isDB ? (
             <div style={{ fontSize: 'var(--fs-hero,34px)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-              {guaranteedIncome > 0 ? `${fmt(guaranteedIncome)}/yr` : cetv > 0 ? `${fmt(cetv)} CETV` : 'Income not yet captured'}
+              {guaranteedIncome > 0 ? `${fmt(guaranteedIncome)}/yr` : cetv > 0 ? `${fmt(cetv)} transfer value` : 'Income not yet captured'}
             </div>
           ) : (
             <div style={{ fontSize: 'var(--fs-hero,34px)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(value)}</div>

@@ -469,7 +469,7 @@ function rowsForGIA(entity) {
   // accounts here (4 accounts, £605k). These are not inside a.investments[].
   for (const inv of (a.gia || [])) {
     out.push({
-      id: inv.id || inv.taxonomy_id || inv.name, label: inv.name || 'GIA',
+      id: inv.id || inv.taxonomy_id || inv.name, label: inv.name || 'General investment account',
       value: +(inv.value || inv.balance_gbp || inv.balance || 0) || 0,
       sub: inv.provider || inv.subtype || '',
       wrapper: 'GIA',
@@ -495,7 +495,7 @@ function rowsForGIA(entity) {
   }
   for (const inv of specItems) {
     out.push({
-      id: inv.id || inv.name, label: inv.name || 'GIA',
+      id: inv.id || inv.name, label: inv.name || 'General investment account',
       value: +(inv.balance_gbp ?? inv.balance ?? 0) || 0,
       sub: inv.provider || '',
       wrapper: 'GIA',

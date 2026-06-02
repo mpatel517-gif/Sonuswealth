@@ -163,6 +163,19 @@ console.log('\n── methodology transparency (show the working to the user) �
   log(/illustrative|not a forecast/i.test(m.note), 'FCA framing on the methodology note')
 }
 
+console.log('\n── FCA compliance copy (audit RED fixes) ──')
+{
+  const r = solveDecumulation({ entity: BRUCE, goalSpec: goalSpec(BRUCE), opts: { now: NOW, iht2027: IHT2027 } })
+  const names = r.rankedPaths.map(p => p.name)
+  log(!names.some(n => /^(Draw|Spend|Use|Take)\b/i.test(n)), `path names are neutral, no imperatives (${names[0]})`)
+  log(!names.some(n => /\b(optimal|best|recommend)\b/i.test(n)), 'no path name implies "optimal/best/recommended"')
+  const rats = r.rankedPaths.flatMap(p => p.rationale).join(' ')
+  log(!/you should|drawing it down sooner generally reduces this|advisers generally line up/i.test(rats), 'rationale carries no directional steer / "advisers generally line up" framing')
+  log(/illustration of that method, not a recommendation/i.test(rats), 'rationale frames itself as illustration, not recommendation')
+  log(r.labels && /not "the best path for you"/i.test(r.labels.ranking) && /not a probability/i.test(r.labels.resilience), 'UI labels instruct against "best path" + "probability" framing')
+  log(r.coverage.unknowns.some(u => /single person/i.test(u)) && r.coverage.unknowns.some(u => /not a probability/i.test(u)), 'coverage surfaces single-person + resilience-not-probability caveats')
+}
+
 console.log('\n── coverage: honest degradation ──')
 {
   const sparse = solveDecumulation({ entity: { age: 70, assets: {} }, goalSpec: goalSpec({ age: 70 }), opts: { now: NOW } })

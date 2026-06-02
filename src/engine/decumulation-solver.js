@@ -265,24 +265,27 @@ export function generateCandidatePaths(ctx, goalSpec, opts = {}) {
   const deathYear = (opts.now ? opts.now.getFullYear() : 2026) + (ctx.horizonAge - ctx.age)
   const post2027 = deathYear >= iht2027.getFullYear()
 
+  // Neutral, descriptive names (no imperatives like "Draw…"/"Spend…", no
+  // "preserve" editorialising) — these are sequences to compare, not steers.
+  // (Compliance: avoids implying one course is suitable-for-you.)
   const paths = [
-    { id: 'gia-first', name: 'Spend taxable first', method: 'gia_first', order: ['gia', 'isa', 'pension', 'cash'] },
-    { id: 'isa-first', name: 'Spend ISA first (preserve pension)', method: 'isa_first', order: ['cash', 'isa', 'gia', 'pension'] },
-    { id: 'pension-first', name: 'Draw pension early', method: 'pension_first', order: ['pension', 'gia', 'isa', 'cash'] },
+    { id: 'gia-first', name: 'Taxable-accounts-first sequence', method: 'gia_first', order: ['gia', 'isa', 'pension', 'cash'] },
+    { id: 'isa-first', name: 'ISA-first sequence', method: 'isa_first', order: ['cash', 'isa', 'gia', 'pension'] },
+    { id: 'pension-first', name: 'Pension-first sequence', method: 'pension_first', order: ['pension', 'gia', 'isa', 'cash'] },
   ]
-  // Goal-tuned order.
+  // Goal-weighted order.
   let tunedOrder, tunedName
   if (primary === 'legacy' || primary === 'min_lifetime_tax') {
     tunedOrder = post2027
       ? ['pension', 'gia', 'cash', 'isa']   // shrink the now-taxable pension; keep ISA transfer
       : ['gia', 'cash', 'isa', 'pension']   // pre-2027 pension is IHT-free → keep it last
-    tunedName = post2027 ? 'IHT-tuned: draw pension before 2027 bite' : 'IHT-tuned: preserve pension (pre-2027)'
+    tunedName = post2027 ? 'IHT-weighted sequence (pension before Apr 2027)' : 'IHT-weighted sequence (pension preserved, pre-2027)'
   } else if (primary === 'income_floor' || primary === 'max_lifetime_spend') {
     tunedOrder = ['cash', 'gia', 'isa', 'pension'] // cash buffer, keep tax-advantaged pots compounding
-    tunedName = 'Income-tuned: cash buffer, pension last'
+    tunedName = 'Income-weighted sequence (cash buffer, pension last)'
   } else {
     tunedOrder = ['gia', 'isa', 'cash', 'pension']
-    tunedName = 'Balanced order'
+    tunedName = 'Balanced sequence'
   }
   paths.push({ id: 'goal-tuned', name: tunedName, method: 'goal_tuned', order: tunedOrder, tuned: true })
   return paths
@@ -386,29 +389,42 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
   })
 
   return {
+    // CONTRACT for UI consumers (compliance): `rank` is a sort by the user's
+    // stated priorities, NOT a verdict. Label rank-1 as "ranked highest under
+    // your priorities (illustrative)" — never "optimal", "best", or
+    // "recommended". Present paths as peers to compare, not winner+also-rans.
     rankedPaths: rankedPaths.map(({ path, sim, ...rest }) => rest), // strip internals from public shape
     network: buildNetwork(ctx, rankedPaths),
     perGoal,
     coverage: coverageSurface(ctx, ledger, []),
     methodology: buildMethodology(ctx, ledger, goalSpec),
     ledger,
+    labels: {
+      ranking: 'Ranked by your stated priorities — illustrative, not "the best path for you".',
+      resilience: 'Funding resilience: a deterministic illustration under your assumptions, not a probability.',
+    },
     binding: { primaryGoal: goalSpec?.primary?.type || null, lexicographicOrder: (goalSpec?.goals || []).filter(g => !g.alwaysOn).map(g => g.type) },
     disclaimer: FCA_DISCLAIMER,
   }
 }
 
+// Rationale = facts about the rules + what THIS sequence does, framed as an
+// illustration, never a steer about the user's own pension. (Compliance: the
+// swap test — replace "your pension / draw it down" with "an undrawn pension /
+// under the rules" and it must still read as a fact, not advice.)
 function buildRationale(r, ctx, ledger, goalSpec) {
   const steps = []
   const first = r.path.order.find(p => ctx.pots[p] > 0)
-  steps.push(`Advisers generally line up withdrawals to a goal — here, ${goalSpec?.primary?.type?.replace(/_/g, ' ') || 'your priority'} — drawing ${first} first under this path.`)
+  const goalLabel = goalSpec?.primary?.type?.replace(/_/g, ' ') || 'your top priority'
+  steps.push(`This sequence draws ${first} first. A goals-based method orders withdrawals to serve your top stated priority (${goalLabel}) before lower ones — this is one illustration of that method, not a recommendation to act.`)
   if (r.path.method.includes('pension') && r.sim.pensionInEstate) {
-    steps.push('From 6 April 2027 unused pensions count toward inheritance tax, so drawing the pension during life can reduce the estate.')
+    steps.push('Under the rules, from 6 April 2027 an undrawn pension counts toward inheritance tax; a pension drawn during life is no longer part of the estate.')
   }
   if (r.sim.pensionDeathIncomeTax > 0) {
-    steps.push(`On these assumptions ~£${Math.round(r.sim.pensionRemainingAtDeath / 1000)}k of pension is left at death (age ${ctx.horizonAge}, after 75): it is taxed for inheritance AND the beneficiary pays income tax — a combined hit of roughly £${Math.round(r.sim.totalDeathTax / 1000)}k. Drawing it down sooner generally reduces this.`)
+    steps.push(`On these assumptions ~£${Math.round(r.sim.pensionRemainingAtDeath / 1000)}k of pension would remain at age ${ctx.horizonAge}. Under the rules, an unused pension inherited after age 75 is taxed for inheritance AND the beneficiary pays income tax on it — here roughly £${Math.round(r.sim.totalDeathTax / 1000)}k combined. The more of a pension is drawn during life, the less is exposed to that combined charge — a property of the rules, not a suggestion about your pension.`)
   }
   if (ledger.notes?.length) steps.push(...ledger.notes)
-  if (!r.sim.survived) steps.push(`On these assumptions the plan funds to age ${r.sim.depletedAtAge} before the pots run low — a flag, not a forecast.`)
+  if (!r.sim.survived) steps.push(`On these assumptions the liquid pots fund spending to age ${r.sim.depletedAtAge} before running low — a flag to review your assumptions, not a forecast. Property is not counted as income here.`)
   return steps
 }
 
@@ -465,6 +481,8 @@ function buildMethodology(ctx, ledger, goalSpec) {
 function coverageSurface(ctx, ledger, unknowns) {
   const extra = []
   if (ctx?.property > 0) extra.push(`£${Math.round(ctx.property / 1000)}k of property is NOT modelled as an income source (downsizing / equity release / sale + property CGT are excluded) — runway shown is from liquid pots only.`)
+  extra.push('Assumes a single person — for couples, transfers between spouses are usually inheritance-tax-free, so the death-tax figures would differ. Couples are not yet modelled.')
+  extra.push('The resilience score is a deterministic illustration under these assumptions, NOT a probability of success.')
   return {
     household: 'single', // couples handled in a later pass; spousal IHT exemption not yet applied
     pensionKinds: ctx.flags.hasDB ? ['DB (income, not a pot)', 'DC'] : ['DC'],

@@ -1,28 +1,27 @@
-name: Sync UK Tax Legislation
+name: Sync UK Tax Legislation [DISABLED]
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DISABLED 2026-06-02. scripts/sync-legislation.js is a NON-FUNCTIONAL STUB:
+# it makes no network call (the "live legislation feed" is a hardcoded 5-key
+# object), its anomaly gate is inert, and it writes 5 dead snake_case keys plus a
+# cosmetic re-encode to UK-2026.1.1.json. It opened auto/tax-sync-* PRs that, off
+# a stale base, also regressed the Sonuswealth brand to Caelixa. Do NOT re-enable
+# until sync-legislation.js genuinely fetches GOV.UK/HMRC, writes the real bundle
+# in the _buildTAX key shapes, and (if wanted) builds per-year/mid-year bundles.
+# Schedule + push triggers removed; manual-only so it can't run on a timer.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
-  # Run nightly at 02:00 UTC (3am UK winter, 2am UK summer)
-  # Distinct from update-rules-uk.yml (08:00 UTC) — staggered to avoid API rate limits
-  schedule:
-    - cron: '0 2 * * *'
-
-  # Manual trigger
+  # Manual trigger ONLY (no schedule) — see DISABLED note above.
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Dry run only (report changes, no writes)'
         required: false
-        default: 'false'
+        default: 'true'
       anomaly_threshold:
         description: 'Anomaly detection threshold (decimal, e.g. 0.10 for 10%)'
         required: false
         default: '0.10'
-
-  # Re-run if the sync script itself changes
-  push:
-    paths:
-      - 'scripts/sync-legislation.js'
-      - 'src/rules/tax-2026.json'
 
 jobs:
   sync-legislation:

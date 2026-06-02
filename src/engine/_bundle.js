@@ -103,7 +103,13 @@ function _buildTAX(b) {
     taperedAATIThreshold:   b.pension?.taperedAATIThreshold    ?? 200000,        // TI gate (FA 2020)
     // taperedAAAdj (260000) + taperedAAFloor (10000) + statePensionFull
     // already populated above — DO NOT duplicate.
-    s455Rate:               b.corp?.s455Rate                   ?? 0.3375,        // CTA 2010 s455 — overdrawn DLA charge (from April 2022)
+    // CTA 2010 s455 — overdrawn DLA charge. Read the year-correct value from the
+    // bundle's canonical location (businessOwnerPersonal.directorsLoan.s455TaxRate:
+    // 32.5% pre-Apr-2022 · 33.75% 2022–2025 · 35.75% from Apr 2026, statutorily
+    // linked to the dividend upper rate, ITA 2007 s8). The old `b.corp?.s455Rate`
+    // path doesn't exist in any bundle, so the engine was silently using the 0.3375
+    // fallback for EVERY year (wrong for 2021/22 and 2026/27). (2026-06-02.)
+    s455Rate:               b.businessOwnerPersonal?.directorsLoan?.s455TaxRate ?? b.corp?.s455Rate ?? 0.3375,
 
     // IHT / Estate -------------------------------------------------------
     bprCombinedCap:         b.iht?.bprCombinedCap              ?? 2500000,       // FA 2026 — combined BPR+APR cap per individual

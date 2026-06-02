@@ -37,6 +37,13 @@
         "session": "s17a-3",
         "change": "Added structured statutoryResidenceTest and splitYearTreatment blocks to bundle.overseas. Previously stub-only (.note field). Source: HMRC RDR3 + Schedule 45 Finance Act 2013. Additive completion within UK-2026.1.1; no version bump.",
         "filenameRename": "UK-2026.1.1.json -> UK-master-2026.1.1.json (D-BUNDLE-FILENAME-1, 7 May 2026)"
+      },
+      "s455_fix_and_hmrc_reverify_2026-06-02": {
+        "date": "2026-06-02",
+        "session": "asset-taxonomy batch — independent HMRC re-verification",
+        "change": "businessOwnerPersonal.directorsLoan.s455TaxRate: 0.3375 -> 0.3575. S455 is statutorily auto-linked to the dividend upper rate (ITA 2007 s8); FA 2026 raised it to 35.75% for loans/benefits on or after 6 April 2026. The s17 dividend update set income.dividendHigherRate=0.3575 but missed the linked s455. ALSO fixed engine: src/engine/_bundle.js _buildTAX read a non-existent b.corp.s455Rate and fell back to the 0.3375 literal for ALL years; now reads businessOwnerPersonal.directorsLoan.s455TaxRate (year-correct: 32.5% 2021/22, 33.75% 2022-2025, 35.75% 2026+).",
+        "verification": "Independent re-check of ~18 headline figures x 6 tax years (2021/22-2026/27) + mid-year events vs gov.uk/HMRC/DWP previous-tax-years tables: 107/108 confirmed; this s455 rate was the ONLY correction. Full per-figure audit trail: 0-Active/historical-tax-verification-2026-06-02.md",
+        "source": "https://www.gov.uk/government/publications/income-tax-changes-to-tax-rates-for-property-savings-and-dividend-income ; CTM61505"
       }
     }
   },
@@ -756,8 +763,8 @@
       "note": "Off-payroll working rules \u2014 if caught by IR35, income treated as employment income. NI and income tax apply. UK-SE-05."
     },
     "directorsLoan": {
-      "s455TaxRate": 0.3375,
-      "s455Note": "Outstanding director's loan at year end \u2014 company pays S455 tax at 33.75%. Repayable if loan repaid within 9 months."
+      "s455TaxRate": 0.3575,
+      "s455Note": "Outstanding director's loan at year end \u2014 company pays S455 tax at 35.75% (raised from 33.75%, statutorily linked to the dividend upper rate from 6 April 2026). Repayable if loan repaid within 9 months."
     },
     "carriedInterest": {
       "effectiveFrom": "2026-04-06",

@@ -445,7 +445,7 @@ export const ASSET_TYPES = [
     decisions: ['review-iht'], match: ['intellectual-property', 'patent', 'trademark'],
     required: ['description', 'estimatedValue'], optional: [] }),
   A({ id: 'DLA', label: "Director's loan account", desc: 'Owed to / from your company', category: 'business', class: 'business-interest', icon: '📒', estate: 'in',
-    source: { id: 'H07', tax: 'Owed TO you: an asset in the estate · owed BY you: S455 charge (33.75%) on any balance outstanding 9 months after year-end (refunded on repayment), plus a benefit-in-kind if over £10k below the official rate' },
+    source: { id: 'H07', tax: 'Owed TO you: an asset in the estate · owed BY you: S455 charge (35.75% from April 2026) on any balance outstanding 9 months after year-end (refunded on repayment), plus a benefit-in-kind if over £10k below the official rate' },
     decisions: ['review-iht'], match: ['dla', 'directors-loan', 'director-loan'],
     required: ['companyName', 'balance', 'inCredit'], optional: [] }),
   // ── Share schemes ──

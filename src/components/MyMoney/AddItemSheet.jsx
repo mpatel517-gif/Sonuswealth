@@ -20,115 +20,43 @@ import { useState, useMemo } from 'react'
 import OwnerChips, { getHouseholdOwners } from './OwnerChips.jsx'
 import AccountsList from './AccountsList.jsx'
 import { liabilityAddItems } from '../../engine/liability-taxonomy.js'
+import { assetAddItems } from '../../engine/asset-taxonomy.js'
 
-// Item taxonomy — distilled from 3-Engine-mm-asset-taxonomy-v1_0.md per category.
-// Each item carries:
-//   id, label, desc, fields (with `required` array + `optional` array),
-//   source (the taxonomy ID + one-line tax position), and an explainerCode
-//   that links to a definition entry in Explainer.jsx if applicable.
+// Item taxonomy. The ASSET categories (pensions / investments / property /
+// business / cash / alternatives / protection) now read from the canonical
+// asset-taxonomy.js module — the full UK instrument spectrum (~115 types),
+// grouped into sub-classes the picker renders as headers (the same pattern
+// liabilities use). Before this, these categories inlined ~48 types — a subset
+// that couldn't even reproduce Mr T's own property mix (founder 2026-06-02:
+// "the asset categories for Mr T was not the entire Taxonomy"). income / gifts /
+// obligations stay inline (income/obligations have their own taxonomy; gifts is
+// the GIFT_RECORDED flow). Each item carries id, label, desc, source (canon ID
+// + one-line tax position), required[] + optional[], and class/classLabel/
+// classIcon for the grouped picker.
 const CAT_TAXONOMY = {
   pensions: {
     label: 'Pensions',
-    items: [
-      { id: 'SIPP',           label: 'SIPP',                 desc: 'Self-invested personal pension',
-        source: { id: 'A08', tax: 'Contributions tax-relieved at marginal rate · 25% PCLS (capped £268,275 LSA) · drawdown taxable · in estate from April 2027' },
-        required: ['provider', 'value'], optional: ['monthlyContribution', 'employerContribution', 'nominationDate'] },
-      { id: 'SSAS',           label: 'SSAS',                 desc: 'Small self-administered scheme (director)',
-        source: { id: 'A09', tax: 'Employer contributions corp-tax deductible · can lend to sponsoring employer (up to 50%) · in estate from April 2027' },
-        required: ['provider', 'value'], optional: ['monthlyContribution', 'employerContribution', 'loanToCompany'] },
-      { id: 'WORKPLACE_DC',   label: 'Workplace DC',         desc: 'Auto-enrolment / employer scheme',
-        source: { id: 'A03', tax: 'Net pay or salary sacrifice · in estate from April 2027 · MPAA on flexible withdrawal' },
-        required: ['provider', 'value'], optional: ['monthlyContribution', 'employerMatchPct'] },
-      { id: 'GPP',            label: 'GPP / Stakeholder',    desc: 'Group personal / stakeholder pension',
-        source: { id: 'A04', tax: 'Same tax treatment as workplace DC · in estate from April 2027' },
-        required: ['provider', 'value'], optional: ['monthlyContribution'] },
-      { id: 'DB',             label: 'DB (defined benefit)', desc: 'Final-salary scheme · CETV or annual',
-        source: { id: 'A12', tax: 'Income taxable as pension · outside estate (trust) · CETV counts against AA' },
-        required: ['scheme', 'projectedAnnual'], optional: ['cetv', 'accrualYears', 'normalRetirementAge'] },
-      { id: 'STATE',          label: 'State pension',        desc: 'Forecast from your NI record',
-        source: { id: 'A01', tax: 'Taxable as income via PAYE coding · 35 NI years for full · not in estate' },
-        required: ['weeklyAmount', 'startAge'], optional: ['niYearsAccrued'] },
-      { id: 'FAD',            label: 'FAD (drawdown)',       desc: 'Flexi-access drawdown account',
-        source: { id: 'B01', tax: 'PCLS up to LSA tax-free · drawdown income taxable · triggers MPAA on first withdrawal' },
-        required: ['provider', 'value'], optional: ['annualWithdrawal', 'pclsTakenSoFar'] },
-      { id: 'ANNUITY',        label: 'Annuity',              desc: 'Purchased income for life',
-        source: { id: 'B05', tax: 'Income taxed via PAYE · ceases on death unless guarantee/survivor pension' },
-        required: ['provider', 'annualIncome'], optional: ['guaranteePeriod', 'survivorPct'] },
-    ],
+    items: assetAddItems('pensions'),
   },
   investments: {
     label: 'Savings & Investments',
-    items: [
-      { id: 'ISA_SS',         label: 'Stocks & Shares ISA',  desc: '£20k annual allowance',                    fields: ['provider', 'value', 'ytdContribution'] },
-      { id: 'ISA_CASH',       label: 'Cash ISA',             desc: 'Counts toward the same £20k cap',          fields: ['provider', 'value', 'interestRate'] },
-      { id: 'LISA',           label: 'Lifetime ISA',         desc: 'First home or age-60 wrapper',             fields: ['provider', 'value'] },
-      { id: 'GIA',            label: 'GIA / general account',desc: 'Unwrapped — CGT applies',                  fields: ['provider', 'value', 'embeddedGain'] },
-      { id: 'EIS',            label: 'EIS',                  desc: 'Enterprise Investment Scheme',             fields: ['provider', 'value', 'yearPurchased'] },
-      { id: 'SEIS',           label: 'SEIS',                 desc: 'Seed EIS — higher relief',                 fields: ['provider', 'value', 'yearPurchased'] },
-      { id: 'VCT',            label: 'VCT',                  desc: 'Venture Capital Trust',                    fields: ['provider', 'value', 'yearPurchased'] },
-      { id: 'BOND_ON',        label: 'Onshore bond',         desc: 'UK life-assurance investment bond',        fields: ['provider', 'value', 'withdrawalPctUsed'] },
-      { id: 'BOND_OFF',       label: 'Offshore bond',        desc: 'Non-UK investment bond',                   fields: ['provider', 'value'] },
-    ],
+    items: assetAddItems('investments'),
   },
   property: {
     label: 'Property',
-    items: [
-      { id: 'RESIDENCE',      label: 'Main residence',       desc: 'PPR — your home',
-        source: { id: 'G01', tax: 'Full PPR relief on disposal if always main home · RNRB up to £175k if passes to direct descendants · in estate' },
-        required: ['address', 'value', 'purchaseDate', 'purchasePrice'],
-        optional: ['mortgageBalance', 'mortgageMonthly', 'mortgageRate', 'mortgageRateType', 'mortgageYears', 'ownership', 'ownershipShare'] },
-      { id: 'BTL',            label: 'Buy-to-let',           desc: 'Rental income property',
-        source: { id: 'G02', tax: 'CGT 18%/24% on disposal (60-day reporting) · S24 mortgage interest 20% tax-credit only · in estate · +5% SDLT on purchase' },
-        required: ['label', 'address', 'value', 'purchaseDate', 'purchasePrice', 'monthlyRent'],
-        optional: ['mortgageId', 'ownership', 'beneficialPct', 's24Position', 'lastValuationDate'] },
-      { id: 'HOLIDAY_LET',    label: 'Furnished holiday let',desc: 'FHL — different tax treatment',
-        source: { id: 'G04', tax: 'FHL status abolished April 2025 — now standard rental · trapped losses from prior FHL period' },
-        required: ['address', 'value', 'annualNetIncome'],
-        optional: ['fhlPreApr2025', 'mortgageBalance'] },
-      { id: 'COMMERCIAL',     label: 'Commercial',           desc: 'Office, retail, industrial',
-        source: { id: 'G07', tax: 'Full mortgage-interest deductibility · BPR possible if part of trading business · VAT option to tax' },
-        required: ['address', 'value'],
-        optional: ['monthlyRent', 'mortgageBalance', 'vatOption'] },
-      { id: 'LAND',           label: 'Land',                 desc: 'Bare land · agricultural',
-        source: { id: 'G09', tax: 'APR on agricultural value (2yr in-hand / 7yr let) · BPR on business value above ag value · combined £2.5m cap from April 2026' },
-        required: ['description', 'value'],
-        optional: ['acres', 'aprQualifying', 'underTenancy'] },
-    ],
+    items: assetAddItems('property'),
   },
   business: {
     label: 'Business Assets',
-    items: [
-      { id: 'PSC_EQUITY',     label: 'Ltd company equity',   desc: 'Your stake in a company you control',      fields: ['companyName', 'sharePct', 'estimatedValue'] },
-      { id: 'PARTNERSHIP',    label: 'Partnership stake',    desc: 'LLP / general partnership interest',       fields: ['name', 'sharePct', 'estimatedValue'] },
-      { id: 'EMI',            label: 'EMI options',          desc: 'Enterprise Management Incentive',          fields: ['employer', 'unvested', 'strike'] },
-      { id: 'RSU',            label: 'RSUs',                 desc: 'Restricted stock units',                   fields: ['employer', 'unvested', 'estimatedValue'] },
-      { id: 'SAYE',           label: 'SAYE',                 desc: 'Save-as-you-earn share option',            fields: ['employer', 'contributedTotal'] },
-      { id: 'BPR_AIM',        label: 'BPR-qualifying AIM',   desc: 'AIM portfolio for IHT relief',             fields: ['provider', 'value', 'qualifyingYears'] },
-      { id: 'DLA',            label: "Director's loan a/c",  desc: 'Owed to/from the company',                 fields: ['companyName', 'balance', 'inCredit'] },
-    ],
+    items: assetAddItems('business'),
   },
   protection: {
     label: 'Protection',
-    items: [
-      { id: 'LIFE',           label: 'Life cover',           desc: 'Death-benefit policy',                     fields: ['provider', 'coverAmount', 'inTrust'] },
-      { id: 'CI',             label: 'Critical illness',     desc: 'Lump-sum on diagnosis',                    fields: ['provider', 'coverAmount'] },
-      { id: 'IP',             label: 'Income protection',    desc: 'Monthly benefit if you can\'t work',       fields: ['provider', 'monthlyBenefit', 'deferralWeeks'] },
-      { id: 'PMI',            label: 'Private medical',      desc: 'Health insurance',                         fields: ['provider', 'annualPremium'] },
-      { id: 'RELEVANT_LIFE',  label: 'Relevant Life',        desc: 'Director life cover via company',          fields: ['provider', 'coverAmount'] },
-      { id: 'KEYPERSON',      label: 'Keyperson',            desc: 'Company-owned life cover on a key person', fields: ['provider', 'coverAmount'] },
-      { id: 'HOME_INS',       label: 'Home insurance',       desc: 'Buildings + contents',                     fields: ['provider', 'annualPremium'] },
-      { id: 'MOTOR',          label: 'Motor',                desc: 'Vehicle cover',                            fields: ['provider', 'annualPremium'] },
-      { id: 'PII',            label: 'Professional indemnity',desc: 'Business PI cover',                       fields: ['provider', 'coverAmount'] },
-    ],
+    items: assetAddItems('protection'),
   },
   cash: {
     label: 'Cash',
-    items: [
-      { id: 'CURRENT',        label: 'Current account',      desc: 'Day-to-day bank account',                  fields: ['bank', 'balance'] },
-      { id: 'SAVINGS',        label: 'Savings account',      desc: 'Easy-access or notice savings',            fields: ['bank', 'balance', 'interestRate'] },
-      { id: 'FIXED',          label: 'Fixed-term deposit',   desc: 'Locked-in fixed-rate savings',             fields: ['bank', 'balance', 'maturityDate'] },
-      { id: 'PREMIUM_BONDS',  label: 'Premium Bonds',        desc: 'NS&I — prize-draw return',                 fields: ['balance'] },
-    ],
+    items: assetAddItems('cash'),
   },
   liabilities: {
     label: 'Liabilities',
@@ -154,14 +82,7 @@ const CAT_TAXONOMY = {
   },
   alternatives: {
     label: 'Alternatives',
-    items: [
-      { id: 'CRYPTO',         label: 'Crypto',               desc: 'Tokens or coins',                          fields: ['asset', 'holdings', 'gbpValue'] },
-      { id: 'GOLD',           label: 'Gold / bullion',       desc: 'Physical metal',                           fields: ['ounces', 'gbpValue'] },
-      { id: 'ART',            label: 'Art',                  desc: 'Single works or collection',               fields: ['description', 'estimatedValue'] },
-      { id: 'WINE',           label: 'Fine wine',            desc: 'Collection or En Primeur',                 fields: ['platform', 'estimatedValue'] },
-      { id: 'PE',             label: 'Private equity',       desc: 'PE fund or co-invest',                     fields: ['fund', 'committed', 'currentValue'] },
-      { id: 'COLLECTIBLE',    label: 'Collectible',          desc: 'Watches, classic cars, etc',               fields: ['description', 'estimatedValue'] },
-    ],
+    items: assetAddItems('alternatives'),
   },
   obligations: {
     label: 'Obligations',
@@ -808,6 +729,17 @@ function prettyField(f) {
     role: 'Role (Director · Shareholder · Officer)',
     // v0.3 Phase 3 — gift fields
     to: 'Recipient (donee)', amount: 'Gift amount (£)', date: 'Gift date',
+    // Asset-taxonomy expansion 2026-06-02 — new sub-type fields
+    childName: 'Child’s name', country: 'Country', currency: 'Currency',
+    jurisdiction: 'Jurisdiction', noticeDays: 'Notice period (days)',
+    monthlyLimit: 'Monthly limit (£)', rooms: 'Rooms / lettable units',
+    hmoLicence: 'HMO licence held? (true/false)', residentialPct: 'Residential portion (%)',
+    pctSold: 'Percentage sold (%)', planningStatus: 'Planning status',
+    startDate: 'Start date', form: 'Form (coins · bars)',
+    multipleOfSalary: 'Multiple of salary (×)', rebuildCost: 'Rebuild cost (£)',
+    surrenderValue: 'Surrender value (£)', termEnd: 'Term ends (date)',
+    grantDate: 'Grant date', awardDate: 'Award date', vestDate: 'Vesting date',
+    tradingStatus: 'Trading or investment?', annualIncome: 'Annual income (£/yr)',
   }
   return map[f] || f
 }

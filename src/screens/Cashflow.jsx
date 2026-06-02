@@ -1226,8 +1226,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             margin: '0 0 4px',
           }}>
             <span style={{ color: 'var(--c-acc)' }}>●</span>
-            {viewMode === 'forecast' && 'Viewing projected figures — forward-modelled spend (coming soon).'}
-            {viewMode === 'plan'     && 'Viewing plan figures — committed plan vs actual variance (coming soon).'}
+            {viewMode === 'forecast' && "Showing today's figures — forward-modelled spend isn't on this tab yet (coming soon). See Timeline for projections."}
+            {viewMode === 'plan'     && "Showing today's figures — plan-vs-actual variance isn't on this tab yet (coming soon)."}
           </div>
         )}
 

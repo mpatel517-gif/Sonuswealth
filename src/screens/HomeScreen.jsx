@@ -2108,10 +2108,12 @@ export default function HomeScreen({
         }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>
-              {viewMode === 'forecast' ? '5-year projection' : 'Plan detail'} — coming in Phase 2
+              Headline figures still show today
             </div>
             <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
-              See your Timeline for projections available now
+              {viewMode === 'forecast'
+                ? 'The radar shows your projected shape; full figure projection is coming — see Timeline.'
+                : 'Plan detail is coming — see Timeline for projections available now.'}
             </div>
           </div>
           <button

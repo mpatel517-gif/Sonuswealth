@@ -122,6 +122,7 @@ import ProtectionDrillDown  from '../components/MyMoney/ProtectionDrillDown.jsx'
 import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx'
 import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
 import { classifyLiability } from '../engine/liability-taxonomy.js'
+import { assetLabel } from '../engine/asset-taxonomy.js'
 import DebtLeaf from '../components/MyMoney/DebtLeaf.jsx'
 import { amortise } from '../components/MyMoney/debtMath.js'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
@@ -681,6 +682,20 @@ function rowsForProtection(entity) {
     sub: 'Director-only — corporate-paid',
     wrapper: 'TRUST', tag: 'RLP',
   })
+  // Additional life/health policies keyed onto assets.protection by the canonical
+  // taxonomy router (decreasing term, whole-of-life, FIB, group life, short-term
+  // IP, MPPI, health cash, etc.) — so the tile counts them, not just the 4 core.
+  const _coreProtKeys = ['lifeInsurance', 'incomeProtection', 'criticalIllness', 'relevantLifePlan', 'pmi', 'keyPerson']
+  for (const [k, v] of Object.entries(lp)) {
+    if (_coreProtKeys.includes(k)) continue
+    if (!v || typeof v !== 'object' || !v.exists) continue
+    out.push({
+      id: k, label: assetLabel(v.policy_type || k),
+      value: +v.amount || ((+v.monthlyBenefit || 0) * 12) || 0,
+      sub: `${v.provider || ''}${v.premium ? ` · ${fmt(+v.premium)}/mo` : ''}`.trim(),
+      wrapper: v.inTrust ? 'TRUST' : null,
+    })
+  }
   for (const p of (entity.protection || [])) {
     out.push({
       id: p.id, label: p.product_name || p.type || 'Protection',

@@ -18,6 +18,7 @@ import DrillContextStub, { ClaimsPaidStub } from './DrillContextStub.jsx'
 import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { BRAND } from '../../config/brand.js'
 import { monthlyEssentials as getMonthlyEssentials } from '../../engine/selectors/index.js'
+import { assetLabel } from '../../engine/asset-taxonomy.js'
 
 function fmt(v) {
   const n = Math.round(+v || 0)
@@ -323,6 +324,26 @@ function ProtectionDrillDownInner({ entity, personaId, onBack, onHome }) {
                   onTap={() => setSelected({ asset: { ...pmi, ..._ctx, name: 'Private medical (PMI)', type: 'pmi', value: 0 }, category: 'protection', itemType: 'pmi' })} />
               </>
             )}
+            {/* Additional life & health policies beyond the 4 core types —
+                decreasing term, FIB, whole-of-life, group life, short-term IP,
+                MPPI, health cash plan, etc. These are keyed onto assets.protection
+                by the canonical taxonomy router (asset-taxonomy.js). Iterate any
+                other `exists` policy so a newly-added one is never invisible. */}
+            {Object.entries(p)
+              .filter(([k, v]) => v && typeof v === 'object' && v.exists &&
+                !['lifeInsurance', 'criticalIllness', 'incomeProtection', 'pmi', 'relevantLifePlan', 'keyPerson'].includes(k))
+              .map(([k, v]) => {
+                const label = assetLabel(v.policy_type || k)
+                const amount = +v.amount || ((+v.monthlyBenefit || 0) * 12)
+                return (
+                  <div key={k}>
+                    <div style={{ borderTop: '1px solid var(--c-sep)' }} />
+                    <PolicyRow title={label} exists amount={amount} premium={v.premium} provider={v.provider}
+                      inTrust={v.inTrust}
+                      onTap={() => setSelected({ asset: { ...v, ..._ctx, name: label, type: v.policy_type || k, value: amount }, category: 'protection', itemType: v.policy_type || k })} />
+                  </div>
+                )
+              })}
           </div>
         </Section>
 

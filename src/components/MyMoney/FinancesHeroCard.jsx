@@ -50,7 +50,9 @@ function countAccounts(entity) {
 }
 
 // ── Stat — a single label/value pair in the strip ────────────────────────────
-function Stat({ label, value, tone, tieout, tieoutRaw }) {
+// onTap (optional): makes the VALUE a button that drills to its source. Without
+// it the figure is a plain read (the left "Accounts" count stays non-tappable).
+function Stat({ label, value, tone, tieout, tieoutRaw, onTap }) {
   return (
     <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
       <span style={{
@@ -61,12 +63,20 @@ function Stat({ label, value, tone, tieout, tieoutRaw }) {
       <span
         data-tieout={tieout || undefined}
         data-tieout-raw={tieoutRaw != null ? String(tieoutRaw) : undefined}
+        onClick={onTap}
+        onKeyDown={onTap ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap() } } : undefined}
+        role={onTap ? 'button' : undefined}
+        tabIndex={onTap ? 0 : undefined}
+        title={onTap ? 'View breakdown' : undefined}
         style={{
         fontSize: 14, fontWeight: 800,
         fontVariantNumeric: 'tabular-nums', letterSpacing: -0.2,
         color: tone === 'good' ? 'var(--c-acc)'
               : tone === 'bad' ? 'var(--c-coral, #FF6F7D)'
               : 'var(--c-text)',
+        cursor: onTap ? 'pointer' : undefined,
+        textDecoration: onTap ? 'underline dotted color-mix(in srgb, currentColor 45%, transparent)' : undefined,
+        textUnderlineOffset: onTap ? 3 : undefined,
       }}>{value}</span>
     </div>
   )
@@ -163,6 +173,10 @@ export default function FinancesHeroCard({
   viewMode,
   historyMissing,
   onAddOrEdit,
+  // onStatTap(tieoutKey): drill a hero figure to its source. Wired on the
+  // balance variant in MyMoney → opens NetWorthDrill (assets + liabilities
+  // breakdown). Without it the figures are plain reads (back-compat).
+  onStatTap,
 }) {
   const cfg = VARIANTS[variant] || VARIANTS.balance
   const accounts = count != null ? count : countAccounts(entity)
@@ -239,6 +253,7 @@ export default function FinancesHeroCard({
                 tone={s.tone}
                 tieout={s.tieout}
                 tieoutRaw={s.tieoutRaw}
+                onTap={onStatTap && s.tieout ? () => onStatTap(s.tieout) : undefined}
               />
             </span>
           ))}

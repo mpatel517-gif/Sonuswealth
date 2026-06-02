@@ -3768,6 +3768,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         viewMode={viewMode}
         historyMissing={projection?.historyMissing}
         onAddOrEdit={() => setBucketOpen(true)}
+        onStatTap={() => setActiveDrill('networth')}
       />
       {/* Whole-tab fresh review 2026-05-26: TripleAnchor was rendered here with
           all three values hidden — producing an empty wrapper. Wealth + Risk

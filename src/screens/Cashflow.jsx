@@ -29,7 +29,7 @@ import {
   // Cashflow Health (§3B)
   cashflowHealth,
   // §A NOW
-  calcAllIncome, classifyIncomeType, monthlySurplus,
+  calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow,
   liquidityBuffer, recommendedSurplusAllocation,
   debtRatio,
   // §B TRAJECTORY
@@ -715,42 +715,50 @@ function HealthScoreDrillPanelInner({ entity, onClose }) {
 // This replaces the calendar-heatmap-as-signature mis-tag flagged by the
 // dataviz critique. The heatmap stays as a secondary depth strip.
 // ─────────────────────────────────────────────────────────────────────────────
-function CashflowMoneySankey({ entity, incomeAll, ms }) {
-  // Build sources from entity.income sub-fields (engine doesn't surface a
-  // per-source array on incomeAll for Bruce-style personas, so synthesize).
-  const inc = entity?.income || {}
-  const sources = [
-    { id: 'src:employment',     label: 'Employment',     value: +(inc.salary || inc.employment || 0) },
-    { id: 'src:rental',         label: 'Rental',         value: +(inc.rental || inc.rentalIncome || 0) },
-    { id: 'src:dividends',      label: 'Dividends',      value: +(inc.dividends || 0) },
-    { id: 'src:self',           label: 'Self-employment', value: +(inc.selfEmployed || 0) },
-    { id: 'src:interest',       label: 'Interest',       value: +(inc.savingsInterest || 0) },
-    { id: 'src:statepension',   label: 'State pension',  value: +(inc.statePension?.annual || 0) },
-    { id: 'src:drawdown',       label: 'Pension drawdown', value: +(entity?.drawdown || 0) },
-    { id: 'src:other',          label: 'Other',          value: +(inc.other || 0) },
-  ].filter(s => s.value > 0)
+function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
+  // Single source of truth: cashflowFlow (net-of-tax). All aggregates below come
+  // from it so the Sankey ties out to the reconciliation strip and to Home's
+  // surplus by construction (2026-06-02 correctness gate).
+  const f = flow || cashflowFlow(entity)
 
-  const gross = sources.reduce((a, b) => a + b.value, 0)
-    || +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
+  // Source nodes derived from the SAME income items that f.gross sums (grouped by
+  // type) — so Σ sources === f.gross exactly. Previously these were re-summed
+  // from entity.income sub-fields, which drifted from the engine total.
+  const SRC_LABELS = {
+    employment: 'Employment', 'self-employment': 'Self-employment',
+    dividends: 'Dividends', rental: 'Rental', 'savings-interest': 'Interest',
+    'state-pension': 'State pension', drawdown: 'Pension drawdown',
+    overseas: 'Overseas', other: 'Other',
+  }
+  const byLabel = {}
+  for (const it of (incomeAll?.items || [])) {
+    const lbl = SRC_LABELS[it.type] || 'Other'
+    byLabel[lbl] = (byLabel[lbl] || 0) + (+it.amount || 0)
+  }
+  const sources = Object.entries(byLabel)
+    .map(([label, value]) => ({ id: 'src:' + label.toLowerCase().replace(/\s+/g, '_'), label, value }))
+    .filter(s => s.value > 0)
 
+  const gross = f.gross
   if (!gross || sources.length === 0) {
     return null // honest hide when no income — no fake Sankey
   }
 
-  const taxAnn       = +(incomeAll?.tax_total_annual ?? incomeAll?.tax ?? 0)
-  const pensionMon   = +(entity?.assets?.sipp?.contribMonthly ?? entity?.pensionContribMonthly ?? 0)
-  const pensionAnn   = pensionMon * 12
-  const essentials   = +(ms?.essentials_annual ?? (ms?.essential != null ? ms.essential * 12 : 0))
-  const debtService  = +(ms?.debt_service_annual ?? (ms?.debtService != null ? ms.debtService * 12 : 0))
-  const surplus      = gross - taxAnn - pensionAnn - essentials - debtService
+  const taxAnn       = f.taxAndNI
+  const pensionAnn   = f.committed
+  const essentials   = f.essentials
+  const debtService  = f.debtService
+  const protection   = f.protection
+  const surplus      = f.surplusAnnual
 
   // Sankey nodes: sources → stages → sink
-  // Stages: tax, pension, essentials, debt — only render those with positive flow
+  // Stages: tax, pension, essentials, debt, protection — only render those with positive flow
   const stageNodes = []
   if (taxAnn > 0)       stageNodes.push({ id: 'stage:tax',        label: 'Tax & NI',       type: 'stage' })
   if (pensionAnn > 0)   stageNodes.push({ id: 'stage:pension',    label: 'Pension',        type: 'stage' })
   if (essentials > 0)   stageNodes.push({ id: 'stage:essentials', label: 'Essentials',     type: 'stage' })
   if (debtService > 0)  stageNodes.push({ id: 'stage:debt',       label: 'Debt service',   type: 'stage' })
+  if (protection > 0)   stageNodes.push({ id: 'stage:protection', label: 'Protection',     type: 'stage' })
 
   const sinkLabel = surplus >= 0 ? 'Net surplus' : 'Net deficit'
   const sinkId = 'sink:net'
@@ -784,6 +792,7 @@ function CashflowMoneySankey({ entity, incomeAll, ms }) {
     pensionAnn > 0   && { id: 'stage:pension',    value: pensionAnn,  label: 'Pension' },
     essentials > 0   && { id: 'stage:essentials', value: essentials,  label: 'Essentials' },
     debtService > 0  && { id: 'stage:debt',       value: debtService, label: 'Debt service' },
+    protection > 0   && { id: 'stage:protection', value: protection,  label: 'Protection' },
   ].filter(Boolean)
 
   // Effective inflow set: real sources + (virtual drawdown source when in deficit).
@@ -848,6 +857,8 @@ function CashflowMoneySankey({ entity, incomeAll, ms }) {
           <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(essentials/1000)}k</strong> essentials</span>
           <span style={{ color: 'var(--c-text3)' }}>−</span>
           <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(debtService/1000)}k</strong> debt</span>
+          {protection > 0 && <span style={{ color: 'var(--c-text3)' }}>−</span>}
+          {protection > 0 && <span><strong style={{ color: 'var(--c-text)' }}>£{Math.round(protection/1000)}k</strong> protection</span>}
           <span style={{ color: 'var(--c-text3)' }}>=</span>
           <span><strong style={{ color: surplus >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)' }}>
             {surplus < 0 ? '−' : ''}£{Math.round(Math.abs(surplus)/1000)}k
@@ -1041,6 +1052,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     [entity, bv, cv]
   )
   const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity, bv, cv])
+  // Canonical net-of-tax cashflow — single source for Sankey + waterfall so they
+  // cannot diverge and tax & NI are real, never £0 (2026-06-02 correctness gate).
+  const flow = useMemo(() => cashflowFlow(entity, CMA_BUNDLE), [entity, bv, cv])
   const lb = useMemo(() => liquidityBuffer(entity), [entity, bv, cv])
   const surplusAlloc = useMemo(
     () => recommendedSurplusAllocation(entity, ms.surplus),
@@ -1256,6 +1270,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
               entity={entity}
               incomeAll={incomeAll}
               ms={ms}
+              flow={flow}
             />
 
             {/* Phase 2 Batch C — new waterfall replaces local version.
@@ -1265,7 +1280,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 arithmetic-computed from the deductions so the visible total
                 always reconciles. Empty state when engine returns no income. */}
             <div style={{ position: 'relative' }}>
-              <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} accountantMode={accountantMode} />
+              <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
               {/* L3 drill affordance — tap to open SurplusDrillPanel */}
               <button
                 onClick={() => setDrillView('surplus')}
@@ -1282,9 +1297,12 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
               </button>
             </div>
             <EssentialsDiscretionarySplit ms={ms} />
-            <BillCalendar entity={entity} />
+            {/* Bill calendar removed 2026-06-02 — founder direction: scheduled
+                outflows / calendar live on Timeline (§C Action Calendar), not
+                Cashflow. The BillCalendar component is retained below for reuse
+                by Timeline but no longer rendered here. */}
             <SubscriptionTracker entity={entity} />
-            <SurplusAllocator surplus={ms.surplus} alloc={surplusAlloc} />
+            <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} />
             <LiquidityBufferCard lb={lb} />
             {/* CAT-03: Domain O split — salary / dividends / rental /
                 drawdown / interest / pension. Sits ABOVE the tax-band
@@ -1363,13 +1381,24 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
               const p10    = buildSeries(pos.p10_terminal_value)
               const p90    = buildSeries(pos.p90_terminal_value)
               return (
-                <PoSChartV2
-                  probability={pos.pos ?? null}
-                  median={median}
-                  bands={p10 && p90 ? { p10, p90 } : null}
-                  guardrail={null}
-                  horizonYears={horizon}
-                />
+                <>
+                  <PoSChartV2
+                    probability={pos.pos ?? null}
+                    median={median}
+                    bands={p10 && p90 ? { p10, p90 } : null}
+                    guardrail={null}
+                    horizonYears={horizon}
+                  />
+                  {/* Honesty caption (2026-06-02): the band is an interpolated
+                      path to the engine's modelled {horizon}-year percentile
+                      end-points, NOT a separately simulated year-by-year curve.
+                      Per-year Monte Carlo percentiles land when §B is rebuilt
+                      (Cashflow redesign Phase 3). */}
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
+                    Shows the modelled range at year {horizon}. Intermediate years are
+                    interpolated to that outcome, not separately simulated.
+                  </div>
+                </>
               )
             })()}
             {/* B-2 (2026-05-27): SequenceStressVisV2 expected good_path /
@@ -1873,35 +1902,17 @@ function SectionDelimiter({ letter, title, subtitle, chipClass = 'sw-chip-mint' 
 // Wraps the V2 visual with engine-derived steps that arithmetic-sum:
 //   income − tax − pension − essentials − debt = surplus
 // No hardcoded fallbacks; renders empty state when income is missing.
-function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) {
-  // Engine-sourced — tolerate either canonical key or legacy alias.
-  const gross = +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
-  const taxAnn = +(incomeAll?.tax_total_annual ?? incomeAll?.tax ?? 0)
-  // Pension contributions: support array-shape (pensionContribMonthly) +
-  // object-shape (assets.sipp.contribMonthly). Engine doesn't yet surface
-  // a canonical figure so derive from persona; zero is honest.
-  const pensionMonthly =
-    +(entity?.assets?.sipp?.contribMonthly ??
-      entity?.pensionContribMonthly ?? 0)
-  const pensionAnn = pensionMonthly * 12
-  const essentialsAnn =
-    +(ms?.essentials_annual ??
-      (ms?.essential != null ? ms.essential * 12 : 0))
-  const debtAnn =
-    +(ms?.debt_service_annual ??
-      (ms?.debtService != null ? ms.debtService * 12 : 0))
-
-  // P1-15 (2026-05-28) — Protection premiums as a Cashflow line item.
-  // Reads entity.assets.protection.{lifeInsurance,criticalIllness,incomeProtection}.premium
-  // (monthly). Sums across policies, annualises. Zero when no cover declared.
-  // Persona-a (Bruce) has £185 + £230 + £0 = £415/mo → £4,980/yr.
-  const _prot = entity?.assets?.protection || {}
-  const protMonthly =
-    (+(_prot.lifeInsurance?.premium    || 0)) +
-    (+(_prot.criticalIllness?.premium  || 0)) +
-    (+(_prot.incomeProtection?.premium || 0)) +
-    (+(_prot.pmi?.premium              || 0))
-  const protAnn = protMonthly * 12
+function CashflowWaterfallReconciled({ entity, incomeAll, ms, flow, accountantMode }) {
+  // Single source of truth: canonical net-of-tax cashflowFlow. Every bar reads
+  // from it, so the waterfall ties out to the Sankey and to Home's surplus by
+  // construction, and Tax & NI are real (never £0) (2026-06-02 correctness gate).
+  const f = flow || cashflowFlow(entity)
+  const gross         = f.gross
+  const taxAnn        = f.taxAndNI
+  const pensionAnn    = f.committed     // pension + ISA contributions
+  const essentialsAnn = f.essentials
+  const debtAnn       = f.debtService
+  const protAnn       = f.protection
 
   // Empty state when engine returns no income — no magic numbers.
   if (!gross || gross <= 0) {
@@ -1924,10 +1935,9 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, accountantMode }) 
     )
   }
 
-  // Arithmetic-reconciled surplus — never trust engine ms.surplus to match
-  // the visible bars; recompute from the same numbers we're rendering.
-  // P1-15: protection premiums now subtracted.
-  const surplusAnn = gross - taxAnn - pensionAnn - essentialsAnn - debtAnn - protAnn
+  // Surplus comes straight from cashflowFlow (gross − tax − NI − contributions −
+  // essentials − debt − protection), so the visible bars sum to it exactly.
+  const surplusAnn = f.surplusAnnual
 
   // Build base steps; conditionally splice protection row when protAnn > 0
   // so personas with no cover (e.g. mrT-aged-out) don't see a £0 phantom row.
@@ -2151,9 +2161,12 @@ function SubscriptionTracker({ entity }) {
 }
 
 // ── §A.5 Surplus allocator (§4.8) — 8-priority list ─────────────────────
-function SurplusAllocator({ surplus, alloc }) {
+function SurplusAllocator({ surplus, deficit, alloc }) {
   const allocList = alloc || []
-  if (surplus <= 0) {
+  // Fire the deficit explainer only on a genuine deficit. monthlySurplus clamps
+  // surplus to >0 and routes the shortfall to .deficit, so the old `surplus <= 0`
+  // test mis-fired at exact break-even (2026-06-02).
+  if (+deficit > 0) {
     return (
       <div className="sw-card sw-lift" style={S.card}>
         <div style={S.cardHeader}>
@@ -2260,7 +2273,10 @@ function LiquidityBufferCard({ lb }) {
         marginTop: 'var(--space-md)',
       }}>
         <span className="sw-hero-md" style={{ color: c }}>
-          <Num value={lb.months} format="score" animate />
+          {/* One-decimal, matching the §3A banner + drill — format="score"
+              integer-rounded this to a different figure (5.7 → 6) and read as a
+              second liquidity number (2026-06-02 single-source fix). */}
+          {lb.months.toFixed(1)}
           <span style={{ fontSize: 14, fontWeight: 700, marginLeft: 4 }}>mo</span>
         </span>
         <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>

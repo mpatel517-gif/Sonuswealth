@@ -351,8 +351,18 @@ body {
     display: none !important;
   }
   .r-grid { grid-template-columns: 1fr 1fr 1fr; }
-  /* Ask Sonu pill clears the 240px sidebar at desktop (founder 2026-06-01). */
-  .sw-ask-pill { left: 256px; right: 24px; }
+  /* Ask Sonu pill: centre it over the content column, not the whole dashboard
+     area. The .screen column is max-width 960 centred AFTER the 240px sidebar,
+     so its centre sits +120px (half the sidebar) right of the viewport centre at
+     every width >=1024px. Spanning left:256/right:24 made the pill ~360px wider
+     than the cards it floats over (founder 2026-06-02: "so large and covers the
+     tabs" — persisted at desktop because the earlier fix only covered 768-1023). */
+  .sw-ask-pill {
+    left: 50%;
+    right: auto;
+    transform: translateX(calc(-50% + 120px));
+    width: min(680px, calc(100vw - 280px));
+  }
 }
 
 /* ── DESKTOP SIDEBAR (Phase 2 Batch B.5) ──────────────────────────────────

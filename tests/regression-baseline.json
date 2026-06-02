@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "capturedAt": "2026-06-02T12:30:53.462Z",
+    "capturedAt": "2026-06-02T19:39:31.394Z",
     "personaCount": 30,
     "yearCount": 6,
     "cellCount": 180,
@@ -14,7 +14,7 @@
       "fq": 86,
       "risk": 69,
       "netWorth": 2972782,
-      "snapshotHash": "d9f489ab"
+      "snapshotHash": "0d2ec614"
     },
     {
       "personaId": "persona-a",
@@ -22,7 +22,7 @@
       "fq": 91,
       "risk": 68,
       "netWorth": 3310356,
-      "snapshotHash": "6c87f8ae"
+      "snapshotHash": "7802687c"
     },
     {
       "personaId": "persona-a",
@@ -30,7 +30,7 @@
       "fq": 93,
       "risk": 68,
       "netWorth": 3798566,
-      "snapshotHash": "31e713ac"
+      "snapshotHash": "3497b553"
     },
     {
       "personaId": "persona-a",
@@ -38,7 +38,7 @@
       "fq": 66,
       "risk": 68,
       "netWorth": 3680491,
-      "snapshotHash": "afc4bbd9"
+      "snapshotHash": "2f153729"
     },
     {
       "personaId": "persona-a",
@@ -46,7 +46,7 @@
       "fq": 67,
       "risk": 68,
       "netWorth": 3781213,
-      "snapshotHash": "e815db74"
+      "snapshotHash": "e59ec1b8"
     },
     {
       "personaId": "persona-a",
@@ -54,7 +54,7 @@
       "fq": 67,
       "risk": 71,
       "netWorth": 3900000,
-      "snapshotHash": "12cacc7c"
+      "snapshotHash": "69b06196"
     },
     {
       "personaId": "persona-b",
@@ -62,7 +62,7 @@
       "fq": 60,
       "risk": 63,
       "netWorth": 974230,
-      "snapshotHash": "f45703e3"
+      "snapshotHash": "005ee43b"
     },
     {
       "personaId": "persona-b",
@@ -70,7 +70,7 @@
       "fq": 42,
       "risk": 60,
       "netWorth": 1035118,
-      "snapshotHash": "338a503b"
+      "snapshotHash": "403ed693"
     },
     {
       "personaId": "persona-b",
@@ -78,7 +78,7 @@
       "fq": 42,
       "risk": 63,
       "netWorth": 1141238,
-      "snapshotHash": "31dace75"
+      "snapshotHash": "7e52ad9b"
     },
     {
       "personaId": "persona-b",
@@ -86,7 +86,7 @@
       "fq": 42,
       "risk": 63,
       "netWorth": 1133279,
-      "snapshotHash": "a5ccaf7d"
+      "snapshotHash": "bfea4b7d"
     },
     {
       "personaId": "persona-b",
@@ -94,7 +94,7 @@
       "fq": 42,
       "risk": 63,
       "netWorth": 1162239,
-      "snapshotHash": "a91cb49f"
+      "snapshotHash": "1f426f0f"
     },
     {
       "personaId": "persona-b",
@@ -102,7 +102,7 @@
       "fq": 42,
       "risk": 62,
       "netWorth": 1195000,
-      "snapshotHash": "e1643070"
+      "snapshotHash": "e527d0f2"
     },
     {
       "personaId": "persona-c",
@@ -110,7 +110,7 @@
       "fq": 71,
       "risk": 78,
       "netWorth": 10436342,
-      "snapshotHash": "46592ecf"
+      "snapshotHash": "76b91385"
     },
     {
       "personaId": "persona-c",
@@ -118,7 +118,7 @@
       "fq": 70,
       "risk": 78,
       "netWorth": 10498119,
-      "snapshotHash": "557be6cb"
+      "snapshotHash": "49be93b5"
     },
     {
       "personaId": "persona-c",
@@ -126,7 +126,7 @@
       "fq": 75,
       "risk": 78,
       "netWorth": 10599014,
-      "snapshotHash": "2c5d94b9"
+      "snapshotHash": "3cd45740"
     },
     {
       "personaId": "persona-c",
@@ -134,7 +134,7 @@
       "fq": 75,
       "risk": 78,
       "netWorth": 10705885,
-      "snapshotHash": "02a4a1d8"
+      "snapshotHash": "cf4369ab"
     },
     {
       "personaId": "persona-c",
@@ -142,7 +142,7 @@
       "fq": 75,
       "risk": 78,
       "netWorth": 10809143,
-      "snapshotHash": "ae8fbdab"
+      "snapshotHash": "e939f30e"
     },
     {
       "personaId": "persona-c",
@@ -150,7 +150,7 @@
       "fq": 75,
       "risk": 78,
       "netWorth": 10919000,
-      "snapshotHash": "94ea0bd8"
+      "snapshotHash": "ef56d021"
     },
     {
       "personaId": "persona-d",
@@ -158,7 +158,7 @@
       "fq": 49,
       "risk": 43,
       "netWorth": 44452,
-      "snapshotHash": "b1a8986b"
+      "snapshotHash": "17e920f1"
     },
     {
       "personaId": "persona-d",
@@ -166,7 +166,7 @@
       "fq": 49,
       "risk": 43,
       "netWorth": 43214,
-      "snapshotHash": "859b94f8"
+      "snapshotHash": "0e7afbe3"
     },
     {
       "personaId": "persona-d",
@@ -174,7 +174,7 @@
       "fq": 49,
       "risk": 43,
       "netWorth": 45786,
-      "snapshotHash": "cf8ef44d"
+      "snapshotHash": "6234a0dc"
     },
     {
       "personaId": "persona-d",
@@ -182,7 +182,7 @@
       "fq": 49,
       "risk": 47,
       "netWorth": 48416,
-      "snapshotHash": "1cc03a9a"
+      "snapshotHash": "e88d3603"
     },
     {
       "personaId": "persona-d",
@@ -190,7 +190,7 @@
       "fq": 49,
       "risk": 47,
       "netWorth": 49988,
-      "snapshotHash": "eebbec6d"
+      "snapshotHash": "7f75eef0"
     },
     {
       "personaId": "persona-d",
@@ -198,7 +198,7 @@
       "fq": 49,
       "risk": 47,
       "netWorth": 51600,
-      "snapshotHash": "64639163"
+      "snapshotHash": "bc746fa0"
     },
     {
       "personaId": "persona-e",
@@ -206,7 +206,7 @@
       "fq": 100,
       "risk": 78,
       "netWorth": 4975223,
-      "snapshotHash": "bf3278b3"
+      "snapshotHash": "332ea4ad"
     },
     {
       "personaId": "persona-e",
@@ -214,7 +214,7 @@
       "fq": 100,
       "risk": 78,
       "netWorth": 5105995,
-      "snapshotHash": "8e8d3fbe"
+      "snapshotHash": "e773ea0e"
     },
     {
       "personaId": "persona-e",
@@ -222,7 +222,7 @@
       "fq": 100,
       "risk": 78,
       "netWorth": 5352470,
-      "snapshotHash": "4c853906"
+      "snapshotHash": "00da498b"
     },
     {
       "personaId": "persona-e",
@@ -230,7 +230,7 @@
       "fq": 100,
       "risk": 82,
       "netWorth": 5329985,
-      "snapshotHash": "a7f005f7"
+      "snapshotHash": "9d8237a7"
     },
     {
       "personaId": "persona-e",
@@ -238,7 +238,7 @@
       "fq": 100,
       "risk": 82,
       "netWorth": 5390866,
-      "snapshotHash": "449c6e7e"
+      "snapshotHash": "72926792"
     },
     {
       "personaId": "persona-e",
@@ -246,7 +246,7 @@
       "fq": 100,
       "risk": 82,
       "netWorth": 5460000,
-      "snapshotHash": "19e4b989"
+      "snapshotHash": "8a02dab0"
     },
     {
       "personaId": "persona-f",
@@ -254,7 +254,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "51e4fd6b"
+      "snapshotHash": "03fe88f4"
     },
     {
       "personaId": "persona-f",
@@ -262,7 +262,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "333fbfd2"
+      "snapshotHash": "bd382ba5"
     },
     {
       "personaId": "persona-f",
@@ -270,7 +270,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "47aebb38"
+      "snapshotHash": "71e34887"
     },
     {
       "personaId": "persona-f",
@@ -278,7 +278,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "35121ff3"
+      "snapshotHash": "c8115476"
     },
     {
       "personaId": "persona-f",
@@ -286,7 +286,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "fad0e909"
+      "snapshotHash": "fb4a0bb0"
     },
     {
       "personaId": "persona-f",
@@ -294,7 +294,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "a5302737"
+      "snapshotHash": "117bcda6"
     },
     {
       "personaId": "persona-g",
@@ -302,7 +302,7 @@
       "fq": 49,
       "risk": 27,
       "netWorth": 88675,
-      "snapshotHash": "936d0bc0"
+      "snapshotHash": "995d09ba"
     },
     {
       "personaId": "persona-g",
@@ -310,7 +310,7 @@
       "fq": 49,
       "risk": 27,
       "netWorth": 201803,
-      "snapshotHash": "4a5c330b"
+      "snapshotHash": "a56bb246"
     },
     {
       "personaId": "persona-g",
@@ -318,7 +318,7 @@
       "fq": 53,
       "risk": 27,
       "netWorth": 352460,
-      "snapshotHash": "cd25c52a"
+      "snapshotHash": "29da7d52"
     },
     {
       "personaId": "persona-g",
@@ -326,7 +326,7 @@
       "fq": 53,
       "risk": 27,
       "netWorth": 306900,
-      "snapshotHash": "b05655c3"
+      "snapshotHash": "41e9418c"
     },
     {
       "personaId": "persona-g",
@@ -334,7 +334,7 @@
       "fq": 53,
       "risk": 27,
       "netWorth": 333979,
-      "snapshotHash": "0a2e3461"
+      "snapshotHash": "1c9577e8"
     },
     {
       "personaId": "persona-g",
@@ -342,7 +342,7 @@
       "fq": 53,
       "risk": 27,
       "netWorth": 366000,
-      "snapshotHash": "0e89968a"
+      "snapshotHash": "9f8edd23"
     },
     {
       "personaId": "mrT-aged-out",
@@ -350,7 +350,7 @@
       "fq": 48,
       "risk": 40,
       "netWorth": 10120,
-      "snapshotHash": "22d54ec1"
+      "snapshotHash": "8f0e7574"
     },
     {
       "personaId": "mrT-aged-out",
@@ -358,7 +358,7 @@
       "fq": 48,
       "risk": 40,
       "netWorth": 10120,
-      "snapshotHash": "9f1b2b44"
+      "snapshotHash": "5c80e031"
     },
     {
       "personaId": "mrT-aged-out",
@@ -366,7 +366,7 @@
       "fq": 48,
       "risk": 40,
       "netWorth": 10120,
-      "snapshotHash": "c197156a"
+      "snapshotHash": "a0be8373"
     },
     {
       "personaId": "mrT-aged-out",
@@ -374,7 +374,7 @@
       "fq": 48,
       "risk": 40,
       "netWorth": 10120,
-      "snapshotHash": "658ba92b"
+      "snapshotHash": "e3dd3f04"
     },
     {
       "personaId": "mrT-aged-out",
@@ -382,7 +382,7 @@
       "fq": 48,
       "risk": 40,
       "netWorth": 10120,
-      "snapshotHash": "ce81bea1"
+      "snapshotHash": "aad700e6"
     },
     {
       "personaId": "mrT-aged-out",
@@ -390,7 +390,7 @@
       "fq": 48,
       "risk": 40,
       "netWorth": 10120,
-      "snapshotHash": "20b8bde5"
+      "snapshotHash": "18886c8a"
     },
     {
       "personaId": "mrT-beneficiary",
@@ -398,7 +398,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 1327000,
-      "snapshotHash": "e763716f"
+      "snapshotHash": "5203fd84"
     },
     {
       "personaId": "mrT-beneficiary",
@@ -406,7 +406,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 1327000,
-      "snapshotHash": "dae61351"
+      "snapshotHash": "171790dc"
     },
     {
       "personaId": "mrT-beneficiary",
@@ -414,7 +414,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 1327000,
-      "snapshotHash": "4844d1b6"
+      "snapshotHash": "9e36f682"
     },
     {
       "personaId": "mrT-beneficiary",
@@ -422,7 +422,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 1327000,
-      "snapshotHash": "0bd61d1f"
+      "snapshotHash": "fda03565"
     },
     {
       "personaId": "mrT-beneficiary",
@@ -430,7 +430,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 1327000,
-      "snapshotHash": "a5d0cd9c"
+      "snapshotHash": "2a15d982"
     },
     {
       "personaId": "mrT-beneficiary",
@@ -438,7 +438,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 1327000,
-      "snapshotHash": "d1515b4b"
+      "snapshotHash": "83952ef9"
     },
     {
       "personaId": "mrT-bereavement",
@@ -446,7 +446,7 @@
       "fq": 56,
       "risk": 32,
       "netWorth": 154834,
-      "snapshotHash": "7ac91d8c"
+      "snapshotHash": "33b0bc1f"
     },
     {
       "personaId": "mrT-bereavement",
@@ -454,7 +454,7 @@
       "fq": 56,
       "risk": 32,
       "netWorth": 155732,
-      "snapshotHash": "1b1edf66"
+      "snapshotHash": "6f316d00"
     },
     {
       "personaId": "mrT-bereavement",
@@ -462,7 +462,7 @@
       "fq": 56,
       "risk": 30,
       "netWorth": 156693,
-      "snapshotHash": "f4b89002"
+      "snapshotHash": "4cfb335e"
     },
     {
       "personaId": "mrT-bereavement",
@@ -470,7 +470,7 @@
       "fq": 56,
       "risk": 30,
       "netWorth": 157722,
-      "snapshotHash": "160437ec"
+      "snapshotHash": "4f73c132"
     },
     {
       "personaId": "mrT-bereavement",
@@ -478,7 +478,7 @@
       "fq": 56,
       "risk": 30,
       "netWorth": 158822,
-      "snapshotHash": "d8be834a"
+      "snapshotHash": "e48f2820"
     },
     {
       "personaId": "mrT-bereavement",
@@ -486,7 +486,7 @@
       "fq": 56,
       "risk": 30,
       "netWorth": 160000,
-      "snapshotHash": "2a91f9e6"
+      "snapshotHash": "d189ee84"
     },
     {
       "personaId": "mrT-child-dependent",
@@ -494,7 +494,7 @@
       "fq": 48,
       "risk": 32,
       "netWorth": 48338,
-      "snapshotHash": "10576c08"
+      "snapshotHash": "b71baaf4"
     },
     {
       "personaId": "mrT-child-dependent",
@@ -502,7 +502,7 @@
       "fq": 48,
       "risk": 32,
       "netWorth": 49062,
-      "snapshotHash": "bb3c19e5"
+      "snapshotHash": "7a995547"
     },
     {
       "personaId": "mrT-child-dependent",
@@ -510,7 +510,7 @@
       "fq": 48,
       "risk": 32,
       "netWorth": 49836,
-      "snapshotHash": "d14c9e5c"
+      "snapshotHash": "3ad82769"
     },
     {
       "personaId": "mrT-child-dependent",
@@ -518,7 +518,7 @@
       "fq": 48,
       "risk": 32,
       "netWorth": 50665,
-      "snapshotHash": "650fc5e9"
+      "snapshotHash": "9b7a11d8"
     },
     {
       "personaId": "mrT-child-dependent",
@@ -526,7 +526,7 @@
       "fq": 48,
       "risk": 32,
       "netWorth": 51551,
-      "snapshotHash": "71170742"
+      "snapshotHash": "815bb18f"
     },
     {
       "personaId": "mrT-child-dependent",
@@ -534,7 +534,7 @@
       "fq": 48,
       "risk": 30,
       "netWorth": 52500,
-      "snapshotHash": "b3ed96a4"
+      "snapshotHash": "a549dcd1"
     },
     {
       "personaId": "mrT-cohab-sep",
@@ -542,7 +542,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 290700,
-      "snapshotHash": "c0d51ea4"
+      "snapshotHash": "31003101"
     },
     {
       "personaId": "mrT-cohab-sep",
@@ -550,7 +550,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 290700,
-      "snapshotHash": "8d75e0fd"
+      "snapshotHash": "7145199a"
     },
     {
       "personaId": "mrT-cohab-sep",
@@ -558,7 +558,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 290700,
-      "snapshotHash": "0d889d1f"
+      "snapshotHash": "ba57ea0c"
     },
     {
       "personaId": "mrT-cohab-sep",
@@ -566,7 +566,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 290700,
-      "snapshotHash": "f04b1305"
+      "snapshotHash": "7519ada9"
     },
     {
       "personaId": "mrT-cohab-sep",
@@ -574,7 +574,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 290700,
-      "snapshotHash": "a75b0d00"
+      "snapshotHash": "dba43e3a"
     },
     {
       "personaId": "mrT-cohab-sep",
@@ -582,7 +582,7 @@
       "fq": 54,
       "risk": 36,
       "netWorth": 290700,
-      "snapshotHash": "b12ba6ea"
+      "snapshotHash": "de401158"
     },
     {
       "personaId": "mrT-core",
@@ -590,7 +590,7 @@
       "fq": 85,
       "risk": 79,
       "netWorth": 1581712,
-      "snapshotHash": "e871f8b5"
+      "snapshotHash": "416155cb"
     },
     {
       "personaId": "mrT-core",
@@ -598,7 +598,7 @@
       "fq": 86,
       "risk": 75,
       "netWorth": 1655906,
-      "snapshotHash": "b90a03af"
+      "snapshotHash": "9aedaf82"
     },
     {
       "personaId": "mrT-core",
@@ -606,7 +606,7 @@
       "fq": 86,
       "risk": 79,
       "netWorth": 1751324,
-      "snapshotHash": "95faa16f"
+      "snapshotHash": "7beb141a"
     },
     {
       "personaId": "mrT-core",
@@ -614,7 +614,7 @@
       "fq": 86,
       "risk": 79,
       "netWorth": 1716360,
-      "snapshotHash": "afcfef1d"
+      "snapshotHash": "e6fe25ac"
     },
     {
       "personaId": "mrT-core",
@@ -622,7 +622,7 @@
       "fq": 86,
       "risk": 79,
       "netWorth": 1730531,
-      "snapshotHash": "b7470ed8"
+      "snapshotHash": "03a0221b"
     },
     {
       "personaId": "mrT-core",
@@ -630,7 +630,7 @@
       "fq": 86,
       "risk": 79,
       "netWorth": 1747850,
-      "snapshotHash": "0ebf3194"
+      "snapshotHash": "1250c42e"
     },
     {
       "personaId": "mrT-couple",
@@ -638,7 +638,7 @@
       "fq": 58,
       "risk": 28,
       "netWorth": 1108900,
-      "snapshotHash": "afc692c6"
+      "snapshotHash": "82beb278"
     },
     {
       "personaId": "mrT-couple",
@@ -646,7 +646,7 @@
       "fq": 58,
       "risk": 28,
       "netWorth": 1108900,
-      "snapshotHash": "6d4751ec"
+      "snapshotHash": "212ca95e"
     },
     {
       "personaId": "mrT-couple",
@@ -654,7 +654,7 @@
       "fq": 58,
       "risk": 28,
       "netWorth": 1108900,
-      "snapshotHash": "6645b996"
+      "snapshotHash": "fee6cd68"
     },
     {
       "personaId": "mrT-couple",
@@ -662,7 +662,7 @@
       "fq": 58,
       "risk": 28,
       "netWorth": 1108900,
-      "snapshotHash": "1d01a6e1"
+      "snapshotHash": "0e38c956"
     },
     {
       "personaId": "mrT-couple",
@@ -670,7 +670,7 @@
       "fq": 58,
       "risk": 28,
       "netWorth": 1108900,
-      "snapshotHash": "0ee93cea"
+      "snapshotHash": "3fd793c3"
     },
     {
       "personaId": "mrT-couple",
@@ -678,7 +678,7 @@
       "fq": 58,
       "risk": 28,
       "netWorth": 1108900,
-      "snapshotHash": "4bf3731c"
+      "snapshotHash": "7396b6f5"
     },
     {
       "personaId": "mrT-decum-complex",
@@ -686,7 +686,7 @@
       "fq": 58,
       "risk": 36,
       "netWorth": 4147000,
-      "snapshotHash": "6e102534"
+      "snapshotHash": "0755ddfc"
     },
     {
       "personaId": "mrT-decum-complex",
@@ -694,7 +694,7 @@
       "fq": 58,
       "risk": 36,
       "netWorth": 4147000,
-      "snapshotHash": "bbd061a5"
+      "snapshotHash": "64cbcbed"
     },
     {
       "personaId": "mrT-decum-complex",
@@ -702,7 +702,7 @@
       "fq": 58,
       "risk": 36,
       "netWorth": 4147000,
-      "snapshotHash": "b15c7d15"
+      "snapshotHash": "8d0ca1bd"
     },
     {
       "personaId": "mrT-decum-complex",
@@ -710,7 +710,7 @@
       "fq": 58,
       "risk": 36,
       "netWorth": 4147000,
-      "snapshotHash": "f0b04648"
+      "snapshotHash": "b2487a30"
     },
     {
       "personaId": "mrT-decum-complex",
@@ -718,7 +718,7 @@
       "fq": 58,
       "risk": 36,
       "netWorth": 4147000,
-      "snapshotHash": "fe085954"
+      "snapshotHash": "83c8338c"
     },
     {
       "personaId": "mrT-decum-complex",
@@ -726,7 +726,7 @@
       "fq": 58,
       "risk": 36,
       "netWorth": 4147000,
-      "snapshotHash": "0858ab1a"
+      "snapshotHash": "ab6182c2"
     },
     {
       "personaId": "mrT-divorced",
@@ -734,7 +734,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 513300,
-      "snapshotHash": "36dde58b"
+      "snapshotHash": "0e230091"
     },
     {
       "personaId": "mrT-divorced",
@@ -742,7 +742,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 513300,
-      "snapshotHash": "563adcb8"
+      "snapshotHash": "dd155e7b"
     },
     {
       "personaId": "mrT-divorced",
@@ -750,7 +750,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 513300,
-      "snapshotHash": "9e87e220"
+      "snapshotHash": "0a3cda76"
     },
     {
       "personaId": "mrT-divorced",
@@ -758,7 +758,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 513300,
-      "snapshotHash": "99aa286a"
+      "snapshotHash": "2476da5d"
     },
     {
       "personaId": "mrT-divorced",
@@ -766,7 +766,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 513300,
-      "snapshotHash": "88814936"
+      "snapshotHash": "63405ee1"
     },
     {
       "personaId": "mrT-divorced",
@@ -774,7 +774,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 513300,
-      "snapshotHash": "73df0467"
+      "snapshotHash": "b1a9b1c0"
     },
     {
       "personaId": "mrT-family",
@@ -782,7 +782,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 426700,
-      "snapshotHash": "11d29f0a"
+      "snapshotHash": "df94fa4c"
     },
     {
       "personaId": "mrT-family",
@@ -790,7 +790,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 426700,
-      "snapshotHash": "517557a8"
+      "snapshotHash": "b69b58b4"
     },
     {
       "personaId": "mrT-family",
@@ -798,7 +798,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 426700,
-      "snapshotHash": "dfcbe6d6"
+      "snapshotHash": "95afcac4"
     },
     {
       "personaId": "mrT-family",
@@ -806,7 +806,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 426700,
-      "snapshotHash": "e123bdf4"
+      "snapshotHash": "a67ef8c4"
     },
     {
       "personaId": "mrT-family",
@@ -814,7 +814,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 426700,
-      "snapshotHash": "7283ceb7"
+      "snapshotHash": "ab8c5971"
     },
     {
       "personaId": "mrT-family",
@@ -822,7 +822,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 426700,
-      "snapshotHash": "b544ae9e"
+      "snapshotHash": "ad7d2a8e"
     },
     {
       "personaId": "mrT-landlord",
@@ -830,7 +830,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 923000,
-      "snapshotHash": "20e2c811"
+      "snapshotHash": "66e69651"
     },
     {
       "personaId": "mrT-landlord",
@@ -838,7 +838,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 923000,
-      "snapshotHash": "a387d6f2"
+      "snapshotHash": "d98e2af6"
     },
     {
       "personaId": "mrT-landlord",
@@ -846,7 +846,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 923000,
-      "snapshotHash": "3e14df04"
+      "snapshotHash": "367e855a"
     },
     {
       "personaId": "mrT-landlord",
@@ -854,7 +854,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 923000,
-      "snapshotHash": "13d89a26"
+      "snapshotHash": "1874e216"
     },
     {
       "personaId": "mrT-landlord",
@@ -862,7 +862,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 923000,
-      "snapshotHash": "14552912"
+      "snapshotHash": "b430cd62"
     },
     {
       "personaId": "mrT-landlord",
@@ -870,7 +870,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 923000,
-      "snapshotHash": "797f8b9e"
+      "snapshotHash": "ad5bb81e"
     },
     {
       "personaId": "mrT-ltd-director",
@@ -878,7 +878,7 @@
       "fq": 64,
       "risk": 28,
       "netWorth": 4213000,
-      "snapshotHash": "cecdc8a4"
+      "snapshotHash": "6e97538b"
     },
     {
       "personaId": "mrT-ltd-director",
@@ -886,7 +886,7 @@
       "fq": 64,
       "risk": 28,
       "netWorth": 4213000,
-      "snapshotHash": "0ff51e60"
+      "snapshotHash": "cff68a57"
     },
     {
       "personaId": "mrT-ltd-director",
@@ -894,7 +894,7 @@
       "fq": 64,
       "risk": 28,
       "netWorth": 4213000,
-      "snapshotHash": "c01f0c0c"
+      "snapshotHash": "e0add647"
     },
     {
       "personaId": "mrT-ltd-director",
@@ -902,7 +902,7 @@
       "fq": 64,
       "risk": 28,
       "netWorth": 4213000,
-      "snapshotHash": "4266bbc2"
+      "snapshotHash": "3f7db749"
     },
     {
       "personaId": "mrT-ltd-director",
@@ -910,7 +910,7 @@
       "fq": 64,
       "risk": 28,
       "netWorth": 4213000,
-      "snapshotHash": "5e220b85"
+      "snapshotHash": "cecb4560"
     },
     {
       "personaId": "mrT-ltd-director",
@@ -918,7 +918,7 @@
       "fq": 64,
       "risk": 28,
       "netWorth": 4213000,
-      "snapshotHash": "77d0675a"
+      "snapshotHash": "f111aa29"
     },
     {
       "personaId": "mrT-mental-capacity",
@@ -926,7 +926,7 @@
       "fq": 72,
       "risk": 42,
       "netWorth": 266344,
-      "snapshotHash": "4fe1272d"
+      "snapshotHash": "5caa1dbb"
     },
     {
       "personaId": "mrT-mental-capacity",
@@ -934,7 +934,7 @@
       "fq": 72,
       "risk": 42,
       "netWorth": 269588,
-      "snapshotHash": "032139df"
+      "snapshotHash": "8b8348d5"
     },
     {
       "personaId": "mrT-mental-capacity",
@@ -942,7 +942,7 @@
       "fq": 76,
       "risk": 42,
       "netWorth": 273059,
-      "snapshotHash": "6fb43e09"
+      "snapshotHash": "48a59077"
     },
     {
       "personaId": "mrT-mental-capacity",
@@ -950,7 +950,7 @@
       "fq": 76,
       "risk": 42,
       "netWorth": 276774,
-      "snapshotHash": "affd770f"
+      "snapshotHash": "1e5034f9"
     },
     {
       "personaId": "mrT-mental-capacity",
@@ -958,7 +958,7 @@
       "fq": 76,
       "risk": 40,
       "netWorth": 280748,
-      "snapshotHash": "b62ed9d8"
+      "snapshotHash": "17862896"
     },
     {
       "personaId": "mrT-mental-capacity",
@@ -966,7 +966,7 @@
       "fq": 76,
       "risk": 40,
       "netWorth": 285000,
-      "snapshotHash": "a7d7f4ef"
+      "snapshotHash": "d612dd05"
     },
     {
       "personaId": "mrT-sole-trader",
@@ -974,7 +974,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 411200,
-      "snapshotHash": "3956a9ee"
+      "snapshotHash": "7aec741b"
     },
     {
       "personaId": "mrT-sole-trader",
@@ -982,7 +982,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 411200,
-      "snapshotHash": "24a94e57"
+      "snapshotHash": "ddb36702"
     },
     {
       "personaId": "mrT-sole-trader",
@@ -990,7 +990,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 411200,
-      "snapshotHash": "dc8f5fa1"
+      "snapshotHash": "91122050"
     },
     {
       "personaId": "mrT-sole-trader",
@@ -998,7 +998,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 411200,
-      "snapshotHash": "74f69088"
+      "snapshotHash": "e1d4852b"
     },
     {
       "personaId": "mrT-sole-trader",
@@ -1006,7 +1006,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 411200,
-      "snapshotHash": "a8e60b26"
+      "snapshotHash": "6cd95b69"
     },
     {
       "personaId": "mrT-sole-trader",
@@ -1014,7 +1014,7 @@
       "fq": 54,
       "risk": 28,
       "netWorth": 411200,
-      "snapshotHash": "8f103584"
+      "snapshotHash": "435ae243"
     },
     {
       "personaId": "mrT-uk-in",
@@ -1022,7 +1022,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 597355,
-      "snapshotHash": "003731fd"
+      "snapshotHash": "3fe07b64"
     },
     {
       "personaId": "mrT-uk-in",
@@ -1030,7 +1030,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 597355,
-      "snapshotHash": "b8c35800"
+      "snapshotHash": "5bab5cb1"
     },
     {
       "personaId": "mrT-uk-in",
@@ -1038,7 +1038,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 597355,
-      "snapshotHash": "afe2c0f2"
+      "snapshotHash": "4f89e397"
     },
     {
       "personaId": "mrT-uk-in",
@@ -1046,7 +1046,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 597355,
-      "snapshotHash": "68bdc635"
+      "snapshotHash": "a551d7f6"
     },
     {
       "personaId": "mrT-uk-in",
@@ -1054,7 +1054,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 597355,
-      "snapshotHash": "8d706e63"
+      "snapshotHash": "db22cc40"
     },
     {
       "personaId": "mrT-uk-in",
@@ -1062,7 +1062,7 @@
       "fq": 53,
       "risk": 36,
       "netWorth": 597355,
-      "snapshotHash": "e45634bd"
+      "snapshotHash": "40cadd86"
     },
     {
       "personaId": "mrT-uk-th",
@@ -1070,7 +1070,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 2248182,
-      "snapshotHash": "6b09ef9c"
+      "snapshotHash": "8ceff1e7"
     },
     {
       "personaId": "mrT-uk-th",
@@ -1078,7 +1078,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 2248182,
-      "snapshotHash": "49c069c5"
+      "snapshotHash": "cc33a2e6"
     },
     {
       "personaId": "mrT-uk-th",
@@ -1086,7 +1086,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 2248182,
-      "snapshotHash": "85428af5"
+      "snapshotHash": "b7e03f3a"
     },
     {
       "personaId": "mrT-uk-th",
@@ -1094,7 +1094,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 2248182,
-      "snapshotHash": "5266fda4"
+      "snapshotHash": "69fc73b9"
     },
     {
       "personaId": "mrT-uk-th",
@@ -1102,7 +1102,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 2248182,
-      "snapshotHash": "b5431014"
+      "snapshotHash": "b444d091"
     },
     {
       "personaId": "mrT-uk-th",
@@ -1110,7 +1110,7 @@
       "fq": 56,
       "risk": 28,
       "netWorth": 2248182,
-      "snapshotHash": "62850aee"
+      "snapshotHash": "760e0557"
     },
     {
       "personaId": "persona-series-A",
@@ -1118,7 +1118,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "d63e9688"
+      "snapshotHash": "a2cc56b5"
     },
     {
       "personaId": "persona-series-A",
@@ -1126,7 +1126,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "b39af9c5"
+      "snapshotHash": "a58e9490"
     },
     {
       "personaId": "persona-series-A",
@@ -1134,7 +1134,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "7093775d"
+      "snapshotHash": "a93bde4c"
     },
     {
       "personaId": "persona-series-A",
@@ -1142,7 +1142,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "02e87306"
+      "snapshotHash": "795bd791"
     },
     {
       "personaId": "persona-series-A",
@@ -1150,7 +1150,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "a19321c2"
+      "snapshotHash": "398378e1"
     },
     {
       "personaId": "persona-series-A",
@@ -1158,7 +1158,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "1fbd9a02"
+      "snapshotHash": "536d89ad"
     },
     {
       "personaId": "persona-series-B",
@@ -1166,7 +1166,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "06c9dee5"
+      "snapshotHash": "45643618"
     },
     {
       "personaId": "persona-series-B",
@@ -1174,7 +1174,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "2cec1cc4"
+      "snapshotHash": "4a5478c1"
     },
     {
       "personaId": "persona-series-B",
@@ -1182,7 +1182,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "336d0324"
+      "snapshotHash": "7197f9e5"
     },
     {
       "personaId": "persona-series-B",
@@ -1190,7 +1190,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "08c0ea0f"
+      "snapshotHash": "5cbcba44"
     },
     {
       "personaId": "persona-series-B",
@@ -1198,7 +1198,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "4aff583b"
+      "snapshotHash": "bb44dc5c"
     },
     {
       "personaId": "persona-series-B",
@@ -1206,7 +1206,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "94d53add"
+      "snapshotHash": "df0a9312"
     },
     {
       "personaId": "persona-series-C",
@@ -1214,7 +1214,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "7ffed7f2"
+      "snapshotHash": "77a6a957"
     },
     {
       "personaId": "persona-series-C",
@@ -1222,7 +1222,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "d2690bab"
+      "snapshotHash": "446ca6b6"
     },
     {
       "personaId": "persona-series-C",
@@ -1230,7 +1230,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "57360713"
+      "snapshotHash": "f90a91aa"
     },
     {
       "personaId": "persona-series-C",
@@ -1238,7 +1238,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "80c65438"
+      "snapshotHash": "39032b8b"
     },
     {
       "personaId": "persona-series-C",
@@ -1246,7 +1246,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "1dbd2a10"
+      "snapshotHash": "8a53cbcf"
     },
     {
       "personaId": "persona-series-C",
@@ -1254,7 +1254,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "c552912c"
+      "snapshotHash": "70472b0f"
     },
     {
       "personaId": "persona-series-D",
@@ -1262,7 +1262,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "b2e5bd3b"
+      "snapshotHash": "0a74e7c2"
     },
     {
       "personaId": "persona-series-D",
@@ -1270,7 +1270,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "5e4dc3d2"
+      "snapshotHash": "a0ffc683"
     },
     {
       "personaId": "persona-series-D",
@@ -1278,7 +1278,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "78a0fe06"
+      "snapshotHash": "0383d3bb"
     },
     {
       "personaId": "persona-series-D",
@@ -1286,7 +1286,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "df7f6745"
+      "snapshotHash": "c436faca"
     },
     {
       "personaId": "persona-series-D",
@@ -1294,7 +1294,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "2ba74b4d"
+      "snapshotHash": "1259429e"
     },
     {
       "personaId": "persona-series-D",
@@ -1302,7 +1302,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "e8e96807"
+      "snapshotHash": "a4687d60"
     },
     {
       "personaId": "persona-series-E",
@@ -1310,7 +1310,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "90a35720"
+      "snapshotHash": "b1cf5361"
     },
     {
       "personaId": "persona-series-E",
@@ -1318,7 +1318,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "be4eb111"
+      "snapshotHash": "e70a4068"
     },
     {
       "personaId": "persona-series-E",
@@ -1326,7 +1326,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "dbc96035"
+      "snapshotHash": "95e7a8b8"
     },
     {
       "personaId": "persona-series-E",
@@ -1334,7 +1334,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "66ea61be"
+      "snapshotHash": "8d4c22b1"
     },
     {
       "personaId": "persona-series-E",
@@ -1342,7 +1342,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "12ece522"
+      "snapshotHash": "134350c1"
     },
     {
       "personaId": "persona-series-E",
@@ -1350,7 +1350,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "19e72b4e"
+      "snapshotHash": "e6470f2d"
     },
     {
       "personaId": "persona-series-F",
@@ -1358,7 +1358,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "76b16781"
+      "snapshotHash": "0cc6a924"
     },
     {
       "personaId": "persona-series-F",
@@ -1366,7 +1366,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "311b7080"
+      "snapshotHash": "197b8bd5"
     },
     {
       "personaId": "persona-series-F",
@@ -1374,7 +1374,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "95e423a8"
+      "snapshotHash": "7bf87c49"
     },
     {
       "personaId": "persona-series-F",
@@ -1382,7 +1382,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "408e1b63"
+      "snapshotHash": "0370d0b8"
     },
     {
       "personaId": "persona-series-F",
@@ -1390,7 +1390,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "55056adf"
+      "snapshotHash": "b65ef170"
     },
     {
       "personaId": "persona-series-F",
@@ -1398,7 +1398,7 @@
       "fq": 48,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "959f1021"
+      "snapshotHash": "9c7e9296"
     },
     {
       "personaId": "persona-series-G",
@@ -1406,7 +1406,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "3ae92ffe"
+      "snapshotHash": "a683761b"
     },
     {
       "personaId": "persona-series-G",
@@ -1414,7 +1414,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "b46a2f7f"
+      "snapshotHash": "99990dda"
     },
     {
       "personaId": "persona-series-G",
@@ -1422,7 +1422,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "5096b087"
+      "snapshotHash": "ee82dcd6"
     },
     {
       "personaId": "persona-series-G",
@@ -1430,7 +1430,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "1fb2735c"
+      "snapshotHash": "7737060f"
     },
     {
       "personaId": "persona-series-G",
@@ -1438,7 +1438,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "6937b834"
+      "snapshotHash": "9e3702a3"
     },
     {
       "personaId": "persona-series-G",
@@ -1446,7 +1446,7 @@
       "fq": 46,
       "risk": 36,
       "netWorth": 0,
-      "snapshotHash": "02502f98"
+      "snapshotHash": "1b9b48e3"
     }
   ]
 }

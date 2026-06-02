@@ -2645,27 +2645,110 @@ export function getActiveRateForDate(rateId, asOfDate = new Date(), bundle) {
  * @returns {{income:number, essential:number, committed:number, debtService:number, surplus:number, deficit:number}}
  */
 export function monthlySurplus(entity, bundle) {
-  const inc       = _annualIncome(entity);
-  const essential = _targetIncome(entity);
-  const ds        = _monthlyDebtService(entity);
-  // Committed = pension/ISA contributions
-  const a   = entity?.assets || {};
-  const pcb = (Array.isArray(a.pensions) ? a.pensions : [])
-    .reduce((s, p) => s + (+p.contribution_monthly_personal || 0) + (+p.contribution_monthly_employer || 0), 0);
-  const isb = (Array.isArray(a.investments) ? a.investments : [])
-    .filter(i => (i.type || '').toLowerCase().includes('isa'))
-    .reduce((s, i) => s + ((+i.contribution_current_tax_year || 0) / 12), 0);
-  const committed = pcb + isb;
-  const monthlyInc = inc / 12;
-  const monthlyEss = essential / 12;
-  const surplus    = Math.round(monthlyInc - monthlyEss - ds - committed);
+  const f = cashflowFlow(entity, bundle);
+  const surplus = f.surplusMonthly;
   return {
-    income:       Math.round(monthlyInc),
-    essential:    Math.round(monthlyEss),
-    committed:    Math.round(committed),
-    debtService:  Math.round(ds),
+    income:       Math.round(f.gross / 12),
+    essential:    Math.round(f.essentials / 12),
+    committed:    Math.round(f.committed / 12),
+    debtService:  Math.round(f.debtService / 12),
+    tax:          Math.round(f.taxAndNI / 12),
     surplus:      surplus > 0 ? surplus : 0,
     deficit:      surplus < 0 ? Math.abs(surplus) : 0,
+  };
+}
+
+/**
+ * Current essential living costs (annual). Sourced from real expense data when a
+ * persona has it, else a 60%-of-current-income proxy. Deliberately does NOT use
+ * targetIncome — that is the user's RETIREMENT-target income (funded-ratio reads
+ * it as target × 25), and using it as current spend made retirement-aspiration
+ * personas (e.g. Bruce: target £120k, earning £47k) show a nonsensical current
+ * deficit (founder decision 2026-06-02). Shared by cashflowFlow + liquidityBuffer
+ * so the waterfall and the "months of buffer" use one essentials figure.
+ * @param {object} entity
+ * @param {number} [grossAnnual] - pass to avoid recomputing income
+ * @returns {number}
+ */
+function _currentEssentialsAnnual(entity, grossAnnual) {
+  const exp = entity?.expenses || {};
+  if (exp.essentialsMonthly) return Math.round(+exp.essentialsMonthly * 12);
+  if (exp.monthly)           return Math.round(+exp.monthly * 12);
+  if (exp.annual)            return Math.round(+exp.annual);
+  const gross = grossAnnual != null ? grossAnnual : calcAllIncome(entity).total;
+  return gross > 0 ? Math.round(gross * 0.6) : 30000;
+}
+
+/**
+ * Canonical net-of-tax cashflow waterfall — the ONE source for the Cashflow tab's
+ * Sankey + waterfall + surplus/deficit cards AND Home's deficit banner, so they
+ * can never diverge (2026-06-02; founder chose net-of-tax over the prior
+ * gross-only model that hid tax and let the tab show "£0 tax & NI").
+ *
+ *   surplus = gross − income tax − employee NI − pension/ISA committed
+ *             − essential living − debt service
+ *
+ * All figures ANNUAL except the *Monthly aliases. Tax via canonical
+ * calcIncomeTax; NI computed inline (importing nicsDetail would be a circular
+ * dep — tax-estate-engine imports this module). Essentials = targetIncome
+ * (explicit per-persona, else the 60%-of-gross fallback in _helpers).
+ * CANONICAL
+ * @param {object} entity
+ * @param {object} [bundle]
+ * @returns {{gross,tax,ni,taxAndNI,committed,essentials,debtService,surplusAnnual,surplusMonthly}}
+ */
+export function cashflowFlow(entity, bundle) {
+  const gross     = calcAllIncome(entity, bundle).total;
+  const incomeTax = calcIncomeTax(entity, bundle).tax;
+  // Employee Class 1 NI, computed inline from confirmed bundle keys (robust
+  // salary read — MAX of aliases — unlike nicsDetail's single-field read).
+  const NICb    = (TAX_JSON && TAX_JSON.nationalInsurance) || {};
+  const niPT    = +(NICb.primaryThreshold ?? 12570);
+  const niUEL   = +(NICb.upperEarningsLimit ?? 50270);
+  const niRate  = +(NICb.class1EmployeeRate ?? 0.08);
+  const niUpper = +(NICb.class1EmployeeRateAboveUEL ?? 0.02);
+  const niSalary = Math.max(
+    +(entity?.individual?.gross_salary || 0),
+    +(entity?.income?.salary || 0),
+    +(entity?.income?.employment || 0),
+    +(entity?.income?.directorSalary || 0),
+  );
+  const ni = Math.round(
+    Math.max(0, Math.min(niSalary, niUEL) - niPT) * niRate +
+    Math.max(0, niSalary - niUEL) * niUpper
+  );
+  // Committed contributions (pension + ISA) — same basis as the legacy model.
+  const a = entity?.assets || {};
+  const pensionContribAnnual = (Array.isArray(a.pensions) ? a.pensions : [])
+    .reduce((s, p) => s + (+p.contribution_monthly_personal || 0) + (+p.contribution_monthly_employer || 0), 0) * 12;
+  const isaContribAnnual = (Array.isArray(a.investments) ? a.investments : [])
+    .filter(i => (i.type || '').toLowerCase().includes('isa'))
+    .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0);
+  const committed   = pensionContribAnnual + isaContribAnnual;
+  const essentials  = _currentEssentialsAnnual(entity, gross);
+  const debtService = _monthlyDebtService(entity) * 12;
+  // Protection premiums (life / CI / IP / PMI) — a real recurring outflow, so it
+  // belongs in the canonical surplus or the Cashflow waterfall and Sankey would
+  // diverge by this amount.
+  const prot = entity?.assets?.protection || {};
+  const protection = (
+    (+(prot.lifeInsurance?.premium    || 0)) +
+    (+(prot.criticalIllness?.premium  || 0)) +
+    (+(prot.incomeProtection?.premium || 0)) +
+    (+(prot.pmi?.premium              || 0))
+  ) * 12;
+  const surplus = gross - incomeTax - ni - committed - essentials - debtService - protection;
+  return {
+    gross:          Math.round(gross),
+    tax:            Math.round(incomeTax),
+    ni:             Math.round(ni),
+    taxAndNI:       Math.round(incomeTax + ni),
+    committed:      Math.round(committed),
+    essentials:     Math.round(essentials),
+    debtService:    Math.round(debtService),
+    protection:     Math.round(protection),
+    surplusAnnual:  Math.round(surplus),
+    surplusMonthly: Math.round(surplus / 12),
   };
 }
 
@@ -2678,7 +2761,9 @@ export function monthlySurplus(entity, bundle) {
  */
 export function liquidityBuffer(entity) {
   const cash    = _cashTotal(entity);
-  const monthly = _targetIncome(entity) / 12;
+  // Months of CURRENT essentials (not the retirement target) — same figure the
+  // Cashflow waterfall uses, so "X months of buffer" reconciles (2026-06-02).
+  const monthly = _currentEssentialsAnnual(entity) / 12;
   const months  = monthly > 0 ? cash / monthly : 0;
   const band    = months < 1 ? 'Critical' : months < 3 ? 'Building' : 'Covered';
   // Score 0-100: 6mo = 100; under 1mo = 0
@@ -3113,13 +3198,20 @@ export function calcAllIncome(entity, bundle) {
   const items = [];
   const inc = entity?.income || {};
   const ind = entity?.individual || {};
-  if (ind.gross_salary)  items.push({ type: 'employment', amount: +ind.gross_salary });
-  if (inc.salary)        items.push({ type: 'employment', amount: +inc.salary });
-  if (inc.employment)    items.push({ type: 'employment', amount: +inc.employment });
-  // P14 tax-accountant audit (2026-05-28): directors with separate directorSalary
-  // field were missed by calcAllIncome — same gap as in calcANI. Adding here so
-  // the income-type breakdown shown on MoneyIncome captures it.
-  if (inc.directorSalary) items.push({ type: 'employment', amount: +inc.directorSalary });
+  // Salary aliases (individual.gross_salary / income.salary / income.employment /
+  // income.directorSalary) are the SAME underlying salary expressed in different
+  // schemas — take MAX, never SUM. Pushing them as separate items triple-counted
+  // Mr T's £12,570 salary into ~£37,710, which inflated calcAllIncome.total
+  // (£104k vs the true £78k), over-taxed calcIncomeTax (it taxes this base), and
+  // broke the Cashflow waterfall↔Sankey tie-out (2026-06-02). Mirrors the
+  // annualIncome() F1 fix in _helpers.js.
+  const _salary = Math.max(
+    +(ind.gross_salary || 0),
+    +(inc.salary || 0),
+    +(inc.employment || 0),
+    +(inc.directorSalary || 0),
+  );
+  if (_salary > 0) items.push({ type: 'employment', amount: _salary });
   if (inc.selfEmployed)  items.push({ type: 'self-employment', amount: +inc.selfEmployed });
   if (inc.selfEmploymentNet) items.push({ type: 'self-employment', amount: +inc.selfEmploymentNet });
   if (inc.dividends)     items.push({ type: 'dividends', amount: +inc.dividends });

@@ -123,6 +123,12 @@ import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx
 import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
 import { classifyLiability } from '../engine/liability-taxonomy.js'
 import { assetLabel } from '../engine/asset-taxonomy.js'
+import {
+  pensionTotal as _selPensionTotal, investmentsTotal as _selInvestmentsTotal,
+  propertyTotal as _selPropertyTotal, cashTotal as _selCashTotal,
+  alternativesTotal as _selAlternativesTotal, businessTotal as _selBusinessTotal,
+  liabilitiesTotal as _selLiabilitiesTotal,
+} from '../engine/_helpers.js'
 import DebtLeaf from '../components/MyMoney/DebtLeaf.jsx'
 import { amortise } from '../components/MyMoney/debtMath.js'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
@@ -3459,113 +3465,22 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   //   · This matches netWorthAtYears() which uses NW_now × 1.04^years; no
   //     amortisation model exists for liabilities, so scaling both keeps the
   //     identity tight without inventing amortisation.
-  const _heroBaseAssets = (() => {
-    const a = entity?.assets || {}
-    let t = 0
-    t += +(a.sipp?.total || 0)
-    t += (a.pensions || []).reduce((s, p) => s + +(p.balance_gbp || p.balance || p.cetv || p.value || 0), 0)
-    t += (a.investments || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
-    // Dedup the legacy ISA/GIA scalar shapes against the investments[] array —
-    // Mr T holds ISA+GIA in BOTH shapes, so adding both double-counted £71.4k and
-    // the hero ASSETS (£1.20m) overstated the sum of the category tiles (£1.13m).
-    // Mirrors investmentsTotal()'s guard so hero = engine = tiles. (Audit 2026-06-01.)
-    const _invHasISA = (a.investments || []).some(x => /isa/i.test(String(x.type ?? x.wrapper ?? '')))
-    const _invHasGIA = (a.investments || []).some(x => /\bgia\b|general/i.test(String(x.type ?? x.wrapper ?? '')))
-    if (!_invHasISA) t += +(a.isa?.total || a.isa?.value || 0)
-    if (!_invHasGIA) t += +(a.portfolio?.total || a.portfolio?.value || 0)
-    // B4 fix (2026-06-01): property[] was not applying ownershipShare / beneficial_interest.
-    // Engine's propertyTotal() always applies it; hero was gross, engine was net — break-even
-    // only for sole-owner personas. Joint-owned (personas b/e/f) had inflated hero assets.
-    t += (a.property || []).reduce((s, p) => {
-      if (p['$ref'] || p.status === 'disposed') return s
-      const raw  = +(p.value_gbp || p.value || p.market_value || 0)
-      const frac = +(p.beneficial_interest_this_individual ?? p.ownershipShare ?? 1) || 1
-      return s + raw * frac
-    }, 0)
-    // F-1 fix (2026-05-26 snap audit): Bruce persona stores main residence under
-    // `assets.residence` (NOT inside the `property[]` array). The wrapper bar and
-    // CategoryTile sums BOTH include residence; the hero strip silently dropped
-    // it, displaying Assets £2.28m vs correct £4.08m. Reconciles NW = Assets - Liabilities.
-    t += (+(a.residence?.value_gbp || a.residence?.value || a.residence?.market_value || 0)) * (+(a.residence?.ownershipShare || 1))
-    // F-2 fix (2026-06-01): Wonka (persona-e) carries private-business equity at
-    // top-level `entity.business_assets` (read by the CategoryTile via rowsForBPR)
-    // AND/OR `entity.assets.businesses[]` (read by the engine's netWorth/_businessTotal).
-    // The old line read `a.business_assets` (= entity.assets.business_assets, undefined),
-    // so the hero dropped the £3.2m company — strip showed Assets £2.26m while NW was
-    // £5.46m and the Business tile showed £3.20m. Read ONE canonical source (prefer the
-    // top-level array the tiles use; fall back to the engine's `businesses[]` shape) so we
-    // never double-count personas that populate both. Apply ownership/shareholding fraction.
-    {
-      const biz = (entity?.business_assets?.length ? entity.business_assets
-                  : (a.businesses || a.business_assets || a.businessAssets || a.business || []))
-      t += biz.reduce((s, b) => {
-        if (b?.status === 'disposed') return s
-        const raw  = +(b.value_gbp ?? b.value ?? 0) || 0
-        const frac = +(b.beneficial_interest_this_individual ?? b.ownershipShare ?? b.shareholding_pct ?? 1) || 1
-        return s + raw * frac
-      }, 0)
-    }
-    // B-residual fix (2026-06-01): alt holdings live at BOTH top-level
-    // `entity.alternatives[]` (Mr T's wine £8.4k) and nested `a.alternatives[]`
-    // (persona-c crypto/gold). The hero read only the nested array, so wine was
-    // dropped from hero Assets while the Alternatives tile counted it — the
-    // residual §9.5 Σtiles=Assets gap. Merge + de-dupe by id, mirroring the engine
-    // alternativesTotal() and the rowsForAlternatives tile classifier. No persona
-    // populates both shapes, so this changes only Mr T.
-    {
-      const _altSeen = new Set()
-      for (const x of [...(Array.isArray(entity?.alternatives) ? entity.alternatives : []),
-                       ...(a.alternatives || [])]) {
-        const _k = x?.id ?? x?.name ?? JSON.stringify(x)
-        if (_altSeen.has(_k)) continue
-        _altSeen.add(_k)
-        if (x?.status === 'disposed') continue
-        t += +(x.value_gbp || x.value || 0)
-      }
-    }
-    // Director's-loan in credit is a receivable (asset) — counted by the Business
-    // tile's rowsForDirector but previously dropped by the hero + engine. Mirrors
-    // the engine businessTotal() DLA fix so hero = engine = tile (£163k). (2026-06-01.)
-    if (entity?.directors_loan?.in_credit && +entity.directors_loan.balance) t += +entity.directors_loan.balance
-    // B7 fix (2026-06-01): persona-c (Tony Stark) stores GIA accounts in a.gia[],
-    // tax-efficient investments in a.taxEfficientInvestments[], and bonds in
-    // a.investmentBonds[]. None of these are inside a.investments[] so they were
-    // silently dropped from the hero assets total (£605k GIA + £533k TEI + £520k bonds
-    // = £1.658m missing). Add all three read-paths here. The engine's investmentsTotal()
-    // also misses them — see B7 rowsFor fix below for the tile-layer; engine fix is
-    // tracked separately (the engine NW is the ripple source and is independently wrong
-    // for Tony Stark, but hero and engine are both consistently wrong — after this fix
-    // the hero will be ahead of the engine NW until engine is patched too, so we use the
-    // corrected asset sum directly rather than the ripple NW when any of these arrays exist).
-    t += (a.gia || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
-    t += (a.taxEfficientInvestments || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
-    t += (a.investmentBonds || []).reduce((s, x) => s + +(x.value || x.balance_gbp || x.balance || 0), 0)
-    // Cash — either flat scalar or nested
-    if (Array.isArray(a.cash)) t += a.cash.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
-    else if (a.cash?.bank?.length) t += a.cash.bank.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
-    else if (a.cash?.accounts) t += a.cash.accounts.reduce((s, c) => s + +(c.balance || c.value || 0), 0)
-    else if (a.cash?.total) t += +a.cash.total
-    return t
-  })()
-  const _heroBaseLiabilities = (() => {
-    const l = entity?.liabilities || {}
-    const a = entity?.assets || {}
-    let t = 0
-    if (l.mortgage) t += +(l.mortgage.outstanding || 0)
-    t += (l.otherLoans || []).reduce((s, x) => s + +(x.outstanding || x.outstanding_balance || x.balance || 0), 0)
-    if (l.creditCards) t += +l.creditCards
-    // B5 fix (2026-06-01): property mortgages stored on property[] entries
-    // (mortgage_outstanding / mortgage_balance) were never counted in liabilities.
-    // Persona-c has £700k in BTL mortgages under property[].mortgage_outstanding
-    // that only appeared in the tile-layer drill but not in the hero strip.
-    // IMPORTANT: property assets above are GROSS (before mortgage) so adding
-    // mortgage debt here is correct — no double-subtraction.
-    t += (a.property || []).reduce((s, p) => {
-      if (p['$ref'] || p.status === 'disposed') return s
-      return s + +(p.mortgage_outstanding || p.mortgage_balance || 0)
-    }, 0)
-    return t
-  })()
+  // C8 (2026-06-02): hero base assets now come straight from the canonical engine
+  // selectors. The previous IIFE had accreted ~8 persona-specific patches
+  // (ISA/GIA dedup · B4 ownership · F-1 residence · F-2 business · B-residual alts ·
+  // DLA · B7 Tony-Stark GIA/TEI/bonds) to stay correct as schemas drifted — and the
+  // engine selectors were independently patched in the SAME 2026-06-01 audit to read
+  // the SAME shapes (the IIFE's "engine is independently wrong" note is now stale).
+  // Verified IDENTICAL output across all 8 personas (mrt £2.16m · a £4.08m · c £11.67m
+  // · e £5.46m · g £746k · d £80k · b £1.20m · f £0), so this collapses the drift
+  // surface to ONE source of truth: the same selectors netWorth() sums.
+  const _heroBaseAssets = _selPensionTotal(entity) + _selInvestmentsTotal(entity)
+    + _selPropertyTotal(entity) + _selCashTotal(entity)
+    + _selAlternativesTotal(entity) + _selBusinessTotal(entity)
+  // C8 (2026-06-02): liabilities now from the canonical engine selector. It
+  // already counts mortgage + otherLoans + property[].mortgage_outstanding (the
+  // B5 fix), so the hand-rolled IIFE was duplicating engine logic. One source.
+  const _heroBaseLiabilities = _selLiabilitiesTotal(entity)
   // W1 / Task A2: apply the same growth factor as the NW projection so the
   // identity Assets - Liab = NW holds at every horizon. The factor is derived
   // from the projection that was computed above (same path as hero NW).

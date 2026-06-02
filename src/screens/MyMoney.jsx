@@ -220,6 +220,9 @@ const WRAPPER_PALETTE = {
   CASH:     { fg: '#34C759' },
   PROPERTY: { fg: '#FF9F0A' },
   STATE:    { fg: '#8FA8C8' },
+  BUSINESS: { fg: '#5E5CE6' },
+  ALT:      { fg: '#FFD60A' },
+  OTHER:    { fg: '#8E8E93' },
   UNKNOWN:  { fg: '#9CA3AF' },
 }
 
@@ -241,6 +244,9 @@ const WRAPPER_LABEL = {
   BOND_ON:  'Onshore bond',
   BOND_OFF: 'Offshore bond',
   STATE:    'State',
+  BUSINESS: 'Business',
+  ALT:      'Alternatives',
+  OTHER:    'Other holdings',
   UNKNOWN:  'WRAPPER?',
 }
 
@@ -953,7 +959,7 @@ function DomainCard({ id, title, rows, total, deltaSince, sources, headerExtra, 
 // §5 WRAPPER COMPOSITION BAR (§2.2 of spec)
 // ═════════════════════════════════════════════════════════════════════════════
 
-function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onAddWrapperDetails, onOpenDrill }) {
+function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onAddWrapperDetails, onOpenDrill, totalAssets = 0 }) {
   // Sum value by wrapper across all asset rows
   const totals = {}
   const all = [
@@ -973,10 +979,32 @@ function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onA
     if (!r.wrapper) continue
     totals[r.wrapper] = (totals[r.wrapper] || 0) + r.value
   }
+  const wrapped = Object.values(totals).reduce((s, v) => s + v, 0)
+  // Surface the UNWRAPPED assets so the bar ties to TOTAL assets, not just the
+  // wrapped subset. Founder 2026-06-02: the title showed heroTotalAssets (£2.16m)
+  // while the segments summed to only the wrapped £1.96m — business equity +
+  // alternatives (deliberately wrapper:null, so the tax fast-path can't treat
+  // them as a GIA) were invisible on this signature surface. Alternatives is a
+  // clean filter; Business is the RESIDUAL (total − wrapped − alt = company
+  // equity / share schemes / any other unwrapped holding) so the bar ties to
+  // heroTotalAssets EXACTLY by construction and can never drift from the hero.
+  const altTotal = rowsForAlternatives(entity).reduce((s, r) => s + (+r.value || 0), 0)
+  if (altTotal > 0) totals.ALT = (totals.ALT || 0) + altTotal
+  const residualTotal = Math.max(0, (totalAssets || wrapped) - wrapped - altTotal)
+  // Label the residual "Business" only when the entity genuinely holds business
+  // assets — otherwise it's some other unwrapped value (or heroTotalAssets drift)
+  // and "Other holdings" is the honest label, not a phantom Business figure.
+  const hasBusiness = !!(entity?.companies?.length || entity?.business_assets?.length ||
+                         entity?.share_schemes?.length || entity?.ltd_companies?.length)
+  const residualKey = hasBusiness ? 'BUSINESS' : 'OTHER'
+  if (residualTotal > 0) totals[residualKey] = (totals[residualKey] || 0) + residualTotal
   const grand = Object.values(totals).reduce((s, v) => s + v, 0)
   if (grand <= 0) return null
   const entries = Object.entries(totals).sort((a, b) => b[1] - a[1])
   const unknownAmount = totals.UNKNOWN || 0
+  // ALT / BUSINESS are synthetic tie-out segments (no tax wrapper) — they have no
+  // dedicated wrapper drill, so tapping them is a no-op rather than a dead drill.
+  const isSyntheticWrapper = (w) => w === 'ALT' || w === 'BUSINESS' || w === 'OTHER'
   return (
     <div style={{ marginBottom: 'var(--space-md)' }}>
       <div
@@ -1003,6 +1031,7 @@ function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onA
             <button key={w} onClick={() => {
                 // Primary tap → open drill (L1→L2→L3). If drill handler not
                 // wired, fall back to legacy filter behaviour for safety.
+                if (isSyntheticWrapper(w)) return   // tie-out segment, no wrapper drill
                 if (typeof onOpenDrill === 'function') onOpenDrill(w)
                 else onSegmentTap?.(isActive ? null : w)
               }}
@@ -1034,6 +1063,7 @@ function WrapperCompositionBar({ entity, onSegmentTap, activeWrapper = null, onA
           const badgeLabel = isUnknown ? `WRAPPER? · ${fmt(v)}` : `${layName} · ${fmt(v)}`
           return (
             <span key={w} onClick={() => {
+                if (isSyntheticWrapper(w)) return   // tie-out segment, no wrapper drill
                 if (typeof onOpenDrill === 'function') onOpenDrill(w)
                 else onSegmentTap?.(isActive ? null : w)
               }}
@@ -3801,6 +3831,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
         </div>
         <WrapperCompositionBar
           entity={entity}
+          totalAssets={heroTotalAssets}
           onSegmentTap={setFilterWrapper}
           activeWrapper={filterWrapper}
           onAddWrapperDetails={() => setBucketOpen(true)}

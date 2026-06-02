@@ -1,0 +1,6 @@
+{
+  "personal_allowance":    { "value": 12570,  "status": "ENACTED", "source": "mock", "asOf": "2026/27" },
+  "basic_rate_threshold":  { "value": 50500,  "status": "ENACTED", "source": "mock-changed", "asOf": "2026/27" },
+  "iht_annual_gift":       { "value": 6000,   "status": "PROPOSED", "source": "mock-anomaly", "asOf": "2026/27" },
+  "cgt_aea":               { "value": null,   "status": "UNVERIFIED", "source": "", "asOf": "" }
+}

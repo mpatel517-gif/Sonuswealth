@@ -666,7 +666,7 @@ function SalarySacrifice({ entity }) {
         }}>
           <strong>2029 NIC cap horizon</strong> · From {horizon.effective_date} the NIC saving
           on salary sacrifice will be capped at {fmt(horizon.cap_amount_per_year)}/yr.
-          Maximise pre-cap contributions while available.
+          Contributions made before the cap takes effect keep today's NIC treatment.
         </div>
       )}
     </div>
@@ -748,8 +748,8 @@ function DividendDetail({ entity }) {
           border: '1px solid rgba(0,229,168,.25)',
           borderRadius: 10, fontSize: 12, color: 'var(--c-success)',
         }}>
-          Move to ISA saves {fmt(div.move_to_isa_opportunity.tax_saving_annual)} / year
-          (headroom {fmt(div.move_to_isa_opportunity.isa_headroom)}).
+          Held in an ISA, the dividend tax on this amount — about {fmt(div.move_to_isa_opportunity.tax_saving_annual)}/year —
+          would not apply (ISA headroom {fmt(div.move_to_isa_opportunity.isa_headroom)}).
         </div>
       )}
     </div>
@@ -2141,7 +2141,7 @@ function CGTDrillPanel({ entity, onClose }) {
             borderRadius: 18, padding: '14px 18px', marginBottom: 12,
             fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55,
           }}>
-            Consider harvesting up to {fmt(exempt)} in gains per tax year to use your annual exempt amount.
+            Your annual CGT exempt amount lets up to {fmt(exempt)} of gains be realised tax-free each tax year; unused, it doesn't carry forward.
           </div>
         )}
 

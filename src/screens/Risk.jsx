@@ -1614,13 +1614,13 @@ export function RiskBody({ entity, onAddProtection, onNav, onDrillMetric, onComm
         const current = appetite ? APPETITE_LABELS[appetite] : null
         const band = risk.band || riskBand(risk.total)
         const RISK_DECISIONS = {
-          vulnerable: 'Keep 12+ months in accessible cash. Avoid new debt. Prioritise income stability.',
-          cautious:   'Maintain 6–12 months cash buffer. Review protection cover. Conservative allocation appropriate.',
-          managed:    'Standard planning applies. Review stress scenarios annually. ISA/SIPP tax shelter priority.',
-          protected:  'Resilience is solid. Focus on growth optimisation and estate efficiency.',
-          resilient:  'Strong resilience. Opportunity to accept more investment risk and focus on legacy.',
+          vulnerable: 'At lower resilience, people often hold 12+ months in accessible cash and focus on income stability before taking on new debt.',
+          cautious:   'A 6–12 month cash buffer and reviewed protection cover are common at this level, with allocations tending to be more conservative.',
+          managed:    'At this level, annual stress-scenario reviews and use of ISA / pension tax shelters are typical.',
+          protected:  'Resilience is solid — attention often shifts toward growth and estate efficiency.',
+          resilient:  'Resilience is strong — there is often capacity for more investment risk and a focus on legacy.',
         }
-        const decision = RISK_DECISIONS[(band.name || '').toLowerCase()] || 'Review your dimensions to understand where resilience can improve.'
+        const decision = RISK_DECISIONS[(band.name || '').toLowerCase()] || 'Your seven dimensions show where resilience could improve.'
         return (
           <FadeInOnMount delay={100}>
             <div className="card sw-lift" style={{ marginBottom: 12 }}>
@@ -1654,6 +1654,7 @@ export function RiskBody({ entity, onAddProtection, onNav, onDrillMetric, onComm
                   What this means for decisions
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>{decision}</div>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, fontStyle: 'italic' }}>General information, not personal advice.</div>
               </div>
               <button
                 onClick={() => setRiskQOpen(true)}

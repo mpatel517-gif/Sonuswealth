@@ -1305,13 +1305,13 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
 }
 
 const DIM_EXPLAINERS = {
-  behaviour:  { what: 'How consistently your financial actions match your goals — contributions, reviews, rebalancing.', lift: 'Set up automatic contributions and review your plan quarterly.', route: 'money' },
-  capital:    { what: 'How hard your capital is working — return vs risk vs wrapper efficiency.', lift: 'Maximise ISA and pension allowances before investing in a GIA.', route: 'money' },
-  tax:        { what: 'How much of your return you keep after tax — allowances, shelters, sequencing.', lift: 'Use annual CGT and dividend allowances. Review ISA/SIPP/GIA sequencing.', route: 'tax' },
-  protection: { what: 'Whether a shock — illness, death, or liability — would derail your financial plan.', lift: 'Review life cover, income protection, and lasting power of attorney.', route: 'risk' },
-  cashflow:   { what: 'Whether your monthly surplus gives you flexibility and a resilience buffer.', lift: 'Build 3–6 months of expenses in liquid, accessible savings.', route: 'flow' },
-  debt:       { what: 'Whether your debt is costing more than your investments earn after tax.', lift: 'Clear high-rate debt before increasing investment contributions.', route: 'money' },
-  estate:     { what: 'Whether your wealth transfers efficiently — IHT exposure, nominations, and Will.', lift: 'Review beneficiary nominations, update your Will, and consider trust structures.', route: 'tax' },
+  behaviour:  { what: 'How consistently your financial actions match your goals — contributions, reviews, rebalancing.', lift: 'Automatic contributions and regular plan reviews tend to keep actions aligned with goals.', route: 'money' },
+  capital:    { what: 'How hard your capital is working — return vs risk vs wrapper efficiency.', lift: 'Tax-free ISA and pension allowances are commonly used before a taxable general account (GIA).', route: 'money' },
+  tax:        { what: 'How much of your return you keep after tax — allowances, shelters, sequencing.', lift: 'Annual CGT and dividend allowances reset each year; wrapper sequencing (ISA / pension / GIA) affects how much tax you keep.', route: 'tax' },
+  protection: { what: 'Whether a shock — illness, death, or liability — would derail your financial plan.', lift: 'Life cover, income protection and a lasting power of attorney are the usual protection building blocks to review.', route: 'risk' },
+  cashflow:   { what: 'Whether your monthly surplus gives you flexibility and a resilience buffer.', lift: 'Many advisers suggest 3–6 months of expenses in liquid, accessible savings as a resilience buffer.', route: 'flow' },
+  debt:       { what: 'Whether your debt is costing more than your investments earn after tax.', lift: 'When debt interest exceeds expected after-tax investment returns, paying it down first is a common approach.', route: 'money' },
+  estate:     { what: 'Whether your wealth transfers efficiently — IHT exposure, nominations, and Will.', lift: 'Up-to-date beneficiary nominations and a current Will are estate-planning basics; trust structures are one option some people consider.', route: 'tax' },
 }
 
 const TAB_LABELS = { money: 'MyMoney', tax: 'Tax & Estate', risk: 'Risk', flow: 'Cashflow', timeline: 'Timeline' }
@@ -1390,16 +1390,16 @@ function DimExplainerStub({ metric, fqData, onClose, onNav }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 const COI_DOMAIN_META = {
-  drawdown:           { label: 'SIPP estate exposure',           screen: 'tax',   action: 'Review expression of wishes and beneficiary nominations. Your SIPP enters the estate in April 2027 — acting now reduces the IHT exposure while gifting windows remain open.' },
-  wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)', screen: 'tax',   action: 'Draw down ISA before SIPP in retirement. Preserves pension growth and keeps the pot outside your estate for longer.' },
-  contributions:      { label: 'Pension contributions',         screen: 'money', action: 'Maximising pension contributions reduces your income tax liability now and grows your retirement pot tax-free.' },
-  taxAllowances:      { label: 'Unused tax allowances',         screen: 'tax',   action: 'Use your ISA, CGT annual exemption, and dividend allowance before 5 April. These reset — unused years are lost.' },
-  estatePlanning:     { label: 'Estate planning gap',           screen: 'tax',   action: 'Update your Will, lasting power of attorney, and beneficiary nominations. Review IHT exposure and gifting opportunities.' },
-  protection:         { label: 'Protection coverage gap',       screen: 'risk',  action: 'Assess life cover, income protection, and critical illness against your current income and dependant obligations.' },
-  debt:               { label: 'High-cost debt',                screen: 'money', action: 'Clear debt costing more than your expected investment return after tax. This is a guaranteed risk-free return.' },
-  gifting:            { label: 'Gifting opportunity',           screen: 'tax',   action: 'Gift up to £3,000/yr free of IHT (carry forward 1 year). Each year without gifting is a permanent loss.' },
-  propertyDecisions:  { label: 'Property decisions',            screen: 'money', action: 'Assess rental yield, CGT on disposal, and whether property is the best use of this capital given your plan.' },
-  investmentStrategy: { label: 'Investment strategy',           screen: 'money', action: 'Review asset allocation, wrapper efficiency, and rebalancing schedule against your risk profile and timeline.' },
+  drawdown:           { label: 'SIPP estate exposure',           screen: 'tax',   action: 'From April 2027 pensions count toward the estate, so an up-to-date expression of wishes and beneficiary nominations matter — the choices made before then affect the IHT position while gifting windows remain open.' },
+  wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)', screen: 'tax',   action: 'Drawing ISA before pension is a common retirement sequence — it preserves pension growth and keeps the pot outside the estate for longer.' },
+  contributions:      { label: 'Pension contributions',         screen: 'money', action: 'Pension contributions reduce income tax now and grow the pot tax-free.' },
+  taxAllowances:      { label: 'Unused tax allowances',         screen: 'tax',   action: 'ISA, CGT and dividend allowances reset on 5 April each year — unused, they are lost.' },
+  estatePlanning:     { label: 'Estate planning gap',           screen: 'tax',   action: 'A current Will, lasting power of attorney and beneficiary nominations are estate-planning basics; IHT exposure and gifting allowances are the usual things to review.' },
+  protection:         { label: 'Protection coverage gap',       screen: 'risk',  action: 'Life cover, income protection and critical illness are typically weighed against current income and dependant obligations.' },
+  debt:               { label: 'High-cost debt',                screen: 'money', action: 'Debt costing more than your expected after-tax investment return is, in effect, a guaranteed risk-free return when paid down.' },
+  gifting:            { label: 'Gifting opportunity',           screen: 'tax',   action: 'The annual gift exemption is £3,000/yr free of IHT (one prior year can be carried forward); it does not accumulate beyond that.' },
+  propertyDecisions:  { label: 'Property decisions',            screen: 'money', action: 'Rental yield, CGT on disposal and how property fits the wider plan are the usual factors weighed here.' },
+  investmentStrategy: { label: 'Investment strategy',           screen: 'money', action: 'Asset allocation, wrapper efficiency and rebalancing are typically reviewed against risk profile and timeline.' },
 }
 
 const COI_SCREEN_LABELS = { tax: 'Tax & Estate', money: 'MyMoney', risk: 'Risk' }

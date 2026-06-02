@@ -230,14 +230,22 @@
   "_lastUpdated": "May 2026 (reconstruction)",
   "_midYearEvents": [
     {
-      "id": "CGT-MAIN-RATE-RAISE",
+      "id": "CGT-BASIC-RATE-RAISE",
       "effectiveFrom": "2024-10-30",
       "type": "rate-change",
-      "scope": "capitalGains.basicRate + higherRate",
-      "from": { "basic": 0.10, "higher": 0.20 },
-      "to":   { "basic": 0.18, "higher": 0.24 },
+      "scope": "capitalGains.basicRate",
+      "from": 0.10, "to": 0.18,
       "source": "Autumn Budget Oct 2024",
-      "note": "CGT main rates aligned with residential rates. Effective for disposals on/after 30 October 2024."
+      "note": "CGT main basic rate aligned with residential. Effective for disposals on/after 30 October 2024. (Split from the former compound CGT-MAIN-RATE-RAISE event, which the resolver silently dropped — compound '+' scope with an object `to` does not apply: see applyMidYearEvents.)"
+    },
+    {
+      "id": "CGT-HIGHER-RATE-RAISE",
+      "effectiveFrom": "2024-10-30",
+      "type": "rate-change",
+      "scope": "capitalGains.higherRate",
+      "from": 0.20, "to": 0.24,
+      "source": "Autumn Budget Oct 2024",
+      "note": "CGT main higher rate aligned with residential. Effective for disposals on/after 30 October 2024."
     },
     {
       "id": "SDLT-SURCHARGE-RAISE",

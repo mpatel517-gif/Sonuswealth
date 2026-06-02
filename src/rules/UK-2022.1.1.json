@@ -219,7 +219,7 @@
       "id": "HSC-LEVY-NIC-START",
       "effectiveFrom": "2022-04-06",
       "type": "rate-change",
-      "scope": "nationalInsurance.class1Employee + class1Employer",
+      "scope": "nationalInsurance.class1EmployeeRate + nationalInsurance.class1EmployerRate",
       "delta": "+0.0125",
       "source": "Health & Social Care Levy Act 2021",
       "note": "1.25pp added to employee + employer NIC."
@@ -237,7 +237,7 @@
       "id": "HSC-LEVY-NIC-REVERSE",
       "effectiveFrom": "2022-11-06",
       "type": "rate-change",
-      "scope": "nationalInsurance.class1Employee + class1Employer",
+      "scope": "nationalInsurance.class1EmployeeRate + nationalInsurance.class1EmployerRate",
       "delta": "-0.0125",
       "source": "Growth Plan September 2022",
       "note": "HSC Levy reversed for NIC. Dividend +1.25pp retained."
@@ -250,7 +250,8 @@
       "from": { "nilTo": 125000, "ftbZero": 300000, "ftbReduced": 500000 },
       "to":   { "nilTo": 250000, "ftbZero": 425000, "ftbReduced": 625000 },
       "source": "Growth Plan September 2022",
-      "note": "SDLT nil-rate band raised. Reverted 31 March 2025."
+      "note": "SDLT nil-rate band raised. Reverted 31 March 2025.",
+      "_resolverNote": "NOT APPLIED by applyMidYearEvents — the scope uses an array-index path (residentialRates[0].upTo) which the dot-path resolver cannot address, and an object from/to. Low impact: SDLT only bites on a purchase scenario in 2022/23 and this change was reverted 31 Mar 2025. To activate, add array-index support to applyMidYearEvents in src/lib/data-source.js, then re-verify."
     }
   ]
 }

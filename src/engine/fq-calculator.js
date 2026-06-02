@@ -2693,9 +2693,18 @@ function _currentEssentialsAnnual(entity, grossAnnual) {
 export function inferLifeStage(entity) {
   const ov = entity?.preferences?.lifeStageOverride;
   if (ov === 'accumulator' || ov === 'decumulator') return ov;
-  const drawingPension = +(entity?.drawdown || 0) > 0
-    || +(entity?.income?.pensionDrawdown || 0) > 0;
-  if (drawingPension) return 'decumulator';
+  // Authoritative persona signal first: lifeStage 5 = Decumulation (a near/at-
+  // retirement person whose job for this tab is "how do I draw this down", even
+  // if they haven't pressed start yet — e.g. Bruce, 62, drawdownPlan pending).
+  if (+(entity?.lifeStage || 0) >= 5 || /decumul/i.test(entity?.lifeStageName || '')) {
+    return 'decumulator';
+  }
+  // Already drawing income, or a drawdown plan is in motion.
+  if (+(entity?.drawdown || 0) > 0
+   || +(entity?.income?.pensionDrawdown || 0) > 0
+   || (entity?.drawdownPlan?.status && entity.drawdownPlan.status !== 'not_started')) {
+    return 'decumulator';
+  }
   const age = +(_personAge(entity) || 0);
   const retAge = +(entity?.preferences?.retirementAge
     ?? entity?.individual?.retirement_age

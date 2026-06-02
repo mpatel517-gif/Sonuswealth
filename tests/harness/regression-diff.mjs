@@ -134,6 +134,17 @@ const VOLATILE_KEYS = new Set([
 ])
 
 function stableStringify(value) {
+  // Numbers: normalize float least-significant-bit noise so the hash is
+  // platform-portable (a Windows-captured baseline must match a Linux CI run).
+  // Without this, 2023/24 cells drifted Windows↔Linux on the HASH only (netWorth/
+  // fq/risk all matched within tolerance) — i.e. a sub-field computed e.g.
+  // 0.30000000000000004 on one platform and 0.29999999999999999 on the other.
+  // Rounding to 6 decimals is far below any meaningful £/rate difference (pennies
+  // survive) but well above the divergent bits. Non-finite → 'null' (stable).
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return 'null'
+    return JSON.stringify(Number(value.toFixed(6)))
+  }
   if (value === null || typeof value !== 'object') return JSON.stringify(value)
   if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']'
   const keys = Object.keys(value).filter(k => !VOLATILE_KEYS.has(k)).sort()

@@ -2680,6 +2680,32 @@ function _currentEssentialsAnnual(entity, grossAnnual) {
 }
 
 /**
+ * Life-stage classifier driving the adaptive Cashflow surface. Returns
+ * 'decumulator' once the person is drawing pension income or has reached their
+ * retirement age; 'accumulator' while still building. The Cashflow tab shows a
+ * saver hero (surplus + funded-ratio trajectory) to accumulators and a retiree
+ * hero (withdrawal solver + drawdown methods) to decumulators. A manual override
+ * (entity.preferences.lifeStageOverride) always wins so the user can switch.
+ * CANONICAL
+ * @param {object} entity
+ * @returns {'accumulator'|'decumulator'}
+ */
+export function inferLifeStage(entity) {
+  const ov = entity?.preferences?.lifeStageOverride;
+  if (ov === 'accumulator' || ov === 'decumulator') return ov;
+  const drawingPension = +(entity?.drawdown || 0) > 0
+    || +(entity?.income?.pensionDrawdown || 0) > 0;
+  if (drawingPension) return 'decumulator';
+  const age = +(_personAge(entity) || 0);
+  const retAge = +(entity?.preferences?.retirementAge
+    ?? entity?.individual?.retirement_age
+    ?? entity?.individual?.state_pension_start_age
+    ?? 67);
+  if (age > 0 && retAge > 0 && age >= retAge) return 'decumulator';
+  return 'accumulator';
+}
+
+/**
  * Canonical net-of-tax cashflow waterfall — the ONE source for the Cashflow tab's
  * Sankey + waterfall + surplus/deficit cards AND Home's deficit banner, so they
  * can never diverge (2026-06-02; founder chose net-of-tax over the prior

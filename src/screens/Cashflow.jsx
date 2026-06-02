@@ -29,7 +29,7 @@ import {
   // Cashflow Health (§3B)
   cashflowHealth,
   // §A NOW
-  calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow,
+  calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow, inferLifeStage,
   liquidityBuffer, recommendedSurplusAllocation,
   debtRatio,
   // §B TRAJECTORY
@@ -1656,6 +1656,14 @@ function PurposeStatement({ entity, lb, fr, pos, health }) {
     : tone === 'bad' ? 'var(--c-coral, #FF6F7D)'
     : 'var(--c-text3)'
 
+  // Adaptive by life stage (Phase 2): a saver and a retiree are asking different
+  // questions of this tab. The hero question + chip reflect which one applies.
+  const stage = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
+  const stageChip = stage === 'decumulator' ? 'Drawing income' : 'Building wealth'
+  const stageQuestion = stage === 'decumulator'
+    ? 'How much can you draw, for how long — and in the most tax-efficient way? Information only.'
+    : 'Are you saving enough — and is your plan on track for the life you want? Information only.'
+
   return (
     <div style={S.purpose}>
       {/* v0.3 R3v2 Frontend critique fix: answer FIRST, question second.
@@ -1674,11 +1682,13 @@ function PurposeStatement({ entity, lb, fr, pos, health }) {
           </span>
         )}
       </div>
-      <div style={{
-        ...S.purposeLine2,
-        marginTop: 8, fontSize: 11, color: 'var(--c-text3)',
-      }}>
-        Will your money last — and is what's coming in actually enough? Information only.
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+        <span className="sw-chip sw-chip-sm" data-tieout="cashflow.life-stage" style={{ fontWeight: 600 }}>
+          {stageChip}
+        </span>
+        <div style={{ ...S.purposeLine2, fontSize: 11, color: 'var(--c-text3)' }}>
+          {stageQuestion}
+        </div>
       </div>
     </div>
   )

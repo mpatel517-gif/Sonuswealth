@@ -246,12 +246,24 @@
       "id": "SDLT-NIL-EXPAND",
       "effectiveFrom": "2022-09-23",
       "type": "threshold-change",
-      "scope": "property.sdlt.residentialRates[0].upTo + firstTimeBuyerRelief",
-      "from": { "nilTo": 125000, "ftbZero": 300000, "ftbReduced": 500000 },
-      "to":   { "nilTo": 250000, "ftbZero": 425000, "ftbReduced": 625000 },
+      "scope": "property.sdlt.residentialRates",
+      "to": [
+        { "upTo": 250000, "rate": 0 },
+        { "from": 250001, "upTo": 925000, "rate": 0.05 },
+        { "from": 925001, "upTo": 1500000, "rate": 0.1 },
+        { "from": 1500001, "rate": 0.12 }
+      ],
       "source": "Growth Plan September 2022",
-      "note": "SDLT nil-rate band raised. Reverted 31 March 2025.",
-      "_resolverNote": "NOT APPLIED by applyMidYearEvents — the scope uses an array-index path (residentialRates[0].upTo) which the dot-path resolver cannot address, and an object from/to. Low impact: SDLT only bites on a purchase scenario in 2022/23 and this change was reverted 31 Mar 2025. To activate, add array-index support to applyMidYearEvents in src/lib/data-source.js, then re-verify."
+      "note": "SDLT 0% band extended £125k→£250k; the former £125k–£250k 2% band removed. Reverted 31 March 2025. (Array-replacement event — applyMidYearEvents now supports array `to` + array-index paths.)"
+    },
+    {
+      "id": "SDLT-FTB-RAISE",
+      "effectiveFrom": "2022-09-23",
+      "type": "threshold-change",
+      "scope": "property.sdlt.firstTimeBuyerRelief",
+      "to": { "zeroRateTo": 425000, "reducedRateTo": 625000 },
+      "source": "Growth Plan September 2022",
+      "note": "First-time-buyer 0% threshold £300k→£425k; reduced-rate ceiling £500k→£625k. Reverted 31 March 2025."
     }
   ]
 }

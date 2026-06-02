@@ -143,32 +143,54 @@ export function applyMidYearEvents(bundle, asOfDate) {
   for (const ev of due) {
     const targets = String(ev.scope || '').split('+').map(s => s.trim()).filter(Boolean);
     for (const target of targets) {
-      const path = target.split('.');
-      const last = path.pop();
-      let node = out;
-      for (const seg of path) {
-        if (node[seg] == null) { node[seg] = {}; }
-        node = node[seg];
-      }
-      // Prefer event.to if defined; otherwise apply delta
+      // Resolve a dotted path to {parent, key}, supporting array-index segments
+      // like `residentialRates[0]` (so events can target an array element).
+      const t = resolveTargetPath(out, target);
+      if (!t) continue;
+      const { parent, key } = t;
       if (ev.to !== undefined) {
-        if (typeof ev.to === 'object' && ev.to !== null) {
-          // Multi-field event (e.g. {basic, higher}) — caller must spell out
-          // exact subkeys; we copy each.
-          Object.assign(node[last] ?? (node[last] = {}), ev.to);
+        if (Array.isArray(ev.to)) {
+          parent[key] = ev.to;                         // full array replacement
+        } else if (typeof ev.to === 'object' && ev.to !== null) {
+          // Object merge — caller spells out the exact subkeys to overwrite.
+          const cur = parent[key];
+          parent[key] = { ...(cur && typeof cur === 'object' && !Array.isArray(cur) ? cur : {}), ...ev.to };
         } else {
-          node[last] = ev.to;
+          parent[key] = ev.to;                         // scalar set
         }
       } else if (ev.delta !== undefined) {
         const delta = typeof ev.delta === 'string' ? parseFloat(ev.delta) : ev.delta;
-        if (typeof node[last] === 'number' && Number.isFinite(delta)) {
-          node[last] = node[last] + delta;
+        if (typeof parent[key] === 'number' && Number.isFinite(delta)) {
+          parent[key] = parent[key] + delta;
         }
       }
     }
     out._appliedMidYearEvents.push({ id: ev.id, effectiveFrom: ev.effectiveFrom, scope: ev.scope });
   }
   return out;
+}
+
+/**
+ * Resolve a dotted path (e.g. "property.sdlt.residentialRates[0].upTo") to the
+ * {parent, key} of its final segment, creating intermediate objects/arrays as
+ * needed. `name[idx]` segments expand to an array key + numeric index, so events
+ * can target array elements as well as object properties.
+ */
+function resolveTargetPath(root, target) {
+  const tokens = [];
+  for (const seg of String(target).split('.')) {
+    const m = seg.match(/^(.+?)\[(\d+)\]$/);
+    if (m) { tokens.push(m[1]); tokens.push(Number(m[2])); }
+    else tokens.push(seg);
+  }
+  if (!tokens.length) return null;
+  let node = root;
+  for (let i = 0; i < tokens.length - 1; i++) {
+    const k = tokens[i];
+    if (node[k] == null) node[k] = typeof tokens[i + 1] === 'number' ? [] : {};
+    node = node[k];
+  }
+  return { parent: node, key: tokens[tokens.length - 1] };
 }
 
 // Expose the mapping so callers (manifest builder, harness) can iterate.

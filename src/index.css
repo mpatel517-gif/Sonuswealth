@@ -301,6 +301,20 @@ body {
    (clears the 240px sidebar) lives in the min-width:1024px block below. */
 .sw-ask-pill { left: 16px; right: 16px; }
 
+/* Tablet band (768–1023px): #root is capped at 680px and centred, but the fixed
+   pill stayed viewport-wide (left/right:16) so it overhung the content by ~100px
+   each side and crowded the bottom tabs (founder 2026-06-02: "so large and covers
+   the tabs"). Pin it to the content column, centred. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sw-ask-pill {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(680px - 32px);
+    max-width: calc(100% - 32px);
+  }
+}
+
 @media (min-width: 768px) {
   #root { max-width: 680px; }
   .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

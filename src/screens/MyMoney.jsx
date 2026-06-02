@@ -121,6 +121,7 @@ import BusinessDrillDown    from '../components/MyMoney/BusinessDrillDown.jsx'
 import ProtectionDrillDown  from '../components/MyMoney/ProtectionDrillDown.jsx'
 import LiabilitiesDrillDown from '../components/MyMoney/LiabilitiesDrillDown.jsx'
 import LiabilityTile from '../components/MyMoney/LiabilityTile.jsx'
+import { classifyLiability } from '../engine/liability-taxonomy.js'
 import DebtLeaf from '../components/MyMoney/DebtLeaf.jsx'
 import { amortise } from '../components/MyMoney/debtMath.js'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
@@ -404,17 +405,11 @@ function rowsForPensions(entity) {
 // `capitalize` (which mangles hyphens → "Buy-To-Let"). Founder 2026-06-01.
 function humanizeDebtType(type = '') {
   const raw = String(type).toLowerCase().trim()
-  // Acronyms / multi-word types the generic prettifier would mangle.
-  const OVERRIDE = {
-    'hmrc-self-assessment': 'HMRC — Self Assessment',
-    'hmrc': 'HMRC',
-    'bnpl': 'Buy now, pay later',
-    'car-finance-pcp': 'Car finance (PCP)',
-    'car-finance-hp': 'Car finance (HP)',
-    'second-charge-mortgage': 'Second-charge mortgage',
-    'overdraft': 'Overdraft',
-  }
-  if (OVERRIDE[raw]) return OVERRIDE[raw]
+  // Prefer the canonical taxonomy label so every surface names a debt the same
+  // way. Only fall back to the generic prettifier when the type matches nothing
+  // in the taxonomy (classifyLiability returns the 'other-loan' sentinel).
+  const entry = classifyLiability(raw)
+  if (entry.id !== 'other-loan') return entry.label
   const planMatch = raw.match(/plan[\s_-]?(\d)/)
   let t = raw
     .replace(/plan[\s_-]?\d/g, '')                    // strip "planN" — re-added as "(Plan N)"

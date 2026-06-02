@@ -20,6 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createContext, useContext, useReducer, useCallback, useMemo } from 'react'
+import { ADD_ID_TO_TYPE } from '../engine/liability-taxonomy.js'
 
 // ─── Event types + validator ────────────────────────────────────────────────
 // Added 2026-05-12: ASSET_VALUE_UPDATED + ASSET_REMOVED + DOCUMENT_CAPTURED.
@@ -535,12 +536,17 @@ function applyAssetEvent(e, payload) {
     }
     const arr = ensureArray(e.liabilities, 'otherLoans')
     const idx = arr.findIndex(l => l.id === newId)
-    const typeMap = { BTL_MORTGAGE: 'buy-to-let-mortgage', PERSONAL_LOAN: 'personal-loan',
-                      CREDIT_CARD: 'credit-card', STUDENT_LOAN: `student-loan-plan-${fields.plan || '2'}`,
-                      HP: 'hire-purchase' }
+    // Canonical kebab `type` for every taxonomy item (ADD_ID_TO_TYPE), so a
+    // freshly-added debt categorises identically to a fixture one. A couple of
+    // field-dependent specials override the generic map (student-loan plan
+    // suffix; legacy STUDENT_LOAN/HP add ids that predate the per-plan menu).
+    const typeSpecials = {
+      STUDENT_LOAN: `student-loan-plan-${fields.plan || '2'}`,
+      HP: 'hire-purchase',
+    }
     const obj = {
       id: newId,
-      type: typeMap[itemType] || itemType,
+      type: typeSpecials[itemType] || ADD_ID_TO_TYPE[itemType] || itemType,
       lender: fields.lender || fields.provider || '',
       outstanding: +fields.outstanding || 0,
       outstanding_balance: +fields.outstanding || 0,

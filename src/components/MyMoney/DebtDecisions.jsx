@@ -37,6 +37,7 @@
 import { useState } from 'react'
 import { amortise, payoffLabel } from './debtMath.js'
 import { BRAND } from '../../config/brand.js'
+import { classifyLiability, DECISION_LABELS } from '../../engine/liability-taxonomy.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -111,26 +112,41 @@ function loanMeta(asset) {
 
 // ── Decision set per loan type ───────────────────────────────────────────────
 
-function decisionsFor(meta) {
-  if (meta.isHMRC) return ['time-to-pay', 'overpay']  // HMRC: spread or clear
-  if (meta.isBNPL) return ['overpay']                 // BNPL: clear before late fees
+// Verbs with a bespoke, maths-backed body below. Every OTHER verb in the
+// taxonomy's decision set renders the generic info body (taxNote + risk flags +
+// a one-line decision intro) — honest info/guidance, no fake maths, no dead chip.
+const RICH_VERBS = new Set(['overpay', 'remortgage', 'switch-rate', 'consolidate', 'time-to-pay'])
+
+// The applicable decision set now comes from the canonical taxonomy, so a PCP
+// shows 'voluntary-termination', a student loan shows 'leave it (written off)',
+// equity release shows 'review the release' — not a generic overpay/consolidate
+// pair (founder 2026-06-02, full-spectrum). Falls back to the meta heuristics
+// only when the type matches nothing in the taxonomy.
+function decisionsFor(meta, asset) {
+  const fromTaxonomy = classifyLiability(asset?.type).decisions
+  if (fromTaxonomy && fromTaxonomy.length) return fromTaxonomy
+  if (meta.isHMRC) return ['time-to-pay', 'overpay']
+  if (meta.isBNPL) return ['clear-before-fees']
   const d = ['overpay']
-  if (meta.isMortgage) {
-    d.push('remortgage')
-    d.push('switch-rate')
-  }
-  if (meta.isUnsecured) {
-    d.push('consolidate')
-  }
+  if (meta.isMortgage) { d.push('remortgage'); d.push('switch-rate') }
+  if (meta.isUnsecured) d.push('consolidate')
   return d
 }
 
-const LABEL = {
-  overpay:        'Overpay',
-  remortgage:     'Remortgage / switch rate',
-  'switch-rate':  'Switch rate type',
-  consolidate:    'Consolidate',
-  'time-to-pay':  'Time to Pay (HMRC)',
+// One-line, FCA-safe framing of each info-only decision (general principle, not
+// a personal recommendation). Used by the generic body.
+const VERB_INTRO = {
+  'clear-before-fees':      'Clearing this balance removes the running cost and any late-fee or default risk. There is usually no penalty for settling a small balance early.',
+  'voluntary-termination':  'On a regulated HP or PCP agreement you have a statutory right (CCA s.99) to hand the car back once you have paid 50% of the total amount payable — capping what you owe.',
+  'do-nothing-written-off': 'For this debt, doing nothing can be rational — it is written off in defined circumstances (e.g. on death), so overpaying may simply waste money. Model it before overpaying.',
+  'equity-release-review':  'Equity release compounds — the balance grows over time. The live decision is reviewing the rate, any drawdown facility and the impact on your estate.',
+  'staircase':              'Staircasing means buying a larger share (shared ownership) or redeeming the equity loan (Help-to-Buy) — it changes what you own outright versus what you owe.',
+  's455-repay':             "Repaying an overdrawn director's loan within 9 months and 1 day of the company year-end avoids the S455 charge (reclaimable, but it ties up cash until repaid).",
+  'seek-debt-advice':       'Free, regulated debt advice (StepChange, National Debtline, Citizens Advice) can structure priority debts and pause enforcement — at no cost.',
+  'balance-transfer':       'Moving a card balance to a 0% balance-transfer deal pauses interest for the promo period (usually for a one-off fee). Clear it before the promo ends or the full APR returns.',
+  'formalise':              "Documenting a family or informal loan (amount, terms, signatures) is what makes it a genuine, estate-deductible debt rather than a gift in HMRC's eyes.",
+  'reduce-poa':             'If your income has fallen you can ask HMRC to reduce your payments on account — but reduce them too far and interest is charged on the shortfall.',
+  'port':                   'Porting moves your existing mortgage deal to a new property, keeping the rate and avoiding early-repayment charges — subject to a fresh affordability check.',
 }
 
 // ── Indicative rate helper ────────────────────────────────────────────────────
@@ -155,7 +171,7 @@ export default function DebtDecisions({ asset = {}, marginalRate = 0.4, surplusC
   const name        = asset.name || asset.label || 'this loan'
 
   const meta = loanMeta(asset)
-  const decisions = decisionsFor(meta)
+  const decisions = decisionsFor(meta, asset)
 
   const [pick, setPick]   = useState(decisions[0])
   const [saved, setSaved] = useState(null)
@@ -487,6 +503,45 @@ export default function DebtDecisions({ asset = {}, marginalRate = 0.4, surplusC
     </>)
   }
 
+  // ── GENERIC INFO BODY — any taxonomy verb without a bespoke maths body ────
+  // (clear-before-fees, voluntary-termination, do-nothing-written-off,
+  //  equity-release-review, staircase, s455-repay, seek-debt-advice,
+  //  balance-transfer, formalise, reduce-poa, port). Info/guidance only.
+  if (!RICH_VERBS.has(active)) {
+    const entry = classifyLiability(asset.type)
+    const intro = VERB_INTRO[active] || 'General information about this option.'
+    askQ = `Tell me more about the "${DECISION_LABELS[active] || active}" option for ${name}.`
+    planLabel = `${DECISION_LABELS[active] || active} — ${name}`
+    planSummary = intro.length > 90 ? intro.slice(0, 88) + '…' : intro
+    planDeltas = (active === 'clear-before-fees' && balance > 0 && surplusCash >= balance)
+      ? [{ category: 'cash', deltaNow: -balance }]
+      : []
+
+    body = (<>
+      <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
+        {intro}
+      </div>
+      {balance > 0 && <Row label="Outstanding balance" value={gbp(balance)} tone={meta.isHMRC || rateDecimal >= 0.15 ? 'bad' : 'neutral'} />}
+      {rateDecimal > 0 && <Row label="Interest rate" value={pct(rateDecimal)} tone={rateDecimal >= 0.15 ? 'bad' : 'warn'} />}
+      {monthly > 0 && <Row label="Current payment" value={`${gbp(monthly)}/mo`} />}
+      {entry.taxNote && (
+        <Note>{entry.taxNote}</Note>
+      )}
+      {entry.riskFlags?.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>
+            Watch for
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 16 }}>
+            {entry.riskFlags.map((f, i) => (
+              <li key={i} style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 3 }}>{f}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>)
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div>
@@ -518,7 +573,7 @@ export default function DebtDecisions({ asset = {}, marginalRate = 0.4, surplusC
                 : 'var(--c-surface2)',
               color: active === d ? 'var(--c-acc)' : 'var(--c-text2)',
             }}
-          >{LABEL[d]}</button>
+          >{DECISION_LABELS[d] || d}</button>
         ))}
       </div>
 

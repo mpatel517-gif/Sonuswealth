@@ -19,6 +19,7 @@
 import { useState, useMemo } from 'react'
 import OwnerChips, { getHouseholdOwners } from './OwnerChips.jsx'
 import AccountsList from './AccountsList.jsx'
+import { liabilityAddItems } from '../../engine/liability-taxonomy.js'
 
 // Item taxonomy — distilled from 3-Engine-mm-asset-taxonomy-v1_0.md per category.
 // Each item carries:
@@ -131,14 +132,11 @@ const CAT_TAXONOMY = {
   },
   liabilities: {
     label: 'Liabilities',
-    items: [
-      { id: 'MORTGAGE',       label: 'Residential mortgage', desc: 'Loan secured on your home',                fields: ['lender', 'outstanding', 'monthlyPayment'] },
-      { id: 'BTL_MORTGAGE',   label: 'BTL mortgage',         desc: 'Loan secured on rental property',          fields: ['lender', 'outstanding', 'rateType'] },
-      { id: 'PERSONAL_LOAN',  label: 'Personal loan',        desc: 'Unsecured loan',                           fields: ['lender', 'outstanding', 'apr'] },
-      { id: 'CREDIT_CARD',    label: 'Credit card',          desc: 'Revolving credit balance',                 fields: ['provider', 'outstanding', 'apr'] },
-      { id: 'STUDENT_LOAN',   label: 'Student loan',         desc: 'Plan 1 / 2 / 4 / 5',                       fields: ['plan', 'outstanding'] },
-      { id: 'HP',             label: 'Hire purchase / lease',desc: 'Car HP, equipment lease',                  fields: ['lender', 'outstanding', 'monthlyPayment'] },
-    ],
+    // Full canonical UK liability spectrum (~50 types across 6 classes) sourced
+    // from the single taxonomy module — replaces the old hardcoded 6 that
+    // couldn't even reproduce Mr T's own fixture (founder 2026-06-02). The
+    // picker emits a class header when item.class changes.
+    items: liabilityAddItems(),
   },
   income: {
     label: 'Income',
@@ -455,19 +453,38 @@ export default function AddItemSheet({ open, initialCategory = null, onClose, on
               Which {catNode.label.toLowerCase()} type?
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-              {catNode.items.map(it => (
-                <button key={it.id} onClick={() => chooseType(it.id)}
-                  className="sw-pressable"
-                  style={{
-                    padding: '10px 12px', textAlign: 'left', cursor: 'pointer',
-                    background: 'var(--c-surface2)',
-                    border: '1px solid var(--c-border)',
-                    borderRadius: 10,
-                  }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{it.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>{it.desc}</div>
-                </button>
-              ))}
+              {catNode.items.map((it, i) => {
+                // Emit a class header when the item's class changes (the
+                // liabilities taxonomy is grouped into 6 classes; other
+                // categories carry no `class` so this is a no-op for them).
+                const prev = catNode.items[i - 1]
+                const showHeader = it.class && it.class !== prev?.class
+                return (
+                  <div key={it.id} style={{ display: 'contents' }}>
+                    {showHeader && (
+                      <div style={{
+                        fontSize: 10, fontWeight: 800, color: 'var(--c-text3)',
+                        letterSpacing: 0.6, textTransform: 'uppercase',
+                        margin: i === 0 ? '0 0 2px' : '10px 0 2px',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                      }}>
+                        <span>{it.classIcon}</span><span>{it.classLabel}</span>
+                      </div>
+                    )}
+                    <button onClick={() => chooseType(it.id)}
+                      className="sw-pressable"
+                      style={{
+                        padding: '10px 12px', textAlign: 'left', cursor: 'pointer',
+                        background: 'var(--c-surface2)',
+                        border: '1px solid var(--c-border)',
+                        borderRadius: 10,
+                      }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{it.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>{it.desc}</div>
+                    </button>
+                  </div>
+                )
+              })}
             </div>
             <button onClick={() => setStep('category')} className="sw-press" style={btnGhost}>← Back</button>
           </>

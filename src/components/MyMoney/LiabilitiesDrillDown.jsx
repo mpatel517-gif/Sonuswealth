@@ -19,6 +19,7 @@ import AssetDetailOverlay from './AssetDetailOverlay.jsx'
 import { BRAND } from '../../config/brand.js'
 import { LiquidityLadder } from '../charts/index.js'
 import { amortise, payoffLabel } from './debtMath.js'
+import { classifyLiability, gapLiabilityTypes } from '../../engine/liability-taxonomy.js'
 
 function Term({ children, id }) {
   return (
@@ -101,31 +102,20 @@ function _isStudentLoan(loan) {
   return t.includes('student') && (t.includes('loan') || t.includes('plan'))
 }
 
+// Category + estate-deductibility now come from the single canonical taxonomy
+// (src/engine/liability-taxonomy.js) instead of a local if-chain. The old chain
+// was stale: it mis-filed 'second-charge-mortgage' as a Residential mortgage
+// (it matched 'mortgage' first) and dumped 'hmrc-self-assessment' and 'bnpl'
+// into "Other loan" (founder 2026-06-02). classifyLiability() resolves by
+// longest-matching substring so the specific type always wins.
 function loanCategory(loan) {
-  const t = _normLoanType(loan)
-  if (t.includes('buy-to-let') || t.includes('btl')) return 'BTL mortgage'
-  if (_isStudentLoan(loan)) return 'Student loan'
-  if (t.includes('credit-card')) return 'Credit card'
-  if (t.includes('commercial')) return 'Commercial mortgage'
-  // Residential / main mortgage — must come AFTER BTL & commercial so those
-  // win, but BEFORE the generic fall-through (else 'residential-mortgage' lands
-  // in "Other loan" — founder 2026-06-01 saw the £215k home loan mis-grouped).
-  if (t.includes('residential') || t.includes('mortgage')) return 'Residential mortgage'
-  if (t.includes('overdraft')) return 'Overdraft'
-  if (t.includes('car') || t.includes('pcp') || t.includes('hp') || t.includes('lease')) return 'Car finance'
-  if (t.includes('bridging')) return 'Bridging'
-  if (t.includes('equity-release')) return 'Equity release'
-  if (t.includes('personal') || t.includes('unsecured')) return 'Personal loan'
-  return 'Other loan'
+  return classifyLiability(loan.type).label
 }
 
 function isEstateDeductible(loan) {
-  // UK student loans are written off on death — NOT estate-deductible.
-  // B8 fix: was testing 'student-loan' (hyphen only); personas use
-  // 'student_loan_plan2' (underscore + plan suffix) → loans were wrongly
-  // showing as estate-deductible and labelled 'Other loan'.
-  if (_isStudentLoan(loan)) return false
-  return true
+  // Student loans (and the pension-sharing debit) are estateDeductible:false in
+  // the taxonomy — written off on death, not an estate liability.
+  return classifyLiability(loan.type).estateDeductible
 }
 
 // L3-1b (2026-05-28): DrillStack wrapper per README pattern.
@@ -406,18 +396,29 @@ function LiabilitiesDrillDownInner({ entity, personaId, onBack, onHome }) {
           </Section>
         )}
 
-        {/* Section 4 — taxonomy gaps */}
-        <Section title="4 · Not captured yet" sub="Other liability types you could add here:">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {['Interest-only mortgage', 'Commercial mortgage', 'Second charge', 'Bridging finance', 'Equity release', 'Overdraft', 'Car PCP', 'Car HP', 'Car lease', 'Postgraduate loan', 'HMRC tax liability', 'Business personal guarantee', 'Family loan', 'Pension debit (divorce)'].map(t => (
-              <span key={t} style={{
-                padding: '6px 12px', borderRadius: 100,
-                background: 'var(--c-surface2)', border: '1px dashed var(--c-border)',
-                color: 'var(--c-text3)', fontSize: 11, fontWeight: 600,
-              }}>+ {t}</span>
-            ))}
-          </div>
-        </Section>
+        {/* Section 4 — taxonomy gaps. Sourced from the canonical taxonomy
+            (common types not already held) so this row mirrors exactly what the
+            + Add control on the Liabilities tile can create — no more advertising
+            types nothing could add (founder 2026-06-02). */}
+        {(() => {
+          const heldTypes = allLoans.map(l => l.type)
+          const gaps = gapLiabilityTypes(heldTypes)
+          if (gaps.length === 0) return null
+          return (
+            <Section title="4 · Not captured yet" sub="Common UK debt types you don't have on file — add any from the + Add control on the Liabilities tile.">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {gaps.map(t => (
+                  <span key={t.id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '6px 12px', borderRadius: 100,
+                    background: 'var(--c-surface2)', border: '1px dashed var(--c-border)',
+                    color: 'var(--c-text3)', fontSize: 11, fontWeight: 600,
+                  }}><span>{t.icon}</span>+ {t.label}</span>
+                ))}
+              </div>
+            </Section>
+          )
+        })()}
 
         <p style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 16, lineHeight: 1.5 }}>
           {BRAND.disclaimer}

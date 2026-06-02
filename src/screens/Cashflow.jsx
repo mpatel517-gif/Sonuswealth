@@ -84,6 +84,7 @@ import {
   usePrevious,
 } from '../hooks/useAnimation.jsx'
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
+import { useTemporalMode } from '../state/temporalMode.jsx'
 
 // Phase 2 Batch C — premium Cashflow components. Aliased as *V2 to avoid
 // colliding with the local components of the same name defined below. The
@@ -986,11 +987,13 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // unwired (standalone snap, deep-link entry, etc.).
   const goBackOrHome = onBack || onHome
   const [windowId, setWindowId] = useState('current-period')
-  // Phase 2 note: 'forecast' and 'plan' are user-selectable via X28TopBar (Future/Plan tabs)
-  // but the content sections below do not yet branch per mode — all three non-scenario modes
-  // render the same data. Differentiated content per mode (e.g. projected vs actual spend
-  // column labels, plan-vs-actual variance rows) is a Phase 2 engine-wiring task.
-  const [viewMode, setViewMode] = useState('actual')
+  // F4 (2026-06-02): viewMode now reads the SHARED temporal store (useTemporalMode)
+  // instead of a local useState, so the global tax-year/mode chip and the other
+  // tabs stay in sync — previously Cashflow's Today/Future/Plan was an island.
+  // Phase 2 note: content sections below still do not branch per mode (Future/Plan
+  // show the honest "(coming soon)" chip); differentiated projected/plan content is
+  // a separate engine-wiring task.
+  const { mode: viewMode, setMode: setViewMode } = useTemporalMode()
   const [accountantMode, setAccountantMode] = useState(
     inferAccountantMode(entity)
   )

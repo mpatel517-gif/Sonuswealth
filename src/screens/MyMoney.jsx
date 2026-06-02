@@ -3612,11 +3612,20 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // "FORECAST · variance overlay active" with no explanation of what
           // changed. Each mode now carries a one-line meaning so the user
           // knows what they're looking at.
+          // F1 (2026-06-02): at the current-period window (years === 0) a
+          // forecast/plan projection produces NO change — the old badge read
+          // "projected at Current period", which is self-contradictory and made
+          // Future/Plan look broken. Prompt the user to pick a forward window.
+          const _atToday = (projection?.years ?? 0) === 0
           const meaning = {
-            forecast: `Future · projected at ${currentWindow.label} using neutral engine assumptions`,
+            forecast: _atToday
+              ? `Future · pick a forward window (5y / 10y / 20y / Lifetime) above to project`
+              : `Future · projected at ${currentWindow.label} using neutral engine assumptions`,
             plan:     projection.planMissing
               ? `Plan · no FI target set — showing forecast trajectory. Set target income to compare.`
-              : `Plan · trajectory toward your FI target at ${currentWindow.label}`,
+              : _atToday
+                ? `Plan · pick a forward window above to see your plan trajectory`
+                : `Plan · trajectory toward your FI target at ${currentWindow.label}`,
             scenario: `What if · scenario sandbox active`,
           }[viewMode]
           return (

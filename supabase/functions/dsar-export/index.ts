@@ -83,12 +83,12 @@ serve(async (req) => {
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   const tasks = await Promise.allSettled([
-    admin.from('finio_entities').select('*').eq('user_id', userId),
-    admin.from('finio_events').select('*').eq('user_id', userId),
-    admin.from('finio_entity_relationships').select('*').eq('user_id', userId),
-    admin.from('finio_bundle_snapshots').select('*').eq('user_id', userId),
+    admin.from('core_entities').select('*').eq('user_id', userId),
+    admin.from('core_events').select('*').eq('user_id', userId),
+    admin.from('core_entity_links').select('*').eq('user_id', userId),
+    admin.from('ops_bundle_activations').select('*').eq('user_id', userId),
     admin.from('finio_ask_usage_log').select('*').eq('user_id', userId),
-    admin.from('finio_user_connections').select('*').eq('user_id', userId),
+    admin.from('core_user_connections').select('*').eq('user_id', userId),
   ]);
 
   const pick = (i: number) => tasks[i].status === 'fulfilled'

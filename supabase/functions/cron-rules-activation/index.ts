@@ -18,7 +18,7 @@ serve(async (_req) => {
 
   // Find rules scheduled for today
   const { data: bundles, error: fetchErr } = await client
-    .from('finio_rules_bundles')
+    .from('market_rules_bundles')
     .select('id, bundle_id, jurisdiction, effective_from')
     .eq('status', 'scheduled')
     .lte('effective_from', today);
@@ -34,14 +34,14 @@ serve(async (_req) => {
   for (const b of bundles || []) {
     // Mark old active bundle as superseded
     const { error: supErr } = await client
-      .from('finio_rules_bundles')
+      .from('market_rules_bundles')
       .update({ status: 'superseded', superseded_by_id: b.id })
       .eq('jurisdiction', b.jurisdiction)
       .eq('status', 'active');
 
     // Activate the new one
     const { error: actErr } = await client
-      .from('finio_rules_bundles')
+      .from('market_rules_bundles')
       .update({ status: 'active', activated_at: new Date().toISOString() })
       .eq('id', b.id);
 

@@ -94,21 +94,21 @@ export function summarise(decisions) {
 export const MONITORS = [
   {
     cronName: 'cron-context-pull',
-    table: 'finio_macro_variables',
+    table: 'market_macro_variables',
     timestampColumn: 'effective_date',
     thresholdSeconds: 26 * 3600,      // daily cron + 2h grace
     description: 'UK CPIH + BoE Bank Rate daily pull from ONS / BoE',
   },
   {
     cronName: 'cron-rules-activation',
-    table: 'finio_scheduled_activations',
+    table: 'ops_scheduled_activations',
     timestampColumn: 'activated_at',
     thresholdSeconds: 26 * 3600,      // daily cron + 2h grace
     description: 'Daily activation of rules with effective_at <= now',
   },
   {
     cronName: 'cron-cma-refresh',
-    table: 'finio_cma_bundle',
+    table: 'market_cma_bundle',
     timestampColumn: 'fetched_at',
     thresholdSeconds: 8 * 24 * 3600,  // weekly cron + 1 day grace
     description: 'Weekly refresh of gilt yield, FTSE 100, PLSA RLS',

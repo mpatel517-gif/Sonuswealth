@@ -7,7 +7,7 @@
  *
  * Usage:
  *   import { supabase } from '@/lib/supabase';
- *   const { data, error } = await supabase.from('finio_entities').select();
+ *   const { data, error } = await supabase.from('core_entities').select();
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -35,24 +35,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 /**
  * Table names (canonical, avoid typos)
  */
+// Domain-grouped names (migration 021): core_ = user's financial graph,
+// market_ = external reference data, persona_ = test fixtures, ops_ = system,
+// wealth_ = point-in-time position/guidance. The KEYS stay the same so callers
+// (TABLES.PERSONAS etc.) are unaffected — only the table strings changed.
 export const TABLES = {
-  ENTITIES: 'finio_entities',
-  ENTITY_RELATIONSHIPS: 'finio_entity_relationships',
-  EVENTS: 'finio_events',
-  BUNDLE_SNAPSHOTS: 'finio_bundle_snapshots',
-  SCHEDULED_ACTIVATIONS: 'finio_scheduled_activations',
-  USER_CONNECTIONS: 'finio_user_connections',
-  CMA_BUNDLE: 'finio_cma_bundle',
-  // Phase 2 data layer (migration 011)
-  RULES_BUNDLES: 'finio_rules_bundles',
-  MACRO_VARIABLES: 'finio_macro_variables',
-  MACRO_HISTORY: 'finio_macro_history',
-  PERSONAS: 'finio_personas',
-  PERSONA_SNAPSHOTS: 'finio_persona_snapshots',
-  TEST_AUDIT_LOG: 'finio_test_audit_log',
-  // Point-in-time wealth + guidance history (migration 020)
-  NET_WORTH_HISTORY: 'finio_net_worth_history',
-  GUIDANCE_SNAPSHOTS: 'finio_guidance_snapshots',
+  ENTITIES: 'core_entities',
+  ENTITY_RELATIONSHIPS: 'core_entity_links',
+  EVENTS: 'core_events',
+  BUNDLE_SNAPSHOTS: 'ops_bundle_activations',
+  SCHEDULED_ACTIVATIONS: 'ops_scheduled_activations',
+  USER_CONNECTIONS: 'core_user_connections',
+  CMA_BUNDLE: 'market_cma_bundle',
+  // Reference data layer (migration 011 → renamed 021)
+  RULES_BUNDLES: 'market_rules_bundles',
+  MACRO_VARIABLES: 'market_macro_variables',
+  MACRO_HISTORY: 'market_macro_history',
+  PERSONAS: 'persona_fixtures',
+  PERSONA_SNAPSHOTS: 'persona_snapshots',
+  TEST_AUDIT_LOG: 'ops_test_audit_log',
+  // Point-in-time wealth + guidance history (migration 020 → renamed 021)
+  NET_WORTH_HISTORY: 'wealth_net_worth_history',
+  GUIDANCE_SNAPSHOTS: 'wealth_guidance_snapshots',
 };
 
 /**
@@ -66,7 +70,7 @@ export const VIEWS = {
 };
 
 /**
- * Event families (for filtering finio_events)
+ * Event families (for filtering core_events)
  */
 export const EVENT_FAMILIES = {
   RISK: 'RISK',

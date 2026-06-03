@@ -12,8 +12,8 @@
 import { supabase } from './supabase.js'
 import { financialSnapshot, snapshotHash } from '../engine/financial-snapshot.js'
 
-const NWH = 'finio_net_worth_history'
-const GUID = 'finio_guidance_snapshots'
+const NWH = 'wealth_net_worth_history'
+const GUID = 'wealth_guidance_snapshots'
 
 // Record the current position as a dated snapshot. Idempotent per (person, as_of)
 // — re-recording the same data-date upserts. Skips the write if the hash matches

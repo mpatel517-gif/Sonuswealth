@@ -54,7 +54,7 @@ async function resolveMode(opts = {}) {
 
   // Probe: is at least one of our new tables reachable?
   try {
-    const { error } = await c.from('finio_rules_bundles').select('id').limit(1);
+    const { error } = await c.from('market_rules_bundles').select('id').limit(1);
     if (!error) return (_modeCache = 'supabase');
   } catch { /* fall through */ }
   return (_modeCache = 'json');
@@ -297,7 +297,7 @@ export async function loadBundle(bundleId = 'UK-2026.1.1', opts = {}) {
   const mode = await resolveMode(opts);
   if (mode === 'supabase') {
     const { data, error } = await adminClient()
-      .from('finio_rules_bundles')
+      .from('market_rules_bundles')
       .select('content')
       .eq('bundle_id', bundleId)
       .eq('status', 'active')
@@ -312,7 +312,7 @@ export async function loadMacroVariables(opts = {}) {
   const mode = await resolveMode(opts);
   if (mode === 'supabase') {
     const { data, error } = await adminClient()
-      .from('finio_macro_variables')
+      .from('market_macro_variables')
       .select('variable_key, value')
       .eq('jurisdiction', 'UK');
     if (!error && data?.length) {
@@ -326,7 +326,7 @@ export async function loadMacroVariablesForYear(taxYear, opts = {}) {
   const mode = await resolveMode(opts);
   if (mode === 'supabase') {
     const { data, error } = await adminClient()
-      .from('finio_macro_history')
+      .from('market_macro_history')
       .select('variable_key, value')
       .eq('jurisdiction', 'UK')
       .eq('tax_year', taxYear);
@@ -341,7 +341,7 @@ export async function loadPersona(personaId, opts = {}) {
   const mode = await resolveMode(opts);
   if (mode === 'supabase') {
     const { data, error } = await adminClient()
-      .from('finio_personas')
+      .from('persona_fixtures')
       .select('profile')
       .eq('persona_id', personaId)
       .limit(1)
@@ -354,7 +354,7 @@ export async function loadPersona(personaId, opts = {}) {
 export async function listPersonas(family = null, opts = {}) {
   const mode = await resolveMode(opts);
   if (mode === 'supabase') {
-    const q = adminClient().from('finio_personas')
+    const q = adminClient().from('persona_fixtures')
       .select('persona_id, family, name, archetype, life_stage');
     const { data, error } = family ? await q.eq('family', family) : await q;
     if (!error && data?.length) return data;
@@ -365,13 +365,13 @@ export async function listPersonas(family = null, opts = {}) {
 export async function saveSnapshot(snapshot) {
   const c = adminClient();
   if (!c) return { error: 'no Supabase client (running in JSON-only mode)' };
-  return c.from('finio_persona_snapshots').insert(snapshot).select().single();
+  return c.from('persona_snapshots').insert(snapshot).select().single();
 }
 
 export async function logAudit(entry) {
   const c = adminClient();
   if (!c) return { error: 'no Supabase client (running in JSON-only mode)' };
-  return c.from('finio_test_audit_log').insert(entry).select().single();
+  return c.from('ops_test_audit_log').insert(entry).select().single();
 }
 
 // ─── Diagnostics ─────────────────────────────────────────────────────────────

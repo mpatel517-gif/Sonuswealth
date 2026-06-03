@@ -3104,7 +3104,7 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
         Your money map — {route?.name || 'draw order'}
       </div>
       <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 8 }}>
-        How much comes from each pot, and from what age, under this route (ranked under your priorities). Drag the income above, or pick another route, and the map re-routes.
+        How much comes from each pot, and from what age, under this route (ranked under your priorities). Dragging the income changes <b>when</b> each pot is used; reorder your priorities (or pick another route) to change the <b>order</b>.
       </div>
       <div style={{ position: 'relative', width: '100%', maxWidth: viewW, margin: '0 auto' }}>
         <svg width="100%" viewBox={`0 0 ${viewW} ${H}`} style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Draw-order map: pots feeding your income">
@@ -3147,6 +3147,57 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
       <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
         Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The year-by-year table below has the exact figures.
       </div>
+    </div>
+  )
+}
+
+// Assumptions + rules behind the plan — answers the founder's "I don't know
+// what assumptions are taking place" by surfacing solve.methodology: the
+// editable assumptions (growth/horizon/etc) AND the named rules applied, each
+// with plain-English + legal source + status (ENACTED/METHOD). This is the
+// "surface methodology to the user" directive made real — drillable to bedrock.
+function AssumptionsPanel({ methodology }) {
+  const [open, setOpen] = useState(false)
+  const assumptions = methodology?.assumptions || []
+  const rules = methodology?.rules || []
+  if (!assumptions.length && !rules.length) return null
+  return (
+    <div style={{ marginTop: 14, borderRadius: 12, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', padding: '10px 12px' }}>
+      <button onClick={() => setOpen(o => !o)} aria-expanded={open} className="sw-pressable"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>What this plan assumes</span>
+        <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>{open ? 'Hide ▲' : 'Show ▼'}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 8 }}>You&rsquo;re drawing down, not contributing. On these assumptions — which you can change:</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {assumptions.map((a, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11 }}>
+                <span style={{ color: 'var(--c-text2)' }}>{a.name}</span>
+                <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{a.value}</span>
+              </div>
+            ))}
+          </div>
+          {rules.length > 0 && (
+            <div style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Rules applied</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {rules.map((r, i) => (
+                  <div key={r.id || i}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{r.rule}</span>
+                      {r.status && <span className="sw-chip sw-chip-sm" style={{ fontSize: 8.5 }}>{r.status}</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 2 }}>{r.plainEnglish}</div>
+                    {r.source && <div style={{ fontSize: 9.5, color: 'var(--c-text3)', marginTop: 2, opacity: 0.85 }}>Source: {r.source}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -3267,16 +3318,22 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>The income you want to live on</span>
             {dT && <button onClick={() => setTarget(seedTarget)} className="sw-pressable" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Reset</button>}
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>{fmt(target)}</span>
-            <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>/yr · {_gmo(target)}/mo</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 18, marginTop: 4, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>{fmt(target)}</span>
+              <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>/yr · {_gmo(target)}/mo</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+              <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>lasts to</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>age {route.depletedAtAge || `${horizon}+`}</span>
+            </div>
           </div>
           <input type="range" min={0} max={targetMax} step={1000} value={target}
             onChange={e => setTarget(+e.target.value)} aria-label="The income you want to live on — drag to back-solve your drawdown plan"
             style={{ width: '100%', marginTop: 10, accentColor: 'var(--c-acc)', cursor: 'pointer' }} />
           {y1 && (
             <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.5 }}>
-              → Year 1 nets <b>{fmt(y1.net)}</b> after <b style={{ color: 'var(--c-coral-text)' }}>{fmt(y1.tax)} tax</b>, funds to age <b>{route.depletedAtAge || `${horizon}+`}</b>. Drag the number — the routes, tax and the money-map below all re-solve from it. Your assumption, not a forecast.
+              → Year 1 nets <b>{fmt(y1.net)}</b> after <b style={{ color: 'var(--c-coral-text)' }}>{fmt(y1.tax)} tax</b>. Drag the number — the routes, tax, runway and the money-map below all re-solve from it. Your assumption, not a forecast.
             </div>
           )}
         </div>
@@ -3432,6 +3489,9 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             )
           })()}
         </div>
+
+        {/* What this plan assumes — surfaces solve.methodology (assumptions + named rules). */}
+        <AssumptionsPanel methodology={solve.methodology} />
 
         {Array.isArray(route.rationale) && route.rationale.length > 0 && (
           <ul style={{ margin: '12px 0 0', paddingLeft: 16, fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>

@@ -50,12 +50,14 @@ Additive — keeps the 67 solver tests green behind a compat shim.
 
 ## PHASE 4 — VISUALS (consume the corrected engine)
 
-10. Drawdown-card honesty + compaction (engine-independent, safe now):
-    - Priorities "DRAG #1" label → match the real ▲▼ control (honesty fix).
-    - Routes-considered strip → compact selectable chips; detail only for selected.
-11. Money-map (now backed by P3): calendar years beside ages; per-pot "why" line (the rule that placed it); SECURE-INCOME node; per-holding drill-down. Confirm map scales by TYPE.
-12. Question-tiles remainder: §A "Now" → tile, §C "Costs" → tile (mechanical); Methods as its own tile; headline band = evolve existing `PurposeStatement` (no duplicate); adaptive face (accumulator e.g. Mr T never sees drawdown/priorities).
-13. Full §9.5 snap matrix: Bruce/Mr T/Willy × {375,768,1280} × {light,dark}.
+> **Verification constraint (discovered this session):** the snap scripts cannot run here — the Playwright chromium download is blocked by the environment network policy, and Cashflow.jsx pulls browser-only imports so SSR smoke tests aren't feasible either. So Phase-4 items are verified by `npm run build` + runtime engine-data checks ONLY — **not** visually. Items done blind are flagged for a visual pass.
+
+10. ✅ DONE (`e72bd28`) Drawdown-card honesty + compaction:
+    - Priorities "DRAG #1" label → "#1 ranks first (reorder with ▲▼)" (matches control).
+    - Routes-considered strip → compact wrapping chips; detail only for selected.
+11. ◑ PARTIAL (`bcec33a`) Money-map: ✅ SECURE-INCOME floor node (mint, with streams) + ✅ calendar years beside ages + caption. STILL TODO: per-pot "why" line (needs per-edge reason data) + per-holding drill-down (needs P3 type→holding expansion). Map scales by TYPE ✅ (confirmed, 4 pot IDs).
+12. ◑ PARTIAL: ✅ headline band (`1545b12`, evolved PurposeStatement → "lasts to age X", §0.5) + ✅ adaptive drawdown-tile question (`025658f`). STILL TODO (needs a VISUAL pass — block-surgery in a 4.3k-line file is reckless blind): §A "Now" → tile move + inline removal; §C "Costs" → tile move + inline removal; Methods extracted to its own tile.
+13. TODO Full §9.5 snap matrix — **blocked**: needs a browser (chromium download blocked here). Run in an environment where Playwright installs.
 
 ## PHASE 5 — CLEANUP
 

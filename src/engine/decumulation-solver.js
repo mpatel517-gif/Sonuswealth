@@ -25,6 +25,8 @@ import { TAX } from './fq-calculator.js'
 import { withdrawalTaxForYear, buildAllowanceLedger } from './withdrawal-tax.js'
 import { recommendMethodForGoal, METHODS } from './withdrawal-methods.js'
 import { stampGuidance } from './financial-snapshot.js'
+import { normaliseHoldings } from './decumulation-holdings.js'
+import { evaluateHoldings } from './decumulation-classify.js'
 
 const FCA_DISCLAIMER = 'Illustrative under your stated priorities and assumptions — not a forecast or personal recommendation. Verify decisions with a qualified UK adviser.'
 
@@ -87,10 +89,21 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     || +entity.targetIncome
     || 0
 
+  // ── P1: per-holding model + evaluate/exclude pre-pass (additive) ───────────
+  // The scalar `pots` above stays as the compat shim so the legacy sequencer +
+  // its 67 tests are untouched. `holdings` + `evaluation` are the new surface the
+  // P2 per-holding sequencer and P3 network drill-down will consume.
+  const holdings = normaliseHoldings(entity)
+  const evaluation = evaluateHoldings(holdings, {
+    safeguardedThreshold: TAX.safeguardedAdviceThreshold,
+    marginalRate: entity.isHigherRateTaxpayer ? TAX.hr : TAX.br,
+  })
+
   return {
     age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
     married, estateToSpouseFraction,
     pots: { pension: pensionDC, isa: isaVal, gia, cash },
+    holdings, evaluation,
     property, liabilities, dbIncome,
     secure: { statePensionAnnual, rental, dividends },
     incomeTargetAnnual,

@@ -1887,9 +1887,14 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
   const routeName = decSolve?.rankedPaths?.[0]?.name
   const sev = seqVuln?.severity || seqVuln?.level
+  // Adaptive face: a decumulator asks "how do I draw it down?"; an accumulator
+  // (no decSolve) asks "am I on track?" — same tile, the question + answer flip.
+  const isDecum = !!decSolve
   const tiles = [
     { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
-    { key: 'drawdown', q: 'How do I draw it down?', headline: decSolve ? (routeName || 'Your plan') : 'Building wealth', sub: decSolve ? (lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map') : 'progress to FI', tone: 'acc' },
+    isDecum
+      ? { key: 'drawdown', q: 'How do I draw it down?', headline: routeName || 'Your plan', sub: lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map', tone: 'acc' }
+      : { key: 'drawdown', q: 'Am I on track? (FI)', headline: 'Building wealth', sub: 'progress to FI', tone: 'acc' },
     { key: 'resilience', q: 'What could break it?', headline: sev ? String(sev) : 'Stress test', sub: 'sequence & market risk', tone: 'acc' },
     { key: 'whatif', q: 'What would change it most?', headline: 'Model levers', sub: 'what-if & goal-seek', tone: 'acc' },
   ]

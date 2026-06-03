@@ -125,11 +125,15 @@ function sumLiabilities(entity) {
 }
 
 // ─── Deterministic single-path simulation ────────────────────────────────────
-// `order` is the pot draw-order, e.g. ['gia','isa','pension','cash']. Each year:
-// secure income first, then draw the remaining GROSS need from pots in order.
-// Pension draws are taxable; ISA/cash tax-free; GIA realises a gain fraction.
-// IHT computed at the horizon (death proxy) with the 2027 pension-in-estate flip.
-export function simulatePath(ctx, order, opts = {}) {
+// `strategy` is EITHER a pot draw-order array (e.g. ['gia','isa','pension','cash'])
+// OR a strategy object { order, fillBand }. With fillBand, each year draws pension
+// only up to the basic-rate band (so it's taxed ≤20%), tops up from tax-free
+// ISA/cash/GIA, and only overflows pension into higher rate as a last resort —
+// the tax-smoothing an adviser actually does. Each year: secure income first,
+// then fund the NET target from the pots. IHT at the horizon (2027 flip).
+export function simulatePath(ctx, strategy, opts = {}) {
+  const order = Array.isArray(strategy) ? strategy : (strategy.order || ['gia', 'isa', 'pension', 'cash'])
+  const fillBand = !Array.isArray(strategy) && !!strategy.fillBand
   const iht2027 = opts.iht2027 || TAX.deadline || new Date('2027-04-06')
   const deathYear = (opts.now ? opts.now.getFullYear() : 2026) + (ctx.horizonAge - ctx.age)
   const pensionInEstate = deathYear >= iht2027.getFullYear()
@@ -158,10 +162,28 @@ export function simulatePath(ctx, order, opts = {}) {
     // tax-free (PCLS) up to the LSA cap. Binary-search the total gross pulled
     // from pots (net is monotonic in it) so net delivered == netTarget.
     const potCap = order.reduce((s, p) => s + (bal[p] || 0), 0)
-    const evalGross = (totalGross) => {
+    // Tax-band-fill cap: the most pension gross we can take while its taxable
+    // part stays inside the basic-rate band (taxed ≤20%). Taxable part is ~75%
+    // while PCLS lasts, else 100%.
+    const secureTaxableAbovePA = Math.max(0, secureTaxable - (TAX.pa || 12570))
+    const bandTaxableHeadroom = Math.max(0, (TAX.brl || 37700) - secureTaxableAbovePA)
+    const taxableFracOfPension = lsaRemaining > 0 ? 0.75 : 1
+    const pensionInBandCap = bandTaxableHeadroom / taxableFracOfPension
+    const allocate = (totalGross) => {
       let rem = totalGross
       const d = { pension: 0, isa: 0, cash: 0, gia: 0 }
-      for (const pot of order) { const t = Math.min(rem, bal[pot] || 0); d[pot] += t; rem -= t; if (rem <= 0) break }
+      const fill = (pot, cap) => { const room = Math.max(0, cap - d[pot]); const t = Math.min(rem, room); d[pot] += t; rem -= t }
+      if (fillBand) {
+        fill('pension', Math.min(bal.pension || 0, pensionInBandCap)) // pension within basic rate
+        fill('isa', bal.isa || 0); fill('cash', bal.cash || 0); fill('gia', bal.gia || 0) // tax-free / low top-ups
+        fill('pension', bal.pension || 0)                            // overflow into higher rate (last resort)
+      } else {
+        for (const pot of order) { fill(pot, bal[pot] || 0); if (rem <= 0) break }
+      }
+      return d
+    }
+    const evalGross = (totalGross) => {
+      const d = allocate(totalGross)
       const pclsTaxFree = Math.min(d.pension * 0.25, lsaRemaining)
       const pensionTaxable = d.pension - pclsTaxFree
       const giaGain = d.gia * ctx.giaGainFraction
@@ -285,6 +307,9 @@ export function generateCandidatePaths(ctx, goalSpec, opts = {}) {
     { id: 'gia-first', name: 'Taxable-accounts-first sequence', method: 'gia_first', order: ['gia', 'isa', 'pension', 'cash'] },
     { id: 'isa-first', name: 'ISA-first sequence', method: 'isa_first', order: ['cash', 'isa', 'gia', 'pension'] },
     { id: 'pension-first', name: 'Pension-first sequence', method: 'pension_first', order: ['pension', 'gia', 'isa', 'cash'] },
+    // The adviser-grade route: draw pension only up to the basic-rate band each
+    // year, top up from tax-free ISA/cash, overflow pension only as last resort.
+    { id: 'fill-band', name: 'Tax-band-smoothed (fill basic rate, top up from ISA)', method: 'fill_band', order: ['pension', 'isa', 'cash', 'gia'], fillBand: true },
   ]
   // Goal-weighted order.
   let tunedOrder, tunedName
@@ -376,7 +401,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
   }
 
   const candidates = generateCandidatePaths(ctx, goalSpec, opts)
-  const simulated = candidates.map(path => ({ path, sim: simulatePath(ctx, path.order, opts) }))
+  const simulated = candidates.map(path => ({ path, sim: simulatePath(ctx, path, opts) }))
   const ranked = scorePaths(simulated, goalSpec)
 
   const rankedPaths = ranked.map(r => ({

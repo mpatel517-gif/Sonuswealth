@@ -89,6 +89,19 @@ console.log('\n── net-target funding (gross-up) + PCLS [C1/C2 audit fixes] �
   log(ctx.pclsLsaCap > 0 && ctx.pclsLsaCap <= TAX.lsa, `PCLS cap = 25% of pot, bounded by LSA (£${Math.round(ctx.pclsLsaCap/1000)}k)`)
 }
 
+console.log('\n── tax-band-smoothed (fill-band) strategy ──')
+{
+  const ctx = extractDecumulationContext(BRUCE, { inflation: 0 })
+  const pf = simulatePath(ctx, ['pension', 'gia', 'isa', 'cash'], { now: NOW, iht2027: IHT2027 })
+  const fb = simulatePath(ctx, { order: ['pension', 'isa', 'cash', 'gia'], fillBand: true }, { now: NOW, iht2027: IHT2027 })
+  log(fb.schedule[0].tax < pf.schedule[0].tax, `fill-band cuts year-1 tax vs pension-first (£${Math.round(fb.schedule[0].tax/1000)}k < £${Math.round(pf.schedule[0].tax/1000)}k)`)
+  log(fb.schedule[0].draws.pension < pf.schedule[0].draws.pension && fb.schedule[0].draws.isa > 0, 'fill-band draws less pension + tops up from ISA (stays in the band)')
+  log(Math.abs(fb.schedule[0].net - 96000) <= 1500, `fill-band still delivers the £96k net target (£${Math.round(fb.schedule[0].net/1000)}k)`)
+  // It appears as a ranked candidate.
+  const r = solveDecumulation({ entity: BRUCE, goalSpec: goalSpec(BRUCE), opts: { now: NOW, iht2027: IHT2027 } })
+  log(r.rankedPaths.some(p => p.method === 'fill_band'), 'fill-band is one of the ranked candidate routes')
+}
+
 console.log('\n── pension DOUBLE TAX (death ≥75, post-2027) ──')
 {
   // Controlled so the pension genuinely SURVIVES under the preserve order:
@@ -146,7 +159,7 @@ console.log('\n── lexicographic scoring: the primary goal picks the winner �
     { type: 'income_floor', priority: 5, target: { income: 96000 } },
   ] })
   const r = solveDecumulation({ entity: BRUCE, goalSpec: legacyFirst, opts: { now: NOW, iht2027: IHT2027 } })
-  log(r.rankedPaths.length === 4, 'four selectable candidate paths run')
+  log(r.rankedPaths.length === 5, 'five selectable candidate paths run (incl. tax-band-smoothed)')
   log(r.binding.primaryGoal === 'legacy', 'binding records the primary goal')
   const maxEstate = Math.max(...r.rankedPaths.map(p => p.afterIhtEstate))
   log(r.rankedPaths[0].afterIhtEstate === maxEstate, 'legacy-primary: #1 path maximises after-IHT estate (the contract)')
@@ -171,7 +184,7 @@ console.log('\n── output contract: visible path · why-it-won · branches �
   log(top.scoreBreakdown && Object.keys(top.scoreBreakdown).length > 0, 'scoreBreakdown present (why this path won)')
   log(Array.isArray(top.rationale) && top.rationale.length > 0, 'plain-English rationale present')
   log(r.network.nodes.some(n => n.id === 'pension') && r.network.edges.length > 0, 'network has pot nodes + draw edges')
-  log(r.network.alternatives.length === 3, 'network exposes 3 alternative branches to select')
+  log(r.network.alternatives.length === 4, 'network exposes 4 alternative branches to select')
   log(/not a forecast|not a personal recommendation/i.test(r.disclaimer), 'FCA disclaimer present')
   log(r.recommendedMethod && r.recommendedMethod.id === 'floor_guardrail', `recommends a withdrawal method for the primary goal (${r.recommendedMethod?.id})`)
 }

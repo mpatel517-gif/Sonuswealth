@@ -78,5 +78,42 @@ t('mrT-core (BOTH shapes) uses objects — no double-count', () => {
   assert.ok(ch.filter(h => h.taxonomyId === 'ISA_SS').length === 1, 'one ISA, not duplicated')
 })
 
+// ── GAR + protected-TFC branches (normaliser reads the fields → evaluate routes)
+// Inline typed-array entity rather than mutating the shared decum-complex fixture
+// (baselined by 6 l3-2 tests) — same coverage, zero blast radius.
+const safeguardedEntity = {
+  assets: {
+    pensions: [
+      { id: 'pp-gar', type: 'personal-pension', balance: 180000, gar: true, garRate: 0.105, charges_percent: 0.009 },
+      { id: 's32', type: 'section-32-buyout', balance: 95000, protected_tfc_pct: 0.40, isSafeguarded: true, cash_equivalent_transfer_value: 95000 },
+      { id: 'sipp', type: 'SIPP', balance: 300000 },
+    ],
+  },
+  individual: { state_pension_annual_gross: 11502 },
+}
+const SE = normaliseHoldings(safeguardedEntity)
+const seEv = evaluateHoldings(SE)
+
+t('normaliser carries GAR + protected-TFC fields from typed-array pensions', () => {
+  const gar = SE.find(h => h.id === 'pp-gar')
+  const s32 = SE.find(h => h.id === 's32')
+  assert.ok(gar?.gar === true && gar.garRate === 0.105, 'GAR fields carried')
+  assert.ok(s32?.protectedTfcPct === 0.40 && s32.cetv === 95000, 'protected-TFC + CETV carried')
+})
+t('GAR pension → ANNUITISE-DONT-DRAW, never in the draw set', () => {
+  const gar = SE.find(h => h.id === 'pp-gar')
+  assert.equal(classify(gar), D.ANNUITISE)
+  assert.ok(!seEv.sequenceable.some(h => h.id === 'pp-gar'), 'GAR not sequenced')
+})
+t('protected-TFC >25% safeguarded → SPECIALIST, flagged not drawn', () => {
+  const s32 = SE.find(h => h.id === 's32')
+  assert.equal(classify(s32), D.SPECIALIST)
+  assert.ok(seEv.specialist.some(h => h.id === 's32'), 'routed to specialist advice')
+  assert.ok(!seEv.sequenceable.some(h => h.id === 's32'), 'not sequenced')
+})
+t('the plain SIPP alongside them stays drawable', () => {
+  assert.ok(seEv.sequenceable.some(h => h.id === 'sipp'), 'SIPP sequenceable')
+})
+
 console.log(`\ndecumulation-mrt-stress — pass=${pass} fail=${fail}`)
 if (fail) process.exit(1)

@@ -462,24 +462,33 @@ export function sequenceOfReturnsVulnerability(entity, cma = null) {
  * @param {number} [runs=500]
  * @returns {{ pos, runs, successful_runs, median_terminal_value, p10_terminal_value, p25_terminal_value, p75_terminal_value, p90_terminal_value, median_depletion_age, p10_depletion_age, ... }}
  */
-export function probabilityOfSuccess(entity, cma = null, runs = 500) {
+// opts (one-engine consistency): pass the SAME inputs the deterministic
+// solver used so the probabilistic fan can't contradict the plan on the same
+// screen — { targetIncome, horizonYears, startValue }. All optional; omitted →
+// the legacy entity-derived defaults.
+export function probabilityOfSuccess(entity, cma = null, runs = 500, opts = {}) {
   const age          = _age(entity);
   const retAge       = entity?.preferences?.retirementAge ?? TAX.spa;
-  const targetIncome = entity?.preferences?.targetIncomeReal ?? entity?.targetIncome ?? 50000;
+  const targetIncome = opts.targetIncome != null ? +opts.targetIncome
+                       : (entity?.preferences?.targetIncomeReal ?? entity?.targetIncome ?? 50000);
   const inv          = _inv(entity);
+  const startValue   = opts.startValue != null ? +opts.startValue : inv.value;
 
-  if (inv.value < 10_000 || targetIncome === 0) {
+  if (startValue < 10_000 || targetIncome === 0) {
     return {
       pos: null, runs, successful_runs: null,
       median_terminal_value: null, p10_terminal_value: null, p25_terminal_value: null,
       p75_terminal_value: null, p90_terminal_value: null,
-      median_depletion_age: null, p10_depletion_age: null,
+      median_depletion_age: null, p10_depletion_age: null, per_year_percentiles: null,
       confidence: 'INSUFFICIENT', insufficient_data: true, cma_bundle: _cmaBundle(cma),
     };
   }
 
-  const startAge  = Math.max(age, retAge);
-  const horizon   = Math.max(5, 90 - startAge);
+  // startAge: when the drawdown clock starts. Default = retirement age, but the
+  // solver passes the person's CURRENT age for someone already decumulating, so
+  // the fan's age axis lines up with the deterministic plan (no 66-vs-62 drift).
+  const startAge  = opts.startAge != null ? +opts.startAge : Math.max(age, retAge);
+  const horizon   = opts.horizonYears ? Math.max(5, Math.round(+opts.horizonYears)) : Math.max(5, 90 - startAge);
   const spAge     = entity?.income?.statePension?.startAge ?? TAX.spa;
   const sp        = entity?.income?.statePension?.annual   ?? TAX.statePensionFull;
   const mu_raw    = cma?.growth ?? DEFAULT_GROWTH;
@@ -493,26 +502,28 @@ export function probabilityOfSuccess(entity, cma = null, runs = 500) {
   let survived = 0;
   const terminalVals = [];
   const depletionAges = [];
+  // Per-year value across all runs → real percentile bands (NOT a fabricated
+  // Math.pow curve in the UI). yearVals[y] = every run's balance at end of year y.
+  const yearVals = Array.from({ length: horizon }, () => []);
 
   for (let r = 0; r < runs; r++) {
-    let val           = inv.value;
+    let val           = startValue;
     let annualWithdraw = targetIncome;
     let depleted      = false;
 
     for (let y = 0; y < horizon; y++) {
       const curAge = startAge + y;
-      const spInc  = curAge >= spAge ? sp : 0;
-      const Z      = _rn();
-      const ret    = Math.exp(mu + sigma * Z);
-      const infShk = inflation + (_rn() * 0.005);   // ±0.5% inflation vol
-      if (y > 0) annualWithdraw *= (1 + Math.max(0, infShk));
-      const draw = Math.max(0, annualWithdraw - spInc);
-      val = val * ret - draw;
-      if (val <= 0) {
-        depleted = true;
-        depletionAges.push(curAge);
-        break;
+      if (!depleted) {
+        const spInc  = curAge >= spAge ? sp : 0;
+        const Z      = _rn();
+        const ret    = Math.exp(mu + sigma * Z);
+        const infShk = inflation + (_rn() * 0.005);   // ±0.5% inflation vol
+        if (y > 0) annualWithdraw *= (1 + Math.max(0, infShk));
+        const draw = Math.max(0, annualWithdraw - spInc);
+        val = val * ret - draw;
+        if (val <= 0) { depleted = true; val = 0; depletionAges.push(curAge); }
       }
+      yearVals[y].push(Math.max(0, Math.round(val)));   // post-depletion = 0
     }
 
     if (!depleted) survived++;
@@ -521,6 +532,15 @@ export function probabilityOfSuccess(entity, cma = null, runs = 500) {
 
   const tvSorted  = [...terminalVals].sort((a, b) => a - b);
   const daSorted  = [...depletionAges].sort((a, b) => a - b);
+  // Per-year percentile fan: real bands at each year, seeded with the known
+  // starting value at year 0 so the chart begins at today's pot, not a guess.
+  const per_year_percentiles = [
+    { year: 0, age: startAge, p10: startValue, p25: startValue, p50: startValue, p75: startValue, p90: startValue },
+    ...yearVals.map((vals, y) => {
+      const s = [...vals].sort((a, b) => a - b);
+      return { year: y + 1, age: startAge + y + 1, p10: _pct(s, 0.10), p25: _pct(s, 0.25), p50: _pct(s, 0.50), p75: _pct(s, 0.75), p90: _pct(s, 0.90) };
+    }),
+  ];
 
   return {
     pos:                    Math.round((survived / runs) * 100) / 100,
@@ -533,6 +553,8 @@ export function probabilityOfSuccess(entity, cma = null, runs = 500) {
     p90_terminal_value:     _pct(tvSorted, 0.90),
     median_depletion_age:   daSorted.length ? _pct(daSorted, 0.50) : null,
     p10_depletion_age:      daSorted.length ? _pct(daSorted, 0.10) : null,
+    per_year_percentiles,
+    start_value:            startValue,
     cma_bundle:             _cmaBundle(cma),
     return_distribution:    'lognormal',
     inflation_model:        `random_walk_around_${Math.round(inflation * 100)}pct`,

@@ -1077,22 +1077,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE), [entity, bv, cv])
   const fi = useMemo(() => fiRatio(entity), [entity, bv, cv])
 
-  // 1000-run Monte Carlo per spec §5.4 / §5.5 (O-CF-RULES-01).
-  const pos = useMemo(
-    () => cf_probabilityOfSuccess(entity, CMA_BUNDLE, 1000),
-    [entity, bv, cv]
-  )
-  const seqVuln = useMemo(
-    () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE),
-    [entity, bv, cv]
-  )
-  const gkPath = useMemo(
-    () => guytonKlingerPath(entity, 30, CMA_BUNDLE),
-    [entity, bv, cv]
-  )
   // The ONE engine: real tax-minimising drawdown sequence (per-pot, per-year +
   // ranked routes). Decumulators only — the goal spec routes accumulators away
-  // (solver returns null), so this card is a decumulation surface.
+  // (solver returns null), so this card is a decumulation surface. Computed
+  // FIRST so the probabilistic cards below can reuse its target/horizon and
+  // can't contradict the deterministic plan on the same screen (one-engine).
   const decSolve = useMemo(() => {
     try {
       const spec = buildGoalSpec(entity)
@@ -1100,6 +1089,33 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
       return solveDecumulation({ entity, goalSpec: spec })
     } catch { return null }
   }, [entity, bv, cv])
+  // Same target income + horizon the deterministic plan resolved, so the MC
+  // fan / sequence-stress / GK corridor share one set of assumptions with it.
+  const trajOpts = useMemo(() => {
+    const i = decSolve?.inputs
+    if (!i) return {}
+    const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+    return {
+      targetIncome: i.incomeTargetAnnual,
+      horizonYears: Math.max(5, i.horizonAge - i.currentAge),
+      startAge: i.currentAge,
+      startValue: portfolio || undefined,
+    }
+  }, [decSolve])
+
+  // 1000-run Monte Carlo per spec §5.4 / §5.5 (O-CF-RULES-01).
+  const pos = useMemo(
+    () => cf_probabilityOfSuccess(entity, CMA_BUNDLE, 1000, trajOpts),
+    [entity, bv, cv, trajOpts]
+  )
+  const seqVuln = useMemo(
+    () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE),
+    [entity, bv, cv]
+  )
+  const gkPath = useMemo(
+    () => guytonKlingerPath(entity, trajOpts.horizonYears || 30, CMA_BUNDLE),
+    [entity, bv, cv, trajOpts]
+  )
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
   const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv, cv])
@@ -1376,41 +1392,26 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 when the engine returns insufficient_data so the user sees one
                 authoritative PoS surface instead of a working one + a stuck
                 "Calculating…" twin. */}
-            {pos && !pos.insufficient_data && (() => {
-              const horizon = pos.horizon_years || 30
+            {pos && !pos.insufficient_data && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1 && (() => {
+              // REAL per-year Monte Carlo percentiles from the engine (no more
+              // Math.pow interpolation to a terminal point). Same target income +
+              // horizon the deterministic plan used (threaded via trajOpts), so
+              // the probabilistic fan and the plan can't contradict each other.
               const startYear = new Date().getFullYear()
-              const endYear   = startYear + horizon
-              // Approximate intermediate points with a power-curve (matches
-              // MonteCarloFanChart's interpolation for visual consistency).
-              const buildSeries = (terminal) => {
-                if (terminal == null) return null
-                const arr = []
-                for (let y = 0; y <= horizon; y++) {
-                  const t = y / horizon
-                  arr.push({ year: startYear + y, value: terminal * Math.pow(t, 1.2) })
-                }
-                return arr
-              }
-              const median = buildSeries(pos.median_terminal_value)
-              const p10    = buildSeries(pos.p10_terminal_value)
-              const p90    = buildSeries(pos.p90_terminal_value)
+              const pyp = pos.per_year_percentiles
+              const horizon = pos.horizon_years || (pyp.length - 1)
+              const series = key => pyp.map(p => ({ year: startYear + p.year, value: p[key] }))
               return (
                 <>
                   <PoSChartV2
                     probability={pos.pos ?? null}
-                    median={median}
-                    bands={p10 && p90 ? { p10, p90 } : null}
+                    median={series('p50')}
+                    bands={{ p10: series('p10'), p90: series('p90') }}
                     guardrail={null}
                     horizonYears={horizon}
                   />
-                  {/* Honesty caption (2026-06-02): the band is an interpolated
-                      path to the engine's modelled {horizon}-year percentile
-                      end-points, NOT a separately simulated year-by-year curve.
-                      Per-year Monte Carlo percentiles land when §B is rebuilt
-                      (Cashflow redesign Phase 3). */}
                   <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
-                    Shows the modelled range at year {horizon}. Intermediate years are
-                    interpolated to that outcome, not separately simulated.
+                    Each year separately simulated across {pos.runs || 1000} market paths (10th–90th percentile band), on the same target income and horizon as your plan above. A range of outcomes under market uncertainty — not a probability of any single result.
                   </div>
                 </>
               )
@@ -2735,88 +2736,67 @@ function PoSHeadline({ pos }) {
 }
 
 // ── §B.5 Monte Carlo fan chart (§5.5) — DrawSVG bands ───────────────────
-function MonteCarloFanChart({ pos, entity }) {
-  if (!pos || pos.insufficient_data) {
+// NOTE: NOT currently rendered — the LIVE fan is the inline PoSChartV2 block
+// (~§B trajectory section) which now reads the SAME engine per_year_percentiles.
+// Kept (and corrected to real bands) as a standalone-card option if ever wanted.
+function MonteCarloFanChart({ pos }) {
+  const pts = pos?.per_year_percentiles
+  if (!pos || pos.insufficient_data || !Array.isArray(pts) || pts.length < 2) {
     return (
       <div className="sw-card sw-lift" style={S.card}>
         <div style={S.cardTitle}>Monte Carlo fan</div>
-        <div style={{
-          marginTop: 'var(--space-sm)', color: 'var(--c-text3)', fontSize: 12,
-        }}>
-          Fan chart unavailable — insufficient data.
+        <div style={{ marginTop: 'var(--space-sm)', color: 'var(--c-text3)', fontSize: 12 }}>
+          Fan chart unavailable — needs an investable pot and a target income to simulate.
         </div>
       </div>
     )
   }
-  const horizon = pos.horizon_years || 30
-  const start = (entity?.assets?.sipp?.total || 0)
-       + (entity?.assets?.isa?.value || 0)
-       + (entity?.assets?.portfolio?.value || 0)
-       + (entity?.assets?.cash?.total || 0)
-  const startVal = Math.max(start, 1)
-  const p10End = pos.p10_terminal_value
-  const p25End = pos.p25_terminal_value
-  const p50End = pos.median_terminal_value
-  const p75End = pos.p75_terminal_value
-  const p90End = pos.p90_terminal_value
-  const maxV = Math.max(p90End || 0, startVal) * 1.1
-
-  const W = 320, H = 160, pL = 40, pR = 8, pT = 10, pB = 22
+  // REAL per-year percentile bands from the engine (no fabricated Math.pow
+  // curve, no re-summed pot shape). Same target/horizon the deterministic plan
+  // uses (threaded from the solver) so the two trajectory visuals can't contradict.
+  const maxV = Math.max(...pts.map(p => p.p90 || 0), 1) * 1.05
+  const n = pts.length
+  const W = 320, H = 168, pL = 44, pR = 10, pT = 12, pB = 26
   const pw = W - pL - pR, ph = H - pT - pB
-  const px = i => pL + (i / horizon) * pw
-  const py = v => pT + ph - (v / maxV) * ph
-
-  function path(end) {
-    let d = ''
-    for (let y = 0; y <= horizon; y++) {
-      const t = y / horizon
-      const v = startVal + (end - startVal) * Math.pow(t, 1.2)
-      d += (y === 0 ? 'M' : 'L') + px(y).toFixed(1) + ',' + py(Math.max(0, v)).toFixed(1) + ' '
-    }
-    return d
-  }
-  function area(low, high) {
-    let d = ''
-    for (let y = 0; y <= horizon; y++) {
-      const t = y / horizon
-      const v = startVal + (low - startVal) * Math.pow(t, 1.2)
-      d += (y === 0 ? 'M' : 'L') + px(y).toFixed(1) + ',' + py(Math.max(0, v)).toFixed(1) + ' '
-    }
-    for (let y = horizon; y >= 0; y--) {
-      const t = y / horizon
-      const v = startVal + (high - startVal) * Math.pow(t, 1.2)
-      d += 'L' + px(y).toFixed(1) + ',' + py(Math.max(0, v)).toFixed(1) + ' '
-    }
+  const px = i => pL + (n === 1 ? 0 : (i / (n - 1)) * pw)
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const line = key => pts.map((p, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(p[key]).toFixed(1)).join(' ')
+  const band = (loKey, hiKey) => {
+    let d = pts.map((p, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(p[hiKey]).toFixed(1)).join(' ')
+    for (let i = n - 1; i >= 0; i--) d += ' L' + px(i).toFixed(1) + ',' + py(pts[i][loKey]).toFixed(1)
     return d + 'Z'
   }
-
+  const last = pts[n - 1]
+  const yTicks = [0, maxV / 2, maxV]
+  const xTickIdx = [0, Math.floor((n - 1) / 2), n - 1]
   return (
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
         <div style={S.cardTitle}>Monte Carlo fan</div>
-        <span className="sw-chip sw-chip-sm">10/25/50/75/90 bands</span>
+        <span className="sw-chip sw-chip-sm">{pos.runs ? `${pos.runs} runs · ` : ''}10–90 bands</span>
       </div>
       <DrawSVG duration={1000}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{
-          display: 'block', marginTop: 'var(--space-sm)',
-        }}>
-          {[0, 0.5, 1].map(t => (
-            <line key={t} x1={pL} y1={py(maxV * t)} x2={W - pR} y2={py(maxV * t)}
-                  stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', marginTop: 'var(--space-sm)' }}
+             role="img" aria-label="Monte Carlo percentile bands of the pot over the retirement horizon">
+          {yTicks.map((v, i) => (
+            <g key={i}>
+              <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+              <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+            </g>
           ))}
-          <path d={area(p10End, p90End)} fill="var(--c-mint-text)" opacity="0.10" />
-          <path d={area(p25End, p75End)} fill="var(--c-mint-text)" opacity="0.20" />
-          <path d={path(p50End)} fill="none" stroke="var(--c-mint-text)" strokeWidth="2" />
-          <path d={path(p10End)} fill="none" stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 3" />
-          <path d={path(p90End)} fill="none" stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="3 3" />
-          <text x={pL} y={H - 6} fontSize="9" fill="var(--c-text3)">Now</text>
-          <text x={W - pR - 18} y={H - 6} fontSize="9" fill="var(--c-text3)">+{horizon}y</text>
+          <path d={band('p10', 'p90')} fill="var(--c-mint-text)" opacity="0.10" />
+          <path d={band('p25', 'p75')} fill="var(--c-mint-text)" opacity="0.20" />
+          <path d={line('p50')} fill="none" stroke="var(--c-mint-text)" strokeWidth="2" />
+          <path d={line('p10')} fill="none" stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 3" />
+          {xTickIdx.map((i, k) => (
+            <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)"
+                  textAnchor={k === 0 ? 'start' : k === xTickIdx.length - 1 ? 'end' : 'middle'}>age {pts[i].age}</text>
+          ))}
+          <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
         </svg>
       </DrawSVG>
-      <div style={{
-        marginTop: 6, fontSize: 11, color: 'var(--c-text3)',
-      }}>
-        Median path: {fmt(p50End)} at year {horizon}. P10 floor: {fmt(p10End)}.
+      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+        By age {last.age}: typical (median) {fmt(last.p50)}, unlucky (10th percentile) {fmt(last.p10)}. {pos.pos != null ? `~${Math.round(pos.pos * 100)}% of simulated markets fund the income to then.` : ''} A spread of market outcomes around your plan — not a probability of any single result.
       </div>
     </div>
   )

@@ -57,6 +57,12 @@ import { useActiveCMA } from '../state/useActiveCMA.js'
 // L3-3 (2026-05-28): tax-band + NI breakdown for L4 drills inside cashflow drill panels.
 import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 
+// §B goal-engine wire-up (2026-06-03): the ONE engine that produces the real
+// tax-minimising drawdown SEQUENCE (year-by-year per-pot draws + ranked routes)
+// for decumulators — replaces the relabeled-G-K "Optimal" + the forward-table stub.
+import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
+import { solveDecumulation } from '../engine/decumulation-solver.js'
+
 // L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
 // to L4 row-level breakdowns (gross income → per-source; tax & NI → per-band).
 import { DrillStackProvider, useDrillStackContext } from '../components/MyMoney/L3/DrillStack.jsx'
@@ -1086,6 +1092,16 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     () => cf_fiveCashflowScenarios(entity, CMA_BUNDLE),
     [entity, bv, cv]
   )
+  // The ONE engine: real tax-minimising drawdown sequence (per-pot, per-year +
+  // ranked routes). Decumulators only — the goal spec routes accumulators away
+  // (solver returns null), so this card is a decumulation surface.
+  const decSolve = useMemo(() => {
+    try {
+      const spec = buildGoalSpec(entity)
+      if (spec.branch !== 'decumulation') return null
+      return solveDecumulation({ entity, goalSpec: spec })
+    } catch { return null }
+  }, [entity, bv, cv])
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
   const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv, cv])
@@ -1425,6 +1441,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
               scenarios={fiveScen?.scenarios || null}
               defaultActiveId={fiveScen?.active_id || 'optimal'}
               entity={entity}
+              decSolve={decSolve}
             />
           </RevealStagger>
 
@@ -3051,13 +3068,9 @@ function FiveScenariosCard({ scen }) {
 // ── Scenario matrix wrapper with real selection state (STUB-02) ────────
 // Tracks active scenario in local state so onSelect actually does work;
 // recomputes a small forward-cashflow summary keyed to the selection.
-function ScenarioMatrixWithRecompute({ scenarios, defaultActiveId, entity }) {
+function ScenarioMatrixWithRecompute({ scenarios, defaultActiveId, entity, decSolve }) {
   const [activeId, setActiveId] = useState(defaultActiveId)
   const items = scenarios && scenarios.length ? scenarios : null
-
-  // Re-derive a forward summary from the chosen scenario. Uses fields the
-  // engine already populates per-scenario; if a field is missing we render
-  // an honest stub rather than fabricating numbers.
   const active = (items || []).find(s => (s.id || s.name) === activeId) || null
 
   return (
@@ -3067,12 +3080,113 @@ function ScenarioMatrixWithRecompute({ scenarios, defaultActiveId, entity }) {
         activeId={activeId}
         onSelect={id => setActiveId(id)}
       />
-      <ScenarioForwardSummary active={active} entity={entity} />
+      <ScenarioForwardSummary active={active} entity={entity} decSolve={decSolve} />
     </>
   )
 }
 
-function ScenarioForwardSummary({ active, entity }) {
+// Compact £ formatters for the dense drawdown table.
+const _gk = (n) => {
+  const v = Math.round(+n || 0)
+  if (Math.abs(v) >= 1e6) return '£' + (v / 1e6).toFixed(1) + 'm'
+  if (Math.abs(v) >= 1000) return '£' + Math.round(v / 1000) + 'k'
+  return '£' + v
+}
+const _gmo = (n) => '£' + Math.round((+n || 0) / 12).toLocaleString()
+
+// The REAL drawdown plan (one-engine). For decumulators, solveDecumulation
+// gives the tax-minimising per-pot, per-year sequence + the routes it ranked.
+// Compliance: routes are "ranked under your priorities", never "optimal/best".
+function ScenarioForwardSummary({ active, entity, decSolve }) {
+  const routes = decSolve?.rankedPaths || []
+  const [routeIdx, setRouteIdx] = useState(0)
+
+  if (routes.length) {
+    const route = routes[Math.min(routeIdx, routes.length - 1)]
+    const sched = route.schedule || []
+    const rows = sched.length > 6 ? [...sched.slice(0, 5), sched[sched.length - 1]] : sched
+    const y1 = sched[0]
+    const cell = { padding: '4px 6px' }
+    return (
+      <div className="sw-card sw-lift" style={S.card}>
+        <div style={S.cardHeader}>
+          <div style={S.cardTitle}>Your drawdown plan</div>
+          <span className="sw-chip sw-chip-sm sw-chip-blue">ranked under your priorities</span>
+        </div>
+
+        {/* Routes considered — the branches the engine ranked, selectable. */}
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', margin: '12px 0 6px' }}>
+          Routes considered ({routes.length})
+        </div>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+          {routes.map((r, i) => {
+            const on = i === routeIdx
+            return (
+              <button key={r.rank ?? i} onClick={() => setRouteIdx(i)} className="sw-pressable"
+                style={{ flexShrink: 0, textAlign: 'left', padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 138,
+                  background: on ? 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface2))' : 'var(--c-surface2)',
+                  border: on ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-text)' }}>#{r.rank ?? i + 1} {r.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>tax {_gk(r.totalTaxCost)} · est. left {_gk(r.afterIhtEstate)}</div>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>funds to age {r.depletedAtAge || '95+'}</div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Year 1 as a monthly instruction — answers "how much from each pot". */}
+        {y1 && (
+          <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+            To take <b>{fmt(y1.net)}/yr</b> ({_gmo(y1.net)}/mo) in year 1: pension <b>{_gmo(y1.draws.pension)}/mo</b>{y1.pclsTaxFree ? ` (${_gmo(y1.pclsTaxFree)} tax-free)` : ''}, ISA {_gmo(y1.draws.isa)}/mo, GIA {_gmo(y1.draws.gia)}/mo, cash {_gmo(y1.draws.cash)}/mo · tax {_gmo(y1.tax)}/mo.
+          </div>
+        )}
+
+        {/* Year-by-year sequence (per-pot draws). */}
+        <div style={{ marginTop: 12, overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>
+            <thead>
+              <tr style={{ color: 'var(--c-text3)', textAlign: 'right' }}>
+                <th style={{ ...cell, textAlign: 'left', fontWeight: 700 }}>Age</th>
+                <th style={{ ...cell, fontWeight: 700 }}>Pension</th>
+                <th style={{ ...cell, fontWeight: 700 }}>ISA</th>
+                <th style={{ ...cell, fontWeight: 700 }}>GIA</th>
+                <th style={{ ...cell, fontWeight: 700 }}>Cash</th>
+                <th style={{ ...cell, fontWeight: 700 }}>Tax</th>
+                <th style={{ ...cell, fontWeight: 700 }}>Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.age ?? i} style={{ textAlign: 'right', borderTop: '1px solid var(--c-border)' }}>
+                  <td style={{ ...cell, textAlign: 'left', color: 'var(--c-text2)' }}>{r.age}</td>
+                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.pension)}</td>
+                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.isa)}</td>
+                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.gia)}</td>
+                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.cash)}</td>
+                  <td style={{ ...cell, color: 'var(--c-coral, #FF6F7D)' }}>{_gk(r.tax)}</td>
+                  <td style={{ ...cell, color: 'var(--c-acc)', fontWeight: 700 }}>{_gk(r.net)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {Array.isArray(route.rationale) && route.rationale.length > 0 && (
+          <ul style={{ margin: '12px 0 0', paddingLeft: 16, fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+            {route.rationale.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
+          </ul>
+        )}
+        {decSolve.coverage?.unknowns?.length > 0 && (
+          <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>⚠ {decSolve.coverage.unknowns[0]}</div>
+        )}
+        <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+          {decSolve.provenance ? decSolve.provenance + ' · ' : ''}{decSolve.disclaimer}
+        </div>
+      </div>
+    )
+  }
+
+  // Accumulator / sparse → honest, no fabricated drawdown.
   if (!active) return null
   const draw = +(active.annual_drawdown ?? active.drawdownAnnual ?? 0)
   const pos  = +(active.pos ?? 0)
@@ -3084,20 +3198,14 @@ function ScenarioForwardSummary({ active, entity }) {
         <div style={S.cardTitle}>Forward cashflow · {active.label || active.name || 'Selected scenario'}</div>
         <span className="sw-chip sw-chip-sm sw-chip-blue">{Math.round(pos * 100)}% PoS</span>
       </div>
-      <div style={{
-        marginTop: 'var(--space-md)', display: 'grid',
-        gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)',
-      }}>
-        <Stat label="Annual draw"   value={draw > 0 ? fmt(draw) : '—'} />
-        <Stat label="Horizon"        value={`${horizon}y`} />
-        <Stat label="Median terminal" value={terminal != null ? fmt(terminal) : '— stub'} />
-        <Stat label="Active id"       value={active.id || active.name || '—'} />
+      <div style={{ marginTop: 'var(--space-md)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+        <Stat label="Annual draw" value={draw > 0 ? fmt(draw) : '—'} />
+        <Stat label="Horizon" value={`${horizon}y`} />
+        <Stat label="Median terminal" value={terminal != null ? fmt(terminal) : '—'} />
+        <Stat label="Scenario" value={active.id || active.name || '—'} />
       </div>
-      <div style={{
-        marginTop: 'var(--space-sm)', fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4,
-      }}>
-        Selection drives downstream summary. Per-scenario forward-cashflow
-        table will appear once the engine surfaces year-by-year draw paths.
+      <div style={{ marginTop: 'var(--space-sm)', fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>
+        The year-by-year drawdown sequence shows for decumulation profiles. This profile is still accumulating — see funded ratio + FI progress above.
       </div>
     </div>
   )

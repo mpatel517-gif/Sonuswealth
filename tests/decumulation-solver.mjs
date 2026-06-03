@@ -108,6 +108,21 @@ console.log('\n── pension DOUBLE TAX (death ≥75, post-2027) ──')
   log(s.pensionDeathIncomeTax === 0, 'death before 75 → no inherited-pension income tax (IHT only)')
 }
 
+console.log('\n── spousal exemption (audit fix: no phantom bill for couples) ──')
+{
+  const single = extractDecumulationContext(BRUCE, { incomeTarget: 50000, horizonAge: 76, inflation: 0 })
+  const married = extractDecumulationContext({ ...BRUCE, isCouple: true, maritalStatus: 'married' }, { incomeTarget: 50000, horizonAge: 76, inflation: 0 })
+  log(single.estateToSpouseFraction === 0 && married.estateToSpouseFraction === 1, 'single → 0% to spouse; married → 100% to spouse (default)')
+  const sSim = simulatePath(single, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 })
+  const mSim = simulatePath(married, ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 })
+  log(sSim.totalDeathTax > 0, `single Bruce bears death tax (£${Math.round(sSim.totalDeathTax/1000)}k)`)
+  log(mSim.totalDeathTax === 0, 'married Bruce → £0 first-death tax (spousal exemption), not a phantom bill')
+  log(mSim.afterIhtEstate > sSim.afterIhtEstate, 'married preserves more on first death')
+  // Partial: 50% to a non-spouse → roughly half the single bill.
+  const partial = simulatePath(extractDecumulationContext({ ...BRUCE, isCouple: true }, { incomeTarget: 50000, horizonAge: 76, inflation: 0, estateToSpouseFraction: 0.5 }), ['cash', 'isa', 'gia', 'pension'], { now: NOW, iht2027: IHT2027 })
+  log(Math.abs(partial.totalDeathTax - sSim.totalDeathTax / 2) < sSim.totalDeathTax * 0.05, '50% to spouse → ~half the death tax')
+}
+
 console.log('\n── lexicographic scoring: the primary goal picks the winner ──')
 {
   // Pure mechanism test (persona-independent): two paths that trade off, so the

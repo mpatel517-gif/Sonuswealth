@@ -67,6 +67,13 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
   const dividends = +inc.dividends || 0
   const growth = +opts.growth || +a.sipp?.growth || 0.05
   const inflation = opts.inflation != null ? +opts.inflation : 0.025
+  // Marital status drives the spousal exemption: transfers to a surviving spouse
+  // (incl. pensions post-2027) are IHT-exempt. Default assumption: a married
+  // person leaves the estate to their spouse (overridable via opts).
+  const married = !!(entity.isCouple || /married|civil|partner/i.test(
+    String(entity.maritalStatus || entity.marital_status || entity.relationshipStatus || entity.household_status || '')))
+  const estateToSpouseFraction = opts.estateToSpouseFraction != null
+    ? Math.min(1, Math.max(0, +opts.estateToSpouseFraction)) : (married ? 1 : 0)
   // Tax-free-cash (PCLS) available = 25% of the pot, capped by the Lump Sum
   // Allowance (£268,275), less any already taken.
   const pclsLsaCap = Math.max(0, Math.min(pensionDC * 0.25, TAX.lsa) - (+a.sipp?.tfcTaken || 0))
@@ -80,6 +87,7 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
 
   return {
     age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
+    married, estateToSpouseFraction,
     pots: { pension: pensionDC, isa: isaVal, gia, cash },
     property, liabilities, dbIncome,
     secure: { statePensionAnnual, rental, dividends },
@@ -223,18 +231,22 @@ export function simulatePath(ctx, order, opts = {}) {
   const rnrb = estate > (TAX.rnrbTaper || 2000000) ? Math.max(0, (TAX.rnrb || 175000) - (estate - (TAX.rnrbTaper || 2000000)) / 2) : (TAX.rnrb || 175000)
   const nilBands = (TAX.nrb || 325000) + rnrb
   const ihtRate = TAX.ihtRate || 0.40
-  const ihtExposure = Math.round(Math.max(0, estate - nilBands) * ihtRate)
-  // Beneficiary income tax on the inherited pension (death age ≥ 75 only),
-  // charged on the pension net of its proportional share of the IHT.
   const benRate = opts.beneficiaryMarginalRate ?? ctx.beneficiaryRate ?? TAX.hr
+  // Spousal exemption: the fraction of the estate passing to a surviving spouse
+  // is IHT-exempt (and pensions to a spouse are exempt from the 2027 inclusion).
+  // Only the NON-spouse fraction bears death tax on this (first) death; the
+  // transferable bands + second-death charge are not modelled (surfaced).
+  const taxableFrac = 1 - (ctx.estateToSpouseFraction || 0)
+  const ihtFull = Math.round(Math.max(0, estate - nilBands) * ihtRate)
   // The pension sits on TOP of the nil-rate bands (those shelter other estate),
-  // so its IHT is the marginal 40% — apportion on the TAXABLE estate, capped at
-  // the full rate (audit fix: gross-estate apportionment understated this and so
-  // overstated the income-tax base on the net-of-IHT slice).
-  const pensionIHTShare = Math.min(pensionInEstateVal * ihtRate, ihtExposure)
-  const pensionDeathIncomeTax = (pensionInEstate && ctx.horizonAge >= 75)
-    ? Math.round((pensionInEstateVal - pensionIHTShare) * benRate)
+  // so its IHT is the marginal 40% — capped at the total IHT (audit fix vs the
+  // old gross-estate apportionment which overstated the net-of-IHT base).
+  const pensionIHTShareFull = Math.min(pensionInEstateVal * ihtRate, ihtFull)
+  const pensionDeathIncomeTaxFull = (pensionInEstate && ctx.horizonAge >= 75)
+    ? Math.round((pensionInEstateVal - pensionIHTShareFull) * benRate)
     : 0
+  const ihtExposure = Math.round(ihtFull * taxableFrac)
+  const pensionDeathIncomeTax = Math.round(pensionDeathIncomeTaxFull * taxableFrac)
   const totalDeathTax = ihtExposure + pensionDeathIncomeTax
   const afterIhtEstate = Math.round(estate - totalDeathTax)
 
@@ -486,10 +498,11 @@ function buildMethodology(ctx, ledger, goalSpec) {
 function coverageSurface(ctx, ledger, unknowns) {
   const extra = []
   if (ctx?.property > 0) extra.push(`£${Math.round(ctx.property / 1000)}k of property is NOT modelled as an income source (downsizing / equity release / sale + property CGT are excluded) — runway shown is from liquid pots only.`)
-  extra.push('Assumes a single person — for couples, transfers between spouses are usually inheritance-tax-free, so the death-tax figures would differ. Couples are not yet modelled.')
+  if (ctx?.married) extra.push(`Assumes the estate passes to your spouse on first death (spousal exemption applied — ${Math.round((ctx.estateToSpouseFraction || 0) * 100)}%), so death tax shown is for THIS death only; the transferable allowances and second-death charge are not yet modelled.`)
+  else extra.push('Assumes a single person — for couples, transfers between spouses are usually inheritance-tax-free, so the death-tax figures would differ.')
   extra.push('The resilience score is a deterministic illustration under these assumptions, NOT a probability of success.')
   return {
-    household: 'single', // couples handled in a later pass; spousal IHT exemption not yet applied
+    household: ctx?.married ? 'couple (spousal exemption applied to first death)' : 'single',
     pensionKinds: ctx.flags.hasDB ? ['DB (income, not a pot)', 'DC'] : ['DC'],
     wrappers: Object.entries(ctx.pots).filter(([, v]) => v > 0).map(([k]) => k),
     dataRichness: ctx.flags.sparse ? 'sparse' : 'sufficient',

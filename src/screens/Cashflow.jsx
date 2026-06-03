@@ -1109,8 +1109,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     [entity, bv, cv, trajOpts]
   )
   const seqVuln = useMemo(
-    () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE),
-    [entity, bv, cv]
+    () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE, trajOpts),
+    [entity, bv, cv, trajOpts]
   )
   const gkPath = useMemo(
     () => guytonKlingerPath(entity, trajOpts.horizonYears || 30, CMA_BUNDLE),

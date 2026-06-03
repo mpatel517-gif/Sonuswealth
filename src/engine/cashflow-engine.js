@@ -390,13 +390,17 @@ export function maxDrawdownExposure(entity, cma = null) {
  * @param {object|null} [cma]
  * @returns {{ median_depletion_age, adverse_depletion_age, vulnerability_years, vulnerability_pounds, bad_years_severity, mitigation_savings, confidence, cma_bundle }}
  */
-export function sequenceOfReturnsVulnerability(entity, cma = null) {
+// opts (one-engine consistency): same { targetIncome, startAge, startValue }
+// the deterministic plan used, so the depletion ages here can't contradict it.
+export function sequenceOfReturnsVulnerability(entity, cma = null, opts = {}) {
   const age          = _age(entity);
   const retAge       = entity?.preferences?.retirementAge ?? TAX.spa;
-  const targetIncome = entity?.preferences?.targetIncomeReal ?? entity?.targetIncome ?? 50000;
+  const targetIncome = opts.targetIncome != null ? +opts.targetIncome
+                       : (entity?.preferences?.targetIncomeReal ?? entity?.targetIncome ?? 50000);
   const inv          = _inv(entity);
+  const startValue   = opts.startValue != null ? +opts.startValue : inv.value;
 
-  if (inv.value < 10_000 || targetIncome === 0) {
+  if (startValue < 10_000 || targetIncome === 0) {
     return {
       median_depletion_age: null, adverse_depletion_age: null,
       vulnerability_years: null, vulnerability_pounds: null,
@@ -405,7 +409,7 @@ export function sequenceOfReturnsVulnerability(entity, cma = null) {
     };
   }
 
-  const startAge   = Math.max(age, retAge);
+  const startAge   = opts.startAge != null ? +opts.startAge : Math.max(age, retAge);
   const spAge      = entity?.income?.statePension?.startAge ?? TAX.spa;
   const sp         = entity?.income?.statePension?.annual   ?? TAX.statePensionFull;
   const growth     = cma?.growth    ?? DEFAULT_GROWTH;
@@ -413,7 +417,7 @@ export function sequenceOfReturnsVulnerability(entity, cma = null) {
   const MAX_HOR    = 50;
 
   function _sim(badFirst5) {
-    let val = inv.value;
+    let val = startValue;
     for (let y = 0; y < MAX_HOR; y++) {
       const curAge = startAge + y;
       const spInc  = curAge >= spAge ? sp : 0;

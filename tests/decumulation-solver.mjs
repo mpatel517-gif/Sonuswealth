@@ -173,6 +173,7 @@ console.log('\n── output contract: visible path · why-it-won · branches �
   log(r.network.nodes.some(n => n.id === 'pension') && r.network.edges.length > 0, 'network has pot nodes + draw edges')
   log(r.network.alternatives.length === 3, 'network exposes 3 alternative branches to select')
   log(/not a forecast|not a personal recommendation/i.test(r.disclaimer), 'FCA disclaimer present')
+  log(r.recommendedMethod && r.recommendedMethod.id === 'floor_guardrail', `recommends a withdrawal method for the primary goal (${r.recommendedMethod?.id})`)
 }
 
 console.log('\n── methodology transparency (show the working to the user) ──')

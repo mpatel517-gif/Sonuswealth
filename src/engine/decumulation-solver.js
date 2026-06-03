@@ -23,6 +23,7 @@
 
 import { TAX } from './fq-calculator.js'
 import { withdrawalTaxForYear, buildAllowanceLedger } from './withdrawal-tax.js'
+import { recommendMethodForGoal, METHODS } from './withdrawal-methods.js'
 
 const FCA_DISCLAIMER = 'Illustrative under your stated priorities and assumptions — not a forecast or personal recommendation. Verify decisions with a qualified UK adviser.'
 
@@ -421,6 +422,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
       resilience: 'Funding resilience: a deterministic illustration under your assumptions, not a probability.',
     },
     binding: { primaryGoal: goalSpec?.primary?.type || null, lexicographicOrder: (goalSpec?.goals || []).filter(g => !g.alwaysOn).map(g => g.type) },
+    recommendedMethod: (() => { const id = recommendMethodForGoal(goalSpec?.primary?.type); return { id, label: METHODS[id]?.label, why: METHODS[id]?.summary } })(),
     disclaimer: FCA_DISCLAIMER,
   }
 }

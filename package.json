@@ -51,7 +51,8 @@
     "regression:check": "node tests/harness/regression-check.mjs",
     "snap": "node scripts/snap.mjs",
     "sync:tax": "node scripts/sync-tax-bundle.mjs",
-    "test:accum-solver": "node tests/accumulation-solver.mjs"
+    "test:accum-solver": "node tests/accumulation-solver.mjs",
+    "test:withdrawal-methods": "node tests/withdrawal-methods.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

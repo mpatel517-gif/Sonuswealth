@@ -3407,7 +3407,12 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           {showMethods && (() => {
             let methods = []
             try { methods = compareMethods({ portfolio, years: Math.max(1, horizon - currentAge), growth: growthPct / 100, inflation: seed.inflation ?? 0.025, essentialsAnnual, age: currentAge }) } catch { methods = [] }
-            if (!methods.length) return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)' }}>Method comparison needs a drawable pot to pace.</div>
+            // compareMethods ALWAYS returns 5 entries, so guard on the real
+            // condition: no drawable pot to pace → don't render five £0/yr rows
+            // with bogus "lasts to age X" verdicts (sparse-degradation fix).
+            if (portfolio <= 0 || !methods.length || methods.every(m => !m.year1Withdrawal)) {
+              return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Method comparison needs a drawable pot (pension/ISA/GIA/cash) to pace. Your income here comes from secure sources or hasn&rsquo;t been captured yet.</div>
+            }
             const recId = recommendMethodForGoal(primaryGoal)
             const maxW1 = Math.max(...methods.map(m => m.year1Withdrawal || 0), 1)
             return (

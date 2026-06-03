@@ -3383,7 +3383,7 @@ function ScenarioForwardSummary({ entity, decSolve }) {
               turns the engine's default ranking into the user's stated choice. */}
           <div style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>
-              Your priorities — drag #1 to the top
+              Your priorities — #1 ranks first (reorder with ▲▼)
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {order.map((t, i) => {
@@ -3408,25 +3408,32 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           {anyDirty && <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)' }}>Re-solved on your assumptions &amp; priorities — an illustration, not a forecast.</div>}
         </div>
 
-        {/* Routes considered — the branches the engine ranked, selectable. */}
+        {/* Routes considered — compact selectable chips; full detail only for the
+            selected route (founder: the strip was too bulky, keep interactivity). */}
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', margin: '12px 0 6px' }}>
           Routes considered ({routes.length})
         </div>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {routes.map((r, i) => {
             const on = i === routeIdx
             return (
-              <button key={r.rank ?? i} onClick={() => setRouteIdx(i)} className="sw-pressable"
-                style={{ flexShrink: 0, textAlign: 'left', padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 138,
+              <button key={r.rank ?? i} onClick={() => setRouteIdx(i)} className="sw-pressable" aria-pressed={on}
+                style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 999, cursor: 'pointer', fontSize: 11,
+                  fontWeight: on ? 800 : 600, whiteSpace: 'nowrap',
+                  color: on ? 'var(--c-acc)' : 'var(--c-text2)',
                   background: on ? 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface2))' : 'var(--c-surface2)',
                   border: on ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-text)' }}>#{r.rank ?? i + 1} {r.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>tax {_gk(r.totalTaxCost)} · est. left {_gk(r.afterIhtEstate)}</div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>funds to age {r.depletedAtAge || '95+'}</div>
+                #{r.rank ?? i + 1} {r.name} · to {r.depletedAtAge || '95+'}
               </button>
             )
           })}
         </div>
+        {/* Detail for the selected route only. */}
+        {route && (
+          <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
+            <b style={{ color: 'var(--c-text2)' }}>#{route.rank ?? routeIdx + 1} {route.name}</b> — tax {_gk(route.totalTaxCost)} · est. left {_gk(route.afterIhtEstate)} · funds to age {route.depletedAtAge || '95+'}
+          </div>
+        )}
 
         {/* Money-map — pots → income in the solved draw order. Re-routes when the
             back-solve target above flips the #1 ranked path. */}

@@ -53,6 +53,15 @@ CREATE INDEX IF NOT EXISTS idx_guid_person_gen
 ALTER TABLE finio_net_worth_history  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finio_guidance_snapshots ENABLE ROW LEVEL SECURITY;
 
+-- DROP-then-CREATE so this migration is safely re-runnable (Postgres has no
+-- CREATE POLICY IF NOT EXISTS). Lets the file live in a batch the founder runs
+-- in one go without erroring if it was applied before.
+DROP POLICY IF EXISTS "nwh_owner_select" ON finio_net_worth_history;
+DROP POLICY IF EXISTS "nwh_owner_write"  ON finio_net_worth_history;
+DROP POLICY IF EXISTS "nwh_owner_update" ON finio_net_worth_history;
+DROP POLICY IF EXISTS "guid_owner_select" ON finio_guidance_snapshots;
+DROP POLICY IF EXISTS "guid_owner_write"  ON finio_guidance_snapshots;
+
 CREATE POLICY "nwh_owner_select" ON finio_net_worth_history
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 CREATE POLICY "nwh_owner_write" ON finio_net_worth_history

@@ -1883,8 +1883,8 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
         {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} onClick={() => setOpen(t.key)} />)}
       </div>
       {open && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--c-bg)', overflowY: 'auto' }}>
-          <DrillStackProvider>
+        <DrillStackProvider>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '14px 16px 96px' }}>
               <button onClick={() => setOpen(null)} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{CF_TILE_TITLES[open]}</h2>
@@ -1913,8 +1913,8 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                 {open === 'whatif' && <GoalSeekCard entity={entity} />}
               </RevealStagger>
             </div>
-          </DrillStackProvider>
-        </div>
+          </div>
+        </DrillStackProvider>
       )}
     </>
   )

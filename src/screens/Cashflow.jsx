@@ -1362,91 +1362,21 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           {/* A4 — pin the face (Building wealth / Drawing income) or leave Auto. */}
           <LifeStageOverrideChip entity={entity} />
 
-          <RevealStagger interval={60} startDelay={50}>
-            {/* (1) ANCHOR — the universal "will it last?" answer for savers,
-                drawers AND preservers (A3: promoted to lead §B; "not everyone
-                wants a drawdown" so the gauge, not the plan, is the headline). */}
-            <FundedRatioGaugeV2
-              ratio={+(fr?.ratio || fr?.value || 1.0)}
-              confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null}
-              fundedYears={fr?.fundedYears || fr?.years || null}
-            />
-            {/* (2) The withdrawal-rate ASSUMPTION knob that drives the gauge (A2). */}
-            <SwrRegimePicker
-              regime={swrRegime}
-              onChange={setSwrRegime}
-              swr={swr}
-            />
-            {/* (3) Sequence-of-returns story — relocated here from the very top
-                (A3 calm-first): the risk read ON the anchor, prominent in §B but
-                no longer the doom-banner that opened the whole tab. */}
-            <SequenceStressHero entity={entity} seqVuln={seqVuln} />
-            {/* (4) Accumulator's progress-to-FI (self-empties for sparse). */}
-            <FiProgressTile fi={fi} />
-            {/* B-1b (2026-05-28): PoSHeadline removed — was a 3rd PoS surface
-                duplicating the % + horizon + terminal values that PoSChartV2
-                already shows in richer form. Founder saw two cards reading
-                "39% / 24y / £0 P10 / £2.43m P90" side-by-side. Now PoSChartV2
-                is the single authoritative PoS surface. */}
-            {/* B-1 (2026-05-27): PoSChartV2 was rendering "Calculating…" forever
-                because it read `pos.probability` / `pos.median_path` / `pos.bands`
-                which the engine never produces (engine returns `pos`, `runs`,
-                `median_terminal_value`, `p10/p25/p75/p90_terminal_value`).
-                We synthesise a usable median + bands envelope from terminal
-                values + horizon so the chart actually renders, OR collapse it
-                when the engine returns insufficient_data so the user sees one
-                authoritative PoS surface instead of a working one + a stuck
-                "Calculating…" twin. */}
-            {pos && !pos.insufficient_data && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1 && (() => {
-              // REAL per-year Monte Carlo percentiles from the engine (no more
-              // Math.pow interpolation to a terminal point). Same target income +
-              // horizon the deterministic plan used (threaded via trajOpts), so
-              // the probabilistic fan and the plan can't contradict each other.
-              const startYear = new Date().getFullYear()
-              const pyp = pos.per_year_percentiles
-              const horizon = pos.horizon_years || (pyp.length - 1)
-              const series = key => pyp.map(p => ({ year: startYear + p.year, value: p[key] }))
-              return (
-                <>
-                  <PoSChartV2
-                    probability={pos.pos ?? null}
-                    median={series('p50')}
-                    bands={{ p10: series('p10'), p90: series('p90') }}
-                    guardrail={null}
-                    horizonYears={horizon}
-                  />
-                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
-                    Each year separately simulated across {pos.runs || 1000} market paths (10th–90th percentile band), on the same target income and horizon as your plan above. A range of outcomes under market uncertainty — not a probability of any single result.
-                  </div>
-                </>
-              )
-            })()}
-            {/* B-2 (2026-05-27): SequenceStressVisV2 expected good_path /
-                bad_path arrays that the engine never populates — Bruce HAS
-                portfolio + drawdown data yet the card sat on "Calculating…"
-                forever. Hide the V2 visualiser until the engine grows the
-                path-array API; the SequenceOfReturnsCard below shows the
-                severity verdict from `seqVuln` and is the authoritative
-                surface today. */}
-            {seqVuln && seqVuln.good_path && seqVuln.bad_path && !seqVuln.insufficient_data && (
-              <SequenceStressVisV2
-                goodSequence={seqVuln.good_path}
-                badSequence={seqVuln.bad_path}
-                horizonYears={seqVuln.horizon_years || 30}
-              />
-            )}
-            <GuytonKlingerCorridor path={gkPath} />
-            {/* (8) Goal-seek — demoted from the top of §B (A3): a CTA tool, not
-                the anchor. */}
-            <GoalSeekCard entity={entity} />
-            {/* (9) The drawdown plan TOOL — LAST; self-degrades to the FI tile
-                for accumulators/preservers, so it never pushes a non-drawer to
-                draw (founder: "not everyone wants a drawdown"). */}
-            <ScenarioMatrixWithRecompute
-              entity={entity}
-              decSolve={decSolve}
-            />
-          </RevealStagger>
+          {/* §B is now four question-tiles, each opening a full-screen page that
+              renders the SAME components (moved, not rewritten). Kills the long
+              scroll the founder flagged; §A/§C migrate to the same grammar next. */}
+          <CashflowTrajectoryTiles
+            entity={entity}
+            fr={fr}
+            fi={fi}
+            pos={pos}
+            seqVuln={seqVuln}
+            gkPath={gkPath}
+            swr={swr}
+            swrRegime={swrRegime}
+            setSwrRegime={setSwrRegime}
+            decSolve={decSolve}
+          />
 
           {/* ════ SECTION C — ENGINE INTERNALS (collapsed by default) ═════════
               R3v2 (2026-05-26): everything below this line is diagnostic /
@@ -1909,6 +1839,86 @@ function ComponentRow({ label, value, tip }) {
 }
 
 // ── Section delimiter — sticky letter badge + title + 1-line purpose ────
+// ── §B trajectory as question-tiles (2026-06-03) ───────────────────────────
+// Founder: the §B trajectory scroll is "so long" and must be called from a
+// drawer/tile like the balance sheet. Four question-tiles, each opening a
+// full-screen page that renders the SAME components (moved, not rewritten).
+// This is the first increment of the whole-tab question-tiles plan; §A/§C
+// migration + the headline-answer band (evolving PurposeStatement) follow.
+const CF_TILE_TITLES = {
+  lastability: 'Will my money last?',
+  drawdown: 'How do I draw it down?',
+  resilience: 'What could break it?',
+  whatif: 'What would change it most?',
+}
+function QuestionTile({ q, headline, sub, tone, onClick }) {
+  const accent = tone === 'coral' ? 'var(--c-coral-text)' : tone === 'mint' ? 'var(--c-mint-text)' : 'var(--c-acc)'
+  return (
+    <button onClick={onClick} className="sw-card sw-lift sw-pressable" style={{
+      display: 'flex', flexDirection: 'column', textAlign: 'left', gap: 3, padding: '14px',
+      borderRadius: 16, cursor: 'pointer', width: '100%', height: '100%', boxSizing: 'border-box',
+      border: '1px solid var(--c-border)', background: 'var(--c-surface)' }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text3)' }}>{q}</div>
+      <div style={{ fontSize: 19, fontWeight: 800, color: accent, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{headline}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>{sub}</div>}
+      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>View ›</div>
+    </button>
+  )
+}
+function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, swrRegime, setSwrRegime, decSolve }) {
+  const [open, setOpen] = useState(null)
+  const ratio = +(fr?.ratio || fr?.value || 0)
+  const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
+  const routeName = decSolve?.rankedPaths?.[0]?.name
+  const sev = seqVuln?.severity || seqVuln?.level
+  const tiles = [
+    { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
+    { key: 'drawdown', q: 'How do I draw it down?', headline: decSolve ? (routeName || 'Your plan') : 'Building wealth', sub: decSolve ? (lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map') : 'progress to FI', tone: 'acc' },
+    { key: 'resilience', q: 'What could break it?', headline: sev ? String(sev) : 'Stress test', sub: 'sequence & market risk', tone: 'acc' },
+    { key: 'whatif', q: 'What would change it most?', headline: 'Model levers', sub: 'what-if & goal-seek', tone: 'acc' },
+  ]
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} onClick={() => setOpen(t.key)} />)}
+      </div>
+      {open && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--c-bg)', overflowY: 'auto' }}>
+          <DrillStackProvider>
+            <div style={{ maxWidth: 760, margin: '0 auto', padding: '14px 16px 96px' }}>
+              <button onClick={() => setOpen(null)} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{CF_TILE_TITLES[open]}</h2>
+              <RevealStagger interval={60} startDelay={40}>
+                {open === 'lastability' && <>
+                  <FundedRatioGaugeV2 ratio={+(fr?.ratio || fr?.value || 1.0)} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
+                  <SwrRegimePicker regime={swrRegime} onChange={setSwrRegime} swr={swr} />
+                  <FiProgressTile fi={fi} />
+                </>}
+                {open === 'drawdown' && <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />}
+                {open === 'resilience' && <>
+                  <SequenceStressHero entity={entity} seqVuln={seqVuln} />
+                  {pos && !pos.insufficient_data && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1 && (() => {
+                    const startYear = new Date().getFullYear()
+                    const pyp = pos.per_year_percentiles
+                    const horizon = pos.horizon_years || (pyp.length - 1)
+                    const series = key => pyp.map(p => ({ year: startYear + p.year, value: p[key] }))
+                    return (<>
+                      <PoSChartV2 probability={pos.pos ?? null} median={series('p50')} bands={{ p10: series('p10'), p90: series('p90') }} guardrail={null} horizonYears={horizon} />
+                      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>Each year separately simulated across {pos.runs || 1000} market paths (10th–90th percentile band), on the same target income and horizon as your plan. A range of outcomes under market uncertainty — not a probability of any single result.</div>
+                    </>)
+                  })()}
+                  {seqVuln && seqVuln.good_path && seqVuln.bad_path && !seqVuln.insufficient_data && <SequenceStressVisV2 goodSequence={seqVuln.good_path} badSequence={seqVuln.bad_path} horizonYears={seqVuln.horizon_years || 30} />}
+                  <GuytonKlingerCorridor path={gkPath} />
+                </>}
+                {open === 'whatif' && <GoalSeekCard entity={entity} />}
+              </RevealStagger>
+            </div>
+          </DrillStackProvider>
+        </div>
+      )}
+    </>
+  )
+}
 function SectionDelimiter({ letter, title, subtitle, chipClass = 'sw-chip-mint' }) {
   return (
     <FadeInOnMount>

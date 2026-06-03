@@ -394,6 +394,11 @@ export function scorePaths(simulated, goalSpec) {
 }
 
 // ─── Network (assets = nodes, draw flows = edges, branches = alternatives) ────
+// P3 additive: a SECURE-INCOME node (state+DB+annuity+rental) flows INTO income
+// as the floor — it is NOT a depletable pot. Excluded/flagged holdings (relief-
+// locked w/ countdown, illiquid, specialist) are shown greyed with a reason, so
+// the user sees the whole balance sheet, not just the drawable slice. This
+// resolves the founder's bug: the old map implied ALL income came from pots.
 function buildNetwork(ctx, rankedPaths) {
   const potNodes = Object.entries(ctx.pots)
     .filter(([, v]) => v > 0)
@@ -404,11 +409,41 @@ function buildNetwork(ctx, rankedPaths) {
     .filter(p => ctx.pots[p] > 0)
     .map((p, i) => ({ from: p, to: 'income', order: i + 1, taxCost: null, kind: i === 0 ? 'draw-first' : 'then' }))
     : []
+
+  // Secure-income floor node — guaranteed inflow that shrinks residualNeed.
+  const ev = ctx.evaluation || {}
+  const secureNodes = []
+  if ((ev.grossFloorIncome || 0) > 0) {
+    secureNodes.push({
+      id: 'secure-income', label: 'Secure income (floor)', kind: 'secure',
+      value: Math.round(ev.grossFloorIncome), netValue: Math.round(ev.netFloorIncome || 0),
+      streams: (ev.secureIncome || []).map(s => ({
+        type: s.streamType, gross: Math.round(s.grossAnnual || 0), source: s.sourceTaxonomyId,
+      })),
+      note: 'Guaranteed lifetime income — not a pot you can deplete.',
+    })
+    edges.push({ from: 'secure-income', to: 'income', order: 0, taxCost: null, kind: 'floor' })
+  }
+
+  // Excluded / flagged holdings — shown, never drawn (reason chip + countdown).
+  const monthsTo = (d) => d ? Math.max(0, Math.round((new Date(d) - Date.now()) / (30 * 864e5))) : null
+  const excludedNodes = (ev.excluded || [])
+    .filter(x => x.holding && (x.holding.currentValue || 0) > 0)
+    .map((x, i) => {
+      const h = x.holding
+      const months = h.drawClassification === 'RELIEF-LOCKED-DONT-SELL-EARLY' ? monthsTo(h.reliefHoldingEndDate) : null
+      return {
+        id: `excluded-${h.id || i}`, label: h.taxonomyId, value: Math.round(h.currentValue || 0),
+        kind: 'excluded', drawClassification: h.drawClassification, reason: x.reason,
+        countdownMonths: months,
+      }
+    })
+
   const alternatives = rankedPaths.slice(1).map(rp => ({
     pathId: rp.path.id, name: rp.path.name, order: rp.path.order,
     successPct: rp.sim.successPct, afterIhtEstate: rp.sim.afterIhtEstate, totalTax: rp.sim.totalTax,
   }))
-  return { nodes: [...potNodes, sink], edges, alternatives }
+  return { nodes: [...potNodes, ...secureNodes, ...excludedNodes, sink], edges, alternatives }
 }
 
 // ─── The public solver ───────────────────────────────────────────────────────
@@ -469,6 +504,19 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     // "recommended". Present paths as peers to compare, not winner+also-rans.
     rankedPaths: rankedPaths.map(({ path, sim, ...rest }) => rest), // strip internals from public shape
     network: buildNetwork(ctx, rankedPaths),
+    // Secure-income floor (P1/P3): guaranteed income covers part of the target
+    // BEFORE any pot is drawn. residualNeed is what the portfolio must actually
+    // deliver. Surfaced so the UI stops implying every pound comes from pots.
+    floor: {
+      grossAnnual: Math.round(ctx.evaluation?.grossFloorIncome || 0),
+      netAnnual: Math.round(ctx.evaluation?.netFloorIncome || 0),
+      residualNeed: Math.max(0, Math.round(ctx.incomeTargetAnnual - (ctx.evaluation?.netFloorIncome || 0))),
+      streams: (ctx.evaluation?.secureIncome || []).map(s => ({
+        type: s.streamType, source: s.sourceTaxonomyId, grossAnnual: Math.round(s.grossAnnual || 0),
+        taxTreatment: s.taxTreatment, startAge: s.startAge,
+      })),
+      flagged: (ctx.evaluation?.specialist || []).map(h => ({ type: h.taxonomyId, reason: 'needs a qualified adviser to value', value: Math.round(h.currentValue || 0) })),
+    },
     perGoal,
     coverage: coverageSurface(ctx, ledger, []),
     methodology: buildMethodology(ctx, ledger, goalSpec),

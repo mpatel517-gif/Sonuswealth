@@ -1088,10 +1088,6 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     () => guytonKlingerPath(entity, 30, CMA_BUNDLE),
     [entity, bv, cv]
   )
-  const fiveScen = useMemo(
-    () => cf_fiveCashflowScenarios(entity, CMA_BUNDLE),
-    [entity, bv, cv]
-  )
   // The ONE engine: real tax-minimising drawdown sequence (per-pot, per-year +
   // ranked routes). Decumulators only — the goal spec routes accumulators away
   // (solver returns null), so this card is a decumulation surface.
@@ -1438,8 +1434,6 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 per-scenario forward-cashflow API the recompute slots in
                 without UI changes. */}
             <ScenarioMatrixWithRecompute
-              scenarios={fiveScen?.scenarios || null}
-              defaultActiveId={fiveScen?.active_id || 'optimal'}
               entity={entity}
               decSolve={decSolve}
             />
@@ -3068,21 +3062,13 @@ function FiveScenariosCard({ scen }) {
 // ── Scenario matrix wrapper with real selection state (STUB-02) ────────
 // Tracks active scenario in local state so onSelect actually does work;
 // recomputes a small forward-cashflow summary keyed to the selection.
-function ScenarioMatrixWithRecompute({ scenarios, defaultActiveId, entity, decSolve }) {
-  const [activeId, setActiveId] = useState(defaultActiveId)
-  const items = scenarios && scenarios.length ? scenarios : null
-  const active = (items || []).find(s => (s.id || s.name) === activeId) || null
-
-  return (
-    <>
-      <ScenarioMatrixV2
-        scenarios={items}
-        activeId={activeId}
-        onSelect={id => setActiveId(id)}
-      />
-      <ScenarioForwardSummary active={active} entity={entity} decSolve={decSolve} />
-    </>
-  )
+function ScenarioMatrixWithRecompute({ entity, decSolve }) {
+  // The old generic 5-scenario picker (cf_fiveCashflowScenarios) is removed: it
+  // showed the same Status-quo / Underspend / G-K / Adverse / Long-life set for
+  // EVERY user (not dynamic) with a mislabelled "Optimal", and conflated
+  // withdrawal METHOD with draw ORDER. Its two real jobs are now properly homed
+  // — draw ORDER in the routes strip below, withdrawal METHOD in the MethodDrawer.
+  return <ScenarioForwardSummary entity={entity} decSolve={decSolve} />
 }
 
 // Compact £ formatters for the dense drawdown table.
@@ -3097,7 +3083,7 @@ const _gmo = (n) => '£' + Math.round((+n || 0) / 12).toLocaleString()
 // The REAL drawdown plan (one-engine). For decumulators, solveDecumulation
 // gives the tax-minimising per-pot, per-year sequence + the routes it ranked.
 // Compliance: routes are "ranked under your priorities", never "optimal/best".
-function ScenarioForwardSummary({ active, entity, decSolve }) {
+function ScenarioForwardSummary({ entity, decSolve }) {
   const routes = decSolve?.rankedPaths || []
   const [routeIdx, setRouteIdx] = useState(0)
 
@@ -3186,26 +3172,14 @@ function ScenarioForwardSummary({ active, entity, decSolve }) {
     )
   }
 
-  // Accumulator / sparse → honest, no fabricated drawdown.
-  if (!active) return null
-  const draw = +(active.annual_drawdown ?? active.drawdownAnnual ?? 0)
-  const pos  = +(active.pos ?? 0)
-  const horizon = +(active.horizon_years ?? 30)
-  const terminal = active.terminal_value ?? active.median_terminal ?? null
+  // No solved drawdown (accumulator / sparse) → don't fabricate one. Show a
+  // brief, honest orientation note instead of an empty container.
   return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Forward cashflow · {active.label || active.name || 'Selected scenario'}</div>
-        <span className="sw-chip sw-chip-sm sw-chip-blue">{Math.round(pos * 100)}% PoS</span>
-      </div>
-      <div style={{ marginTop: 'var(--space-md)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-        <Stat label="Annual draw" value={draw > 0 ? fmt(draw) : '—'} />
-        <Stat label="Horizon" value={`${horizon}y`} />
-        <Stat label="Median terminal" value={terminal != null ? fmt(terminal) : '—'} />
-        <Stat label="Scenario" value={active.id || active.name || '—'} />
-      </div>
-      <div style={{ marginTop: 'var(--space-sm)', fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>
-        The year-by-year drawdown sequence shows for decumulation profiles. This profile is still accumulating — see funded ratio + FI progress above.
+    <div className="sw-card" style={S.card}>
+      <div style={S.cardTitle}>Drawdown plan</div>
+      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+        A year-by-year drawdown sequence appears once you&rsquo;re decumulating.
+        You&rsquo;re still building — see funded ratio and FI progress above.
       </div>
     </div>
   )

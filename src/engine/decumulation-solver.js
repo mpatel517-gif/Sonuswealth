@@ -25,7 +25,7 @@ import { TAX } from './fq-calculator.js'
 import { withdrawalTaxForYear, buildAllowanceLedger } from './withdrawal-tax.js'
 import { recommendMethodForGoal, METHODS } from './withdrawal-methods.js'
 import { stampGuidance } from './financial-snapshot.js'
-import { normaliseHoldings } from './decumulation-holdings.js'
+import { normaliseHoldings, growthForHolding } from './decumulation-holdings.js'
 import { evaluateHoldings } from './decumulation-classify.js'
 
 const FCA_DISCLAIMER = 'Illustrative under your stated priorities and assumptions — not a forecast or personal recommendation. Verify decisions with a qualified UK adviser.'
@@ -99,10 +99,31 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     marginalRate: entity.isHigherRateTaxpayer ? TAX.hr : TAX.br,
   })
 
+  // Per-pot blended growth (decision B) — value-weighted growthForHolding across
+  // each pot's holdings, so cash grows at ~cash rate and equities at ~equity rate
+  // instead of one flat rate for all four pots. Consumed by simulatePath ONLY
+  // when opts.perPotGrowth is set (keeps the flat-rate baselines stable).
+  const potGrowth = (() => {
+    const potOf = (h) => h.category === 'pensions' ? 'pension'
+      : h.category === 'cash' ? 'cash' : /ISA/.test(h.taxonomyId) ? 'isa' : 'gia'
+    const acc = { pension: { v: 0, g: 0 }, isa: { v: 0, g: 0 }, gia: { v: 0, g: 0 }, cash: { v: 0, g: 0 } }
+    for (const h of holdings) {
+      if (h.isPot !== true || !(+h.currentValue > 0)) continue
+      const k = potOf(h); acc[k].v += +h.currentValue; acc[k].g += +h.currentValue * growthForHolding(h)
+    }
+    const out = {}
+    for (const k of ['pension', 'isa', 'gia', 'cash']) {
+      out[k] = acc[k].v > 0 ? acc[k].g / acc[k].v
+        : (k === 'cash' ? (TAX.growthByCategory?.cash ?? growth) : growth)
+    }
+    return out
+  })()
+
   return {
     age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
     married, estateToSpouseFraction,
     pots: { pension: pensionDC, isa: isaVal, gia, cash },
+    potGrowth,
     holdings, evaluation,
     property, liabilities, dbIncome,
     secure: { statePensionAnnual, rental, dividends },
@@ -160,10 +181,14 @@ export function simulatePath(ctx, strategy, opts = {}) {
   let depletedAtAge = null
   const startYear = opts.now ? opts.now.getFullYear() : 2026
 
+  // Per-pot growth (decision B) is opt-in so the flat-rate baselines stay stable;
+  // when on, each pot grows at its blended rate (cash ~3% vs equity ~6%) instead
+  // of one rate for all four — fixes cash being grown at the equity assumption.
+  const usePotGrowth = !!(opts.perPotGrowth && ctx.potGrowth)
   for (let age = ctx.age; age <= ctx.horizonAge; age++) {
     const yIdx = age - ctx.age
     // Grow pots at start of year (nominal).
-    for (const k of Object.keys(bal)) bal[k] = bal[k] * (1 + ctx.growth)
+    for (const k of Object.keys(bal)) bal[k] = bal[k] * (1 + (usePotGrowth ? (ctx.potGrowth[k] ?? ctx.growth) : ctx.growth))
 
     const sp = age >= ctx.spa ? ctx.secure.statePensionAnnual : 0
     const secureTaxable = sp + ctx.secure.rental + ctx.dbIncome   // taxed as non-savings

@@ -45,6 +45,24 @@ function toTaxonomyId(typeStr, category) {
   const raw = String(typeStr || '').trim()
   const upper = raw.toUpperCase().replace(/[\s-]+/g, '_')
   if (TAXONOMY_DRAW_CLASS[upper]) return upper
+  // Common variant strings the richer fixtures use (typed-array schema).
+  const ALIAS = {
+    OCCUPATIONAL_DB: 'DB', FINAL_SALARY: 'DB', DEFINED_BENEFIT: 'DB', CAREER_AVERAGE: 'DB',
+    STOCKS_AND_SHARES_ISA: 'ISA_SS', STOCKS_SHARES_ISA: 'ISA_SS', S_S_ISA: 'ISA_SS',
+    CASH_ISA: 'ISA_CASH', INNOVATIVE_FINANCE_ISA: 'IFISA', LIFETIME_ISA: 'LISA',
+    CURRENT_ACCOUNT: 'CURRENT', SAVINGS_ACCOUNT: 'SAVINGS', EASY_ACCESS: 'SAVINGS', EASY_ACCESS_SAVINGS: 'SAVINGS',
+    FIXED_RATE_BOND: 'FIXED', NOTICE_ACCOUNT: 'NOTICE', EIS_LIKE_BPR_AIM: 'BPR_AIM', AIM_BPR: 'BPR_AIM',
+  }
+  if (ALIAS[upper]) return ALIAS[upper]
+  // Fuzzy contains-match for anything else.
+  if (/\bdb\b|defined.?benefit|final.?salary|occupational.?db/i.test(raw)) return 'DB'
+  if (/cash.?isa/i.test(raw)) return 'ISA_CASH'
+  if (/isa/i.test(raw)) return 'ISA_SS'
+  if (/bpr|\baim\b/i.test(raw)) return 'BPR_AIM'
+  if (/premium.?bond/i.test(raw)) return 'PREMIUM_BONDS'
+  if (/current/i.test(raw)) return 'CURRENT'
+  if (/\bsav/i.test(raw)) return 'SAVINGS'
+  if (/gia|general.?invest/i.test(raw)) return 'GIA'
   if (category === 'pensions' && DB_RE.test(raw)) return 'DB'
   const fallback = { pensions: 'SIPP', investments: 'GIA', cash: 'SAVINGS', property: 'RESIDENCE', business: 'LTD_INVESTMENT', alternatives: 'PE' }
   return fallback[category] || 'SIPP'
@@ -54,10 +72,37 @@ let _uid = 0
 const mkId = (prefix) => `${prefix}-${++_uid}`
 
 /** Pensions → PensionScheme holdings (DC pots + DB/annuity income floors). */
-function pensionHoldings(a, inc) {
+function pensionHoldings(a, inc, individual = {}) {
   const out = []
   const sipp = a.sipp || {}
   const list = Array.isArray(sipp.pensions) ? sipp.pensions : []
+  // Typed-array schema (a.pensions[]) — only when the object form is absent, so
+  // fixtures carrying BOTH (e.g. mrT-core) keep their object-shape behaviour.
+  if (!list.length && !num(sipp.total) && Array.isArray(a.pensions) && a.pensions.length) {
+    for (const p of a.pensions) {
+      const taxonomyId = toTaxonomyId(p.type, 'pensions')
+      const isDB = taxonomyId === 'DB' || DB_RE.test(String(p.type || ''))
+        || p.isPot === false || num(p.annual_pension_gross, p.annualIncome) > 0 && !num(p.balance, p.value)
+      out.push({
+        id: p.id || mkId('pen'), taxonomyId: isDB ? 'DB' : taxonomyId, category: 'pensions', provider: p.provider,
+        currentValue: isDB ? null : num(p.balance, p.value, p.total),
+        isPot: !isDB,
+        guaranteedAnnual: isDB ? num(p.annual_pension_gross, p.annualIncome, p.income, p.guaranteedAnnual) : undefined,
+        cetv: firstDefined(p.cetv, p.transferValue, p.cash_equivalent_transfer_value),
+        amc: firstDefined(p.charges_percent, p.charge, p.amc), ocf: p.ocf,
+        gar: p.gar, garRate: p.garRate,
+        protectedTfcPct: firstDefined(p.protectedTfcPct, p.protected_tfc_pct),
+        isSafeguarded: isDB || p.gar || p.gmp || p.isSafeguarded,
+        gmp: p.gmp, withProfits: p.withProfits,
+        crystallised: !!(p.crystallised || p.crystallisation_history?.length),
+        mpaaTriggered: !!p.mpaa_triggered,
+        smallPotEligible: num(p.balance, p.value) > 0 && num(p.balance, p.value) <= 10000,
+        growthRate: firstDefined(p.growth_rate_assumption, p.growthRate),
+        estateTreatment: isDB ? 'outside' : 'from-2027',
+        inflationLinked: p.inflation_linkage || p.inflationLinked || p.escalation,
+      })
+    }
+  }
   if (list.length) {
     for (const p of list) {
       const taxonomyId = toTaxonomyId(p.type, 'pensions')
@@ -98,11 +143,12 @@ function pensionHoldings(a, inc) {
     currentValue: null, isPot: false, guaranteedAnnual: annuity, estateTreatment: 'outside' })
 
   // State Pension — guaranteed lifetime income, defines the pre-STP bridge.
+  // Read from income.statePension first, else the individual block (richer fixtures).
   const sp = inc.statePension
-  const spAnnual = num(sp?.annual, typeof sp === 'number' ? sp : 0)
+  const spAnnual = num(sp?.annual, typeof sp === 'number' ? sp : 0, individual.state_pension_annual_gross)
   if (spAnnual > 0) out.push({ id: mkId('state'), taxonomyId: 'STATE', category: 'pensions',
     currentValue: null, isPot: false, guaranteedAnnual: spAnnual,
-    startAge: num(sp?.startAge) || undefined, escalation: 'tripleLock', estateTreatment: 'outside' })
+    startAge: num(sp?.startAge, individual.state_pension_start_age) || undefined, escalation: 'tripleLock', estateTreatment: 'outside' })
 
   return out
 }
@@ -110,6 +156,32 @@ function pensionHoldings(a, inc) {
 /** ISA + GIA + other wrapped/unwrapped investments. */
 function investmentHoldings(a) {
   const out = []
+  // Typed-array schema (a.investments[]) — only when no object wrapper forms,
+  // so fixtures carrying both (mrT-core) keep object-shape behaviour.
+  if (Array.isArray(a.investments) && !a.isa && !a.portfolio && !a.gia) {
+    for (const v of a.investments) {
+      const taxonomyId = toTaxonomyId(v.type, 'investments')
+      const val = num(v.balance, v.value)
+      const cost = num(v.cost_base, v.bookCost, v.cost)
+      const gain = num(v.unrealised_gain, v.unrealisedGain)
+      const isISA = /^ISA|^LISA|^IFISA/.test(taxonomyId)
+      const isVenture = /^EIS|^SEIS|^VCT|^BPR_AIM/.test(taxonomyId)
+      out.push({
+        id: v.id || mkId('inv'), taxonomyId, category: 'investments', provider: v.provider,
+        wrapperClass: isISA ? 'ISA_FAMILY' : isVenture ? 'VENTURE_RELIEF' : 'UNWRAPPED',
+        currentValue: val, isPot: true, bookCost: cost || undefined,
+        embeddedGainPct: v.embeddedGainPct != null ? +v.embeddedGainPct
+          : gain > 0 && val > 0 ? gain / val : (cost > 0 ? Math.max(0, (val - cost) / val) : undefined),
+        holdsAimBpr: !!(v.bpr_qualifying || v.bprQualifying || taxonomyId === 'BPR_AIM'),
+        bprQualifying: !!(v.bpr_qualifying || v.bprQualifying),
+        reliefHoldingEndDate: v.reliefHoldingEndDate || v.relief_holding_end_date || v.holdingEndDate,
+        growthRate: firstDefined(v.growth_rate_assumption, v.growthRate),
+        amc: firstDefined(v.charges_percent, v.charge),
+        estateTreatment: isVenture ? 'outside' : 'in',
+      })
+    }
+    return out
+  }
   const isa = a.isa || {}
   const isaCash = num(isa.cash, isa.cashValue)
   const isaSS = num(isa.value, isa.stocks, isa.total) - (isaCash && (isa.cash != null) ? 0 : 0)
@@ -155,6 +227,14 @@ function cashHoldings(a) {
     out.push({ id: mkId('cash'), taxonomyId: 'SAVINGS', category: 'cash',
       currentValue: num(cash.total, cash.own, cash.value), balance: num(cash.total, cash.own, cash.value),
       isPot: true, rate: cash.rate, estateTreatment: 'in' })
+  } else if (Array.isArray(a.bank) && a.bank.length) {
+    // Typed-array schema (a.bank[]) — used only when no a.cash object form.
+    for (const acc of a.bank) {
+      const taxonomyId = toTaxonomyId(acc.type, 'cash')
+      out.push({ id: acc.id || mkId('cash'), taxonomyId, category: 'cash', provider: acc.bank || acc.provider,
+        currentValue: num(acc.balance, acc.balance_gbp, acc.value), balance: num(acc.balance, acc.balance_gbp, acc.value),
+        isPot: true, rate: firstDefined(acc.interest_rate, acc.rate), estateTreatment: 'in' })
+    }
   }
   return out
 }
@@ -213,8 +293,9 @@ export function normaliseHoldings(entity = {}) {
   _uid = 0
   const a = entity.assets || {}
   const inc = entity.income || {}
+  const individual = entity.individual || {}
   return [
-    ...pensionHoldings(a, inc),
+    ...pensionHoldings(a, inc, individual),
     ...investmentHoldings(a),
     ...cashHoldings(a),
     ...propertyHoldings(a, inc),

@@ -123,8 +123,13 @@ export function classify(h = {}, opts = {}) {
     return D.SPECIALIST
   }
   if (base === D.SPECIALIST) return D.SPECIALIST                       // structured / bonds / S32 / QROPS / HTB
-  // Relief clock still running → don't sell early (clawback > disposal raise).
-  if (base === D.RELIEF_LOCKED) return future(h.reliefHoldingEndDate) ? D.RELIEF_LOCKED : D.DRAW_DOWN
+  // Relief-locked (EIS/SEIS/VCT income-relief clock, or BPR/business IHT shelter):
+  // stay locked unless the holding period is EXPLICITLY expired. A relief asset
+  // with no clock (e.g. BPR-AIM held >2yr — the IHT shelter is the lock, not a
+  // clawback clock) defaults to locked so it is never auto-drawn.
+  if (base === D.RELIEF_LOCKED) {
+    return (h.reliefHoldingEndDate && !future(h.reliefHoldingEndDate)) ? D.DRAW_DOWN : D.RELIEF_LOCKED
+  }
   // QCB corporate bonds become CGT-exempt.
   if (h.taxonomyId === 'CORP_BONDS' && h.isQcb) return D.DRAW_EARLY_CGT_EXEMPT
   // High-charge legacy DC with no guarantee → drain first (CONSOLIDATE-OR-DRAW-FIRST).

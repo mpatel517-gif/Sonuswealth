@@ -3279,7 +3279,27 @@ function ScenarioForwardSummary({ entity, decSolve }) {
   if (routes.length) {
     const route = routes[Math.min(routeIdx, routes.length - 1)]
     const sched = route.schedule || []
-    const rows = sched.length > 6 ? [...sched.slice(0, 5), sched[sched.length - 1]] : sched
+    // Show the TRANSITION years (where the drawn-from pot changes), not just the
+    // first 5 + last — otherwise the table reads "pension only" and hides every
+    // year GIA/ISA/Cash are used (founder confusion: "why are they always £0?").
+    const _dominant = r => {
+      const d = r.draws || {}
+      const e = [['pension', d.pension || 0], ['isa', d.isa || 0], ['gia', d.gia || 0], ['cash', d.cash || 0]].sort((a, b) => b[1] - a[1])
+      return e[0][1] > 0 ? e[0][0] : 'none'
+    }
+    let rows = sched
+    if (sched.length > 7) {
+      const picked = []
+      let prevDom = null
+      sched.forEach((r, i) => {
+        const dom = _dominant(r)
+        if (i === 0 || i === sched.length - 1 || dom !== prevDom) picked.push(r)
+        prevDom = dom
+      })
+      rows = picked.length > 9 ? [...picked.slice(0, 8), sched[sched.length - 1]] : picked
+    }
+    // Secure income (state pension / DB) = total income not drawn from the 4 pots.
+    const _secure = r => Math.max(0, Math.round((r.net || 0) + (r.tax || 0) - ((r.draws?.pension || 0) + (r.draws?.isa || 0) + (r.draws?.gia || 0) + (r.draws?.cash || 0))))
     const y1 = sched[0]
     const cell = { padding: '4px 6px' }
     const resetAll = () => { setTarget(seedTarget); setHorizon(seedHorizon); setGrowthPct(seedGrowthPct); setOrder(baseOrder) }
@@ -3432,6 +3452,7 @@ function ScenarioForwardSummary({ entity, decSolve }) {
                 <th style={{ ...cell, fontWeight: 700 }}>ISA</th>
                 <th style={{ ...cell, fontWeight: 700 }}>GIA</th>
                 <th style={{ ...cell, fontWeight: 700 }}>Cash</th>
+                <th style={{ ...cell, fontWeight: 700 }}>Secure</th>
                 <th style={{ ...cell, fontWeight: 700 }}>Tax</th>
                 <th style={{ ...cell, fontWeight: 700 }}>Net</th>
               </tr>
@@ -3440,16 +3461,20 @@ function ScenarioForwardSummary({ entity, decSolve }) {
               {rows.map((r, i) => (
                 <tr key={r.age ?? i} style={{ textAlign: 'right', borderTop: '1px solid var(--c-border)' }}>
                   <td style={{ ...cell, textAlign: 'left', color: 'var(--c-text2)' }}>{r.age}</td>
-                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.pension)}</td>
-                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.isa)}</td>
-                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.gia)}</td>
-                  <td style={{ ...cell, color: 'var(--c-text)' }}>{_gk(r.draws.cash)}</td>
+                  <td style={{ ...cell, color: r.draws.pension > 0 ? 'var(--c-text)' : 'var(--c-text3)' }}>{_gk(r.draws.pension)}</td>
+                  <td style={{ ...cell, color: r.draws.isa > 0 ? 'var(--c-text)' : 'var(--c-text3)' }}>{_gk(r.draws.isa)}</td>
+                  <td style={{ ...cell, color: r.draws.gia > 0 ? 'var(--c-text)' : 'var(--c-text3)' }}>{_gk(r.draws.gia)}</td>
+                  <td style={{ ...cell, color: r.draws.cash > 0 ? 'var(--c-text)' : 'var(--c-text3)' }}>{_gk(r.draws.cash)}</td>
+                  <td style={{ ...cell, color: 'var(--c-mint-text)' }}>{_gk(_secure(r))}</td>
                   <td style={{ ...cell, color: 'var(--c-coral, #FF6F7D)' }}>{_gk(r.tax)}</td>
                   <td style={{ ...cell, color: 'var(--c-acc)', fontWeight: 700 }}>{_gk(r.net)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 6 }}>
+            Key years only — each row is where the drawn-from pot changes, so you can see the hand-off pension&nbsp;→&nbsp;GIA&nbsp;→&nbsp;ISA&nbsp;→&nbsp;cash (the in-between years continue the same pot). <b>Secure</b> is income that isn&rsquo;t drawn from a pot — your state pension and any defined-benefit pension — which keeps paying even after the pots are spent.
+          </div>
         </div>
 
         {/* MethodDrawer — five ways to PACE withdrawals (how much each year),

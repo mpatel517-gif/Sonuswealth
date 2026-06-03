@@ -3075,7 +3075,14 @@ const RANKABLE_GOALS = [
 // (£/yr per pot) come from the schedule so each node carries its real flow.
 const _POT_PRETTY = { pension: 'Pension', isa: 'ISA', gia: 'GIA', cash: 'Cash', sipp: 'SIPP', db: 'DB pension' }
 const _POT_IDS = ['pension', 'isa', 'gia', 'cash']
-function DrawNetworkDiagram({ route, network, netTotal }) {
+// Secure-income stream labels for the floor node (state/DB/annuity/rental).
+const _STREAM_PRETTY = { state: 'State pension', DB: 'DB pension', lifetimeAnnuity: 'Annuity', PLA: 'Annuity', rental: 'Rental' }
+function _secureStreamLabel(streams) {
+  if (!streams?.length) return 'state pension, DB & guaranteed income'
+  return streams.filter(s => s.gross > 0)
+    .map(s => `${_STREAM_PRETTY[s.type] || (s.source === 'BTL' ? 'Rental' : 'Income')} ${_gk(s.gross)}`).join(' · ')
+}
+function DrawNetworkDiagram({ route, network, netTotal, currentAge }) {
   // Pot starting values come from the network; the per-pot draw TIMING + amounts
   // come from the SELECTED route's schedule (not always the #1 path), so the map
   // follows whichever route the user is reading + answers "how much from each pot
@@ -3104,8 +3111,17 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
   if (!seq.length) return null
   const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th']
 
+  // Secure-income floor node (P3 buildNetwork) — guaranteed income that feeds the
+  // sink ALONGSIDE the pots, so the map no longer implies all income is drawn
+  // from pots. Rendered as an extra row, never a depletable pot.
+  const secureNode = (network?.nodes || []).find(n => n.kind === 'secure')
+  const nRows = seq.length + (secureNode ? 1 : 0)
+  // Calendar year beside each age (founder: years beside ages on the map).
+  const baseYear = new Date().getFullYear()
+  const calYear = (age) => (currentAge && age != null) ? baseYear + (age - currentAge) : null
+
   const rowH = 66, padY = 12
-  const H = padY * 2 + seq.length * rowH - 14
+  const H = padY * 2 + nRows * rowH - 14
   const viewW = 340, leftW = 158, sinkX = 254, sinkCY = H / 2
   const potCY = i => padY + i * rowH + 26
   return (
@@ -3128,6 +3144,13 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
                 opacity={first ? 1 : 0.5} />
             )
           })}
+          {secureNode && (() => {
+            const y = potCY(seq.length)
+            return (
+              <path key="secure-edge" d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
+                fill="none" stroke="var(--c-mint-text)" strokeWidth={2} opacity={0.85} strokeDasharray="5 3" />
+            )
+          })()}
         </svg>
         {/* Pot nodes (left) — order badge, pot size, £/yr + start age (or preserved) */}
         {seq.map((id, i) => {
@@ -3142,11 +3165,24 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
               </div>
               <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(d.value)} pot</div>
               <div style={{ fontSize: 9.5, fontWeight: 600, color: d.drawn ? 'var(--c-acc)' : 'var(--c-text3)', marginTop: 1 }}>
-                {d.drawn ? `${_gk(d.perYear)}/yr from age ${d.firstAge}` : 'kept — not drawn'}
+                {d.drawn ? `${_gk(d.perYear)}/yr from age ${d.firstAge}${calYear(d.firstAge) ? ` · ${calYear(d.firstAge)}` : ''}` : 'kept — not drawn'}
               </div>
             </div>
           )
         })}
+        {/* Secure-income floor node — guaranteed inflow, not a depletable pot. */}
+        {secureNode && (
+          <div style={{ position: 'absolute', left: 0, top: `${(potCY(seq.length) - 27) / H * 100}%`, width: leftW - 8,
+            padding: '7px 9px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 12%, var(--c-surface))',
+            border: '1px solid var(--c-mint-text)', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-mint-text)' }}>FLOOR</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>Secure income</span>
+            </div>
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--c-mint-text)', marginTop: 1 }}>{_gk(secureNode.value)}/yr guaranteed</div>
+            <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_secureStreamLabel(secureNode.streams)}</div>
+          </div>
+        )}
         {/* Income sink (right) */}
         <div style={{ position: 'absolute', right: 0, top: `${(sinkCY - 22) / H * 100}%`, width: 86,
           padding: '7px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface))', border: '1px solid var(--c-acc)', boxSizing: 'border-box', textAlign: 'center' }}>
@@ -3155,7 +3191,7 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
         </div>
       </div>
       <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
-        Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The year-by-year table below has the exact figures.
+        Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The <span style={{ color: 'var(--c-mint-text)', fontWeight: 700 }}>green floor</span> is guaranteed income (state pension, DB, rental) that isn&rsquo;t drawn from a pot &mdash; it keeps paying even after the pots run out. The year-by-year table below has the exact figures.
       </div>
     </div>
   )
@@ -3437,7 +3473,7 @@ function ScenarioForwardSummary({ entity, decSolve }) {
 
         {/* Money-map — pots → income in the solved draw order. Re-routes when the
             back-solve target above flips the #1 ranked path. */}
-        <DrawNetworkDiagram route={route} network={solve.network} netTotal={y1?.net} />
+        <DrawNetworkDiagram route={route} network={solve.network} netTotal={y1?.net} currentAge={currentAge} />
 
         {/* Year 1 as a monthly instruction — answers "how much from each pot". */}
         {y1 && (

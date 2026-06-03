@@ -35,15 +35,28 @@ bRes.rankedPaths.forEach(p =>
 console.log(`└─ (label these "ranked under your priorities", never "optimal/best" — compliance)`)
 
 const top = bRes.rankedPaths[0]
-console.log(`\nWHY #1 WON — score breakdown:`)
+
+console.log(`\nROUTES CONSIDERED — all ${bRes.rankedPaths.length} candidate sequences scored against the goals:`)
+console.log(`   (the engine ranks these N heuristics; it does NOT yet search every possible blend)`)
+bRes.rankedPaths.forEach(p => {
+  const mark = p.rank === 1 ? '►' : ' '
+  console.log(`   ${mark} #${p.rank} ${p.name.padEnd(40)} survives-to ${p.depletedAtAge || '95+'}  tax ${gk(p.totalTaxCost)}  legacy ${gm(p.afterIhtEstate)}`)
+})
+
+console.log(`\nWHY #1 WON — score breakdown (lexicographic: top goal first, then ties):`)
 Object.entries(top.scoreBreakdown).forEach(([goal, b]) =>
   console.log(`   ${goal.padEnd(18)} ${b.objective.padEnd(34)} ${typeof b.value === 'number' ? (b.value > 9999 ? gk(b.value) : b.value) : b.value} (${b.better} = better)`))
 
-console.log(`\nTHE VISIBLE PATH — year-by-year (first 5 + last):`)
-console.log(`   ${'age'.padEnd(4)} ${'draw from'.padEnd(12)} ${'gross'.padStart(8)} ${'tax'.padStart(8)} ${'net'.padStart(8)}  PCLS`)
 const sched = top.schedule
+console.log(`\nHOW MUCH FROM EACH POT — top path, £/YEAR (first 5 + last):`)
+console.log(`   ${'age'.padEnd(4)} ${'pension'.padStart(9)} ${'ISA'.padStart(8)} ${'GIA'.padStart(8)} ${'cash'.padStart(8)} ${'│ tax'.padStart(7)} ${'net'.padStart(8)}`)
 ;[...sched.slice(0, 5), sched[sched.length - 1]].forEach(y =>
-  console.log(`   ${String(y.age).padEnd(4)} ${String(y.fromAsset).padEnd(12)} ${gk(y.grossFromPots).padStart(8)} ${gk(y.tax).padStart(8)} ${gk(y.net).padStart(8)}  ${y.pclsTaxFree ? gk(y.pclsTaxFree) : '–'}`))
+  console.log(`   ${String(y.age).padEnd(4)} ${gk(y.draws.pension).padStart(9)} ${gk(y.draws.isa).padStart(8)} ${gk(y.draws.gia).padStart(8)} ${gk(y.draws.cash).padStart(8)} ${('│' + gk(y.tax)).padStart(7)} ${gk(y.net).padStart(8)}`))
+const y1 = sched[0]
+console.log(`\n   YEAR 1 AS A MONTHLY INSTRUCTION (to generate ${gk(y1.net)} net /yr = ${gp(Math.round(y1.net / 12))}/mo):`)
+console.log(`   • Pension drawdown: ${gp(Math.round(y1.draws.pension / 12))}/mo  (of which ${gp(Math.round(y1.pclsTaxFree / 12))}/mo is tax-free cash, rest taxed)`)
+console.log(`   • ISA:  ${gp(Math.round(y1.draws.isa / 12))}/mo   GIA: ${gp(Math.round(y1.draws.gia / 12))}/mo   Cash: ${gp(Math.round(y1.draws.cash / 12))}/mo  (all tax-free)`)
+console.log(`   • + secure income ${gp(Math.round((bCtx.secure.rental + bCtx.secure.dividends) / 12))}/mo  −  tax ${gp(Math.round(y1.tax / 12))}/mo  =  ${gp(Math.round(y1.net / 12))}/mo in your pocket`)
 
 console.log(`\nRATIONALE (plain-English, shown to the user):`)
 top.rationale.forEach(s => console.log(`   • ${s}`))

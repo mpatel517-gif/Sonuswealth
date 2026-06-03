@@ -74,6 +74,8 @@ console.log(`\nASSUMPTIONS (editable by the user):`)
 bRes.methodology.assumptions.forEach(a => console.log(`   • ${a.name}: ${a.value}`))
 console.log(`\nHONESTY / COVERAGE caveats:`)
 bRes.coverage.unknowns.forEach(u => console.log(`   ⚠ ${u}`))
+console.log(`\nPROVENANCE (point-in-time): data as-of ${bRes.asOf} · snapshot ${bRes.snapshotHash} · net worth ${gm(bRes.snapshot.netWorth)}`)
+console.log(`   ${bRes.provenance}`)
 console.log(`\n${bRes.disclaimer}`)
 
 // ════════════════════════════════════════════════════════════════════════════

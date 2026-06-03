@@ -14,6 +14,25 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { TAXONOMY_DRAW_CLASS } from './decumulation-classify.js'
+import { TAX } from './fq-calculator.js'
+
+/**
+ * Resolve a holding's nominal growth rate (decision 'B', per-asset-class).
+ * Precedence: per-holding override → byClass → byCategory → bundle default.
+ * All sources are bundle params (growthAssumptions) — never a hardcoded rate.
+ * @param {object} h holding
+ * @param {object} [opts] { growthByClass, growthByCategory, growthDefault }
+ * @returns {number} nominal annual growth (decimal)
+ */
+export function growthForHolding(h = {}, opts = {}) {
+  const r = +h.growthRate
+  if (Number.isFinite(r) && r > 0) return r
+  const byClass = opts.growthByClass || TAX.growthByClass || {}
+  const byCat = opts.growthByCategory || TAX.growthByCategory || {}
+  if (h.assetClass && byClass[h.assetClass] != null) return +byClass[h.assetClass]
+  if (h.category && byCat[h.category] != null) return +byCat[h.category]
+  return opts.growthDefault != null ? +opts.growthDefault : (+TAX.growthDefault || 0.05)
+}
 
 const num = (...xs) => { for (const x of xs) { const n = +x; if (Number.isFinite(n) && n !== 0) return n } return 0 }
 const firstDefined = (...xs) => xs.find(x => x != null)

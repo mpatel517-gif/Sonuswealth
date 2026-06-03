@@ -5,7 +5,8 @@
 // the secure-income floor is computed before any sequencing.
 import assert from 'node:assert'
 import { classify, evaluateHoldings, DRAW_CLASS, TAXONOMY_DRAW_CLASS } from '../src/engine/decumulation-classify.js'
-import { normaliseHoldings } from '../src/engine/decumulation-holdings.js'
+import { normaliseHoldings, growthForHolding } from '../src/engine/decumulation-holdings.js'
+import { TAX } from '../src/engine/fq-calculator.js'
 import bruce from '../src/rules/personas/persona-a.json' with { type: 'json' }
 
 let pass = 0, fail = 0
@@ -104,6 +105,22 @@ t('Bruce BTL net rent joins the floor, residence excluded', () => {
   const r = evaluateHoldings(normaliseHoldings(bruce))
   const rentFloor = r.secureIncome.find(s => s.streamType === 'other' || s.sourceTaxonomyId === 'BTL')
   assert.ok(r.grossFloorIncome >= 11973 + 19200 - 1, `floor includes £19,200 net rent, got ${r.grossFloorIncome}`)
+})
+
+// ── growthForHolding(): per-asset-class growth params (decision B) ───────────
+t('bundle exposes per-class growth params', () => {
+  assert.ok(TAX.growthDefault > 0, 'growthDefault present')
+  assert.ok(TAX.growthByCategory && TAX.growthByCategory.cash != null, 'byCategory present')
+  assert.ok(TAX.growthByClass && TAX.growthByClass['global-equity'] != null, 'byClass present')
+})
+t('per-holding growthRate overrides class/category', () => assert.equal(growthForHolding({ growthRate: 0.062, category: 'pensions' }), 0.062))
+t('byClass used when no holding override', () => assert.equal(growthForHolding({ assetClass: 'global-equity', category: 'investments' }), TAX.growthByClass['global-equity']))
+t('byCategory used when no class', () => assert.equal(growthForHolding({ category: 'cash' }), TAX.growthByCategory.cash))
+t('falls back to default', () => assert.equal(growthForHolding({ category: 'unknown-cat' }), TAX.growthDefault))
+t('cash does NOT silently get the old flat 5%', () => assert.ok(growthForHolding({ category: 'cash' }) < 0.05, 'cash grows slower than equities'))
+t('Bruce Vanguard SIPP keeps its 6.2% fund assumption, not flat 5%', () => {
+  const sipp = normaliseHoldings(bruce).find(h => h.taxonomyId === 'SIPP' && h.isPot)
+  assert.equal(growthForHolding(sipp), 0.062, `got ${growthForHolding(sipp)}`)
 })
 
 console.log(`\ndecumulation-classify — pass=${pass} fail=${fail}`)

@@ -150,6 +150,11 @@ function _buildTAX(b) {
     fscsTempHighBalance:    b.cashProtection?.fscsTemporaryHighBalanceLimit ?? 1000000, // temporary high balances, 6 months
     // Safeguarded benefit (DB/GAR/GMP) transfer advice threshold — FCA COBS 19.1A
     safeguardedAdviceThreshold: b.pension?.safeguardedBenefitAdviceThreshold ?? 30000,
+    // Per-asset-class growth (decision 'B') — engine reads these, never hardcodes.
+    growthDefault:          b.growthAssumptions?.default      ?? 0.05,
+    growthByCategory:       b.growthAssumptions?.byCategory   ?? {},
+    growthByClass:          b.growthAssumptions?.byClass      ?? {},
+    growthInflation:        b.growthAssumptions?.inflation    ?? 0.025,
     // ── END v0.3 ROUTE-SPECS BUNDLE ADDITIONS ─────────────────────────────
     scottishBands: [
       { name: 'Starter',      from: b.income?.scottishStarterBandFrom      ?? 12570,  to: b.income?.scottishStarterBandTo        ?? 14876,  rate: b.income?.scottishStarterRate      ?? 0.19 },

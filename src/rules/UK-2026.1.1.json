@@ -822,6 +822,33 @@
   },
   "safeWithdrawalRate": 0.04,
   "bengenNote": "4% safe withdrawal rate (Bengen rule). Investable assets \u00d7 4% = safe annual spending ceiling.",
+  "growthAssumptions": {
+    "_note": "Nominal annual growth defaults (decimal). Engine precedence: per-holding growthRate override \u2192 byClass \u2192 byCategory \u2192 default. Never hardcode growth in engine/UI \u2014 read these. Real-terms growth = nominal \u2212 inflation. Decision 'B' (per-asset-class), 2026-06-03.",
+    "default": 0.05,
+    "inflation": 0.025,
+    "byCategory": {
+      "pensions": 0.05,
+      "investments": 0.06,
+      "property": 0.04,
+      "business": 0.05,
+      "cash": 0.03,
+      "alternatives": 0.05
+    },
+    "byClass": {
+      "global-equity": 0.066,
+      "equity": 0.066,
+      "developed-equity": 0.062,
+      "emerging-equity": 0.072,
+      "bonds": 0.035,
+      "gilts": 0.03,
+      "corporate-bonds": 0.04,
+      "money-market": 0.03,
+      "property": 0.04,
+      "commodity": 0.04,
+      "everyday-cash": 0.025,
+      "multi-asset": 0.05
+    }
+  },
   "cashProtection": {
     "fscsLimit": 120000,
     "fscsJointLimit": 240000,

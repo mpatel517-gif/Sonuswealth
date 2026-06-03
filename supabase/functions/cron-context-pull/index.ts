@@ -2,7 +2,7 @@
 // Edge Function: cron-context-pull (v2 — 2026-05-23)
 // Schedule: daily 09:30 UTC (registered via pg_cron in migration 012)
 // Purpose: fetch live UK macro context (ONS CPIH, BoE Bank Rate) and upsert
-//          into finio_macro_variables. Also snapshots history when value
+//          into market_macro_variables. Also snapshots history when value
 //          differs materially from last entry for current tax year.
 //
 // v2 fixes (vs v1):
@@ -137,7 +137,7 @@ function parseBoEDate(d: string | undefined): string | null {
 // ─── Upsert ─────────────────────────────────────────────────────────────────
 async function upsertMacro(client: ReturnType<typeof createClient>, update: MacroUpdate) {
   const { error } = await client
-    .from('finio_macro_variables')
+    .from('market_macro_variables')
     .upsert({
       jurisdiction: 'UK',
       variable_key: update.key,
@@ -157,7 +157,7 @@ async function upsertMacro(client: ReturnType<typeof createClient>, update: Macr
 async function snapshotHistory(client: ReturnType<typeof createClient>, update: MacroUpdate) {
   const taxYear = currentUKTaxYear(update.effective_date);
   const { error } = await client
-    .from('finio_macro_history')
+    .from('market_macro_history')
     .upsert({
       jurisdiction: 'UK',
       tax_year: taxYear,

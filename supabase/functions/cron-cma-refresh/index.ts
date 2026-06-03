@@ -2,7 +2,7 @@
 // Edge Function: cron-cma-refresh (L4-5 — 2026-05-28)
 // Schedule: weekly Monday 06:00 UTC (registered via migration 017)
 // Purpose: refresh Class-2 market context — yield curves, equity indices,
-//          PLSA retirement living standards — into finio_cma_bundle.
+//          PLSA retirement living standards — into market_cma_bundle.
 //
 // Series (Phase 1 — what we can fetch reliably from free public sources):
 //   1. UK 10-year gilt yield     → BoE series IUDMNZC
@@ -16,7 +16,7 @@
 //   - Upsert one row per metric_key per reference_date
 //   - Mark prior is_current = false where a newer reference_date lands
 //   - Log via cron-health-check on staleness (registered automatically once
-//     this cron writes to finio_cma_bundle for the first time — add the
+//     this cron writes to market_cma_bundle for the first time — add the
 //     MONITORS entry in tests/harness/cron-health.js)
 //
 // Env:
@@ -195,7 +195,7 @@ serve(async () => {
     try {
       // 1. Demote previous row for this metric_key (if older reference_date)
       await supabase
-        .from('finio_cma_bundle')
+        .from('market_cma_bundle')
         .update({ is_current: false })
         .eq('metric_key', u.metric_key)
         .lt('reference_date', u.reference_date);
@@ -203,7 +203,7 @@ serve(async () => {
       // 2. Upsert the new row. UNIQUE (jurisdiction, metric_key, reference_date)
       //    handles the re-run-same-day case.
       const { error } = await supabase
-        .from('finio_cma_bundle')
+        .from('market_cma_bundle')
         .upsert({
           source_key:     u.source_key,
           metric_key:     u.metric_key,

@@ -63,6 +63,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
 import { compareMethods, recommendMethodForGoal } from '../engine/withdrawal-methods.js'
+import { useEvents, EV } from '../state/events.jsx'
 
 // L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
 // to L4 row-level breakdowns (gross income → per-source; tax & NI → per-band).
@@ -3211,6 +3212,8 @@ function ScenarioForwardSummary({ entity, decSolve }) {
   const [growthPct, setGrowthPct] = useState(seedGrowthPct)
   const [routeIdx, setRouteIdx] = useState(0)
   const [showMethods, setShowMethods] = useState(false)
+  const { commit } = useEvents()
+  const [savedAt, setSavedAt] = useState(null)
 
   // Priority order — seeded from the entity's default goalSpec, reorderable.
   const baseOrder = useMemo(() => {
@@ -3261,6 +3264,29 @@ function ScenarioForwardSummary({ entity, decSolve }) {
     const portfolio = (solve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
     const essentialsAnnual = Math.round((target || 0) * 0.6)
     const primaryGoal = solve.binding?.primaryGoal || order[0]
+    // Save THIS route as the user's drawdown plan. A drawdown is a RECURRING
+    // flow, so we persist the structured plan (route + assumptions + recurring
+    // annual pot draws) rather than a one-off balance step — Timeline folds
+    // SCENARIO_SAVED; the projection-aware pension-trajectory bend is Phase-4.
+    const saveAsPlan = () => {
+      const pid = entity?.id || entity?.personaId
+      if (!pid) return
+      commit(pid, {
+        type: EV.SCENARIO_SAVED,
+        ts: Date.now(),
+        payload: {
+          kind: 'decumulation', domain: 'cashflow',
+          routeId: route.id, routeName: route.name,
+          targetIncome: target, horizonAge: horizon, growthPct,
+          priorities: order,
+          year1: y1 ? { net: y1.net, draws: y1.draws, tax: y1.tax } : null,
+          recurringAnnual: y1 ? { pensions: -y1.draws.pension, investments: -(y1.draws.isa + y1.draws.gia), cash: -y1.draws.cash } : null,
+          afterIhtEstate: route.afterIhtEstate, totalTaxCost: route.totalTaxCost,
+        },
+      })
+      setSavedAt(route.id)
+    }
+    const isSaved = savedAt === route.id
     return (
       <div className="sw-card sw-lift" style={S.card}>
         <div style={S.cardHeader}>
@@ -3417,6 +3443,15 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             {route.rationale.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
           </ul>
         )}
+        {/* Save this route as the user's drawdown plan → SCENARIO_SAVED ripple. */}
+        <button onClick={saveAsPlan} disabled={isSaved} className="sw-pressable"
+          style={{ marginTop: 14, width: '100%', padding: '11px 14px', borderRadius: 12, cursor: isSaved ? 'default' : 'pointer',
+            background: isSaved ? 'var(--c-tint-neutral-2)' : 'var(--c-acc)', color: isSaved ? 'var(--c-text2)' : 'var(--c-bg)',
+            border: 'none', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
+          {isSaved ? '✓ Saved to your plan — see Timeline' : `Save “${route.name}” as my plan`}
+        </button>
+        {isSaved && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Recorded as your drawdown plan. It appears on your Timeline; this is your stored intention, not advice to act.</div>}
+
         {solve.coverage?.unknowns?.length > 0 && (
           <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>⚠ {solve.coverage.unknowns[0]}</div>
         )}

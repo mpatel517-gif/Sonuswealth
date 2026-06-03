@@ -409,6 +409,11 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
       rankedPaths: [], network: { nodes: [], edges: [], alternatives: [] }, perGoal: [],
       coverage: coverageSurface(ctx, ledger, ['no drawable assets captured']),
       methodology: buildMethodology(ctx, ledger, goalSpec),
+      inputs: {
+        incomeTargetAnnual: Math.round(ctx.incomeTargetAnnual),
+        currentAge: ctx.age, horizonAge: ctx.horizonAge,
+        growth: ctx.growth, inflation: ctx.inflation, statePensionAge: ctx.spa,
+      },
       ledger, binding: null, disclaimer: FCA_DISCLAIMER,
     }, entity, opts)
   }
@@ -461,6 +466,13 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     },
     binding: { primaryGoal: goalSpec?.primary?.type || null, lexicographicOrder: (goalSpec?.goals || []).filter(g => !g.alwaysOn).map(g => g.type) },
     recommendedMethod: (() => { const id = recommendMethodForGoal(goalSpec?.primary?.type); return { id, label: METHODS[id]?.label, why: METHODS[id]?.summary } })(),
+    // Resolved assumptions echoed back so the UI can seed interactive controls
+    // from the REAL values used (not hardcoded guesses) and show provenance.
+    inputs: {
+      incomeTargetAnnual: Math.round(ctx.incomeTargetAnnual),
+      currentAge: ctx.age, horizonAge: ctx.horizonAge,
+      growth: ctx.growth, inflation: ctx.inflation, statePensionAge: ctx.spa,
+    },
     disclaimer: FCA_DISCLAIMER,
   }
   return stampGuidance(out, entity, opts)

@@ -3165,12 +3165,57 @@ function DepletionCurve({ schedule, depletedAtAge }) {
   )
 }
 
+// SolverSlider — one labelled control for the live decumulation panel.
+function SolverSlider({ label, value, min, max, step, fmt, onChange, dirty }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, flex: '1 1 140px', minWidth: 128 }}>
+      <span style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--c-text3)', fontWeight: 700, letterSpacing: 0.3 }}>
+        <span>{label}</span>
+        <span style={{ color: dirty ? 'var(--c-acc)' : 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{fmt(value)}</span>
+      </span>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(+e.target.value)} aria-label={label}
+        style={{ width: '100%', accentColor: 'var(--c-acc)' }} />
+    </label>
+  )
+}
+
 // The REAL drawdown plan (one-engine). For decumulators, solveDecumulation
 // gives the tax-minimising per-pot, per-year sequence + the routes it ranked.
+// The panel lets the user move THEIR assumptions (target income, plan horizon,
+// growth) and watch the plan + curve re-solve — their inputs, not our forecast.
 // Compliance: routes are "ranked under your priorities", never "optimal/best".
 function ScenarioForwardSummary({ entity, decSolve }) {
-  const routes = decSolve?.rankedPaths || []
+  // Seed the controls from the engine's RESOLVED inputs (honest defaults, never
+  // hardcoded). Sparse personas have no inputs → panel won't render (no routes).
+  const seed = decSolve?.inputs || {}
+  const seedTarget = seed.incomeTargetAnnual || 0
+  const seedHorizon = seed.horizonAge || 95
+  const seedGrowthPct = Math.round((seed.growth || 0.05) * 1000) / 10
+  const currentAge = seed.currentAge || 60
+  const [target, setTarget] = useState(seedTarget)
+  const [horizon, setHorizon] = useState(seedHorizon)
+  const [growthPct, setGrowthPct] = useState(seedGrowthPct)
   const [routeIdx, setRouteIdx] = useState(0)
+
+  const dT = target !== seedTarget
+  const dH = horizon !== seedHorizon
+  const dG = Math.abs(growthPct - seedGrowthPct) > 0.001
+  const dirty = dT || dH || dG
+
+  // Re-solve LIVE on the user's assumptions (deterministic, sub-ms). When
+  // untouched, reuse the parent's default solve — no redundant recompute.
+  const solve = useMemo(() => {
+    if (!dirty) return decSolve
+    try {
+      return solveDecumulation({
+        entity, goalSpec: buildGoalSpec(entity),
+        opts: { incomeTarget: target, horizonAge: horizon, growth: growthPct / 100 },
+      })
+    } catch { return decSolve }
+  }, [entity, decSolve, dirty, target, horizon, growthPct])
+
+  const routes = solve?.rankedPaths || []
 
   if (routes.length) {
     const route = routes[Math.min(routeIdx, routes.length - 1)]
@@ -3178,11 +3223,27 @@ function ScenarioForwardSummary({ entity, decSolve }) {
     const rows = sched.length > 6 ? [...sched.slice(0, 5), sched[sched.length - 1]] : sched
     const y1 = sched[0]
     const cell = { padding: '4px 6px' }
+    const resetAll = () => { setTarget(seedTarget); setHorizon(seedHorizon); setGrowthPct(seedGrowthPct) }
+    const targetMax = Math.max(120000, Math.round((seedTarget || 40000) * 1.6 / 1000) * 1000)
     return (
       <div className="sw-card sw-lift" style={S.card}>
         <div style={S.cardHeader}>
           <div style={S.cardTitle}>Your drawdown plan</div>
           <span className="sw-chip sw-chip-sm sw-chip-blue">ranked under your priorities</span>
+        </div>
+
+        {/* Live controls — move YOUR assumptions, watch the plan + curve re-solve. */}
+        <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Adjust your assumptions</span>
+            {dirty && <button onClick={resetAll} className="sw-pressable" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Reset</button>}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+            <SolverSlider label="Target income" value={target} min={0} max={targetMax} step={1000} fmt={v => `${_gk(v)}/yr`} onChange={setTarget} dirty={dT} />
+            <SolverSlider label="Plan to age" value={horizon} min={currentAge + 1} max={105} step={1} fmt={v => `age ${v}`} onChange={setHorizon} dirty={dH} />
+            <SolverSlider label="Growth (nominal)" value={growthPct} min={1} max={8} step={0.5} fmt={v => `${v}%`} onChange={setGrowthPct} dirty={dG} />
+          </div>
+          {dirty && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-text3)' }}>Re-solved on your assumptions — an illustration, not a forecast.</div>}
         </div>
 
         {/* Routes considered — the branches the engine ranked, selectable. */}
@@ -3250,11 +3311,11 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             {route.rationale.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
           </ul>
         )}
-        {decSolve.coverage?.unknowns?.length > 0 && (
-          <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>⚠ {decSolve.coverage.unknowns[0]}</div>
+        {solve.coverage?.unknowns?.length > 0 && (
+          <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>⚠ {solve.coverage.unknowns[0]}</div>
         )}
         <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-          {decSolve.provenance ? decSolve.provenance + ' · ' : ''}{decSolve.disclaimer}
+          {solve.provenance ? solve.provenance + ' · ' : ''}{solve.disclaimer}
         </div>
       </div>
     )

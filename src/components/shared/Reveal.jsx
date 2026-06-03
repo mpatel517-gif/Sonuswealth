@@ -9,7 +9,7 @@
 //   <Skeleton width height />             — shimmering placeholder
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Children, cloneElement, isValidElement, useEffect, useRef } from 'react'
+import { Children, cloneElement, Fragment, isValidElement, useEffect, useRef } from 'react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FadeInOnMount
@@ -56,7 +56,10 @@ export function RevealStagger({
       {items.map((child, i) => {
         const delay = startDelay + i * interval
         const animStyle = { animationDelay: `${delay}ms` }
-        if (isValidElement(child)) {
+        // Fragments (`<>…</>`) are valid elements but accept only `key`/`children`.
+        // Cloning className/style onto them triggers a React warning, so wrap
+        // them in the animated <div> below instead of cloning.
+        if (isValidElement(child) && child.type !== Fragment) {
           const childClass = [child.props.className, 'sw-fade-in-up'].filter(Boolean).join(' ')
           return cloneElement(child, {
             key: child.key ?? i,

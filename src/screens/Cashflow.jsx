@@ -40,7 +40,6 @@ import {
   // Cashflow-engine re-exports
   cf_probabilityOfSuccess,
   cf_sequenceOfReturnsVulnerability,
-  cf_fiveCashflowScenarios,
   cf_prcPccSpread,
   cf_realityEngineFactorisation,
   cf_maxDrawdownExposure,
@@ -2683,125 +2682,6 @@ function FiProgressTile({ fi }) {
   )
 }
 
-// ── §B.4 PoS headline (§5.4) — 1000 MC runs ─────────────────────────────
-function PoSHeadline({ pos }) {
-  if (!pos || pos.insufficient_data) {
-    return (
-      <div className="sw-card sw-lift" style={S.card}>
-        <div style={S.cardTitle}>Probability of Success</div>
-        <div style={{
-          marginTop: 'var(--space-sm)', color: 'var(--c-text3)', fontSize: 12,
-        }}>
-          Insufficient data — investable &lt; £10k.
-        </div>
-      </div>
-    )
-  }
-  const p = Math.round((pos.pos || 0) * 100)
-  const c = p >= 85 ? 'var(--c-mint-text)'
-           : p >= 70 ? 'var(--c-amber-text)'
-           : 'var(--c-coral-text)'
-  const chip = p >= 85 ? 'sw-chip-mint'
-             : p >= 70 ? 'sw-chip-amber'
-             : 'sw-chip-coral'
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Probability of Success</div>
-        <span className={`sw-chip sw-chip-sm ${chip}`}>
-          {pos.runs} MC paths
-        </span>
-      </div>
-      <div style={{
-        display: 'flex', alignItems: 'baseline', gap: 'var(--space-md)',
-        marginTop: 'var(--space-md)',
-      }}>
-        <span className="sw-hero-md" style={{ color: c }}>
-          <Num value={p} format="score" animate />
-          <span style={{ fontSize: 18, fontWeight: 700, marginLeft: 4 }}>%</span>
-        </span>
-        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
-          {pos.successful_runs} of {pos.runs} paths sustain target income · {pos.horizon_years}y horizon
-        </div>
-      </div>
-      <div style={{ marginTop: 'var(--space-sm)', fontSize: 11, color: 'var(--c-text3)' }}>
-        Median terminal: {fmt(pos.median_terminal_value)} · P10 {fmt(pos.p10_terminal_value)} · P90 {fmt(pos.p90_terminal_value)}
-      </div>
-      <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>
-        Note: full correlation-matrix Monte Carlo not yet present;
-        current PoS uses single-Z Box-Muller — flagged stub.
-      </div>
-    </div>
-  )
-}
-
-// ── §B.5 Monte Carlo fan chart (§5.5) — DrawSVG bands ───────────────────
-// NOTE: NOT currently rendered — the LIVE fan is the inline PoSChartV2 block
-// (~§B trajectory section) which now reads the SAME engine per_year_percentiles.
-// Kept (and corrected to real bands) as a standalone-card option if ever wanted.
-function MonteCarloFanChart({ pos }) {
-  const pts = pos?.per_year_percentiles
-  if (!pos || pos.insufficient_data || !Array.isArray(pts) || pts.length < 2) {
-    return (
-      <div className="sw-card sw-lift" style={S.card}>
-        <div style={S.cardTitle}>Monte Carlo fan</div>
-        <div style={{ marginTop: 'var(--space-sm)', color: 'var(--c-text3)', fontSize: 12 }}>
-          Fan chart unavailable — needs an investable pot and a target income to simulate.
-        </div>
-      </div>
-    )
-  }
-  // REAL per-year percentile bands from the engine (no fabricated Math.pow
-  // curve, no re-summed pot shape). Same target/horizon the deterministic plan
-  // uses (threaded from the solver) so the two trajectory visuals can't contradict.
-  const maxV = Math.max(...pts.map(p => p.p90 || 0), 1) * 1.05
-  const n = pts.length
-  const W = 320, H = 168, pL = 44, pR = 10, pT = 12, pB = 26
-  const pw = W - pL - pR, ph = H - pT - pB
-  const px = i => pL + (n === 1 ? 0 : (i / (n - 1)) * pw)
-  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
-  const line = key => pts.map((p, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(p[key]).toFixed(1)).join(' ')
-  const band = (loKey, hiKey) => {
-    let d = pts.map((p, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(p[hiKey]).toFixed(1)).join(' ')
-    for (let i = n - 1; i >= 0; i--) d += ' L' + px(i).toFixed(1) + ',' + py(pts[i][loKey]).toFixed(1)
-    return d + 'Z'
-  }
-  const last = pts[n - 1]
-  const yTicks = [0, maxV / 2, maxV]
-  const xTickIdx = [0, Math.floor((n - 1) / 2), n - 1]
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Monte Carlo fan</div>
-        <span className="sw-chip sw-chip-sm">{pos.runs ? `${pos.runs} runs · ` : ''}10–90 bands</span>
-      </div>
-      <DrawSVG duration={1000}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', marginTop: 'var(--space-sm)' }}
-             role="img" aria-label="Monte Carlo percentile bands of the pot over the retirement horizon">
-          {yTicks.map((v, i) => (
-            <g key={i}>
-              <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
-              <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
-            </g>
-          ))}
-          <path d={band('p10', 'p90')} fill="var(--c-mint-text)" opacity="0.10" />
-          <path d={band('p25', 'p75')} fill="var(--c-mint-text)" opacity="0.20" />
-          <path d={line('p50')} fill="none" stroke="var(--c-mint-text)" strokeWidth="2" />
-          <path d={line('p10')} fill="none" stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 3" />
-          {xTickIdx.map((i, k) => (
-            <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)"
-                  textAnchor={k === 0 ? 'start' : k === xTickIdx.length - 1 ? 'end' : 'middle'}>age {pts[i].age}</text>
-          ))}
-          <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
-        </svg>
-      </DrawSVG>
-      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-        By age {last.age}: typical (median) {fmt(last.p50)}, unlucky (10th percentile) {fmt(last.p10)}. {pos.pos != null ? `~${Math.round(pos.pos * 100)}% of simulated markets fund the income to then.` : ''} A spread of market outcomes around your plan — not a probability of any single result.
-      </div>
-    </div>
-  )
-}
-
 // ── §B.6 Sequence-of-returns stress (§5.6) ──────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 // P13-3 (2026-05-28, IFA must-fix #3): SequenceStressHero
@@ -2984,58 +2864,6 @@ function GuytonKlingerCorridor({ path }) {
       </DrawSVG>
       <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
         Expected over {path.length}y: {raises} raises · {cuts} cuts.
-      </div>
-    </div>
-  )
-}
-
-// ── §B.8 Five Cashflow Scenarios (§5.8) ─────────────────────────────────
-function FiveScenariosCard({ scen }) {
-  if (!scen || scen.insufficient_data || (scen.scenarios || []).length === 0) {
-    return (
-      <div className="sw-card sw-lift" style={S.card}>
-        <div style={S.cardTitle}>5 Cashflow Scenarios</div>
-        <div style={{
-          marginTop: 'var(--space-sm)', color: 'var(--c-text3)', fontSize: 12,
-        }}>
-          Insufficient data.
-        </div>
-      </div>
-    )
-  }
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>5 Cashflow scenarios</div>
-        <span className="sw-chip sw-chip-sm">Do Nothing · Guardrail · Balanced · Bengen · Custom</span>
-      </div>
-      <div style={{
-        marginTop: 'var(--space-md)', display: 'flex',
-        flexDirection: 'column', gap: 'var(--space-sm)',
-      }}>
-        <RevealStagger interval={70} startDelay={50}>
-          {(scen.scenarios || []).map(s => {
-            const p = Math.round((s.pos || 0) * 100)
-            const chip = p >= 85 ? 'sw-chip-mint'
-                       : p >= 70 ? 'sw-chip-amber'
-                       : 'sw-chip-coral'
-            return (
-              <div key={s.id} style={S.scenRow}>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
-                  {s.label}
-                </div>
-                <div style={{
-                  minWidth: 90, fontSize: 11, color: 'var(--c-text3)',
-                }}>
-                  Draw {fmt(s.annual_drawdown)}/y
-                </div>
-                <span className={`sw-chip sw-chip-sm ${chip}`} style={{ minWidth: 64, justifyContent: 'center' }}>
-                  {p}% PoS
-                </span>
-              </div>
-            )
-          })}
-        </RevealStagger>
       </div>
     </div>
   )

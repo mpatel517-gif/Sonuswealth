@@ -476,7 +476,12 @@ const SWR_REGIMES = {
  *             current_age: number, horizon_years: number,
  *             confidence: string, insufficient_data: boolean, cma_bundle: object|null }}
  */
-export function fundedRatio(entity, cma = null) {
+// opts.swrRegime — the safe-withdrawal-rate regime CHOSEN IN THE UI. The funded
+// gauge is `required capital = target income / SWR rate`, so a more conservative
+// rate (e.g. Vanguard 3.3%) needs a bigger pot → lower funded %. The UI picker
+// must thread its choice here (entity.swrRegime is the persona default fallback)
+// or the picker is a dead control.
+export function fundedRatio(entity, cma = null, opts = {}) {
   const e             = entity || {};
   const age           = e.age ?? 0;
   const retirementAge = e.retirementAge ?? TAX.spa;
@@ -500,7 +505,7 @@ export function fundedRatio(entity, cma = null) {
   }
 
   const life      = lifeStageFor(age);
-  const regimeKey = e.swrRegime ?? (life.stage >= 5 ? 'morningstar' : 'bengen');
+  const regimeKey = opts.swrRegime ?? e.swrRegime ?? (life.stage >= 5 ? 'morningstar' : 'bengen');
   const { rate, label } = SWR_REGIMES[regimeKey] ?? SWR_REGIMES.bengen;
 
   // FP-4: HIGH — already at or past retirement

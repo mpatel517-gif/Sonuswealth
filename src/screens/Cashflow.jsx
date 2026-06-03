@@ -1073,7 +1073,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     () => swrFromRegime(swrRegime, null, CMA_BUNDLE),
     [swrRegime, bv, cv]
   )
-  const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE), [entity, bv, cv])
+  // swrRegime threaded so the picker actually drives the gauge (A2 — the picker
+  // was a dead control: fundedRatio read entity.swrRegime, never the UI state).
+  const fr = useMemo(() => fundedRatio(entity, CMA_BUNDLE, { swrRegime }), [entity, swrRegime, bv, cv])
   const fi = useMemo(() => fiRatio(entity), [entity, bv, cv])
 
   // The ONE engine: real tax-minimising drawdown sequence (per-pot, per-year +
@@ -2527,6 +2529,11 @@ const REGIMES = [
   { id: 'custom',         label: 'Custom',                  note: 'Override rate' },
 ]
 
+// CANDIDATE-FOR-REMOVAL (redesign Phase B): the SWR picker is the rate-ASSUMPTION
+// knob (it now drives the funded gauge via fundedRatio opts.swrRegime — A2). It
+// overlaps the MethodDrawer (pacing comparison) inside the drawdown plan. Keep both
+// for now (founder); decide in Phase B whether the gauge + MethodDrawer make it
+// redundant.
 function SwrRegimePicker({ regime, onChange, swr }) {
   // STUB-08: PRC-anchored and Custom aren't engine-backed yet — engine
   // returns the Bengen fallback rate. Surface that honestly rather than
@@ -2536,7 +2543,7 @@ function SwrRegimePicker({ regime, onChange, swr }) {
   return (
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Withdrawal regime</div>
+        <div style={S.cardTitle}>Withdrawal-rate assumption</div>
         <span className={`sw-chip sw-chip-sm ${isStubRegime ? '' : 'sw-chip-mint'}`}>
           {isStubRegime ? 'Coming next' : swr?.source}
         </span>
@@ -2578,6 +2585,9 @@ function SwrRegimePicker({ regime, onChange, swr }) {
             )}
           </>
         )}
+      </div>
+      <div style={{ marginTop: 'var(--space-sm)', fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+        Sets the safe-withdrawal-rate behind the <strong>funded gauge</strong> — a more cautious rate (e.g. 3.3%) needs a bigger pot to count as fully funded. (Different from the <em>pacing methods</em> in the drawdown plan, which compare how fast to spend.)
       </div>
     </div>
   )
@@ -3226,7 +3236,7 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             return (
               <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-                  The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan above. Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
+                  The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan above (and from the single withdrawal-<em>rate</em> assumption behind the funded gauge: this compares how fast to spend, not one rate). Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
                 </div>
                 {methods.map(m => {
                   const rec = m.id === recId

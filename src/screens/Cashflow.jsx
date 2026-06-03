@@ -62,6 +62,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 // for decumulators — replaces the relabeled-G-K "Optimal" + the forward-table stub.
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
+import { compareMethods, recommendMethodForGoal } from '../engine/withdrawal-methods.js'
 
 // L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
 // to L4 row-level breakdowns (gross income → per-source; tax & NI → per-band).
@@ -3180,10 +3181,22 @@ function SolverSlider({ label, value, min, max, step, fmt, onChange, dirty }) {
   )
 }
 
+// The four decumulation priorities the SOLVER actually responds to (each maps
+// to a scoring objective in decumulation-solver). Reordering these is how the
+// user controls which route ranks #1 — turning the engine's default ranking
+// (e.g. estate-first → pension-first) from a hidden assumption into a lever.
+const RANKABLE_GOALS = [
+  { type: 'income_floor',      label: 'Secure essential income for life' },
+  { type: 'max_lifetime_spend', label: 'Spend more while I can enjoy it' },
+  { type: 'min_lifetime_tax',  label: 'Pay less tax over my lifetime' },
+  { type: 'legacy',            label: 'Leave more to family, after tax' },
+]
+
 // The REAL drawdown plan (one-engine). For decumulators, solveDecumulation
 // gives the tax-minimising per-pot, per-year sequence + the routes it ranked.
 // The panel lets the user move THEIR assumptions (target income, plan horizon,
-// growth) and watch the plan + curve re-solve — their inputs, not our forecast.
+// growth) AND reorder their priorities, and watch the plan re-solve — their
+// inputs, not our forecast.
 // Compliance: routes are "ranked under your priorities", never "optimal/best".
 function ScenarioForwardSummary({ entity, decSolve }) {
   // Seed the controls from the engine's RESOLVED inputs (honest defaults, never
@@ -3197,23 +3210,42 @@ function ScenarioForwardSummary({ entity, decSolve }) {
   const [horizon, setHorizon] = useState(seedHorizon)
   const [growthPct, setGrowthPct] = useState(seedGrowthPct)
   const [routeIdx, setRouteIdx] = useState(0)
+  const [showMethods, setShowMethods] = useState(false)
+
+  // Priority order — seeded from the entity's default goalSpec, reorderable.
+  const baseOrder = useMemo(() => {
+    const pr = {}
+    try { (buildGoalSpec(entity).goals || []).forEach(g => { if (g.priority != null) pr[g.type] = g.priority }) } catch { /* default below */ }
+    return RANKABLE_GOALS.map(r => r.type).sort((a, b) => (pr[a] ?? 50) - (pr[b] ?? 50))
+  }, [entity])
+  const [order, setOrder] = useState(baseOrder)
+  useEffect(() => { setOrder(baseOrder) }, [baseOrder])
+  const goalsDirty = order.join('|') !== baseOrder.join('|')
+  const moveGoal = (i, dir) => setOrder(o => {
+    const j = i + dir; if (j < 0 || j >= o.length) return o
+    const n = [...o];[n[i], n[j]] = [n[j], n[i]]; return n
+  })
 
   const dT = target !== seedTarget
   const dH = horizon !== seedHorizon
   const dG = Math.abs(growthPct - seedGrowthPct) > 0.001
   const dirty = dT || dH || dG
+  const anyDirty = dirty || goalsDirty
 
-  // Re-solve LIVE on the user's assumptions (deterministic, sub-ms). When
-  // untouched, reuse the parent's default solve — no redundant recompute.
+  // Re-solve LIVE on the user's assumptions + priority order (deterministic,
+  // sub-ms). When nothing is touched, reuse the parent's default solve.
   const solve = useMemo(() => {
-    if (!dirty) return decSolve
+    if (!anyDirty) return decSolve
     try {
+      const spec = goalsDirty
+        ? buildGoalSpec(entity, { goals: order.map((t, i) => ({ type: t, priority: i + 1 })) })
+        : buildGoalSpec(entity)
       return solveDecumulation({
-        entity, goalSpec: buildGoalSpec(entity),
+        entity, goalSpec: spec,
         opts: { incomeTarget: target, horizonAge: horizon, growth: growthPct / 100 },
       })
     } catch { return decSolve }
-  }, [entity, decSolve, dirty, target, horizon, growthPct])
+  }, [entity, decSolve, anyDirty, goalsDirty, order, target, horizon, growthPct])
 
   const routes = solve?.rankedPaths || []
 
@@ -3223,8 +3255,12 @@ function ScenarioForwardSummary({ entity, decSolve }) {
     const rows = sched.length > 6 ? [...sched.slice(0, 5), sched[sched.length - 1]] : sched
     const y1 = sched[0]
     const cell = { padding: '4px 6px' }
-    const resetAll = () => { setTarget(seedTarget); setHorizon(seedHorizon); setGrowthPct(seedGrowthPct) }
+    const resetAll = () => { setTarget(seedTarget); setHorizon(seedHorizon); setGrowthPct(seedGrowthPct); setOrder(baseOrder) }
     const targetMax = Math.max(120000, Math.round((seedTarget || 40000) * 1.6 / 1000) * 1000)
+    // Portfolio + essentials for the method comparison (from the solved pots).
+    const portfolio = (solve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+    const essentialsAnnual = Math.round((target || 0) * 0.6)
+    const primaryGoal = solve.binding?.primaryGoal || order[0]
     return (
       <div className="sw-card sw-lift" style={S.card}>
         <div style={S.cardHeader}>
@@ -3232,18 +3268,45 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           <span className="sw-chip sw-chip-sm sw-chip-blue">ranked under your priorities</span>
         </div>
 
-        {/* Live controls — move YOUR assumptions, watch the plan + curve re-solve. */}
+        {/* Live controls — move YOUR assumptions + priorities, watch it re-solve. */}
         <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase' }}>Adjust your assumptions</span>
-            {dirty && <button onClick={resetAll} className="sw-pressable" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Reset</button>}
+            {anyDirty && <button onClick={resetAll} className="sw-pressable" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Reset</button>}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
             <SolverSlider label="Target income" value={target} min={0} max={targetMax} step={1000} fmt={v => `${_gk(v)}/yr`} onChange={setTarget} dirty={dT} />
             <SolverSlider label="Plan to age" value={horizon} min={currentAge + 1} max={105} step={1} fmt={v => `age ${v}`} onChange={setHorizon} dirty={dH} />
             <SolverSlider label="Growth (nominal)" value={growthPct} min={1} max={8} step={0.5} fmt={v => `${v}%`} onChange={setGrowthPct} dirty={dG} />
           </div>
-          {dirty && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-text3)' }}>Re-solved on your assumptions — an illustration, not a forecast.</div>}
+
+          {/* Priority order — #1 decides which route ranks first. The lever that
+              turns the engine's default ranking into the user's stated choice. */}
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>
+              Your priorities — drag #1 to the top
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {order.map((t, i) => {
+                const g = RANKABLE_GOALS.find(r => r.type === t)
+                const top = i === 0
+                return (
+                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8,
+                    background: top ? 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface))' : 'var(--c-surface)',
+                    border: top ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: top ? 'var(--c-acc)' : 'var(--c-text3)', minWidth: 16 }}>{i + 1}</span>
+                    <span style={{ flex: 1, fontSize: 11, color: 'var(--c-text2)', fontWeight: top ? 700 : 500 }}>{g?.label || t}</span>
+                    <button onClick={() => moveGoal(i, -1)} disabled={i === 0} aria-label={`Move ${g?.label} up`} className="sw-pressable"
+                      style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--c-text3)' : 'var(--c-text)', opacity: i === 0 ? 0.3 : 1, fontSize: 13, lineHeight: 1, padding: 2 }}>▲</button>
+                    <button onClick={() => moveGoal(i, 1)} disabled={i === order.length - 1} aria-label={`Move ${g?.label} down`} className="sw-pressable"
+                      style={{ background: 'none', border: 'none', cursor: i === order.length - 1 ? 'default' : 'pointer', color: i === order.length - 1 ? 'var(--c-text3)' : 'var(--c-text)', opacity: i === order.length - 1 ? 0.3 : 1, fontSize: 13, lineHeight: 1, padding: 2 }}>▼</button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {anyDirty && <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)' }}>Re-solved on your assumptions &amp; priorities — an illustration, not a forecast.</div>}
         </div>
 
         {/* Routes considered — the branches the engine ranked, selectable. */}
@@ -3304,6 +3367,49 @@ function ScenarioForwardSummary({ entity, decSolve }) {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* MethodDrawer — five ways to PACE withdrawals (how much each year),
+            a different lens from the draw ORDER (which pot) above. Gross pacing
+            rules on the total pot — deliberately NOT the plan's net figures. */}
+        <div style={{ marginTop: 14 }}>
+          <button onClick={() => setShowMethods(s => !s)} className="sw-pressable"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', cursor: 'pointer' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>Compare withdrawal methods</span>
+            <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{showMethods ? 'Hide ▲' : 'How fast to spend? ▼'}</span>
+          </button>
+          {showMethods && (() => {
+            let methods = []
+            try { methods = compareMethods({ portfolio, years: Math.max(1, horizon - currentAge), growth: growthPct / 100, inflation: seed.inflation ?? 0.025, essentialsAnnual, age: currentAge }) } catch { methods = [] }
+            if (!methods.length) return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)' }}>Method comparison needs a drawable pot to pace.</div>
+            const recId = recommendMethodForGoal(primaryGoal)
+            const maxW1 = Math.max(...methods.map(m => m.year1Withdrawal || 0), 1)
+            return (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+                  The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan above. Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
+                </div>
+                {methods.map(m => {
+                  const rec = m.id === recId
+                  return (
+                    <div key={m.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: rec ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>{m.label}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1</span>}</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}/yr</span>
+                      </div>
+                      <div style={{ marginTop: 5, height: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)' }} />
+                      </div>
+                      <div style={{ marginTop: 5, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>{m.summary}</div>
+                      <div style={{ marginTop: 3, fontSize: 10, color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>
+                        {m.lastsHorizon ? `Lasts to age ${horizon}+` : `Funds low by age ${m.depletesAtAge}`} · keeps {m.strength} · watch: {m.weakness}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
 
         {Array.isArray(route.rationale) && route.rationale.length > 0 && (

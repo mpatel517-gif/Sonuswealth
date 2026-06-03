@@ -53,7 +53,8 @@
     "sync:tax": "node scripts/sync-tax-bundle.mjs",
     "test:accum-solver": "node tests/accumulation-solver.mjs",
     "test:withdrawal-methods": "node tests/withdrawal-methods.mjs",
-    "demo:goals": "node scripts/goal-engine-demo.mjs"
+    "demo:goals": "node scripts/goal-engine-demo.mjs",
+    "test:snapshot": "node tests/financial-snapshot.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",

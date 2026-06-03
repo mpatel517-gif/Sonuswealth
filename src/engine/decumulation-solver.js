@@ -24,6 +24,7 @@
 import { TAX } from './fq-calculator.js'
 import { withdrawalTaxForYear, buildAllowanceLedger } from './withdrawal-tax.js'
 import { recommendMethodForGoal, METHODS } from './withdrawal-methods.js'
+import { stampGuidance } from './financial-snapshot.js'
 
 const FCA_DISCLAIMER = 'Illustrative under your stated priorities and assumptions — not a forecast or personal recommendation. Verify decisions with a qualified UK adviser.'
 
@@ -392,12 +393,12 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
 
   // Sparse / no-decumulation-assets → honest empty result, never fabricate.
   if (ctx.flags.sparse) {
-    return {
+    return stampGuidance({
       rankedPaths: [], network: { nodes: [], edges: [], alternatives: [] }, perGoal: [],
       coverage: coverageSurface(ctx, ledger, ['no drawable assets captured']),
       methodology: buildMethodology(ctx, ledger, goalSpec),
       ledger, binding: null, disclaimer: FCA_DISCLAIMER,
-    }
+    }, entity, opts)
   }
 
   const candidates = generateCandidatePaths(ctx, goalSpec, opts)
@@ -431,7 +432,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     return { goalId: g.id || g.type, type: g.type, objective: g.objective, value, successPct: top?.sim.successPct ?? null }
   })
 
-  return {
+  const out = {
     // CONTRACT for UI consumers (compliance): `rank` is a sort by the user's
     // stated priorities, NOT a verdict. Label rank-1 as "ranked highest under
     // your priorities (illustrative)" — never "optimal", "best", or
@@ -450,6 +451,7 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     recommendedMethod: (() => { const id = recommendMethodForGoal(goalSpec?.primary?.type); return { id, label: METHODS[id]?.label, why: METHODS[id]?.summary } })(),
     disclaimer: FCA_DISCLAIMER,
   }
+  return stampGuidance(out, entity, opts)
 }
 
 // Rationale = facts about the rules + what THIS sequence does, framed as an

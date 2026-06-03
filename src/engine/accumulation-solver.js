@@ -13,6 +13,7 @@
 
 import { TAX } from './fq-calculator.js'
 import { binarySearchSolver } from './goal-seek-engine.js'
+import { stampGuidance } from './financial-snapshot.js'
 
 const FCA_DISCLAIMER = 'Illustrative under your assumptions — not a forecast or personal recommendation. Verify decisions with a qualified UK adviser.'
 
@@ -132,15 +133,15 @@ export function solveAccumulation({ entity, goalSpec, opts = {} } = {}) {
   const goals = (goalSpec?.goals || []).filter(g => !g.alwaysOn)
 
   if (ctx.sparse) {
-    return { branch: 'accumulation', perGoal: [], primary: goalSpec?.primary?.type || null,
+    return stampGuidance({ branch: 'accumulation', perGoal: [], primary: goalSpec?.primary?.type || null,
       coverage: { dataRichness: 'sparse', unknowns: ['no savings or investable assets captured'] },
-      disclaimer: FCA_DISCLAIMER }
+      disclaimer: FCA_DISCLAIMER }, entity, opts)
   }
 
   const perGoal = goals.map(g => solveAccGoal(ctx, g, opts))
   const primary = perGoal.find(g => g.type === goalSpec?.primary?.type) || perGoal[0] || null
 
-  return {
+  const out = {
     branch: 'accumulation',
     perGoal,
     primary: primary ? primary.type : null,
@@ -156,4 +157,5 @@ export function solveAccumulation({ entity, goalSpec, opts = {} } = {}) {
     binding: { primaryGoal: goalSpec?.primary?.type || null, lexicographicOrder: goals.map(g => g.type) },
     disclaimer: FCA_DISCLAIMER,
   }
+  return stampGuidance(out, entity, opts)
 }

@@ -50,6 +50,9 @@ export const TABLES = {
   PERSONAS: 'finio_personas',
   PERSONA_SNAPSHOTS: 'finio_persona_snapshots',
   TEST_AUDIT_LOG: 'finio_test_audit_log',
+  // Point-in-time wealth + guidance history (migration 020)
+  NET_WORTH_HISTORY: 'finio_net_worth_history',
+  GUIDANCE_SNAPSHOTS: 'finio_guidance_snapshots',
 };
 
 /**

@@ -3080,6 +3080,91 @@ const _gk = (n) => {
 }
 const _gmo = (n) => '£' + Math.round((+n || 0) / 12).toLocaleString()
 
+// ── Depletion curve — stacked pot balances over the drawdown horizon ───
+// Plots the REAL end-of-year balances (`potsEnd`) the solver computed, so the
+// curve turns over honestly (doctrine §4: a decumulating asset shows its
+// lifecycle, never an ever-rising line) AND the stack order makes the draw
+// sequence visible — you SEE which pot drains first. No fabricated growth
+// curve; every point is a balance the engine decremented.
+const _POTS = [
+  // bottom→top of the stack; drawn pots (cash/gia/isa) sit under the preserved
+  // pension so the pension "tail" — what survives for the estate — reads on top.
+  { key: 'cash',    label: 'Cash',    color: 'var(--c-text3)' },
+  { key: 'gia',     label: 'GIA',     color: 'var(--c-amber-text)' },
+  { key: 'isa',     label: 'ISA',     color: 'var(--c-mint-text)' },
+  { key: 'pension', label: 'Pension', color: 'var(--c-acc)' },
+]
+function DepletionCurve({ schedule, depletedAtAge }) {
+  const pts = (schedule || []).filter(r => r && r.potsEnd)
+  if (pts.length < 2) return null
+  const maxV = Math.max(...pts.map(r => r.potsTotal || 0), 1) * 1.05
+  if (maxV <= 1.05) return null   // no drawable pots → nothing to deplete
+  const W = 320, H = 150, pL = 44, pR = 10, pT = 12, pB = 26
+  const pw = W - pL - pR, ph = H - pT - pB
+  const n = pts.length
+  const px = i => pL + (n === 1 ? 0 : (i / (n - 1)) * pw)
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  // cumulative band tops, bottom→top, per point
+  const band = (idx) => {
+    const lowerKeys = _POTS.slice(0, idx).map(p => p.key)
+    const upToKeys = _POTS.slice(0, idx + 1).map(p => p.key)
+    const sum = (r, keys) => keys.reduce((s, k) => s + Math.max(0, r.potsEnd[k] || 0), 0)
+    let d = ''
+    pts.forEach((r, i) => { d += (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(sum(r, upToKeys)).toFixed(1) + ' ' })
+    for (let i = n - 1; i >= 0; i--) d += 'L' + px(i).toFixed(1) + ',' + py(sum(pts[i], lowerKeys)).toFixed(1) + ' '
+    return d + 'Z'
+  }
+  const totalLine = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.potsTotal || 0).toFixed(1)).join(' ')
+  const ageOf = i => pts[i].age
+  const depIdx = depletedAtAge ? pts.findIndex(r => r.age >= depletedAtAge) : -1
+  const yTicks = [0, maxV / 2, maxV]
+  const xTickIdx = [0, Math.floor((n - 1) / 2), n - 1]
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>
+        Pots over time
+      </div>
+      <DrawSVG duration={900}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img"
+             aria-label="Stacked pot balances declining across the drawdown years">
+          {/* Y gridlines + £ labels */}
+          {yTicks.map((v, i) => (
+            <g key={i}>
+              <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+              <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+            </g>
+          ))}
+          {/* Stacked pot bands (real balances) */}
+          {_POTS.map((p, idx) => <path key={p.key} d={band(idx)} fill={p.color} opacity="0.55" />)}
+          {/* Total outline */}
+          <path d={totalLine} fill="none" stroke="var(--c-text2)" strokeWidth="1.5" />
+          {/* Funds-low marker */}
+          {depIdx >= 0 && (
+            <g>
+              <line x1={px(depIdx)} y1={pT} x2={px(depIdx)} y2={pT + ph} stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 2" />
+              <text x={px(depIdx)} y={pT - 3} fontSize="8" fill="var(--c-coral-text)" textAnchor="middle">funds low</text>
+            </g>
+          )}
+          {/* X axis — age, labelled */}
+          {xTickIdx.map((i, k) => (
+            <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)"
+                  textAnchor={k === 0 ? 'start' : k === xTickIdx.length - 1 ? 'end' : 'middle'}>age {ageOf(i)}</text>
+          ))}
+          <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+        </svg>
+      </DrawSVG>
+      {/* Legend (composition needs a key) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
+        {_POTS.map(p => (
+          <span key={p.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--c-text3)' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color, opacity: 0.55, display: 'inline-block' }} />{p.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // The REAL drawdown plan (one-engine). For decumulators, solveDecumulation
 // gives the tax-minimising per-pot, per-year sequence + the routes it ranked.
 // Compliance: routes are "ranked under your priorities", never "optimal/best".
@@ -3126,6 +3211,9 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             To take <b>{fmt(y1.net)}/yr</b> ({_gmo(y1.net)}/mo) in year 1: pension <b>{_gmo(y1.draws.pension)}/mo</b>{y1.pclsTaxFree ? ` (${_gmo(y1.pclsTaxFree)} tax-free)` : ''}, ISA {_gmo(y1.draws.isa)}/mo, GIA {_gmo(y1.draws.gia)}/mo, cash {_gmo(y1.draws.cash)}/mo · tax {_gmo(y1.tax)}/mo.
           </div>
         )}
+
+        {/* Depletion curve — see the shape before reading the rows. */}
+        <DepletionCurve schedule={sched} depletedAtAge={route.depletedAtAge} />
 
         {/* Year-by-year sequence (per-pot draws). */}
         <div style={{ marginTop: 12, overflowX: 'auto' }}>

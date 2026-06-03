@@ -223,6 +223,16 @@ export function simulatePath(ctx, strategy, opts = {}) {
     totalNetDelivered += netDelivered
     const sourceSwitch = order.find(p => chosen.d[p] > 0 && (bal[p] || 0) <= 1) || null
 
+    // End-of-year pot balances (post-growth, post-draw). `bal` is the REAL
+    // running ledger the solver decremented at line ~218 — we expose it so the
+    // depletion curve plots a computed balance, never a fabricated one.
+    const potsEnd = {
+      pension: Math.max(0, Math.round(bal.pension || 0)),
+      isa: Math.max(0, Math.round(bal.isa || 0)),
+      gia: Math.max(0, Math.round(bal.gia || 0)),
+      cash: Math.max(0, Math.round(bal.cash || 0)),
+    }
+    const potsTotal = potsEnd.pension + potsEnd.isa + potsEnd.gia + potsEnd.cash
     schedule.push({
       year: startYear + yIdx, age,
       fromAsset: order.find(p => chosen.d[p] > 0) || 'secure-only',
@@ -234,6 +244,8 @@ export function simulatePath(ctx, strategy, opts = {}) {
       net: Math.round(netDelivered),
       ihtDelta: 0,
       sourceSwitch,
+      potsEnd,
+      potsTotal,
     })
   }
 

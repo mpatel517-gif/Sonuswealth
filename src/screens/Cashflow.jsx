@@ -1210,6 +1210,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             fr={fr}
             pos={pos?.pos ?? pos}
             health={health}
+            decSolve={decSolve}
           />
         </FadeInOnMount>
 
@@ -1562,7 +1563,7 @@ function SubAnchor({ prcPcc }) {
 // v0.3 R3 fix (2026-05-26): purpose-statement was a floating question with
 // no answer next to it. The answer IS computable from runway + funded ratio
 // + PoS. Surface it inline so the user sees the headline take in 3 seconds.
-function PurposeStatement({ entity, lb, fr, pos, health }) {
+function PurposeStatement({ entity, lb, fr, pos, health, decSolve }) {
   // Runway months — prefer the liquidityBuffer engine answer; fall back to
   // cash ÷ essentials if needed.
   let runwayMo = +(lb?.months_covered ?? lb?.months ?? 0)
@@ -1611,8 +1612,23 @@ function PurposeStatement({ entity, lb, fr, pos, health }) {
   const stage = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
   const stageChip = stage === 'decumulator' ? 'Drawing income' : 'Building wealth'
   const stageQuestion = stage === 'decumulator'
-    ? 'How much can you draw, for how long — and in the most tax-efficient way? Information only.'
+    ? 'Will my money last? How much you can draw, for how long, and in the most tax-efficient way. Information only.'
     : 'Are you saving enough — and is your plan on track for the life you want? Information only.'
+
+  // Decumulators: lead with the direct answer to the tab's canonical purpose
+  // ("Will my money last?") from the decumulation solve — the headline figure
+  // the drawdown plan produces. Overrides the generic buffer/funded headline.
+  const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
+  if (stage === 'decumulator' && decSolve) {
+    if (lastsAge) {
+      headline = `On these assumptions, your money lasts to age ${lastsAge}.`
+      tone = lastsAge >= 90 ? 'good' : lastsAge >= 80 ? 'warn' : 'bad'
+    } else {
+      headline = 'On these assumptions, your money lasts the full plan — the pots don’t run out.'
+      tone = 'good'
+    }
+    if (fundedRatio > 0) headline += ` Plan ${Math.round(fundedRatio * 100)}% funded.`
+  }
 
   return (
     <div style={S.purpose}>

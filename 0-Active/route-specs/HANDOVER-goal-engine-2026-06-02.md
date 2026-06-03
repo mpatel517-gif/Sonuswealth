@@ -34,9 +34,18 @@ I ran 3 parallel adversarial reviewers (IFA / tax-CTA / FCA-compliance). They fo
 - s24 BTL mortgage-interest restriction; emergency tax; small-pots.
 - **Dividend rate literal `0.1075` in fq-calculator** — the tax auditor flagged it may be the proposed +2% rate, not current. I did NOT change it blindly (changing tax rates without certainty is dangerous) — **needs verification against the bundle's ENACTED status.** Please confirm or flag for the independent audit.
 
-## Next steps (in order)
-1. **Step 2c** (task #40): the 5 withdrawal-*rate* methods (Bengen/GK/Vanguard/Bucket/floor+guardrail) — engine-side, I can do solo.
-2. **Step 4**: `GoalPriorities` shared drag-rank primitive.
-3. **Step 5** (task #41): the Cashflow UI — **do this with you**, not blind: goal-led hero, SolverPanel (network + selectable branch paths), MethodDrawer, "How we worked this out" panel. Engine emits everything it needs. Must pass §9.5 snaps. Compliance contract: label rank "highest under your priorities" NOT "optimal/best"; resilience NOT "probability".
+## Update — continued after handover (per "fix as you go, then move to target")
+- **Spousal exemption FIXED** (ac8a87f) — married personas no longer show a phantom death-tax bill (married Bruce £0 first-death vs single £2.54m). Audit C3 closed.
+- **Dividend rate CONFIRMED correct** — the auditor's flag was wrong; 10.75% IS the 2026/27 rate (Budget 2025). No change. (One less doubt for the independent audit.)
+- **Step 2c DONE** — `withdrawal-methods.js`: the 5 withdrawal-rate methods, deterministic, with goal→method mapping; solver emits `recommendedMethod`.
+- **Step 3 DONE** — `accumulation-solver.js` (Mr T branch).
+- **GOAL ENGINE LAYER NOW COMPLETE: 165 tests, 5 suites.** `npm run test:goal-engine && npm run test:withdrawal-tax && npm run test:decum-solver && npm run test:accum-solver && npm run test:withdrawal-methods`
+
+## Next steps (in order) — all that remains is integration + UI
+1. **Step 4**: `GoalPriorities` shared drag-rank primitive (state + a small UI) — partly UI.
+2. **Step 5** (task #41): the Cashflow UI — **do this with you**, not blind: goal-led adaptive hero, SolverPanel (network + selectable branch paths), MethodDrawer (the 5 methods, `compareMethods()`), "How we worked this out" panel (the `methodology` block), drawers like MyMoney. Engine emits everything it needs. Must pass §9.5 snaps. Compliance contract: label rank "highest under your priorities" NOT "optimal/best"; resilience NOT "probability".
+3. **Step 6**: cross-tab What-if ripple (SCENARIO_SAVED → Home/MyMoney).
+
+The whole engine is done and audited. From here it's wiring the verified engine into the screen — which is where your eyes are needed.
 
 Design doc (full): `~/.claude/plans/goal-engine-design.md`. Memory updated.

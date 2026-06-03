@@ -3462,14 +3462,56 @@ function ScenarioForwardSummary({ entity, decSolve }) {
     )
   }
 
-  // No solved drawdown (accumulator / sparse) → don't fabricate one. Show a
-  // brief, honest orientation note instead of an empty container.
+  // No solved drawdown (accumulator / sparse) → don't fabricate one. Show the
+  // accumulator's real surface: progress to financial independence (25× target
+  // income). The drawdown plan replaces this once they're decumulating.
+  return <FIProgressTile entity={entity} />
+}
+
+// §5.3 FI progress — the accumulator face (§B X24 mode-3 entry). Progress to
+// the 25× target-income FI number, from the canonical fiRatio selector. Honest
+// empty when investable data is too sparse to be meaningful.
+function FIProgressTile({ entity }) {
+  let fi = null
+  try { fi = fiRatio(entity) } catch { fi = null }
+  const fiTarget = fi?.fiTarget || 0
+  const ratio = fi?.ratio || 0
+  const invested = Math.round(ratio * fiTarget)
+  const pct = Math.min(100, Math.round(ratio * 100))
+  const targetIncome = fiTarget ? Math.round(fiTarget / 25) : 0
+
+  // Sparse → don't fabricate a progress bar off near-zero data.
+  if (!fiTarget || fi?.confidence === 'LOW') {
+    return (
+      <div className="sw-card" style={S.card}>
+        <div style={S.cardTitle}>Financial-independence progress</div>
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+          Add your investable savings and a target retirement income to see how far along you are toward financial independence. A year-by-year drawdown plan appears here once you start decumulating.
+        </div>
+      </div>
+    )
+  }
+  const bandColour = pct >= 100 ? 'var(--c-mint-text)' : pct >= 50 ? 'var(--c-acc)' : 'var(--c-amber-text)'
   return (
-    <div className="sw-card" style={S.card}>
-      <div style={S.cardTitle}>Drawdown plan</div>
-      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-        A year-by-year drawdown sequence appears once you&rsquo;re decumulating.
-        You&rsquo;re still building — see funded ratio and FI progress above.
+    <div className="sw-card sw-lift" style={S.card}>
+      <div style={S.cardHeader}>
+        <div style={S.cardTitle}>Financial-independence progress</div>
+        {fi.achieved
+          ? <span className="sw-chip sw-chip-sm sw-chip-mint">FI reached</span>
+          : <span className="sw-chip sw-chip-sm">{fi.multiple}× of {_gk(targetIncome)}/yr</span>}
+      </div>
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontSize: 26, fontWeight: 800, color: bandColour, fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+        <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>of the {_gk(fiTarget)} you&rsquo;d need (25× a {_gk(targetIncome)}/yr income)</span>
+      </div>
+      <div style={{ marginTop: 8, height: 8, borderRadius: 5, background: 'var(--c-tint-neutral-2)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: bandColour, transition: 'width .4s ease' }} />
+      </div>
+      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+        You hold <b>{_gk(invested)}</b> of investable assets{fi.achieved ? '' : ` — about ${_gk(Math.max(0, fiTarget - invested))} to go`}. The 25× rule is a long-standing planning rule of thumb (a ~4% withdrawal), not a guarantee — your real number depends on your assumptions.
+      </div>
+      <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+        When you start drawing an income, a tax-aware year-by-year drawdown plan replaces this tile. Information and guidance, not advice.
       </div>
     </div>
   )

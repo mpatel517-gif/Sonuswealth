@@ -1213,14 +1213,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           />
         </FadeInOnMount>
 
-        {/* P13-3 (2026-05-28, IFA must-fix #3): SequenceStressHero.
-            At distribution/preservation life-stage, the sequence-of-returns
-            story is the most important conversation an IFA would have. The
-            old sub-score (Sequence resilience 67) buried that. Now the
-            adverse-path story leads at decumulation, before the health hero. */}
-        <FadeInOnMount delay={80}>
-          <SequenceStressHero entity={entity} seqVuln={seqVuln} />
-        </FadeInOnMount>
+        {/* SequenceStressHero RELOCATED into §B (A3 calm-first): it now sits
+            under the funded-ratio anchor as the risk read, not as the doom
+            banner that opened the tab. (Was P13-3 IFA must-fix — still prominent
+            in §B, just no longer the very first thing the user sees.) */}
 
         {/* §3 — Cashflow Health Score hero (band + 5 sub-scores with ⓘ tooltips). */}
         <FadeInOnMount delay={100}>
@@ -1365,19 +1361,25 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           />
 
           <RevealStagger interval={60} startDelay={50}>
-            {/* Goal Seek — promoted to top of Section B per user 2026-05-11 */}
-            <GoalSeekCard entity={entity} />
-            <SwrRegimePicker
-              regime={swrRegime}
-              onChange={setSwrRegime}
-              swr={swr}
-            />
-            {/* Phase 2 Batch C — premium replacements (V2 visuals). */}
+            {/* (1) ANCHOR — the universal "will it last?" answer for savers,
+                drawers AND preservers (A3: promoted to lead §B; "not everyone
+                wants a drawdown" so the gauge, not the plan, is the headline). */}
             <FundedRatioGaugeV2
               ratio={+(fr?.ratio || fr?.value || 1.0)}
               confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null}
               fundedYears={fr?.fundedYears || fr?.years || null}
             />
+            {/* (2) The withdrawal-rate ASSUMPTION knob that drives the gauge (A2). */}
+            <SwrRegimePicker
+              regime={swrRegime}
+              onChange={setSwrRegime}
+              swr={swr}
+            />
+            {/* (3) Sequence-of-returns story — relocated here from the very top
+                (A3 calm-first): the risk read ON the anchor, prominent in §B but
+                no longer the doom-banner that opened the whole tab. */}
+            <SequenceStressHero entity={entity} seqVuln={seqVuln} />
+            {/* (4) Accumulator's progress-to-FI (self-empties for sparse). */}
             <FiProgressTile fi={fi} />
             {/* B-1b (2026-05-28): PoSHeadline removed — was a 3rd PoS surface
                 duplicating the % + horizon + terminal values that PoSChartV2
@@ -1432,11 +1434,12 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
               />
             )}
             <GuytonKlingerCorridor path={gkPath} />
-            {/* STUB-02 fix: ScenarioMatrix now drives a real selection
-                state that re-renders ScenarioSummary below it. Engine
-                recompute hook is in place — when the engine grows a
-                per-scenario forward-cashflow API the recompute slots in
-                without UI changes. */}
+            {/* (8) Goal-seek — demoted from the top of §B (A3): a CTA tool, not
+                the anchor. */}
+            <GoalSeekCard entity={entity} />
+            {/* (9) The drawdown plan TOOL — LAST; self-degrades to the FI tile
+                for accumulators/preservers, so it never pushes a non-drawer to
+                draw (founder: "not everyone wants a drawdown"). */}
             <ScenarioMatrixWithRecompute
               entity={entity}
               decSolve={decSolve}

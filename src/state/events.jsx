@@ -174,6 +174,18 @@ export function applyEvents(baseEntity, events = []) {
         break
       }
 
+      case EV.PREFERENCE_SET: {
+        // Payload: a flat object merged into entity.preferences (e.g.
+        // { lifeStageOverride: 'decumulator' | 'accumulator' | null }). Engine
+        // readers (inferLifeStage / inferBranch) already honour these keys, so
+        // the override takes effect on the next effective-entity fold. A null
+        // value clears the override (back to Auto / inferred).
+        if (ev.payload && typeof ev.payload === 'object') {
+          e.preferences = { ...(e.preferences || {}), ...ev.payload }
+        }
+        break
+      }
+
       default:
         // Unknown event type — ignore (forward-compatible)
         break

@@ -18,6 +18,7 @@ export const EV = {
   ASSET_FIELD_CORRECTED: 'ASSET_FIELD_CORRECTED', // L3-2 leaf edit — surgical single-field correction
   DOCUMENT_CAPTURED:     'DOCUMENT_CAPTURED',
   SCENARIO_SAVED:        'SCENARIO_SAVED',
+  PREFERENCE_SET:        'PREFERENCE_SET', // user preference override (e.g. lifeStageOverride) → folds into entity.preferences
   document_captured:     'document_captured', // legacy lowercase alias from DataCapture
 }
 

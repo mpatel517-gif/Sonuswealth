@@ -1359,6 +1359,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             subtitle="Will it last?"
             chipClass="sw-chip-blue"
           />
+          {/* A4 — pin the face (Building wealth / Drawing income) or leave Auto. */}
+          <LifeStageOverrideChip entity={entity} />
 
           <RevealStagger interval={60} startDelay={50}>
             {/* (1) ANCHOR — the universal "will it last?" answer for savers,
@@ -1923,6 +1925,46 @@ function SectionDelimiter({ letter, title, subtitle, chipClass = 'sw-chip-mint' 
         </div>
       </div>
     </FadeInOnMount>
+  )
+}
+
+// A4 — manual life-stage override. The §B face is inferred (inferLifeStage),
+// but "not everyone wants a drawdown" — the user can pin it. Commits a
+// PREFERENCE_SET event → folds into entity.preferences.lifeStageOverride, which
+// inferBranch/inferLifeStage already read, so the drawdown plan card flips to
+// the FI face (and back) on the next fold. Two real branches only (the engine
+// knows accumulator/decumulator) + Auto — no cosmetic 4th option. Preserve/
+// legacy intent lives in the drawdown plan's priority reorder, not here.
+function LifeStageOverrideChip({ entity }) {
+  const { commit } = useEvents()
+  const pid = entity?.id || entity?.personaId
+  const override = entity?.preferences?.lifeStageOverride || null
+  const inferred = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
+  const set = (val) => { if (pid) commit(pid, { type: EV.PREFERENCE_SET, ts: Date.now(), payload: { lifeStageOverride: val } }) }
+  const seg = (val, label) => {
+    const isOn = val === null ? !override : override === val
+    return (
+      <button key={val || 'auto'} onClick={() => set(val)} className="sw-press"
+        style={{ padding: '4px 11px', borderRadius: 'var(--r-pill, 999px)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          border: isOn ? '1px solid var(--c-acc)' : '1px solid var(--c-border)',
+          background: isOn ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'transparent',
+          color: isOn ? 'var(--c-acc)' : 'var(--c-text3)' }}>
+        {label}
+      </button>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '2px 0 12px' }}>
+      <span style={{ fontSize: 10, color: 'var(--c-text3)', fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>This view:</span>
+      {seg(null, 'Auto')}
+      {seg('accumulator', 'Building wealth')}
+      {seg('decumulator', 'Drawing income')}
+      {!override && (
+        <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>
+          detected: {inferred === 'decumulator' ? 'drawing income' : 'building wealth'}
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -3059,6 +3101,11 @@ function ScenarioForwardSummary({ entity, decSolve }) {
   // Re-solve LIVE on the user's assumptions + priority order (deterministic,
   // sub-ms). When nothing is touched, reuse the parent's default solve.
   const solve = useMemo(() => {
+    // BRANCH GUARD (A4): decSolve is null when the entity is NOT a decumulator
+    // (accumulator/preserver-as-accumulator or sparse). Never force a drawdown
+    // solve in that case — even if the sliders are left dirty from a prior
+    // decumulator state — so the override flips to the FI face honestly.
+    if (!decSolve) return null
     if (!anyDirty) return decSolve
     try {
       const spec = goalsDirty

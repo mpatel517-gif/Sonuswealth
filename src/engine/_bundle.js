@@ -141,6 +141,15 @@ function _buildTAX(b) {
 
     // Allowance freeze -----------------------------------------------------
     paFreezeUntil:          b.income?.paFreezeUntil ?? b._meta?.paFreezeUntil ?? '2031-04-05', // Autumn Budget 2025 — freeze to end of 2030/31 tax year
+
+    // Cash protection / safeguarded-benefit advice -------------------------
+    // FSCS deposit protection rose £85,000 → £120,000 from 1 Dec 2025. Read
+    // from the bundle so no UI/engine site carries the stale £85k literal.
+    fscsLimit:              b.cashProtection?.fscsLimit                     ?? 120000,   // PRA PS18/25 — per person per banking licence (from 1 Dec 2025)
+    fscsJointLimit:         b.cashProtection?.fscsJointLimit                ?? 240000,   // joint accounts = 2× limit
+    fscsTempHighBalance:    b.cashProtection?.fscsTemporaryHighBalanceLimit ?? 1000000, // temporary high balances, 6 months
+    // Safeguarded benefit (DB/GAR/GMP) transfer advice threshold — FCA COBS 19.1A
+    safeguardedAdviceThreshold: b.pension?.safeguardedBenefitAdviceThreshold ?? 30000,
     // ── END v0.3 ROUTE-SPECS BUNDLE ADDITIONS ─────────────────────────────
     scottishBands: [
       { name: 'Starter',      from: b.income?.scottishStarterBandFrom      ?? 12570,  to: b.income?.scottishStarterBandTo        ?? 14876,  rate: b.income?.scottishStarterRate      ?? 0.19 },

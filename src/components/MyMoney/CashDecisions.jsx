@@ -2,7 +2,7 @@
 // CashDecisions — model the decisions for a cash account. Researched UK rules
 // (2026/27): Personal Savings Allowance (£1,000 basic / £500 higher / £0
 // additional), interest taxed at marginal rate above it; Cash ISA shelters
-// interest tax-free; FSCS protects £85k per banking licence; cash above an
+// interest tax-free; FSCS protects £120k per banking licence; cash above an
 // emergency buffer loses real value to inflation.
 //   · Move to a Cash ISA — shelter the interest from tax.
 //   · Switch rate        — what a better easy-access rate would earn.
@@ -14,6 +14,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState } from 'react'
 import { BRAND } from '../../config/brand.js'
+import { TAX } from '../../engine/fq-calculator.js'
+
+// FSCS deposit-protection limit — bundle-driven (£85k → £120k from 1 Dec 2025).
+const FSCS_LIMIT_LABEL = `£${(+TAX.fscsLimit || 120_000).toLocaleString()}`
 
 function gbp(v) {
   const n = Math.round(+v || 0)
@@ -70,7 +74,7 @@ export default function CashDecisions({ asset = {}, marginalRate = 0.4, psa = 50
       <Row label={`At your current ${(rate * 100).toFixed(1)}%`} value={`${gbp(interest)}/yr`} />
       <Row label={`At a top ~${(bestRate * 100).toFixed(1)}% easy-access`} value={`${gbp(better)}/yr`} tone="good" />
       <Row label="Extra interest a year" value={`~${gbp(gainMore)}`} tone="good" strong />
-      <Note>Rates shown are indicative. Keep no more than £85,000 per banking licence so the full balance stays FSCS-protected. Switching easy-access savings carries no tax event — it's the same wrapper.</Note>
+      <Note>Rates shown are indicative. Keep no more than {FSCS_LIMIT_LABEL} per banking licence so the full balance stays FSCS-protected. Switching easy-access savings carries no tax event — it's the same wrapper.</Note>
     </>)
   }
   if (active === 'invest') {

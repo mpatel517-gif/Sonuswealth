@@ -481,11 +481,11 @@ export const ASSET_TYPES = [
 
   // ════════════════════════════ CASH ════════════════════════════
   A({ id: 'CURRENT', label: 'Current account', desc: 'Day-to-day bank account', category: 'cash', class: 'everyday-cash', common: true, icon: '💷', estate: 'in',
-    source: { id: 'M01', tax: 'Interest taxable above the Personal Savings Allowance · FSCS-protected to £85k per institution · check for multiple accounts at the same bank' },
+    source: { id: 'M01', tax: 'Interest taxable above the Personal Savings Allowance · FSCS-protected to £120k per institution · check for multiple accounts at the same bank' },
     decisions: ['check-fscs'], match: ['current-account', 'checking'],
     required: ['bank', 'balance'], optional: [] }),
   A({ id: 'SAVINGS', label: 'Easy-access savings', desc: 'Variable-rate, instant access', category: 'cash', class: 'everyday-cash', common: true, icon: '💷', estate: 'in',
-    source: { id: 'M02', tax: 'Interest taxable above the PSA · FSCS-protected to £85k per institution' },
+    source: { id: 'M02', tax: 'Interest taxable above the PSA · FSCS-protected to £120k per institution' },
     decisions: ['check-fscs', 'use-allowance'], match: ['easy-access', 'savings-account', 'instant-access'],
     required: ['bank', 'balance'], optional: ['interestRate'] }),
   A({ id: 'NOTICE', label: 'Notice account', desc: '32/60/90-day notice · higher rate', category: 'cash', class: 'everyday-cash', icon: '💷', estate: 'in',

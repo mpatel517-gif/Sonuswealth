@@ -3056,6 +3056,75 @@ const RANKABLE_GOALS = [
   { type: 'legacy',            label: 'Leave more to family, after tax' },
 ]
 
+// Draw-order network — pots (nodes) → "Your income" (sink), edges in the
+// solved draw sequence. Reads solve.network (decumulation-solver buildNetwork):
+// nodes {id,value,kind:'pot'} + the income sink; edges {from,order,kind}. The
+// edge order comes from the #1 ranked path, so when the user back-solves a
+// different target (or reorders priorities) and the ranking flips, THIS map
+// redraws — the founder's "the network diagram may change too". Year-1 draws
+// (£/yr per pot) come from the schedule so each node carries its real flow.
+const _POT_PRETTY = { pension: 'Pension', isa: 'ISA', gia: 'GIA', cash: 'Cash', sipp: 'SIPP', db: 'DB pension' }
+function DrawNetworkDiagram({ network, year1, netTotal }) {
+  const pots = (network?.nodes || []).filter(n => n.kind === 'pot' && (n.value || 0) > 0)
+  const edges = network?.edges || []
+  if (pots.length < 1 || edges.length < 1) return null
+  const orderOf = {}
+  edges.forEach(e => { orderOf[e.from] = e.order })
+  const seq = [...pots].sort((a, b) => (orderOf[a.id] ?? 99) - (orderOf[b.id] ?? 99))
+  const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th']
+  const drawOf = id => (year1?.draws?.[id] ?? null)
+  const rowH = 60, padY = 12
+  const H = padY * 2 + seq.length * rowH - (seq.length ? 12 : 0)
+  const viewW = 340, leftW = 150, sinkX = 250, sinkCY = H / 2
+  const potCY = i => padY + i * rowH + 24
+  return (
+    <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 }}>
+        Your money map — draw order
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 8 }}>
+        Which pot funds your income, and in what order, under this route. Drag the income above and the map re-routes.
+      </div>
+      <div style={{ position: 'relative', width: '100%', maxWidth: viewW, margin: '0 auto' }}>
+        <svg width="100%" viewBox={`0 0 ${viewW} ${H}`} style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Draw-order map: pots feeding your income">
+          {seq.map((p, i) => {
+            const y = potCY(i)
+            const first = (orderOf[p.id] ?? 99) === 1
+            return (
+              <path key={p.id} d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
+                fill="none" stroke={first ? 'var(--c-acc)' : 'var(--c-border)'} strokeWidth={first ? 2.2 : 1.3}
+                strokeDasharray={first ? '0' : '4 3'} opacity={first ? 1 : 0.8} />
+            )
+          })}
+        </svg>
+        {/* Pot nodes (left) */}
+        {seq.map((p, i) => {
+          const first = (orderOf[p.id] ?? 99) === 1
+          const d = drawOf(p.id)
+          return (
+            <div key={p.id} style={{ position: 'absolute', left: 0, top: `${(potCY(i) - 22) / H * 100}%`, width: leftW - 10,
+              padding: '6px 8px', borderRadius: 10, background: 'var(--c-surface)', border: first ? '1px solid var(--c-acc)' : '1px solid var(--c-border)', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 9, fontWeight: 800, color: first ? 'var(--c-acc)' : 'var(--c-text3)' }}>{ORD[(orderOf[p.id] ?? 1) - 1] || ''}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{_POT_PRETTY[p.id] || p.label || p.id}</span>
+              </div>
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>
+                {_gk(p.value)} pot{d != null && Math.abs(d) > 0 ? ` · ${_gk(Math.abs(d))}/yr` : ''}
+              </div>
+            </div>
+          )
+        })}
+        {/* Income sink (right) */}
+        <div style={{ position: 'absolute', right: 0, top: `${(sinkCY - 22) / H * 100}%`, width: 86,
+          padding: '7px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface))', border: '1px solid var(--c-acc)', boxSizing: 'border-box', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text)' }}>Your income</div>
+          {netTotal != null && <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-acc)', marginTop: 1 }}>{_gk(netTotal)}/yr</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // The REAL drawdown plan (one-engine). For decumulators, solveDecumulation
 // gives the tax-minimising per-pot, per-year sequence + the routes it ranked.
 // The panel lets the user move THEIR assumptions (target income, plan horizon,
@@ -3162,6 +3231,30 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           <span className="sw-chip sw-chip-sm sw-chip-blue">ranked under your priorities</span>
         </div>
 
+        {/* BACK-SOLVE HERO — the founder's "grab the £96k Net and drag it". The
+            year-1 Net the user wanted to edit IS this target: the solver draws
+            gross to NET this figure, so dragging it back-solves the whole plan —
+            routes re-rank, tax re-computes, and the money-map below re-routes.
+            One control for one value (no duplicate "target income" slider). */}
+        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--c-acc) 7%, var(--c-surface2))', border: '1px solid var(--c-acc)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>The income you want to live on</span>
+            {dT && <button onClick={() => setTarget(seedTarget)} className="sw-pressable" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Reset</button>}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>{fmt(target)}</span>
+            <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>/yr · {_gmo(target)}/mo</span>
+          </div>
+          <input type="range" min={0} max={targetMax} step={1000} value={target}
+            onChange={e => setTarget(+e.target.value)} aria-label="The income you want to live on — drag to back-solve your drawdown plan"
+            style={{ width: '100%', marginTop: 10, accentColor: 'var(--c-acc)', cursor: 'pointer' }} />
+          {y1 && (
+            <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.5 }}>
+              → Year 1 nets <b>{fmt(y1.net)}</b> after <b style={{ color: 'var(--c-coral-text)' }}>{fmt(y1.tax)} tax</b>, funds to age <b>{route.depletedAtAge || `${horizon}+`}</b>. Drag the number — the routes, tax and the money-map below all re-solve from it. Your assumption, not a forecast.
+            </div>
+          )}
+        </div>
+
         {/* Live controls — move YOUR assumptions + priorities, watch it re-solve. */}
         <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -3169,7 +3262,6 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             {anyDirty && <button onClick={resetAll} className="sw-pressable" style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Reset</button>}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-            <SolverSlider label="Target income" value={target} min={0} max={targetMax} step={1000} fmt={v => `${_gk(v)}/yr`} onChange={setTarget} dirty={dT} />
             <SolverSlider label="Plan to age" value={horizon} min={currentAge + 1} max={105} step={1} fmt={v => `age ${v}`} onChange={setHorizon} dirty={dH} />
             <SolverSlider label="Growth (nominal)" value={growthPct} min={1} max={8} step={0.5} fmt={v => `${v}%`} onChange={setGrowthPct} dirty={dG} />
           </div>
@@ -3222,6 +3314,10 @@ function ScenarioForwardSummary({ entity, decSolve }) {
             )
           })}
         </div>
+
+        {/* Money-map — pots → income in the solved draw order. Re-routes when the
+            back-solve target above flips the #1 ranked path. */}
+        <DrawNetworkDiagram network={solve.network} year1={y1} netTotal={y1?.net} />
 
         {/* Year 1 as a monthly instruction — answers "how much from each pot". */}
         {y1 && (

@@ -3064,52 +3064,75 @@ const RANKABLE_GOALS = [
 // redraws — the founder's "the network diagram may change too". Year-1 draws
 // (£/yr per pot) come from the schedule so each node carries its real flow.
 const _POT_PRETTY = { pension: 'Pension', isa: 'ISA', gia: 'GIA', cash: 'Cash', sipp: 'SIPP', db: 'DB pension' }
-function DrawNetworkDiagram({ network, year1, netTotal }) {
-  const pots = (network?.nodes || []).filter(n => n.kind === 'pot' && (n.value || 0) > 0)
-  const edges = network?.edges || []
-  if (pots.length < 1 || edges.length < 1) return null
-  const orderOf = {}
-  edges.forEach(e => { orderOf[e.from] = e.order })
-  const seq = [...pots].sort((a, b) => (orderOf[a.id] ?? 99) - (orderOf[b.id] ?? 99))
+const _POT_IDS = ['pension', 'isa', 'gia', 'cash']
+function DrawNetworkDiagram({ route, network, netTotal }) {
+  // Pot starting values come from the network; the per-pot draw TIMING + amounts
+  // come from the SELECTED route's schedule (not always the #1 path), so the map
+  // follows whichever route the user is reading + answers "how much from each pot
+  // and from what age" — not just the year-1 snapshot (where only the first pot
+  // shows a draw and the rest read £0).
+  const potVal = {}
+  ;(network?.nodes || []).filter(n => n.kind === 'pot').forEach(n => { potVal[n.id] = n.value || 0 })
+  const sched = route?.schedule || []
+  if (!sched.length || !Object.keys(potVal).length) return null
+
+  // Per pot: first age drawn, £/yr while active (total ÷ active years), total.
+  const info = {}
+  _POT_IDS.forEach(id => {
+    if (!(id in potVal)) return
+    let firstAge = null, total = 0, activeYears = 0
+    sched.forEach(yr => {
+      const d = yr.draws?.[id] || 0
+      if (d > 0) { if (firstAge == null) firstAge = yr.age; total += d; activeYears++ }
+    })
+    info[id] = { firstAge, total, perYear: activeYears ? Math.round(total / activeYears) : 0, value: potVal[id], drawn: total > 0 }
+  })
+  // Drawn pots in true draw order (by first age); preserved pots after.
+  const drawn = _POT_IDS.filter(id => info[id]?.drawn).sort((a, b) => (info[a].firstAge ?? 1e9) - (info[b].firstAge ?? 1e9))
+  const preserved = _POT_IDS.filter(id => info[id] && !info[id].drawn && info[id].value > 0)
+  const seq = [...drawn, ...preserved]
+  if (!seq.length) return null
   const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th']
-  const drawOf = id => (year1?.draws?.[id] ?? null)
-  const rowH = 60, padY = 12
-  const H = padY * 2 + seq.length * rowH - (seq.length ? 12 : 0)
-  const viewW = 340, leftW = 150, sinkX = 250, sinkCY = H / 2
-  const potCY = i => padY + i * rowH + 24
+
+  const rowH = 66, padY = 12
+  const H = padY * 2 + seq.length * rowH - 14
+  const viewW = 340, leftW = 158, sinkX = 254, sinkCY = H / 2
+  const potCY = i => padY + i * rowH + 26
   return (
     <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 }}>
-        Your money map — draw order
+        Your money map — {route?.name || 'draw order'}
       </div>
       <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 8 }}>
-        Which pot funds your income, and in what order, under this route. Drag the income above and the map re-routes.
+        How much comes from each pot, and from what age, under this route (ranked under your priorities). Drag the income above, or pick another route, and the map re-routes.
       </div>
       <div style={{ position: 'relative', width: '100%', maxWidth: viewW, margin: '0 auto' }}>
         <svg width="100%" viewBox={`0 0 ${viewW} ${H}`} style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Draw-order map: pots feeding your income">
-          {seq.map((p, i) => {
-            const y = potCY(i)
-            const first = (orderOf[p.id] ?? 99) === 1
+          {seq.map((id, i) => {
+            const d = info[id]
+            if (!d.drawn) return null // preserved pots don't feed income — no edge
+            const y = potCY(i), first = i === 0
             return (
-              <path key={p.id} d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
-                fill="none" stroke={first ? 'var(--c-acc)' : 'var(--c-border)'} strokeWidth={first ? 2.2 : 1.3}
-                strokeDasharray={first ? '0' : '4 3'} opacity={first ? 1 : 0.8} />
+              <path key={id} d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
+                fill="none" stroke="var(--c-acc)" strokeWidth={first ? 2.4 : 1.6}
+                opacity={first ? 1 : 0.5} />
             )
           })}
         </svg>
-        {/* Pot nodes (left) */}
-        {seq.map((p, i) => {
-          const first = (orderOf[p.id] ?? 99) === 1
-          const d = drawOf(p.id)
+        {/* Pot nodes (left) — order badge, pot size, £/yr + start age (or preserved) */}
+        {seq.map((id, i) => {
+          const d = info[id]
           return (
-            <div key={p.id} style={{ position: 'absolute', left: 0, top: `${(potCY(i) - 22) / H * 100}%`, width: leftW - 10,
-              padding: '6px 8px', borderRadius: 10, background: 'var(--c-surface)', border: first ? '1px solid var(--c-acc)' : '1px solid var(--c-border)', boxSizing: 'border-box' }}>
+            <div key={id} style={{ position: 'absolute', left: 0, top: `${(potCY(i) - 27) / H * 100}%`, width: leftW - 8,
+              padding: '7px 9px', borderRadius: 10, background: 'var(--c-surface)', boxSizing: 'border-box',
+              border: d.drawn && i === 0 ? '1px solid var(--c-acc)' : '1px solid var(--c-border)', opacity: d.drawn ? 1 : 0.62 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: first ? 'var(--c-acc)' : 'var(--c-text3)' }}>{ORD[(orderOf[p.id] ?? 1) - 1] || ''}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{_POT_PRETTY[p.id] || p.label || p.id}</span>
+                {d.drawn && <span style={{ fontSize: 9, fontWeight: 800, color: i === 0 ? 'var(--c-acc)' : 'var(--c-text3)' }}>{ORD[i] || ''}</span>}
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{_POT_PRETTY[id] || id}</span>
               </div>
-              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>
-                {_gk(p.value)} pot{d != null && Math.abs(d) > 0 ? ` · ${_gk(Math.abs(d))}/yr` : ''}
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(d.value)} pot</div>
+              <div style={{ fontSize: 9.5, fontWeight: 600, color: d.drawn ? 'var(--c-acc)' : 'var(--c-text3)', marginTop: 1 }}>
+                {d.drawn ? `${_gk(d.perYear)}/yr from age ${d.firstAge}` : 'kept — not drawn'}
               </div>
             </div>
           )
@@ -3120,6 +3143,9 @@ function DrawNetworkDiagram({ network, year1, netTotal }) {
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text)' }}>Your income</div>
           {netTotal != null && <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-acc)', marginTop: 1 }}>{_gk(netTotal)}/yr</div>}
         </div>
+      </div>
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
+        Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The year-by-year table below has the exact figures.
       </div>
     </div>
   )
@@ -3317,7 +3343,7 @@ function ScenarioForwardSummary({ entity, decSolve }) {
 
         {/* Money-map — pots → income in the solved draw order. Re-routes when the
             back-solve target above flips the #1 ranked path. */}
-        <DrawNetworkDiagram network={solve.network} year1={y1} netTotal={y1?.net} />
+        <DrawNetworkDiagram route={route} network={solve.network} netTotal={y1?.net} />
 
         {/* Year 1 as a monthly instruction — answers "how much from each pot". */}
         {y1 && (

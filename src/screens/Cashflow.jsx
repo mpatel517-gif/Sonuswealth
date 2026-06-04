@@ -997,6 +997,100 @@ function CashflowCalendarHeatmap({ entity }) {
 // Render via <MoneyXDrawer activeRoute="flow" entity={entity} onNav={onNav} />.
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 
+// "Am I OK right now?" rebuilt to the drawer bar (founder 2026-06-04: "apply
+// this logic to all tiles"). Leads with the net position + an INTERACTIVE
+// break-even model (trim spend / add income + a back-solve that closes the gap),
+// then COMPACT ROWS that open detail sub-drawers — replacing the old 8-card
+// static scroll. msNet = signed monthly net (surplus − deficit), engine-sourced.
+function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, surplusAlloc, onSurplusBreakdown, onIncomeBreakdown }) {
+  const [openRow, setOpenRow] = useState(null)
+  const [trim, setTrim] = useState(0)     // £/mo spending cut (delta on engine baseline)
+  const [extra, setExtra] = useState(0)   // £/mo extra income (delta)
+  const income = Math.round(ms.income || 0)
+  const out = Math.round((ms.essential || 0) + (ms.committed || 0) + (ms.debtService || 0) + (ms.tax || 0))
+  const newNet = msNet + trim + extra
+  const deficit = Math.max(0, -msNet)
+  const maxTrim = Math.max(100, Math.round((ms.essential || 0) + (ms.committed || 0)))
+  const maxExtra = Math.max(500, income)
+  const essPct = income > 0 ? Math.round(((ms.essential || 0) / income) * 100) : null
+  const dirty = trim > 0 || extra > 0
+  const inDeficit = msNet < 0
+  const rows = [
+    { key: 'flow', label: 'Where your money flows', stat: `${_gk(income)} in · ${_gk(out)} out`, render: (
+      <>
+        <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
+        <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
+        <button onClick={onSurplusBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full surplus breakdown ›</button>
+      </>
+    ) },
+    { key: 'split', label: 'Essentials vs discretionary', stat: essPct != null ? `${essPct}% essential` : '—', render: (
+      <>
+        <EssentialsDiscretionarySplit ms={ms} />
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>Subscriptions count toward essentials. Automatic detection arrives with Open Banking; until then they're inside the figures above.</div>
+      </>
+    ) },
+    { key: 'income', label: 'Income — by source & tax band', stat: `${_gk(incomeAll?.total || income)} · ${incomeAll?.items?.length || 0} src`, render: (
+      <>
+        <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
+        <IncomeBreakdownByBand incomeAll={incomeAll} />
+        <button onClick={onIncomeBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full income breakdown ›</button>
+      </>
+    ) },
+    { key: 'buffer', label: 'Your safety buffer', stat: lb?.months != null ? (lb.months >= 24 ? `${Math.round(lb.months / 12)}+ yrs` : `${Math.round(lb.months)} mo`) : '—', render: <LiquidityBufferCard lb={lb} /> },
+    ...(ms.surplus > 0 ? [{ key: 'alloc', label: 'What to do with your surplus', stat: `${_gk(ms.surplus)}/mo spare`, render: <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} /> }] : []),
+  ]
+  const open = rows.find(r => r.key === openRow)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* LEAD — net position + interactive break-even */}
+      <div className="sw-card" style={{ padding: '14px 16px' }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: inDeficit ? 'var(--c-coral-text)' : msNet > 0 ? 'var(--c-mint-text)' : 'var(--c-text)' }}>
+          {inDeficit ? 'In deficit' : msNet > 0 ? 'In surplus' : 'Breaking even'} {_gk(Math.abs(msNet))}/mo
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginTop: 3 }}>
+          {_gk(income)} comes in and {_gk(out)} goes out each month{inDeficit ? `, so you draw about ${_gk(deficit)}/mo from savings or pots to cover it.` : msNet > 0 ? `, leaving ${_gk(msNet)} spare.` : '.'}
+        </div>
+        <div style={{ marginTop: 10, display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--c-surface2)' }}>
+          <div style={{ width: `${Math.min(100, Math.round((income / Math.max(1, income, out)) * 100))}%`, background: 'var(--c-mint-text)' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gk(income)}</span><span>out {_gk(out)}</span></div>
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--c-sep)', paddingTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>What would fix it? — drag a lever</div>
+            {dirty && <button onClick={() => { setTrim(0); setExtra(0) }} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, fontSize: 11, padding: 0 }}>reset</button>}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--c-text2)', margin: '5px 0 7px' }}>New monthly position: <strong style={{ color: newNet >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>{newNet >= 0 ? '+' : '−'}{_gk(Math.abs(newNet))}/mo</strong></div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+            <SolverSlider label="Trim spending" value={trim} min={0} max={maxTrim} step={50} fmt={v => `−${_gk(v)}/mo`} onChange={setTrim} dirty={trim > 0} />
+            <SolverSlider label="Extra income" value={extra} min={0} max={maxExtra} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setExtra} dirty={extra > 0} />
+          </div>
+          {inDeficit && <button onClick={() => { setExtra(Math.min(deficit, maxExtra)); setTrim(0) }} className="sw-chip sw-chip-sm sw-chip-mint sw-press" style={{ marginTop: 8, cursor: 'pointer', fontWeight: 700 }}>↩ Back-solve: close the {_gk(deficit)}/mo gap</button>}
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>Drag a lever, or let it solve the gap. Illustration on your figures — not advice.</div>
+        </div>
+      </div>
+      {/* COMPACT ROWS → detail sub-drawers */}
+      {rows.map(r => (
+        <button key={r.key} onClick={() => setOpenRow(r.key)} className="sw-lift sw-pressable" style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer', width: '100%', padding: '11px 13px', borderRadius: 12, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{r.label}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text2)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.stat}</div>
+          <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
+        </button>
+      ))}
+      {open && (
+        <DrillStackProvider>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ maxWidth: 760, margin: '0 auto', padding: '14px 16px 96px' }}>
+              <button onClick={() => setOpenRow(null)} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
+              <h2 style={{ fontSize: 21, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 14px' }}>{open.label}</h2>
+              <RevealStagger interval={60} startDelay={40}>{open.render}</RevealStagger>
+            </div>
+          </div>
+        </DrillStackProvider>
+      )}
+    </div>
+  )
+}
+
 export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed }) {
   // Back-routing (2026-05-28): if the user came from another screen (e.g.
   // MyMoney → Cashflow via section-nav chip), the back chevron should return
@@ -1162,50 +1256,18 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // as the 'now' question-tile's render-prop content, so the drill buttons keep
   // working and nothing is re-typed.
   const nowSectionContent = (
-    <RevealStagger interval={60} startDelay={50}>
-      <CashflowMoneySankey
-        entity={entity}
-        incomeAll={incomeAll}
-        ms={ms}
-        flow={flow}
-      />
-      <div style={{ position: 'relative' }}>
-        <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
-        <button
-          onClick={() => setDrillView('surplus')}
-          className="sw-chip sw-chip-sm sw-press"
-          style={{
-            position: 'absolute', top: 14, right: 14,
-            cursor: 'pointer', fontSize: 11, fontWeight: 700,
-            background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-            color: 'var(--c-acc)',
-          }}
-          title="Open full surplus breakdown"
-        >
-          Breakdown ›
-        </button>
-      </div>
-      <EssentialsDiscretionarySplit ms={ms} />
-      <SubscriptionTracker entity={entity} />
-      <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} />
-      <LiquidityBufferCard lb={lb} />
-      <div style={{ position: 'relative' }}>
-        <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
-        <button
-          onClick={() => setDrillView('income')}
-          className="sw-chip sw-chip-sm sw-press"
-          style={{
-            position: 'absolute', top: 14, right: 14,
-            cursor: 'pointer', fontSize: 11, fontWeight: 700,
-            background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-            color: 'var(--c-acc)',
-          }}
-        >
-          Breakdown ›
-        </button>
-      </div>
-      <IncomeBreakdownByBand incomeAll={incomeAll} />
-    </RevealStagger>
+    <NowDrawer
+      entity={entity}
+      incomeAll={incomeAll}
+      ms={ms}
+      msNet={msNet}
+      flow={flow}
+      accountantMode={accountantMode}
+      lb={lb}
+      surplusAlloc={surplusAlloc}
+      onSurplusBreakdown={() => setDrillView('surplus')}
+      onIncomeBreakdown={() => setDrillView('income')}
+    />
   )
 
   // ── Render ─────────────────────────────────────────────────────────────

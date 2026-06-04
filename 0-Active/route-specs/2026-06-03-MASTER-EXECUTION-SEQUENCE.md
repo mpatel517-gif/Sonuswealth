@@ -81,9 +81,21 @@ run-ask-sonu-coverage (integration test, needs live LLM/Supabase backend).
     adaptive question-tile grid (now·lastability·drawdown·resilience·whatif·methods·
     costs) + headline band — the A/B/C scroll is gone. Via an extraTiles render-prop
     so content is built in parent scope (drill buttons keep working, nothing retyped).
-13. TODO Full §9.5 snap matrix + VISUAL QA — **blocked**: needs a browser (chromium
-    download blocked here). The tile moves are build-green but unverified for LAYOUT;
-    a snap pass is required before "done" per §0.6 (build-green ≠ layout-correct).
+13. ◑ VISUAL QA DONE (pre-installed chromium at /opt/pw-browsers — `npx playwright
+    install` fails but the binary exists; point executablePath at it). Snapped Bruce
+    1280 + 390 + all four new/moved drawers. VERIFIED rendering: 7-tile grid, headline,
+    Now (§A intact), Drawdown (honesty label + route chips + SECURE-INCOME floor node +
+    calendar years), Methods (5 methods), Costs (engine depth). Caught+fixed 2 real
+    bugs (`769d3ee`): app crashed to ErrorBoundary without Supabase env (offline stub);
+    headline claimed "lasts the full plan" at 0.47 funded (now "covers only 48% of
+    target"). Console CLEAN — **Fragment-className flood not reproducible** (Reveal.jsx
+    already guards; 0 warnings live) → that Phase-5 item is closed.
+    STILL TODO for full §0.6: exhaustive matrix (Mr T + Willy × 768/light), and the
+    `sonuswealth-compliance`/`ifa-auditor` skill pass (skills unavailable here).
+    RESIDUAL (deeper, logged): the decumulation solver ("£96k lasts to 95+") and the
+    fundedRatio selector (0.48) disagree on whether the target is sustainable — two
+    engines, different assumptions. Headline now leads with the conservative funded
+    view; reconciling the two selectors is a follow-up.
 
 ## PHASE 5 — CLEANUP
 

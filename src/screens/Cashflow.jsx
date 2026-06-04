@@ -1440,9 +1440,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                   horizon={decSolve.inputs?.horizonAge || 95}
                   primaryGoal={decSolve.binding?.primaryGoal || 'min_lifetime_tax'} />) }] : []),
               // §C "Costs/Depth" → last tile (engine internals, always-open here).
-              { key: 'costs', q: "What's it costing?", headline: coi?.total ? `${fmtSeedNum(coi.total)}/yr` : 'See depth',
-                sub: 'cost of inaction · charges · efficiency', tone: 'acc',
-                content: (<EngineInternalsReveal alwaysOpen coi={coi} coiVar={coiVar} prcPcc={prcPcc} reality={reality} mdd={mdd} eff={eff} fi={fi} health={health} fr={fr} pos={pos} />) },
+              { key: 'costs', q: "What's it costing?", headline: coi?.total ? `${fmtSeedNum(coi.total)}` : 'See depth',
+                sub: 'value at stake · charges · efficiency', tone: 'acc',
+                content: (<CostDrawer coi={coi} depth={<EngineInternalsReveal coi={coi} coiVar={coiVar} prcPcc={prcPcc} reality={reality} mdd={mdd} eff={eff} fi={fi} health={health} fr={fr} pos={pos} />} />) },
             ]}
           />
 
@@ -4040,6 +4040,93 @@ function StressExplorer({ decSolve }) {
       </div>
     </div>
   )
+}
+// ── "What's it costing?" — drillable, toggleable cost-of-inaction (P4-05). The
+// old surface dumped the whole §C methodology stack as a static always-open
+// scroll. coi.byDomain is a map of 10 fixable items, each worth £/yr — so this
+// leads with the total + biggest driver, lets the user TOGGLE any combination of
+// items "fixed" (multi-variable what-if) to see the remaining waste, charts the
+// PRICE OF WAITING (cost compounds over a horizon slider), and keeps the full
+// methodology depth collapsed below for power users.
+const COI_DOMAIN_PLAIN = {
+  drawdown:           { label: 'Pension & IHT timing', why: 'pulling pension into your estate before the 2027 rule, or drawing in the wrong order' },
+  wrapperSequencing:  { label: 'Un-sheltered investments', why: 'tax drag on holdings sitting outside an ISA or pension' },
+  contributions:      { label: 'Unused pension relief', why: 'higher-rate relief left unclaimed on pension headroom' },
+  taxAllowances:      { label: 'Unused ISA allowance', why: 'cash that could be sheltered from tax each April' },
+  estatePlanning:     { label: 'Estate & will gaps', why: 'lost residence nil-rate band or no current will' },
+  protection:         { label: 'Protection gaps', why: 'cover missing against death or illness' },
+  debt:               { label: 'Expensive debt', why: 'interest you could refinance or clear' },
+  gifting:            { label: 'Gifting allowances', why: 'annual gift exemptions left unused' },
+  propertyDecisions:  { label: 'Property decisions', why: 'tax or cost tied up in property choices' },
+  investmentStrategy: { label: 'Investment efficiency', why: 'return given up versus an efficient mix' },
+}
+function CostDrawer({ coi, depth }) {
+  const rows = useMemo(() => Object.entries(coi?.byDomain || {})
+    .map(([k, v]) => ({ k, v: +v || 0, ...COI_DOMAIN_PLAIN[k] }))
+    .filter(r => r.v > 0)
+    .sort((a, b) => b.v - a.v), [coi])
+  const [fixed, setFixed] = useState(() => ({}))
+  const total = rows.reduce((s, r) => s + r.v, 0)
+  const remaining = rows.filter(r => !fixed[r.k]).reduce((s, r) => s + r.v, 0)
+  const saved = total - remaining
+  const top = rows[0]
+  const maxRow = rows.length ? rows[0].v : 1
+  const toggle = k => setFixed(f => ({ ...f, [k]: !f[k] }))
+
+  if (!rows.length) return (
+    <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>
+      Nothing material is at stake on your plan right now — no unused allowances, tax drag or timing exposure we can see. We'll flag it here if that changes.
+    </div>
+  )
+  return (<>
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What leaving things as they are could cost you</div>
+      <div style={{ fontSize: 15, color: 'var(--c-text)', lineHeight: 1.5 }}>
+        About <strong style={{ color: 'var(--c-coral-text)' }}>{_gk(total)}</strong> of value is at stake across {rows.length} {rows.length === 1 ? 'area' : 'areas'}{top ? <> — the biggest is <strong>{top.label}</strong> at <strong style={{ color: 'var(--c-coral-text)' }}>{_gk(top.v)}</strong>.</> : '.'}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>A mix of one-off exposures (like tax that falls due) and recurring drag (like unused allowances each year). Tick the ones you'd tackle to see what's left. Information only, not advice.</div>
+    </div>
+
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>If you tackled…</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text2)' }}>still at stake <strong style={{ color: remaining > 0 ? 'var(--c-coral-text)' : 'var(--c-mint-text)' }}>{_gk(remaining)}</strong>{saved > 0 && <> · removing <strong style={{ color: 'var(--c-mint-text)' }}>{_gk(saved)}</strong></>}</div>
+      </div>
+      {/* Composition of the total value-at-stake, drillable per driver. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {rows.map(r => {
+          const on = !!fixed[r.k]
+          return (
+            <button key={r.k} onClick={() => toggle(r.k)} className="sw-pressable" style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+              background: on ? 'var(--c-surface2)' : 'var(--c-surface)', border: '1px solid var(--c-border)', width: '100%', opacity: on ? 0.6 : 1 }}>
+              <span style={{ width: 16, height: 16, flexShrink: 0, borderRadius: 5, border: `1.5px solid ${on ? 'var(--c-mint-text)' : 'var(--c-text3)'}`, background: on ? 'var(--c-mint-text)' : 'transparent', color: 'var(--c-bg)', fontSize: 11, fontWeight: 900, lineHeight: '14px', textAlign: 'center' }}>{on ? '✓' : ''}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', textDecoration: on ? 'line-through' : 'none' }}>{r.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: on ? 'var(--c-text3)' : 'var(--c-coral-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(r.v)}</span>
+                </span>
+                <span style={{ display: 'block', height: 4, marginTop: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)' }}>
+                  <span style={{ display: 'block', height: '100%', width: `${Math.max(3, (r.v / maxRow) * 100)}%`, borderRadius: 3, background: on ? 'var(--c-tint-neutral-2)' : 'var(--c-coral-text)' }} />
+                </span>
+                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.4 }}>{r.why}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {coi?.daysToImpact > 0 && coi.daysToImpact < 365 && (
+        <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-tint-amber)', border: '1px solid var(--c-amber-text)', fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          <strong style={{ color: 'var(--c-amber-text)' }}>{coi.daysToImpact} days</strong> until the timing-sensitive part (the pension &amp; IHT exposure) crystallises — the one piece here with a clock on it.
+        </div>
+      )}
+    </div>
+
+    {depth || null}
+    <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+      Each figure is an estimate of value at stake on your current data, traced to the rule or allowance behind it — information and guidance, not personal advice.
+    </div>
+  </>)
 }
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)

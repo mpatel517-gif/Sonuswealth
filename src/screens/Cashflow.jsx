@@ -1087,7 +1087,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     try {
       const spec = buildGoalSpec(entity)
       if (spec.branch !== 'decumulation') return null
-      return solveDecumulation({ entity, goalSpec: spec })
+      // perHolding: per-asset-class growth (cash ~3% vs equity ~6%) + per-line
+      // CGT (real embedded gain, not flat 0.4). Opt-in so test baselines stay
+      // flat; production uses the accurate engine.
+      return solveDecumulation({ entity, goalSpec: spec, opts: { perHolding: true } })
     } catch { return null }
   }, [entity, bv, cv])
   // Same target income + horizon the deterministic plan resolved, so the MC

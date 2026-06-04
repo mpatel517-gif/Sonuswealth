@@ -1351,7 +1351,18 @@ export function sequenceOfReturnsVulnerability(entity, cma, riskEngineFns) {
   const advDeplAge = advDepl
     ? Math.max(currentAge, retirementAge) + advDepl - 1 : longevity;
   const vulnYears = medianDeplAge - advDeplAge;
-  const vulnPounds = (medianVal > 0 ? medianVal : 0) - (advVal > 0 ? advVal : 0);
+  // Pounds-at-risk = the terminal-wealth gap between the median and adverse paths.
+  // SANITY CLAMP (founder reconciliation standard, ported from cashflow-engine.js:461):
+  // this can never exceed the pot it references — when the median path grows to a
+  // large terminal value the raw delta can balloon (e.g. £6.99m on a £1.8m pot).
+  // Clamp so the UI never shows an impossible figure.
+  let vulnPounds = Math.max(0, (medianVal > 0 ? medianVal : 0) - (advVal > 0 ? advVal : 0));
+  if (vulnPounds > startValue) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(`[seqVuln] pounds-at-risk £${Math.round(vulnPounds)} exceeds pot £${Math.round(startValue)} — clamping (metric regression?)`);
+    }
+    vulnPounds = startValue;
+  }
 
   // Mitigation savings: how much extra B1/B2 buffer prevents adverse depletion?
   const mitigationSavings = vulnYears > 0 ? targetIncomeReal * vulnYears : 0;

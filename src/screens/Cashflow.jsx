@@ -2110,7 +2110,7 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
     { ...sustainTile, spark: lastSpark },
     ...(drawdownTile ? [drawdownTile] : []),
     { key: 'resilience', q: 'What if markets fall?', headline: sev ? `${sev} exposure` : 'Stress-tested', sub: 'a bad run of markets early on', tone: 'acc', spark: resSpark },
-    { key: 'whatif', q: 'What would change it most?', headline: 'Top levers', sub: 'what-if & goal-seek', tone: 'acc' },
+    { key: 'whatif', q: 'What would change it most?', headline: 'Top levers', sub: 'rank the levers by impact', tone: 'acc' },
   ]
   // Whole-tab grid: §A "now" tiles first, the trajectory four, then §C "costs"
   // (and methods) last — each extra tile carries its own render-prop content.
@@ -2133,9 +2133,11 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                 {openTile?.content || null}
                 {open === 'lastability' && <LastabilityDrawer entity={entity} decSolve={decSolve} fr={fr} fi={fi} />}
                 {open === 'drawdown' && <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />}
-                {open === 'resilience' && <>
+                {open === 'resilience' && (isDecum ? <>
+                  {/* Decumulator: the drawdown sits in markets — sequence-risk story,
+                      interactive crash explorer, then the engine's Monte-Carlo range. */}
                   <SequenceStressHero entity={entity} seqVuln={seqVuln} />
-                  {decSolve?.rankedPaths?.length ? <StressExplorer decSolve={decSolve} /> : null}
+                  <StressExplorer decSolve={decSolve} />
                   {pos && !pos.insufficient_data && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1 && (() => {
                     const startYear = new Date().getFullYear()
                     const pyp = pos.per_year_percentiles
@@ -2147,7 +2149,12 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                     </>)
                   })()}
                   {seqVuln && seqVuln.good_path && seqVuln.bad_path && !seqVuln.insufficient_data && <SequenceStressVisV2 goodSequence={seqVuln.good_path} badSequence={seqVuln.bad_path} horizonYears={seqVuln.horizon_years || 30} />}
-                </>}
+                </> : <>
+                  {/* Accumulator: not drawing yet, so the decumulation success-probability
+                      simulation (which read a contradictory "0% / plan survives") does NOT
+                      apply. The real risk is a crash WHILE saving delaying FI. (D1 fix.) */}
+                  <StressExplorerAccum entity={entity} fi={fi} />
+                </>)}
                 {open === 'whatif' && <LeversCard entity={entity} decSolve={decSolve} fi={fi} />}
               </RevealStagger>
             </div>
@@ -3891,7 +3898,8 @@ function LastAccum({ entity, fi }) {
   const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
   const fiTarget = Math.round(fi?.fiTarget || 0)
   const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
-  const seedSaveAnnual = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); const net = (+(m?.surplus) || 0) - (+(m?.deficit) || 0); return Math.max(0, Math.round(net * 12)) } catch { return 0 } })()
+  const rawNetMonthly = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); return (+(m?.surplus) || 0) - (+(m?.deficit) || 0) } catch { return 0 } })()
+  const seedSaveAnnual = Math.max(0, Math.round(rawNetMonthly * 12))
   const seedPotK = Math.max(1, Math.round(invested0 / 1000))
   const seedSaveK = Math.max(0, Math.round(seedSaveAnnual / 1000))
   const seedG = 5
@@ -3918,6 +3926,11 @@ function LastAccum({ entity, fi }) {
           ? <>at <strong style={{ color: 'var(--c-mint-text)' }}>age {fiAge}</strong>.</>
           : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong> — raise saving or growth below.</>}
       </div>
+      {rawNetMonthly < 0 && (
+        <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--c-tint-coral)', border: '1px solid var(--c-coral-text)', fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          But right now you're spending <strong style={{ color: 'var(--c-coral-text)' }}>{_gmo(Math.abs(rawNetMonthly) * 12)}/mo more than you earn</strong> — so this projection assumes you add <strong>nothing</strong> new (and existing pots just grow). Closing that monthly gap is step one; until then you're relying on growth alone. See "Am I OK right now?".
+        </div>
+      )}
     </div>
 
     <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
@@ -4171,6 +4184,130 @@ function CostDrawer({ coi, depth }) {
       Each figure is an estimate of value at stake on your current data, traced to the rule or allowance behind it — information and guidance, not personal advice.
     </div>
   </>)
+}
+// Accumulation under a crash — the accumulator's "What if markets fall?" (D1). A
+// market crash WHILE you're saving delays the day you reach independence; this
+// lets the user drag the crash and see how many years it pushes FI back, with a
+// back-solve for the biggest crash that still hits a chosen FI age.
+function accumStressPath({ pot, annualSaving, growth, age0, years, crashPct, crashAtYear }) {
+  let bal = +pot || 0
+  const g = growth != null ? +growth : 0.05
+  const sv = +annualSaving || 0
+  const out = [{ age: age0, balance: Math.round(bal) }]
+  const n = Math.max(1, years)
+  for (let y = 1; y <= n; y++) {
+    const yg = (y === crashAtYear) ? -Math.abs(crashPct) : g
+    bal = Math.max(0, bal * (1 + yg) + sv)
+    out.push({ age: age0 + y, balance: Math.round(bal) })
+  }
+  return out
+}
+function _fiAge(path, target, fallback) { const h = path.find(r => (r.balance || 0) >= target); return h ? h.age : fallback }
+function solveSurvivableCrashAccum({ pot, annualSaving, growth, age0, years, crashAtYear, fiTarget, targetAge }) {
+  let lo = 0, hi = 0.9
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2
+    const age = _fiAge(accumStressPath({ pot, annualSaving, growth, age0, years, crashPct: mid, crashAtYear }), fiTarget, 999)
+    if (age <= targetAge) lo = mid; else hi = mid   // still reaches in time → try a bigger crash
+  }
+  return Math.round(lo * 100) / 100
+}
+function AccumStressChart({ baseline, stressed, target, crashAtAge }) {
+  const a = (baseline || []).filter(Boolean), b = (stressed || []).filter(Boolean)
+  if (a.length < 2) return null
+  const maxV = Math.max(...a.map(r => r.balance || 0), ...b.map(r => r.balance || 0), target || 0, 1) * 1.05
+  const W = 320, H = 160, pL = 44, pR = 10, pT = 12, pB = 28, pw = W - pL - pR, ph = H - pT - pB
+  const n = a.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const mk = pts => pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  const crashIdx = a.findIndex(r => r.age === crashAtAge)
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your savings — calm markets vs a crash</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Your savings climbing to the independence target under calm markets versus an early crash">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        {target > 0 && target < maxV && (
+          <g>
+            <line x1={pL} y1={py(target)} x2={W - pR} y2={py(target)} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="4 2" />
+            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">FI target {_gk(target)}</text>
+          </g>
+        )}
+        {crashIdx > 0 && (
+          <g>
+            <line x1={px(crashIdx)} y1={pT} x2={px(crashIdx)} y2={pT + ph} stroke="var(--c-amber-text)" strokeWidth="0.75" strokeDasharray="2 2" />
+            <text x={px(crashIdx)} y={pT - 3} fontSize="8" fill="var(--c-amber-text)" textAnchor="middle">crash</text>
+          </g>
+        )}
+        <path d={mk(a)} fill="none" stroke="var(--c-mint-text)" strokeWidth="1.75" />
+        <path d={mk(b)} fill="none" stroke="var(--c-coral-text)" strokeWidth="1.75" />
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {a[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+      <div style={{ display: 'flex', gap: 14, marginTop: 2, fontSize: 10, color: 'var(--c-text3)' }}>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-mint-text)', verticalAlign: 'middle', marginRight: 4 }} />Calm markets</span>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-coral-text)', verticalAlign: 'middle', marginRight: 4 }} />After the crash</span>
+      </div>
+    </div>
+  )
+}
+function StressExplorerAccum({ entity, fi }) {
+  const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+  const fiTarget = Math.round(fi?.fiTarget || 0)
+  const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
+  const seedSave = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); return Math.max(0, Math.round(((+(m?.surplus) || 0) - (+(m?.deficit) || 0)) * 12)) } catch { return 0 } })()
+  const growth = 0.05
+  const horizonAge = Math.min(100, age0 + 50)
+  const years = Math.max(1, horizonAge - age0)
+  const [crashPctI, setCrashPctI] = useState(30)
+  const [crashYr, setCrashYr] = useState(1)
+  const dirty = crashPctI !== 30 || crashYr !== 1
+  const reset = () => { setCrashPctI(30); setCrashYr(1) }
+  const common = { pot: invested0, annualSaving: seedSave, growth, age0, years }
+  const baseline = useMemo(() => accumStressPath({ ...common, crashPct: 0, crashAtYear: -1 }), [invested0, seedSave, age0, years])
+  const stressed = useMemo(() => accumStressPath({ ...common, crashPct: crashPctI / 100, crashAtYear: crashYr }), [invested0, seedSave, age0, years, crashPctI, crashYr])
+  const baseAge = _fiAge(baseline, fiTarget, null)
+  const stressAge = _fiAge(stressed, fiTarget, null)
+  const delay = (baseAge && stressAge) ? stressAge - baseAge : null
+  const onSurvivable = (tAge) => setCrashPctI(Math.round(solveSurvivableCrashAccum({ ...common, crashAtYear: crashYr, fiTarget, targetAge: tAge }) * 100))
+
+  if (!fiTarget) return null
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Stress it yourself — a crash while you save</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+        A <strong style={{ color: 'var(--c-coral-text)' }}>{crashPctI}% crash</strong> {crashYr <= 1 ? 'next year' : `in ${crashYr} years`} {baseAge == null
+          ? <>doesn't change much — you don't reach the target within this horizon either way.</>
+          : delay > 0
+            ? <>pushes your independence date from <strong style={{ color: 'var(--c-mint-text)' }}>age {baseAge}</strong> to <strong style={{ color: 'var(--c-coral-text)' }}>age {stressAge}</strong> — about <strong>{delay} {delay === 1 ? 'year' : 'years'}</strong> later.</>
+            : <>barely moves your independence date — you'd still reach it around <strong style={{ color: 'var(--c-mint-text)' }}>age {stressAge || baseAge}</strong>.</>}
+      </div>
+      <AccumStressChart baseline={baseline} stressed={stressed} target={fiTarget} crashAtAge={age0 + crashYr} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Crash size" value={crashPctI} min={5} max={60} step={5} fmt={v => `−${v}%`} onChange={setCrashPctI} dirty={crashPctI !== 30} />
+        <SolverSlider label="When it hits" value={crashYr} min={1} max={Math.min(20, years)} step={1} fmt={v => v <= 1 ? 'next yr' : `in ${v}y`} onChange={setCrashYr} dirty={crashYr !== 1} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — still reach FI by" value={Math.min(Math.max(stressAge || baseAge || age0 + 10, age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onSurvivable} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you'd still want to be independent by — the engine solves the biggest crash you could ride out and still get there.</div>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        A single-shock illustration on your assumptions — not a forecast. The further off your target, the more time you have to recover.
+      </div>
+    </div>
+  )
 }
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)

@@ -1059,6 +1059,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     [entity, bv, cv]
   )
   const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity, bv, cv])
+  // Net monthly position. monthlySurplus clamps surplus to ≥0 and routes the
+  // negative into `deficit`, so surplus − deficit is the true signed figure that
+  // reconciles with Home's deficit hero (same engine, was read off the wrong key).
+  const msNet = (+(ms?.surplus) || 0) - (+(ms?.deficit) || 0)
   // Canonical net-of-tax cashflow — single source for Sankey + waterfall so they
   // cannot diverge and tax & NI are real, never £0 (2026-06-02 correctness gate).
   const flow = useMemo(() => cashflowFlow(entity, CMA_BUNDLE), [entity, bv, cv])
@@ -1234,13 +1238,13 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
 
-        {/* §0 — SECTION DRAWER (2026-05-28) — same 8-chip MoneyX nav that lives
-             on MyMoney. Founder direction: every MoneyX-family screen should
-             carry the same drawer so the user can pivot between Balance Sheet,
-             Income Statement, Cashflow, Tax, Protection, Business, Trusts and
-             Cost-of-inaction from any tab. Chips that lead off this screen call
-             onNav(route); the active chip (Cashflow) is filled accent. */}
-        <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} />
+        {/* §0 — STATEMENT STRIP (MoneyXDrawer) REMOVED from Cashflow (founder
+             decision 2026-06-04, locking a 3×-oscillating call). The Balance
+             Sheet / Income Statement / Tax / Protection / Trusts / Cost-of-
+             inaction cross-statement nav dominated the top of the tab (worst on
+             mobile, where it overflowed) and answered "why am I seeing Balance
+             Sheet on Cashflow?". Other statements are reachable via the sidebar
+             and contextual deep-links. Strip stays on the screens where it fits. */}
 
         {/* §1 — Today / Future / Plan / What if — PRIMARY navigation chrome.
             Moved to top of body (was mid-page round 7) so the user has the
@@ -1263,45 +1267,22 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             lb={lb}
             fr={fr}
             pos={pos?.pos ?? pos}
-            health={health}
+            fi={fi}
+            ms={ms}
             decSolve={decSolve}
           />
         </FadeInOnMount>
 
-        {/* SequenceStressHero RELOCATED into §B (A3 calm-first): it now sits
-            under the funded-ratio anchor as the risk read, not as the doom
-            banner that opened the tab. (Was P13-3 IFA must-fix — still prominent
-            in §B, just no longer the very first thing the user sees.) */}
+        {/* Cashflow Health Score REMOVED (founder decision 2026-06-04): the
+            composite band needed an apology note ("reads Healthy but surplus is
+            £0") and blended accumulation metrics into a single number that
+            contradicted the hero. The "Am I OK right now?" tile owns that job
+            honestly and per-persona. CashflowHealthHero kept in-file for the
+            health drill only (reachable from that tile if ever wanted).
 
-        {/* §3 — Cashflow Health Score hero (band + 5 sub-scores with ⓘ tooltips). */}
-        <FadeInOnMount delay={100}>
-          <div style={{ position: 'relative' }}>
-            <CashflowHealthHero
-              health={health}
-              incomeAll={incomeAll}
-              ms={ms}
-              fr={fr}
-              entity={entity}
-            />
-            <button
-              onClick={() => setDrillView('health')}
-              className="sw-chip sw-chip-sm sw-press"
-              style={{
-                position: 'absolute', top: 14, right: 14,
-                cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                color: 'var(--c-acc)',
-              }}
-            >
-              Detail ›
-            </button>
-          </div>
-        </FadeInOnMount>
-
-        {/* §4 — Monthly seasonality heatmap (depth visual). */}
-        <FadeInOnMount delay={140}>
-          <CashflowCalendarHeatmap entity={entity} />
-        </FadeInOnMount>
+            Monthly seasonality heatmap REMOVED: it rendered 12 identical green
+            bars ("all months surplus") — placeholder data with no real series,
+            and it contradicted the actual surplus. Real-or-nothing per §9. */}
 
         {/* Scenario seed banner — surfaces what the user asked us to model when
             they landed here via a TappableNumber "Tweak in scenario mode" link. */}
@@ -1355,8 +1336,12 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             extraTiles={[
               // §A "Now" → first tile (the whole NOW section moved intact).
               { key: 'now', position: 'start', q: 'Am I OK right now?',
-                headline: (ms?.surplus >= 0 ? 'In surplus' : 'In deficit'),
-                sub: 'spend, buffer & income sources', tone: (ms?.surplus >= 0 ? 'mint' : 'coral'),
+                // Net = surplus − deficit. monthlySurplus clamps surplus to ≥0
+                // (negatives go to `deficit`), so reading `surplus` alone made
+                // everyone "In surplus £0". Net ties this tile to Home's deficit.
+                headline: (msNet > 0 ? 'In surplus' : msNet < 0 ? 'In deficit' : 'Breaking even'),
+                sub: `${msNet < 0 ? '−' : ''}${fmtSeedNum(Math.abs(msNet))}/mo · spend, buffer & income`,
+                tone: (msNet > 0 ? 'mint' : msNet < 0 ? 'coral' : 'acc'),
                 content: nowSectionContent },
               // Methods → its own tile (decumulators with a solved plan only).
               ...(decSolve?.rankedPaths?.length ? [{ key: 'methods', q: 'How fast can I spend?', headline: '5 methods',
@@ -1371,8 +1356,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                   horizon={decSolve.inputs?.horizonAge || 95}
                   primaryGoal={decSolve.binding?.primaryGoal || 'min_lifetime_tax'} />) }] : []),
               // §C "Costs/Depth" → last tile (engine internals, always-open here).
-              { key: 'costs', q: "What's it costing?", headline: 'Engine depth',
-                sub: 'cost of inaction · frontier · PRC/PCC', tone: 'acc',
+              { key: 'costs', q: "What's it costing?", headline: coi?.total ? `${fmtSeedNum(coi.total)}/yr` : 'See depth',
+                sub: 'cost of inaction · charges · efficiency', tone: 'acc',
                 content: (<EngineInternalsReveal alwaysOpen coi={coi} coiVar={coiVar} prcPcc={prcPcc} reality={reality} mdd={mdd} eff={eff} fi={fi} health={health} fr={fr} pos={pos} />) },
             ]}
           />
@@ -1543,7 +1528,52 @@ function SubAnchor({ prcPcc }) {
 // v0.3 R3 fix (2026-05-26): purpose-statement was a floating question with
 // no answer next to it. The answer IS computable from runway + funded ratio
 // + PoS. Surface it inline so the user sees the headline take in 3 seconds.
-function PurposeStatement({ entity, lb, fr, pos, health, decSolve }) {
+// ── Hero: TWO LENSES, clearly separated (founder decision 2026-06-04) ────────
+// The old single sentence welded two disagreeing numbers with "but" ("pots
+// stretch the full plan BUT cover only 48%") and never named WHY they differ.
+// They were never contradictory: `fundedRatio` counts INVESTABLE POTS ONLY
+// (excludes state pension + DB + annuities); `solveDecumulation` includes that
+// secure-income floor. The gap between them IS the secure income. So we show
+// two named lenses instead of one hedged line — never blended, never "but".
+//   Decumulator → Lens A "Your plan" (lived answer, incl. secure floor) ·
+//                 Lens B "If markets disappoint" (investment self-sufficiency)
+//   Accumulator → funded-ratio is the WRONG metric (it assumes zero future
+//                 saving), so Lens A "On track" (FI progress) · Lens B
+//                 "Resilience" (buffer + the surplus lever). No doom %.
+const HERO_TONE = {
+  good: 'var(--c-acc)', warn: '#FF9500', bad: 'var(--c-coral, #FF6F7D)', neutral: 'var(--c-text3)',
+}
+function HeroLens({ label, head, sub, tone = 'neutral', gauge = null, tieout }) {
+  const c = HERO_TONE[tone] || HERO_TONE.neutral
+  return (
+    <div data-tieout={tieout} style={{
+      flex: '1 1 240px', minWidth: 0,
+      padding: '12px 14px',
+      background: `color-mix(in srgb, ${c} 9%, var(--c-surface))`,
+      border: `1px solid color-mix(in srgb, ${c} 26%, transparent)`,
+      borderRadius: 'var(--r-md, 12px)',
+    }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: c, marginBottom: 5 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.32 }}>
+        {head}
+      </div>
+      {sub && (
+        <div style={{ fontSize: 11.5, color: 'var(--c-text3)', lineHeight: 1.45, marginTop: 5 }}>
+          {sub}
+        </div>
+      )}
+      {gauge != null && (
+        <div style={{ marginTop: 8, height: 6, borderRadius: 99, background: 'var(--c-surface2)', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.max(2, Math.min(100, Math.round(gauge * 100)))}%`, height: '100%', background: c, borderRadius: 99 }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
   // Runway months — prefer the liquidityBuffer engine answer; fall back to
   // cash ÷ essentials if needed.
   let runwayMo = +(lb?.months_covered ?? lb?.months ?? 0)
@@ -1560,93 +1590,113 @@ function PurposeStatement({ entity, lb, fr, pos, health, decSolve }) {
       || 0)
     if (cashLike && mEss) runwayMo = Math.round(cashLike / mEss)
   }
-  const fundedRatio = +(fr?.funded_ratio ?? fr?.ratio ?? 0)
-  const posPct = pos != null ? Math.round((+pos) * 100) : null
-  const healthScore = +(health?.score ?? 0)
-
-  // Compose the one-line answer. Three states with honest qualifiers.
-  let headline = 'Add income and essentials to see the answer.'
-  let tone = 'neutral'
-  if (runwayMo > 0 || fundedRatio > 0) {
-    if (runwayMo >= 24 && fundedRatio >= 0.85 && (posPct == null || posPct >= 75)) {
-      headline = 'On track. Cash buffer holds, plan is funded, and the long-run model is healthy.'
-      tone = 'good'
-    } else if (runwayMo < 6 || fundedRatio < 0.5) {
-      headline = runwayMo < 6
-        ? `Cash buffer covers ${runwayMo} month${runwayMo === 1 ? '' : 's'} of essentials. Plan is under-funded.`
-        : `Plan is under-funded — current trajectory covers ${Math.round(fundedRatio * 100)}% of target.`
-      tone = 'bad'
-    } else {
-      headline = `Buffer ${runwayMo}mo · plan ${Math.round(fundedRatio * 100)}% funded${posPct != null ? ` · PoS ${posPct}%` : ''}. Manageable, with attention points below.`
-      tone = 'warn'
-    }
-  }
-
-  const toneColor = tone === 'good' ? 'var(--c-acc)'
-    : tone === 'warn' ? '#FF9500'
-    : tone === 'bad' ? 'var(--c-coral, #FF6F7D)'
-    : 'var(--c-text3)'
-
-  // Adaptive by life stage (Phase 2): a saver and a retiree are asking different
-  // questions of this tab. The hero question + chip reflect which one applies.
   const stage = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
-  const stageChip = stage === 'decumulator' ? 'Drawing income' : 'Building wealth'
-  const stageQuestion = stage === 'decumulator'
-    ? 'Will my money last? How much you can draw, for how long, and in the most tax-efficient way. Information only.'
-    : 'Are you saving enough — and is your plan on track for the life you want? Information only.'
+  const isDecum = stage === 'decumulator' && !!decSolve?.rankedPaths?.length
 
-  // Decumulators WITH a solved plan: lead with the direct answer to the tab's
-  // canonical purpose. A decumulator with no target income has no routes
-  // (rankedPaths empty) — don't claim "lasts the full plan" when there's no plan;
-  // fall through to the generic buffer/funded headline so grid + drawer agree.
-  const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
-  if (stage === 'decumulator' && decSolve?.rankedPaths?.length) {
-    const fundedPct = fundedRatio > 0 ? Math.round(fundedRatio * 100) : null
-    if (lastsAge) {
-      headline = `On these assumptions, your money lasts to age ${lastsAge}.`
-      tone = lastsAge >= 90 ? 'good' : lastsAge >= 80 ? 'warn' : 'bad'
-      if (fundedPct != null) headline += ` Plan ${fundedPct}% funded.`
-    } else if (fundedRatio > 0 && fundedRatio < 0.9) {
-      // Pots don't deplete within the plan, but only because they can't deliver
-      // the full target — "lasts the full plan" alone would mislead. Reconcile.
-      headline = `On these assumptions, the pots stretch the full plan but cover only ${fundedPct}% of your target income.`
-      tone = fundedRatio < 0.6 ? 'bad' : 'warn'
-    } else {
-      headline = 'On these assumptions, your money lasts the full plan — the pots don’t run out.'
-      tone = 'good'
-      if (fundedPct != null) headline += ` Plan ${fundedPct}% funded.`
+  const fundedRatioVal = +(fr?.funded_ratio ?? fr?.ratio ?? 0)
+  const fundedPct = fundedRatioVal > 0 ? Math.round(fundedRatioVal * 100) : null
+  const swrPct = fr?.swr ? Math.round(fr.swr * 1000) / 10 : null
+  const posPct = pos != null ? Math.round((+pos) * 100) : null
+
+  let lensA, lensB, question
+  if (isDecum) {
+    const floor = decSolve.floor || {}
+    const inp = decSolve.inputs || {}
+    const target = inp.incomeTargetAnnual || fr?.target_income_real || 0
+    const secure = floor.grossAnnual || 0
+    // Tie out to the displayed target: residual = target − secure (gross basis),
+    // so "£31k secure + £65k pots" sums to the £96k target on screen. (floor.
+    // residualNeed is net-of-tax and wouldn't reconcile with the gross secure.)
+    const residual = Math.max(0, target - secure)
+    const lastsAge = decSolve.rankedPaths?.[0]?.depletedAtAge
+    const horizonAge = inp.horizonAge || null
+    question = 'Will your money last — and how much can you safely draw? Information only.'
+    // Lens A — the LIVED plan: includes the secure-income floor, so it's the
+    // complete answer ("lasts to X"), not the investments-only view.
+    lensA = {
+      label: 'Your plan',
+      tone: lastsAge ? (lastsAge >= 90 ? 'good' : lastsAge >= 80 ? 'warn' : 'bad') : 'good',
+      head: lastsAge
+        ? `Drawing ${fmtSeedNum(target)}/yr, your money lasts to age ${lastsAge}.`
+        : `Your ${fmtSeedNum(target)}/yr target holds${horizonAge ? ` through age ${horizonAge}` : ' for the full plan'} — your pots don’t run out.`,
+      sub: secure > 0
+        ? `${fmtSeedNum(secure)}/yr is secure income (state pension + DB); your pots supply the remaining ${fmtSeedNum(residual)}/yr.`
+        : 'Every pound comes from your pots — no guaranteed income floor is captured yet.',
+      tieout: 'cashflow.hero.plan',
     }
-  } else if (stage === 'decumulator' && decSolve && !decSolve.rankedPaths?.length) {
-    // Decumulator who hasn't set a target income → no plan can be solved. Prompt
-    // for it rather than the generic buffer line (or the accumulator "building").
-    headline = 'Add a target retirement income to see how long your money lasts — and the most tax-efficient way to draw it.'
-    tone = 'neutral'
+    // Lens B — investment self-sufficiency. The SAME funded ratio, but framed
+    // honestly: it's what your pots alone would cover; the gap is the secure
+    // income named in Lens A. Never welded to Lens A with "but".
+    lensB = {
+      label: 'If markets disappoint',
+      tone: fundedRatioVal >= 0.85 ? 'good' : fundedRatioVal >= 0.6 ? 'warn' : 'bad',
+      head: fundedPct != null
+        ? `Your investments alone fund ${fundedPct}% of the target.`
+        : 'Not enough investment data to stress-test.',
+      sub: fundedPct != null
+        ? `At a ${swrPct ?? 4}% safe-withdrawal rate your pots cover ${fundedPct}%; the rest leans on the secure income above.${posPct != null ? ` ${posPct}% of simulated markets sustain the full plan.` : ''}`
+        : '',
+      gauge: fundedPct != null ? fundedRatioVal : null,
+      tieout: 'cashflow.hero.resilience',
+    }
+  } else {
+    // Accumulator — funded-ratio assumes ZERO future saving, so it's the wrong
+    // verdict here (that's why "under-funded 36%" was nonsense for a 35-yo).
+    // Lens A = FI progress (a real current-state measure); Lens B = buffer +
+    // the monthly-surplus lever. No doom percentage.
+    const fiPct = fi?.ratio != null ? Math.round(fi.ratio * 100) : null
+    const fiMult = fi?.multiple ?? null
+    // monthlySurplus clamps surplus to ≥0 and puts the negative in `deficit`,
+    // so the true net is surplus − deficit. Reading `surplus` alone made every
+    // persona look like £0/"breaking even" (and Home, which reads the deficit,
+    // disagreed). Net reconciles the two tabs.
+    const surplusM = (+(ms?.surplus) || 0) - (+(ms?.deficit) || 0)
+    question = 'Are you saving enough, and on track for the life you want? Information only.'
+    lensA = {
+      label: 'On track',
+      tone: fiPct != null && fiPct >= 100 ? 'good' : fiPct != null && fiPct >= 40 ? 'warn' : 'neutral',
+      head: fiPct != null
+        ? (fiPct >= 100
+            ? `You’ve reached financial independence — ${fiMult}× your target spend.`
+            : `You’re ${fiPct}% of the way to financial independence.`)
+        : 'Add investments and a target to track financial independence.',
+      sub: fiPct != null
+        ? `Financial independence ≈ 25× your annual spend. You hold ${fiMult}× today — keep investing to close the gap.`
+        : '',
+      tieout: 'cashflow.hero.fi',
+    }
+    lensB = {
+      label: 'Resilience',
+      tone: runwayMo >= 6 ? 'good' : runwayMo >= 3 ? 'warn' : 'bad',
+      head: runwayMo > 0
+        ? `Your cash buffer covers ${runwayMo} month${runwayMo === 1 ? '' : 's'} of essentials.`
+        : 'No cash buffer captured yet.',
+      sub: surplusM > 0
+        ? `You’re saving about ${fmtSeedNum(surplusM)}/mo — the lever that compounds toward the goal.`
+        : surplusM < 0
+          ? `Spending exceeds income by ${fmtSeedNum(Math.abs(surplusM))}/mo — closing that gap is the first lever.`
+          : 'Monthly surplus is about £0 — nothing is being saved right now; that’s the lever to watch.',
+      tieout: 'cashflow.hero.resilience',
+    }
   }
+
+  const stageChip = stage === 'decumulator' ? 'Drawing income' : 'Building wealth'
 
   return (
-    <div style={S.purpose}>
-      {/* v0.3 R3v2 Frontend critique fix: answer FIRST, question second.
-          The headline IS the answer; the question is the sub-context. */}
-      <div style={{
-        padding: '10px 14px',
-        background: `color-mix(in srgb, ${toneColor} 10%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${toneColor} 24%, transparent)`,
-        borderRadius: 'var(--r-md)',
-        fontSize: 15, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.4,
-      }}>
-        {headline}
-        {healthScore > 0 && (
-          <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--c-text3)', fontWeight: 500 }}>
-            · Health {healthScore}/100
-          </span>
-        )}
+    <div style={{ ...S.purpose, textAlign: 'left' }}>
+      {/* TWO LENSES, never blended. Each owns its own number; Lens A's sub-line
+          names WHY the two views differ (the secure income), so they read as
+          complements, not the old self-contradicting "stretch ... but 48%". */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <HeroLens {...lensA} />
+        <HeroLens {...lensB} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <span className="sw-chip sw-chip-sm" data-tieout="cashflow.life-stage" style={{ fontWeight: 600 }}>
           {stageChip}
         </span>
         <div style={{ ...S.purposeLine2, fontSize: 11, color: 'var(--c-text3)' }}>
-          {stageQuestion}
+          {question}
         </div>
       </div>
     </div>
@@ -1887,16 +1937,34 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   const isDecum = !!(decSolve?.rankedPaths?.length)
   let decumStage = false
   try { decumStage = inferLifeStage(entity) === 'decumulator' } catch { decumStage = false }
+  const fiPct = fi?.ratio != null ? Math.round(fi.ratio * 100) : null
+  // planAge = when pots deplete, or the plan horizon when they never do — so the
+  // tile says "To age 95" in step with the hero, not the bare "0.48×" funded
+  // ratio (which keys off depletedAtAge and is null when pots hold).
+  const planAge = lastsAge || decSolve?.inputs?.horizonAge || null
+  // Sustainability tile is ADAPTIVE — one tile, not two. Decumulators ask "will
+  // it last" (plan answer + funded stress); accumulators ask "am I on track"
+  // (FI progress, NOT funded-ratio doom). This kills the duplicate funded/FI
+  // pair the founder flagged ("Will my money last 0.36×" beside "Building
+  // wealth"). Both drill to the same lastability panel.
+  const sustainTile = isDecum
+    ? { key: 'lastability', q: 'Will my money last?', headline: planAge ? `To age ${planAge}` : (ratio ? `${ratio.toFixed(2)}×` : '—'),
+        sub: ratio ? `plan + ${Math.round(ratio * 100)}% funded on investments` : 'your plan + market stress', tone: (planAge ? planAge >= 90 : ratio >= 1) ? 'mint' : 'coral' }
+    : { key: 'lastability', q: 'Am I on track? (FI)', headline: fiPct != null ? (fiPct >= 100 ? 'On track' : `${fiPct}% to FI`) : '—',
+        sub: 'progress to financial independence', tone: (fiPct != null && fiPct >= 100) ? 'mint' : 'acc' }
+  // Drawdown tile only for decumulators — for an accumulator it would open an
+  // empty ScenarioForwardSummary (decSolve is null → the panel returns null).
+  // That empty-drawer bug is why the accumulator face must not show this tile.
   const drawdownTile = isDecum
     ? { key: 'drawdown', q: 'How do I draw it down?', headline: routeName || 'Your plan', sub: lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map', tone: 'acc' }
     : decumStage
       ? { key: 'drawdown', q: 'How do I draw it down?', headline: 'Set a target', sub: 'add a target income', tone: 'acc' }
-      : { key: 'drawdown', q: 'Am I on track? (FI)', headline: 'Building wealth', sub: 'progress to FI', tone: 'acc' }
+      : null
   const baseTiles = [
-    { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
-    drawdownTile,
-    { key: 'resilience', q: 'What could break it?', headline: sev ? String(sev) : 'Stress test', sub: 'sequence & market risk', tone: 'acc' },
-    { key: 'whatif', q: 'What would change it most?', headline: 'Model levers', sub: 'what-if & goal-seek', tone: 'acc' },
+    sustainTile,
+    ...(drawdownTile ? [drawdownTile] : []),
+    { key: 'resilience', q: 'What could break it?', headline: sev ? `${sev} risk` : 'Sequence risk', sub: 'bad-returns sequence & markets', tone: 'acc' },
+    { key: 'whatif', q: 'What would change it most?', headline: 'Top levers', sub: 'what-if & goal-seek', tone: 'acc' },
   ]
   // Whole-tab grid: §A "now" tiles first, the trajectory four, then §C "costs"
   // (and methods) last — each extra tile carries its own render-prop content.

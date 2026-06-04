@@ -1999,7 +1999,25 @@ const CF_TILE_TITLES = {
   resilience: 'What if markets fall?',
   whatif: 'What would change it most?',
 }
-function QuestionTile({ q, headline, sub, tone, onClick }) {
+// Tile-face sparkline (balance-sheet grammar). Draws a real engine series only —
+// pass `spark` = [{balance|value}] with ≥2 points or it renders nothing (no
+// fabricated trend). `spark` carries a tone so depleting curves read coral.
+function TileSparkline({ pts, color }) {
+  const s = (pts || []).filter(p => p && (p.balance != null || p.value != null)).map(p => +(p.balance ?? p.value))
+  if (s.length < 2) return null
+  const W = 100, H = 26
+  const max = Math.max(...s, 1), min = Math.min(...s, 0)
+  const span = max - min || 1
+  const px = i => (i / (s.length - 1)) * W
+  const py = v => H - ((v - min) / span) * (H - 4) - 2
+  const d = s.map((v, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(v).toFixed(1)).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block', marginTop: 6 }} aria-hidden="true">
+      <path d={d} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+function QuestionTile({ q, headline, sub, tone, onClick, spark }) {
   const accent = tone === 'coral' ? 'var(--c-coral-text)' : tone === 'mint' ? 'var(--c-mint-text)' : 'var(--c-acc)'
   return (
     <button onClick={onClick} className="sw-card sw-lift sw-pressable" style={{
@@ -2009,6 +2027,7 @@ function QuestionTile({ q, headline, sub, tone, onClick }) {
       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text3)' }}>{q}</div>
       <div style={{ fontSize: 19, fontWeight: 800, color: accent, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{headline}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>{sub}</div>}
+      {spark && spark.length > 1 && <TileSparkline pts={spark} color={accent} />}
       <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>View ›</div>
     </button>
   )
@@ -2062,10 +2081,35 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
     : decumStage
       ? { key: 'drawdown', q: 'Where my income comes from', headline: 'Set a target', sub: 'add a target income to plan it', tone: 'acc' }
       : null
+  // Tile-face sparklines — REAL engine series only (balance-sheet grammar, P4-04).
+  // Lastability: the pot trajectory (depletion for decum, accumulation for accum).
+  // Resilience: the Monte-Carlo median pot path. Others have no honest single
+  // series, so they carry none (no fabricated trend).
+  const lastSpark = useMemo(() => {
+    try {
+      if (isDecum) {
+        const inp = decSolve.inputs || {}; const a0 = inp.currentAge || 65
+        const hz = Math.max((inp.horizonAge || 95) + 5, 105)
+        const pf = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+        if (!(pf > 0)) return null
+        const mid = recommendMethodForGoal(decSolve.binding?.primaryGoal || 'min_lifetime_tax')
+        return methodPath(mid, { portfolio: pf, years: hz - a0, growth: inp.growth ?? 0.05, inflation: inp.inflation ?? 0.025, essentialsAnnual: Math.round((inp.incomeTargetAnnual || 0) * 0.6), age: a0 })
+      }
+      if (fi?.fiTarget) {
+        const a0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+        const invested = Math.round((fi.fiTarget || 0) * (fi.ratio || 0))
+        const sv = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); return Math.max(0, ((+(m?.surplus) || 0) - (+(m?.deficit) || 0)) * 12) } catch { return 0 } })()
+        return accumProjection({ pot: invested, annualSaving: sv, growth: 0.05, age0: a0, years: Math.min(50, 100 - a0) })
+      }
+    } catch { /* */ }
+    return null
+  }, [entity, decSolve, fi, isDecum])
+  const resSpark = (pos && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1)
+    ? pos.per_year_percentiles.map(p => ({ value: p.p50 })) : null
   const baseTiles = [
-    sustainTile,
+    { ...sustainTile, spark: lastSpark },
     ...(drawdownTile ? [drawdownTile] : []),
-    { key: 'resilience', q: 'What if markets fall?', headline: sev ? `${sev} exposure` : 'Stress-tested', sub: 'a bad run of markets early on', tone: 'acc' },
+    { key: 'resilience', q: 'What if markets fall?', headline: sev ? `${sev} exposure` : 'Stress-tested', sub: 'a bad run of markets early on', tone: 'acc', spark: resSpark },
     { key: 'whatif', q: 'What would change it most?', headline: 'Top levers', sub: 'what-if & goal-seek', tone: 'acc' },
   ]
   // Whole-tab grid: §A "now" tiles first, the trajectory four, then §C "costs"
@@ -2077,7 +2121,7 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} onClick={() => setOpen(t.key)} />)}
+        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} spark={t.spark} onClick={() => setOpen(t.key)} />)}
       </div>
       {open && (
         <DrillStackProvider>

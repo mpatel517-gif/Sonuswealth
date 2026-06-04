@@ -35,6 +35,25 @@ Additive — keeps the 67 solver tests green behind a compat shim.
 4. Tests `tests/decumulation-classify.mjs`: classification-table coverage, exclusion correctness, secure-income floor, relief-lock gating, per-holding (two GIAs different gains) not averaged.
    - Verify: build green; decumulation 67/67 still green; new suite green.
 
+## STATUS (end of autonomous session) — engine bedrock complete
+
+Engine P0–P3 done + hardened; per-holding accuracy wired AND activated in the
+live app. Visual remainder (§A/§C/methods block-moves, snap matrix) needs a
+browser (blocked here). Commits f2c8222…(tip). Suites: all green except
+run-ask-sonu-coverage (integration test, needs live LLM/Supabase backend).
+
+- P0 audit ✅ · P1 classify/normalise ✅ (typed-array schema + BPR lock fixed via
+  Mr T stress) · P2 per-pot growth + per-line CGT ✅ wired+activated · the
+  empty-pots/wrong-floor bug for typed-array personas ✅ fixed (Mr T's drawdown
+  was running on £0 pots) · P3 secure node ✅ · Phase-4 verifiable visuals ✅
+  (drawdown honesty, money-map secure node, headline band, adaptive tile) ·
+  Phase-5: Willy test ✅, supabase node-safety ✅, Fragment flood (needs browser).
+- Remaining for a browser-capable session: §A/§C/methods tile moves + snap
+  matrix; full per-holding sequencer (generateCandidatePaths ordering by
+  per-holding charge/embedded-gain — the 4-pot model with corrected growth/CGT/
+  pots/floor is the 85–90% bar); baseline-refresh to make perHolding the engine
+  default in tests too.
+
 ## PHASE 2 — ENGINE P2: per-holding sequencing
 
 5. Per-asset-class growth as bundle params (`growthAssumptions` block) + `TAX.growthByClass`; `simulatePath` grows each holding at its class/holding rate (not one `ctx.growth`).

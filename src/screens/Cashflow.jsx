@@ -2104,7 +2104,7 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                   })()}
                   {seqVuln && seqVuln.good_path && seqVuln.bad_path && !seqVuln.insufficient_data && <SequenceStressVisV2 goodSequence={seqVuln.good_path} badSequence={seqVuln.bad_path} horizonYears={seqVuln.horizon_years || 30} />}
                 </>}
-                {open === 'whatif' && <GoalSeekCard entity={entity} />}
+                {open === 'whatif' && <LeversCard entity={entity} decSolve={decSolve} fi={fi} />}
               </RevealStagger>
             </div>
           </div>
@@ -4575,6 +4575,163 @@ function FIProgressTile({ entity }) {
 // STUB-01 fix: button now wires onClick to goalSeek(). Slider sets the
 // *target*; clicking Find paths commits it and runs the engine. Default
 // run on mount so the card isn't empty.
+// "What would change it most?" — a CASHFLOW sensitivity ranking (P4-09 replaced
+// the old Wealth-Score goal-seek, which the founder flagged as the wrong subject
+// for this tab). For each real lever the user controls, perturb it by the chosen
+// size and measure the effect on the outcome that matters for their life stage:
+// how many YEARS longer the money lasts (decumulator) or how many years SOONER
+// they reach financial independence (accumulator). Ranked biggest-impact first —
+// the comparison IS the answer — with a size slider so they can see sensitivity.
+function LeversCard({ entity, decSolve, fi }) {
+  const isDecum = !!(decSolve?.rankedPaths?.length)
+  return isDecum ? <LeversDecum decSolve={decSolve} /> : <LeversAccum entity={entity} fi={fi} />
+}
+function _LeverRow({ label, detail, deltaLabel, magnitude, max, positive }) {
+  const col = positive ? 'var(--c-mint-text)' : 'var(--c-coral-text)'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{label}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1, lineHeight: 1.4 }}>{detail}</div>
+        <div style={{ display: 'block', height: 4, marginTop: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)' }}>
+          <div style={{ height: '100%', width: `${Math.max(3, (magnitude / (max || 1)) * 100)}%`, borderRadius: 3, background: col }} />
+        </div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 64 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: col, fontVariantNumeric: 'tabular-nums' }}>{deltaLabel}</div>
+      </div>
+    </div>
+  )
+}
+function LeversDecum({ decSolve }) {
+  const inp = decSolve.inputs || {}
+  const age0 = inp.currentAge || 65
+  const horizonAge = inp.horizonAge || 95
+  const simEndAge = Math.max(horizonAge + 5, 105)
+  const years = Math.max(1, simEndAge - age0)
+  const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+  const growth = inp.growth ?? 0.05
+  const inflation = inp.inflation ?? 0.025
+  const essentials = Math.round((inp.incomeTargetAnnual || 0) * 0.6)
+  const methodId = recommendMethodForGoal(decSolve.binding?.primaryGoal || 'min_lifetime_tax')
+  const [sizePct, setSizePct] = useState(10)
+
+  const base = { portfolio, years, growth, inflation, essentialsAnnual: essentials, age: age0 }
+  const idxAtHorizon = horizonAge - age0
+  const depOf = (opts) => { try { const p = methodPath(methodId, opts); const d = p.find(r => (r.balance || 0) <= 0); return d ? d.age : simEndAge } catch { return simEndAge } }
+  // Estate left at the plan horizon — the metric that DIFFERENTIATES levers once
+  // the pot already outlives the horizon (where "extra years" saturates at the cap).
+  const estateOf = (opts) => { try { const p = methodPath(methodId, opts); const row = p[Math.min(Math.max(0, idxAtHorizon), p.length - 1)]; return Math.max(0, row?.balance || 0) } catch { return 0 } }
+  const result = useMemo(() => {
+    const f = sizePct / 100
+    const baseDep = depOf(base)
+    const survives = baseDep >= simEndAge
+    const measure = survives ? estateOf : depOf
+    const baseVal = measure(base)
+    const dy = Math.max(1, Math.round(years * f / 5))
+    const optsFor = {
+      spend: { ...base, rateScale: 1 - f },
+      grow:  { ...base, growth: growth * (1 + f) },
+      pot:   { ...base, portfolio: portfolio * (1 + f) },
+      delay: { ...base, portfolio: portfolio * Math.pow(1 + growth, dy), years: years - dy, age: age0 + dy },
+    }
+    const meta = {
+      spend: { label: `Spend ${sizePct}% less from your pots`, detail: 'lower the income you draw each year' },
+      grow:  { label: `Earn ${(growth * 100 * f).toFixed(1)}% more growth`, detail: `e.g. lower fees or more risk (${(growth * 100).toFixed(1)}% → ${(growth * 100 * (1 + f)).toFixed(1)}%)` },
+      pot:   { label: `Add ${_gk(portfolio * f)} to your pots`, detail: 'top up before you start drawing' },
+      delay: { label: `Start ${dy} ${dy === 1 ? 'year' : 'years'} later`, detail: 'let the pot grow and draw for fewer years' },
+    }
+    const levers = Object.keys(optsFor).map(k => ({ key: k, ...meta[k], delta: measure(optsFor[k]) - baseVal }))
+      .sort((a, b) => b.delta - a.delta)
+    return { baseDep, survives, levers }
+  }, [sizePct, portfolio, growth, inflation, essentials, age0, years, methodId])
+
+  if (!(portfolio > 0)) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Your income here comes from secure sources (state pension, DB, annuities), so there's no drawable pot to flex. Add investable pots to explore the levers.</div>
+  const survives = result.survives
+  const maxDelta = Math.max(1, ...result.levers.map(l => Math.abs(l.delta)))
+  const topLab = result.levers[0]?.label
+  const fmtDelta = (d) => survives
+    ? (d > 0 ? `+${_gk(d)} left` : d < 0 ? `${_gk(d)} left` : 'no change')
+    : (d > 0 ? `+${d} yrs` : d < 0 ? `${d} yrs` : 'no change')
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>{survives ? 'What grows your estate most' : 'What buys you the most extra years'}</div>
+      <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.5, marginBottom: 4 }}>
+        Today your pots {survives ? <>last beyond <strong style={{ color: 'var(--c-mint-text)' }}>age {horizonAge}</strong> — so the question is what they leave over</> : <>run out around <strong style={{ color: 'var(--c-coral-text)' }}>age {result.baseDep}</strong></>}. The single change that helps most: <strong>{topLab ? topLab.replace(/^(\w)/, c => c.toLowerCase()) : '—'}</strong>.
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>{survives ? `Each bar shows how much more your pots would be worth at age ${horizonAge}` : 'Each bar shows how many extra years that one change buys'}, at the size you set below.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {result.levers.map(l => (
+          <_LeverRow key={l.key} label={l.label} detail={l.detail} magnitude={Math.abs(l.delta)} max={maxDelta}
+            positive={l.delta >= 0} deltaLabel={fmtDelta(l.delta)} />
+        ))}
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <SolverSlider label="Size of the change" value={sizePct} min={5} max={30} step={5} fmt={v => `${v}%`} onChange={setSizePct} dirty={sizePct !== 10} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Bigger changes move the needle more — drag to see how sensitive each lever is.</div>
+      </div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
+        A constant-return illustration on your assumptions — not a forecast or a recommendation. "Years" caps at your simulated horizon (age {simEndAge}).
+      </div>
+    </div>
+  )
+}
+function LeversAccum({ entity, fi }) {
+  const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+  const fiTarget = Math.round(fi?.fiTarget || 0)
+  const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
+  const seedSaveAnnual = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); const net = (+(m?.surplus) || 0) - (+(m?.deficit) || 0); return Math.max(0, Math.round(net * 12)) } catch { return 0 } })()
+  const growth = 0.05
+  const horizonAge = Math.min(100, age0 + 50)
+  const years = Math.max(1, horizonAge - age0)
+  const [sizePct, setSizePct] = useState(10)
+
+  const fiAgeOf = ({ pot = invested0, saving = seedSaveAnnual, g = growth, target = fiTarget }) => {
+    const path = accumProjection({ pot, annualSaving: saving, growth: g, age0, years })
+    const hit = path.find(r => (r.balance || 0) >= target)
+    return hit ? hit.age : horizonAge + 1
+  }
+  const result = useMemo(() => {
+    if (!fiTarget) return null
+    const f = sizePct / 100
+    const baseAge = fiAgeOf({})
+    const extraSave = Math.max(1000, Math.round(fiTarget * 0.01 * (sizePct / 10)))   // a meaningful saving bump scaled by size
+    const levers = [
+      { key: 'save', label: `Save ${_gk(extraSave)}/yr more`, detail: seedSaveAnnual > 0 ? `on top of your current ${_gk(seedSaveAnnual)}/yr` : 'you currently save nothing spare', age: fiAgeOf({ saving: seedSaveAnnual + extraSave }) },
+      { key: 'grow', label: `Earn ${(growth * 100 * f).toFixed(1)}% more growth`, detail: `e.g. lower fees (${(growth * 100).toFixed(1)}% → ${(growth * 100 * (1 + f)).toFixed(1)}%)`, age: fiAgeOf({ g: growth * (1 + f) }) },
+      { key: 'pot',  label: `Add ${_gk(invested0 * f)} now`, detail: 'a lump sum into investments today', age: fiAgeOf({ pot: invested0 * (1 + f) }) },
+      { key: 'target', label: `Need ${sizePct}% less income`, detail: 'a lower retirement target lowers the finish line', age: fiAgeOf({ target: fiTarget * (1 - f) }) },
+    ].map(l => ({ ...l, delta: baseAge - l.age })).sort((a, b) => b.delta - a.delta)   // delta = years SOONER
+    return { baseAge, levers }
+  }, [sizePct, fiTarget, invested0, seedSaveAnnual, age0, years])
+
+  if (!result) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Add your investable savings and a target retirement income to see which lever moves your independence date most.</div>
+  const reached = result.baseAge <= horizonAge
+  const maxDelta = Math.max(1, ...result.levers.map(l => Math.abs(l.delta)))
+  const top = result.levers[0]
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What gets you there soonest</div>
+      <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.5, marginBottom: 4 }}>
+        On today's plan you reach independence {reached ? <>around <strong style={{ color: 'var(--c-mint-text)' }}>age {result.baseAge}</strong></> : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong></>}. The single change that helps most: <strong>{top ? top.label.replace(/^(\w)/, c => c.toLowerCase()) : '—'}</strong>.
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>Each bar shows how many years sooner that one change gets you there, at the size you set below.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {result.levers.map(l => (
+          <_LeverRow key={l.key} label={l.label} detail={l.detail} magnitude={Math.abs(l.delta)} max={maxDelta}
+            positive={l.delta >= 0} deltaLabel={l.delta > 0 ? `${l.delta} yrs sooner` : l.delta < 0 ? `${-l.delta} yrs later` : 'no change'} />
+        ))}
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <SolverSlider label="Size of the change" value={sizePct} min={5} max={30} step={5} fmt={v => `${v}%`} onChange={setSizePct} dirty={sizePct !== 10} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Bigger changes move the needle more — drag to see how sensitive each lever is.</div>
+      </div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
+        The 25× target is a planning rule of thumb. A constant-return illustration on your assumptions — not a forecast or a recommendation.
+      </div>
+    </div>
+  )
+}
 function GoalSeekCard({ entity }) {
   const [target, setTarget] = useState(85)
   const [committedTarget, setCommittedTarget] = useState(85)

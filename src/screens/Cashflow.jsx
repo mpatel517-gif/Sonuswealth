@@ -1980,9 +1980,17 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   // mechanism. "Pension-first sequence" was the solver's OUTPUT as a tile name —
   // exactly what every adviser source avoids ("where does your paycheck come
   // from", not "pension-first"). The order + its reasoning live INSIDE the drawer.
+  // The tile answers "where does my income COME FROM" — so the headline is the
+  // SOURCE SPLIT (guaranteed + pots), NOT the target spend. Showing the £96k
+  // target here was wrong: it's the input, not the answer, and it duplicated the
+  // hero. £47k secure + £49k pots = the £96k, but framed as "where from".
   const targetInc = decSolve?.inputs?.incomeTargetAnnual || 0
+  const secureInc = decSolve?.floor?.grossAnnual || 0
+  const fromPots = Math.max(0, targetInc - secureInc)
   const drawdownTile = isDecum
-    ? { key: 'drawdown', q: 'Where my income comes from', headline: targetInc ? `${fmtSeedNum(targetInc)}/yr` : 'Your income plan', sub: 'a tax-smart order across your pots', tone: 'acc' }
+    ? { key: 'drawdown', q: 'Where my income comes from',
+        headline: secureInc ? `${fmtSeedNum(secureInc)} + ${fmtSeedNum(fromPots)}` : (targetInc ? `${fmtSeedNum(targetInc)}/yr` : 'Your income plan'),
+        sub: secureInc ? 'secure income + your pots, tax-smart order' : 'a tax-smart order across your pots', tone: 'acc' }
     : decumStage
       ? { key: 'drawdown', q: 'Where my income comes from', headline: 'Set a target', sub: 'add a target income to plan it', tone: 'acc' }
       : null
@@ -3416,12 +3424,59 @@ function methodNarrative(id, { age0, w1, w2, portfolio, essentialsAnnual }) {
     default: return ''
   }
 }
-// Per-method drawer (founder 2026-06-04): tap a method → its own page with the
-// plain-English mechanism + a worked example on the user's real numbers + a few
-// representative years from the engine path. Sits above the methods drawer.
+// Pot-balance-over-time chart for ONE method — labelled axes, area+line, a
+// "runs out" marker. Reuses the DepletionCurve visual language; recomputes as the
+// growth slider moves so the user can SEE the sensitivity, not read a static table.
+function MethodChart({ path }) {
+  const pts = (path || []).filter(Boolean)
+  if (pts.length < 2) return null
+  const maxV = Math.max(...pts.map(r => r.balance || 0), 1) * 1.05
+  const W = 320, H = 150, pL = 44, pR = 10, pT = 12, pB = 26, pw = W - pL - pR, ph = H - pT - pB
+  const n = pts.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const line = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const area = `M${px(0).toFixed(1)},${py(0).toFixed(1)} ` + pts.map((r, i) => 'L' + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ') + ` L${px(n - 1).toFixed(1)},${py(0).toFixed(1)} Z`
+  const depIdx = pts.findIndex(r => (r.balance || 0) <= 0)
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your pot over time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Pot balance across the drawdown years under this method, on your assumptions">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        <path d={area} fill="var(--c-acc)" opacity="0.12" />
+        <path d={line} fill="none" stroke="var(--c-acc)" strokeWidth="1.75" />
+        {depIdx >= 0 && (
+          <g>
+            <line x1={px(depIdx)} y1={pT} x2={px(depIdx)} y2={pT + ph} stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 2" />
+            <text x={px(depIdx)} y={pT - 3} fontSize="8" fill="var(--c-coral-text)" textAnchor="middle">runs out</text>
+          </g>
+        )}
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {pts[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+    </div>
+  )
+}
+// Per-method drawer (founder 2026-06-04): tap a method → its own page. Plain-
+// English mechanism + an INTERACTIVE worked example — a growth slider re-runs the
+// engine path live, so the user can play with the assumption and watch the pot
+// chart + the year-by-year numbers move (not a static read).
 function MethodDetail({ method, opts, horizon, recommended, onBack }) {
   const p = METHOD_PLAIN[method.id] || { name: method.label }
-  const path = useMemo(() => { try { return methodPath(method.id, opts) } catch { return [] } }, [method.id, opts])
+  const seedG = Math.round((opts.growth ?? 0.05) * 1000) / 10
+  const [gPct, setGPct] = useState(seedG)
+  const path = useMemo(() => { try { return methodPath(method.id, { ...opts, growth: gPct / 100 }) } catch { return [] } }, [method.id, opts, gPct])
+  const depletes = path.find(r => (r.balance || 0) <= 0)
+  const lastsHorizon = !depletes
   const age0 = path[0]?.age ?? opts.age
   const w1 = path[0]?.withdrawal ?? method.year1Withdrawal
   const w2 = path[1]?.withdrawal ?? w1
@@ -3446,6 +3501,13 @@ function MethodDetail({ method, opts, horizon, recommended, onBack }) {
           <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it plays out for you</div>
             <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(method.id, { age0, w1, w2, portfolio: opts.portfolio, essentialsAnnual: opts.essentialsAnnual })}</div>
+            <MethodChart path={path} />
+            <div style={{ marginTop: 10 }}>
+              <SolverSlider label="Growth assumption (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 3 }}>
+                Drag to see how the pot and your income respond.{Math.abs(gPct - seedG) > 0.001 && <> · <button onClick={() => setGPct(seedG)} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 10 }}>reset</button></>}
+              </div>
+            </div>
             {rows.length > 1 && (
               <div style={{ marginTop: 12, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
@@ -3477,7 +3539,7 @@ function MethodDetail({ method, opts, horizon, recommended, onBack }) {
             <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6 }}>
               <strong style={{ color: 'var(--c-mint-text)' }}>Strength:</strong> {method.strength}.<br />
               <strong style={{ color: 'var(--c-amber-text)' }}>Watch:</strong> {method.weakness}.<br />
-              <strong style={{ color: 'var(--c-text)' }}>Lasts:</strong> {method.lastsHorizon ? `to age ${horizon}+ on these assumptions` : `funds run low by age ${method.depletesAtAge}`}.
+              <strong style={{ color: 'var(--c-text)' }}>Lasts:</strong> {lastsHorizon ? `to age ${horizon}+ at ${gPct}% growth` : `funds run low by age ${depletes?.age}`}.
             </div>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>

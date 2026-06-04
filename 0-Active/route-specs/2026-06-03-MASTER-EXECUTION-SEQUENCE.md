@@ -75,8 +75,15 @@ run-ask-sonu-coverage (integration test, needs live LLM/Supabase backend).
     - Priorities "DRAG #1" label → "#1 ranks first (reorder with ▲▼)" (matches control).
     - Routes-considered strip → compact wrapping chips; detail only for selected.
 11. ◑ PARTIAL (`bcec33a`) Money-map: ✅ SECURE-INCOME floor node (mint, with streams) + ✅ calendar years beside ages + caption. STILL TODO: per-pot "why" line (needs per-edge reason data) + per-holding drill-down (needs P3 type→holding expansion). Map scales by TYPE ✅ (confirmed, 4 pot IDs).
-12. ◑ PARTIAL: ✅ headline band (`1545b12`, evolved PurposeStatement → "lasts to age X", §0.5) + ✅ adaptive drawdown-tile question (`025658f`). STILL TODO (needs a VISUAL pass — block-surgery in a 4.3k-line file is reckless blind): §A "Now" → tile move + inline removal; §C "Costs" → tile move + inline removal; Methods extracted to its own tile.
-13. TODO Full §9.5 snap matrix — **blocked**: needs a browser (chromium download blocked here). Run in an environment where Playwright installs.
+12. ✅ DONE: headline band (`1545b12`, §0.5) + adaptive tile (`025658f`) + the
+    full tile redesign (`6d5e4f7`): §A "Now", Methods, §C "Costs" are now tiles;
+    inline §A/§C removed; Methods extracted to a reused standalone. The tab is one
+    adaptive question-tile grid (now·lastability·drawdown·resilience·whatif·methods·
+    costs) + headline band — the A/B/C scroll is gone. Via an extraTiles render-prop
+    so content is built in parent scope (drill buttons keep working, nothing retyped).
+13. TODO Full §9.5 snap matrix + VISUAL QA — **blocked**: needs a browser (chromium
+    download blocked here). The tile moves are build-green but unverified for LAYOUT;
+    a snap pass is required before "done" per §0.6 (build-green ≠ layout-correct).
 
 ## PHASE 5 — CLEANUP
 

@@ -217,14 +217,20 @@ function SurplusDrillPanelInner({ entity, onClose }) {
     try { return recommendedSurplusAllocation(entity, s) } catch { return null }
   }, [entity, ms])
 
-  const gross       = +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
-  const taxAnn      = +(incomeAll?.tax_total_annual ?? incomeAll?.tax ?? 0)
-  const pensionMo   = +(entity?.assets?.sipp?.contribMonthly ?? entity?.pensionContribMonthly ?? 0)
-  const pensionAnn  = pensionMo * 12
-  const essAnn      = +(ms?.essentials_annual ?? (ms?.essential != null ? ms.essential * 12 : 0))
-  const debtAnn     = +(ms?.debt_service_annual ?? (ms?.debtService != null ? ms.debtService * 12 : 0))
-  const surplusAnn  = gross > 0 ? (gross - taxAnn - pensionAnn - essAnn - debtAnn) : +(ms?.surplus != null ? ms.surplus * 12 : 0)
-  const surplusMo   = surplusAnn / 12
+  // CANONICAL: every figure from cashflowFlow — the SAME fn the now-tile,
+  // waterfall, Sankey and Home use — so this drill cannot diverge. The old code
+  // recomputed surplus from fields that don't exist (incomeAll.tax_total_annual
+  // → £0) and OMITTED protection, showing a +£6k SURPLUS when the engine says a
+  // −£5k DEFICIT (founder 2026-06-04 reconciliation flag).
+  const flow        = useMemo(() => { try { return cashflowFlow(entity, CMA_BUNDLE) } catch { return null } }, [entity])
+  const gross       = +(flow?.gross ?? 0)
+  const taxAnn      = +(flow?.taxAndNI ?? 0)
+  const committedAnn= +(flow?.committed ?? 0)
+  const essAnn      = +(flow?.essentials ?? 0)
+  const debtAnn     = +(flow?.debtService ?? 0)
+  const protAnn     = +(flow?.protection ?? 0)
+  const surplusAnn  = +(flow?.surplusAnnual ?? 0)
+  const surplusMo   = +(flow?.surplusMonthly ?? 0)
 
   // L3-3 row-level L4 drill payloads — engine-derived, no fabrication.
   const incomeSourceBreakdown = useMemo(() => {
@@ -253,7 +259,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
 
   const steps = [
     {
-      label: 'Gross income',         value: gross,       colour: 'var(--c-success)', kind: 'income',    note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null,
+      label: 'Gross income',         value: gross,        colour: 'var(--c-mint-text)',  kind: 'income',    note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null,
       drill: incomeSourceBreakdown.length > 0 ? {
         metric: 'Gross income',
         value: fmt(gross) + '/yr',
@@ -264,7 +270,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
       } : null,
     },
     {
-      label: 'Tax & NI',             value: -taxAnn,     colour: 'var(--c-danger)',  kind: 'deduction', note: null,
+      label: 'Tax & NI',             value: -taxAnn,      colour: 'var(--c-coral-text)', kind: 'deduction', note: null,
       drill: taxBandBreakdown.length > 0 ? {
         metric: 'Tax & NI',
         value: fmt(taxAnn) + '/yr',
@@ -274,10 +280,11 @@ function SurplusDrillPanelInner({ entity, onClose }) {
         breakdown: taxBandBreakdown,
       } : null,
     },
-    { label: 'Pension contributions',value: -pensionAnn, colour: 'var(--c-acc)',     kind: 'deduction', note: pensionAnn > 0 ? 'Pre-tax via salary sacrifice' : null },
-    { label: 'Essentials',           value: -essAnn,     colour: 'var(--c-warning)', kind: 'deduction', note: 'Housing, bills, transport' },
-    { label: 'Debt service',         value: -debtAnn,    colour: 'var(--c-acc3)',    kind: 'deduction', note: 'Loans and cards' },
-    { label: 'Monthly surplus × 12', value: surplusAnn,  colour: surplusAnn >= 0 ? 'var(--c-acc)' : 'var(--c-danger)', kind: 'surplus', note: null },
+    { label: 'Pension & ISA put aside', value: -committedAnn, colour: 'var(--c-acc)',        kind: 'deduction', note: committedAnn > 0 ? 'Contributions you set aside' : null },
+    { label: 'Essentials',           value: -essAnn,      colour: 'var(--c-amber-text)', kind: 'deduction', note: 'Housing, bills, transport' },
+    { label: 'Debt service',         value: -debtAnn,     colour: 'var(--c-acc3, var(--c-text3))', kind: 'deduction', note: 'Loans and cards' },
+    { label: 'Protection premiums',  value: -protAnn,     colour: 'var(--c-coral-text)', kind: 'deduction', note: 'Life · CI · IP · PMI' },
+    { label: 'Net surplus × 12',     value: surplusAnn,   colour: surplusAnn >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)', kind: 'surplus', note: null },
   ].filter(s => Math.abs(s.value) > 0)
 
   const maxAbs = Math.max(...steps.map(s => Math.abs(s.value)), 1)
@@ -318,7 +325,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'var(--c-text)' }}>
-          Monthly surplus breakdown
+          Monthly cashflow breakdown
         </div>
         <div style={{ width: 56 }} />
       </div>
@@ -329,15 +336,15 @@ function SurplusDrillPanelInner({ entity, onClose }) {
           background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
           borderRadius: 18, padding: '14px 18px', marginBottom: 12,
         }}>
-          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Monthly surplus</div>
+          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>{surplusMo >= 0 ? 'Monthly surplus' : 'Monthly deficit'}</div>
           <div style={{
             fontSize: 28, fontWeight: 800, letterSpacing: -0.8,
-            color: surplusMo >= 0 ? 'var(--c-acc)' : 'var(--c-danger)',
+            color: surplusMo >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)',
           }}>
-            {surplusMo >= 0 ? '' : '−'}{fmt(Math.abs(surplusMo))}/mo
+            {surplusMo >= 0 ? '+' : '−'}{fmt(Math.abs(surplusMo))}/mo
           </div>
           <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 4 }}>
-            {fmt(gross)}/yr gross · {fmt(surplusAnn >= 0 ? surplusAnn : 0)}/yr surplus
+            {fmt(gross)}/yr gross · {surplusMo >= 0 ? `${fmt(surplusAnn)}/yr surplus` : `${fmt(Math.abs(surplusAnn))}/yr shortfall, covered from savings or pots`}
           </div>
           <span className="sw-chip sw-chip-sm" style={{ marginTop: 8, display: 'inline-block' }}>
             From your data
@@ -425,10 +432,10 @@ function SurplusDrillPanelInner({ entity, onClose }) {
           }}>
             <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Emergency buffer</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--c-text)' }}>
-              {lb.months.toFixed(1)} months
+              {lb.months >= 24 ? `${(lb.months / 12).toFixed(1)} years` : `${lb.months.toFixed(1)} months`} of essentials
             </div>
             <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4 }}>
-              {lb.months >= 6 ? 'Buffer healthy (6+ months)' : lb.months >= 3 ? 'Buffer adequate (3–6 months)' : 'Buffer below typical 3–6 month range (information only)'}
+              {lb.months >= 6 ? 'Healthy — well above the typical 3–6 month range (information only)' : lb.months >= 3 ? 'Adequate (3–6 months)' : 'Below the typical 3–6 month range (information only)'}
             </div>
           </div>
         )}

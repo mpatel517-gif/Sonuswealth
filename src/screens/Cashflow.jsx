@@ -61,7 +61,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 // for decumulators — replaces the relabeled-G-K "Optimal" + the forward-table stub.
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
-import { compareMethods, recommendMethodForGoal } from '../engine/withdrawal-methods.js'
+import { compareMethods, recommendMethodForGoal, methodPath } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
 // L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
@@ -1927,8 +1927,8 @@ function ComponentRow({ label, value, tip }) {
 // migration + the headline-answer band (evolving PurposeStatement) follow.
 const CF_TILE_TITLES = {
   lastability: 'Will my money last?',
-  drawdown: 'How do I draw it down?',
-  resilience: 'What could break it?',
+  drawdown: 'Where my income comes from',
+  resilience: 'What if markets fall?',
   whatif: 'What would change it most?',
 }
 function QuestionTile({ q, headline, sub, tone, onClick }) {
@@ -1976,15 +1976,20 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   // Drawdown tile only for decumulators — for an accumulator it would open an
   // empty ScenarioForwardSummary (decSolve is null → the panel returns null).
   // That empty-drawer bug is why the accumulator face must not show this tile.
+  // Name by the user's GOAL (turn savings into income), never the engine's chosen
+  // mechanism. "Pension-first sequence" was the solver's OUTPUT as a tile name —
+  // exactly what every adviser source avoids ("where does your paycheck come
+  // from", not "pension-first"). The order + its reasoning live INSIDE the drawer.
+  const targetInc = decSolve?.inputs?.incomeTargetAnnual || 0
   const drawdownTile = isDecum
-    ? { key: 'drawdown', q: 'How do I draw it down?', headline: routeName || 'Your plan', sub: lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map', tone: 'acc' }
+    ? { key: 'drawdown', q: 'Where my income comes from', headline: targetInc ? `${fmtSeedNum(targetInc)}/yr` : 'Your income plan', sub: 'a tax-smart order across your pots', tone: 'acc' }
     : decumStage
-      ? { key: 'drawdown', q: 'How do I draw it down?', headline: 'Set a target', sub: 'add a target income', tone: 'acc' }
+      ? { key: 'drawdown', q: 'Where my income comes from', headline: 'Set a target', sub: 'add a target income to plan it', tone: 'acc' }
       : null
   const baseTiles = [
     sustainTile,
     ...(drawdownTile ? [drawdownTile] : []),
-    { key: 'resilience', q: 'What could break it?', headline: sev ? `${sev} risk` : 'Sequence risk', sub: 'bad-returns sequence & markets', tone: 'acc' },
+    { key: 'resilience', q: 'What if markets fall?', headline: sev ? `${sev} exposure` : 'Stress-tested', sub: 'a bad run of markets early on', tone: 'acc' },
     { key: 'whatif', q: 'What would change it most?', headline: 'Top levers', sub: 'what-if & goal-seek', tone: 'acc' },
   ]
   // Whole-tab grid: §A "now" tiles first, the trajectory four, then §C "costs"

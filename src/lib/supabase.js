@@ -28,9 +28,44 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * - Respects Row Level Security policies
  * - Use for all user-facing operations
  */
-// Only instantiate when configured — createClient throws on undefined url/key,
-// which would break importing this module in a node/test context (no Vite env).
-// In the browser the env is always present, so this is a real client there.
+// When configured, a real client. When NOT (node tests, or a dev/demo session
+// with no .env.local), a safe no-op stub so the app boots into demo mode instead
+// of crashing on `supabase.auth`/`supabase.from(...)`. Real backend behaviour is
+// unchanged when the env is present.
+function makeOfflineStub() {
+  const offline = () => ({ error: new Error('Supabase offline — no env configured'), data: null });
+  const query = () => {
+    const result = { data: [], error: null };
+    const b = { then: (res) => res(result), catch: () => b, finally: (f) => { f && f(); return b } };
+    for (const m of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
+      'like', 'ilike', 'is', 'in', 'contains', 'containedBy', 'order', 'limit', 'range', 'single',
+      'maybeSingle', 'filter', 'match', 'or', 'not', 'csv', 'returns', 'throwOnError']) b[m] = () => b;
+    return b;
+  };
+  return {
+    _offline: true,
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      getUser: async () => ({ data: { user: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      signUp: async () => offline(),
+      signInWithPassword: async () => offline(),
+      signInWithOAuth: async () => offline(),
+      signOut: async () => ({ error: null }),
+      resetPasswordForEmail: async () => ({ error: null }),
+      resend: async () => ({ error: null }),
+      mfa: {
+        enroll: async () => offline(), challenge: async () => offline(),
+        verify: async () => offline(), listFactors: async () => ({ data: { totp: [] }, error: null }),
+      },
+    },
+    from: query,
+    rpc: async () => ({ data: null, error: null }),
+    channel: () => ({ on() { return this }, subscribe() { return this }, unsubscribe() {} }),
+    removeChannel: () => {},
+  };
+}
+
 export const supabase = (supabaseUrl && supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -38,7 +73,7 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
       autoRefreshToken: true,
     },
   })
-  : null;
+  : makeOfflineStub();
 
 /**
  * Table names (canonical, avoid typos)

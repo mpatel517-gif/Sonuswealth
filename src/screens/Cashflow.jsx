@@ -1600,14 +1600,21 @@ function PurposeStatement({ entity, lb, fr, pos, health, decSolve }) {
   // the drawdown plan produces. Overrides the generic buffer/funded headline.
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
   if (stage === 'decumulator' && decSolve) {
+    const fundedPct = fundedRatio > 0 ? Math.round(fundedRatio * 100) : null
     if (lastsAge) {
       headline = `On these assumptions, your money lasts to age ${lastsAge}.`
       tone = lastsAge >= 90 ? 'good' : lastsAge >= 80 ? 'warn' : 'bad'
+      if (fundedPct != null) headline += ` Plan ${fundedPct}% funded.`
+    } else if (fundedRatio > 0 && fundedRatio < 0.9) {
+      // Pots don't deplete within the plan, but only because they can't deliver
+      // the full target — "lasts the full plan" alone would mislead. Reconcile.
+      headline = `On these assumptions, the pots stretch the full plan but cover only ${fundedPct}% of your target income.`
+      tone = fundedRatio < 0.6 ? 'bad' : 'warn'
     } else {
       headline = 'On these assumptions, your money lasts the full plan — the pots don’t run out.'
       tone = 'good'
+      if (fundedPct != null) headline += ` Plan ${fundedPct}% funded.`
     }
-    if (fundedRatio > 0) headline += ` Plan ${Math.round(fundedRatio * 100)}% funded.`
   }
 
   return (

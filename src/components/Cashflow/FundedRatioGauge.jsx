@@ -101,8 +101,8 @@ export default function FundedRatioGauge({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
       }}>
-        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE}
-          style={{ flexShrink: 0, overflow: 'visible' }}>
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`}
+          style={{ flex: '0 1 200px', width: '100%', maxWidth: SIZE, height: 'auto', overflow: 'visible' }}>
           {/* Background track */}
           <path d={trackPath}
             fill="none"

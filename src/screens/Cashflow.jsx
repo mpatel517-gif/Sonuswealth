@@ -35,7 +35,6 @@ import {
   debtRatio,
   // §B TRAJECTORY
   swrFromRegime, fundedRatio, fiRatio,
-  guytonKlingerPath, goalSeek,
   // §C DEPTH
   totalCoI, coiCashflowVariants,
   // Cashflow-engine re-exports
@@ -1237,10 +1236,6 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE, trajOpts),
     [entity, bv, cv, trajOpts]
   )
-  const gkPath = useMemo(
-    () => guytonKlingerPath(entity, trajOpts.horizonYears || 30, CMA_BUNDLE),
-    [entity, bv, cv, trajOpts]
-  )
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
   const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv, cv])
@@ -1411,7 +1406,6 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             fi={fi}
             pos={pos}
             seqVuln={seqVuln}
-            gkPath={gkPath}
             swr={swr}
             swrRegime={swrRegime}
             setSwrRegime={setSwrRegime}
@@ -2032,7 +2026,7 @@ function QuestionTile({ q, headline, sub, tone, onClick, spark }) {
     </button>
   )
 }
-function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, swrRegime, setSwrRegime, decSolve, extraTiles = [] }) {
+function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime, setSwrRegime, decSolve, extraTiles = [] }) {
   const [open, setOpen] = useState(null)
   const ratio = +(fr?.ratio || fr?.value || 0)
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
@@ -3123,61 +3117,10 @@ function SequenceOfReturnsCard({ seqVuln }) {
   )
 }
 
-// ── §B.7 Guyton-Klinger corridor (§5.7) — DrawSVG envelope ─────────────
-function GuytonKlingerCorridor({ path }) {
-  if (!path || path.length === 0) {
-    return (
-      <div className="sw-card sw-lift" style={S.card}>
-        <div style={S.cardTitle}>Dynamic guardrails corridor (Guyton-Klinger)</div>
-      </div>
-    )
-  }
-  const W = 320, H = 110, pL = 40, pR = 8, pT = 10, pB = 22
-  const pw = W - pL - pR, ph = H - pT - pB
-  const maxBal = Math.max(...path.map(p => p.balance), 1)
-  const px = i => pL + (i / Math.max(1, path.length - 1)) * pw
-  const py = v => pT + ph - (v / maxBal) * ph
-  const d = path.map((p, i) =>
-    (i === 0 ? 'M' : 'L') + px(i).toFixed(1) + ',' + py(p.balance).toFixed(1)
-  ).join(' ')
-  // Build the ±20% corridor envelope around the median path
-  const upper = path.map((p, i) =>
-    (i === 0 ? 'M' : 'L') + px(i).toFixed(1) + ',' + py(p.balance * 1.2).toFixed(1)
-  ).join(' ')
-  const lower = path.map((p, i) =>
-    (i === 0 ? 'M' : 'L') + px(i).toFixed(1) + ',' + py(p.balance * 0.8).toFixed(1)
-  ).join(' ')
-  const raises = path.filter(p => p.rule === 'prosperity').length
-  const cuts = path.filter(p => p.rule === 'preservation').length
-
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Dynamic guardrails corridor (Guyton-Klinger)</div>
-        <span className="sw-chip sw-chip-sm">±20% triggers</span>
-      </div>
-      <DrawSVG duration={1100}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{
-          display: 'block', marginTop: 'var(--space-sm)',
-        }}>
-          <path d={upper} fill="none" stroke="var(--c-tint-mint-2)" strokeWidth="1" strokeDasharray="2 3" />
-          <path d={lower} fill="none" stroke="var(--c-tint-mint-2)" strokeWidth="1" strokeDasharray="2 3" />
-          <path d={d} fill="none" stroke="var(--c-mint-text)" strokeWidth="2" />
-          {path.map((p, i) =>
-            p.rule === 'prosperity' ? (
-              <circle key={i} cx={px(i)} cy={py(p.balance)} r="3" fill="var(--c-mint-text)" />
-            ) : p.rule === 'preservation' ? (
-              <circle key={i} cx={px(i)} cy={py(p.balance)} r="3" fill="var(--c-coral-text)" />
-            ) : null
-          )}
-        </svg>
-      </DrawSVG>
-      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
-        Expected over {path.length}y: {raises} raises · {cuts} cuts.
-      </div>
-    </div>
-  )
-}
+// GuytonKlingerCorridor REMOVED 2026-06-05 — it drew a FABRICATED ±20% envelope
+// (balance*1.2 / *0.8), not engine uncertainty, with unlabelled axes (P4-06).
+// Replaced by StressExplorer (adjustable single-shock) + the real Monte-Carlo
+// p10–p90 band. gkPath / guytonKlingerPath dropped with it.
 
 // ── Scenario matrix wrapper with real selection state (STUB-02) ────────
 // Tracks active scenario in local state so onSelect actually does work;
@@ -3879,7 +3822,7 @@ function LastDecum({ decSolve, fr }) {
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>Second lens — pots only</div>
         <FundedRatioGaugeV2 ratio={frRatio} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
         <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
-          This gauge weighs your <strong>investable pots alone</strong> against a safe-withdrawal target — it deliberately ignores secure income. That's why it can read "{Math.round(frRatio * 100)}% funded" while the plan above lasts to {lastsHorizon ? `age ${horizonAge}+` : `age ${lastsAge}`}: {secureGross > 0 ? `the difference is the ${_gk(secureGross)}/yr of secure income carrying the rest.` : 'the two simply measure different things.'}
+          This gauge weighs your <strong>investable pots alone</strong> against a safe-withdrawal target — it deliberately ignores secure income. That's why it can read "{Math.round(frRatio * 100)}% funded" while the plan above lasts to {lastsHorizon ? `age ${horizonAge}+` : `age ${lastsAge}`}: {secureGross > 0 ? `the difference is the ${_gk(secureGross)}/yr of secure income carrying the rest.` : 'the two simply measure different things.'} The chart above assumes <strong>steady</strong> returns; the band on this gauge — and <strong>"What if markets fall?"</strong> — show how real, variable markets widen the range either way.
         </div>
       </div>
     )}
@@ -4913,103 +4856,9 @@ function LeversAccum({ entity, fi }) {
     </div>
   )
 }
-function GoalSeekCard({ entity }) {
-  const [target, setTarget] = useState(85)
-  const [committedTarget, setCommittedTarget] = useState(85)
-  const [running, setRunning] = useState(false)
-  const paths = useMemo(
-    () => goalSeek(entity, 'wealthScore', committedTarget, 'lifetime', {}) || [],
-    [entity, committedTarget]
-  )
-  function runFindPaths() {
-    setRunning(true)
-    // Defer commit so the button registers a press state before the
-    // (potentially heavy) goalSeek useMemo re-runs.
-    requestAnimationFrame(() => {
-      setCommittedTarget(target)
-      setRunning(false)
-    })
-  }
-  const dirty = target !== committedTarget
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Goal-Seek</div>
-        <span className="sw-chip sw-chip-sm">Goal: paths to target Wealth Score</span>
-      </div>
-      <div style={{
-        marginTop: 'var(--space-md)', display: 'flex',
-        alignItems: 'center', gap: 'var(--space-sm)',
-      }}>
-        <span className="sw-eyebrow">Target</span>
-        <input
-          type="range" min="50" max="100" step="5"
-          value={target} onChange={e => setTarget(+e.target.value)}
-          style={{ flex: 1 }}
-          aria-label="Wealth Score target"
-        />
-        <strong style={{
-          minWidth: 32, textAlign: 'right',
-          fontSize: 14, fontVariantNumeric: 'tabular-nums', color: 'var(--c-mint-text)',
-        }}>{target}</strong>
-        <button
-          type="button"
-          onClick={runFindPaths}
-          disabled={running || !dirty}
-          aria-label="Find paths to target"
-          className="sw-press"
-          style={{
-            padding: '6px 14px', borderRadius: 'var(--r-pill)',
-            background: dirty ? 'var(--c-mint-text)' : 'var(--c-tint-neutral-2)',
-            color: dirty ? 'var(--c-bg)' : 'var(--c-text3)',
-            border: 'none', cursor: dirty ? 'pointer' : 'default',
-            fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
-            boxShadow: dirty ? '0 4px 12px var(--c-acc-bg)' : 'none',
-            opacity: running ? 0.6 : 1,
-          }}
-        >
-          {running ? 'Solving…' : dirty ? 'Find paths' : 'Up to date'}
-        </button>
-      </div>
-      <div style={{
-        marginTop: 6, fontSize: 11, color: 'var(--c-text3)',
-      }}>
-        Showing paths to Wealth Score {committedTarget}
-        {dirty && <span style={{ color: 'var(--c-amber-text)' }}>
-          {' '}· slider moved — press Find paths to re-solve.
-        </span>}
-      </div>
-      <div style={{
-        marginTop: 'var(--space-md)', display: 'flex',
-        flexDirection: 'column', gap: 'var(--space-xs)',
-      }}>
-        {(paths || []).slice(0, 3).map((p, i) => (
-          <div key={i} style={S.gsRow}>
-            <div style={{ flex: 1, fontSize: 13 }}>{humanise(p.action.kind)}</div>
-            <div style={{
-              minWidth: 90, textAlign: 'right',
-              fontSize: 11, color: 'var(--c-text3)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {fmt(p.action.amount)}
-            </div>
-            <div style={{
-              minWidth: 60, textAlign: 'right',
-              fontSize: 11, fontWeight: 700, color: 'var(--c-mint-text)',
-            }}>
-              gap {p.gap}
-            </div>
-          </div>
-        ))}
-        {(paths || []).length === 0 && (
-          <div style={{ fontSize: 12, color: 'var(--c-text3)' }}>
-            No solver paths returned for this target.
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+// GoalSeekCard (Wealth-Score goal-seek) REMOVED 2026-06-05 — wrong subject for
+// Cashflow (founder flagged the "paths to Wealth Score 85 / gap 15" framing as
+// confusing). Replaced by LeversCard (cashflow levers ranked by impact). P4-09/P1.
 
 // ── CoIOdometer wrapper — adds cascade-halo on totalCoI change ─────────
 function CoIOdometerWithHalo({ coi }) {

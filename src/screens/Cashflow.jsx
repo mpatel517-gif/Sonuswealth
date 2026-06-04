@@ -1616,6 +1616,11 @@ function PurposeStatement({ entity, lb, fr, pos, health, decSolve }) {
       tone = 'good'
       if (fundedPct != null) headline += ` Plan ${fundedPct}% funded.`
     }
+  } else if (stage === 'decumulator' && decSolve && !decSolve.rankedPaths?.length) {
+    // Decumulator who hasn't set a target income → no plan can be solved. Prompt
+    // for it rather than the generic buffer line (or the accumulator "building").
+    headline = 'Add a target retirement income to see how long your money lasts — and the most tax-efficient way to draw it.'
+    tone = 'neutral'
   }
 
   return (
@@ -1875,16 +1880,21 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
   const routeName = decSolve?.rankedPaths?.[0]?.name
   const sev = seqVuln?.severity || seqVuln?.level
-  // Adaptive face: a decumulator WITH a solved plan asks "how do I draw it down?";
-  // an accumulator — or a decumulator with no target income (no routes) — asks
-  // "am I on track?". Gate on rankedPaths so the tile matches the drawer (which
-  // shows the FI face when there are no routes), never claiming a plan that isn't.
+  // Adaptive face — three states: a decumulator WITH a solved plan asks "how do
+  // I draw it down?"; a decumulator with NO target income (no routes) is prompted
+  // to set one; an accumulator asks "am I on track?". Gate on rankedPaths so the
+  // tile matches the drawer, never claiming a plan that isn't there.
   const isDecum = !!(decSolve?.rankedPaths?.length)
+  let decumStage = false
+  try { decumStage = inferLifeStage(entity) === 'decumulator' } catch { decumStage = false }
+  const drawdownTile = isDecum
+    ? { key: 'drawdown', q: 'How do I draw it down?', headline: routeName || 'Your plan', sub: lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map', tone: 'acc' }
+    : decumStage
+      ? { key: 'drawdown', q: 'How do I draw it down?', headline: 'Set a target', sub: 'add a target income', tone: 'acc' }
+      : { key: 'drawdown', q: 'Am I on track? (FI)', headline: 'Building wealth', sub: 'progress to FI', tone: 'acc' }
   const baseTiles = [
     { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
-    isDecum
-      ? { key: 'drawdown', q: 'How do I draw it down?', headline: routeName || 'Your plan', sub: lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map', tone: 'acc' }
-      : { key: 'drawdown', q: 'Am I on track? (FI)', headline: 'Building wealth', sub: 'progress to FI', tone: 'acc' },
+    drawdownTile,
     { key: 'resilience', q: 'What could break it?', headline: sev ? String(sev) : 'Stress test', sub: 'sequence & market risk', tone: 'acc' },
     { key: 'whatif', q: 'What would change it most?', headline: 'Model levers', sub: 'what-if & goal-seek', tone: 'acc' },
   ]
@@ -3630,9 +3640,26 @@ function ScenarioForwardSummary({ entity, decSolve }) {
     )
   }
 
-  // No solved drawdown (accumulator / sparse) → don't fabricate one. Show the
-  // accumulator's real surface: progress to financial independence (25× target
-  // income). The drawdown plan replaces this once they're decumulating.
+  // No solved drawdown. A decumulator who simply hasn't set a target income gets
+  // prompted to set one (and can do it right here — dragging the income up makes
+  // routes appear and the full plan renders). Accumulators get the FI surface.
+  let isDecumStage = false
+  try { isDecumStage = inferLifeStage(entity) === 'decumulator' } catch { isDecumStage = false }
+  if (isDecumStage) {
+    return (
+      <div className="sw-card" style={S.card}>
+        <div style={S.cardTitle}>Set a target retirement income</div>
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+          Tell us the income you&rsquo;d like to draw and we&rsquo;ll show how long your pots last, the most tax-efficient order to draw them, and a money-map of where each &pound; comes from.
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <SolverSlider label="Target income" value={target} min={0} max={150000} step={1000} fmt={v => v ? `${fmt(v)}/yr` : 'not set'} onChange={setTarget} dirty={dT} />
+        </div>
+        <div style={{ marginTop: 10, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Drag the income up to generate your plan. Information and guidance, not advice.</div>
+      </div>
+    )
+  }
+  // Accumulator / sparse → progress to financial independence (25× target income).
   return <FIProgressTile entity={entity} />
 }
 

@@ -153,10 +153,17 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
   const effDbIncome = dbIncome || evDbIncome
   const effStatePension = (+inc.statePension?.annual || +inc.statePension) || evState?.grossAnnual || statePensionAnnual
 
+  // Effective pots — object-shape scalar, else the per-holding fallback. Used for
+  // BOTH the pots view AND the sparse flag, so typed-array personas (whose object
+  // scalars are 0) aren't wrongly flagged "no drawable assets" and denied a plan.
+  const effPots = {
+    pension: pensionDC || potSum.pension, isa: isaVal || potSum.isa,
+    gia: gia || potSum.gia, cash: cash || potSum.cash,
+  }
   return {
     age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
     married, estateToSpouseFraction,
-    pots: { pension: pensionDC || potSum.pension, isa: isaVal || potSum.isa, gia: gia || potSum.gia, cash: cash || potSum.cash },
+    pots: effPots,
     potGrowth, giaGainBlended,
     holdings, evaluation,
     property, liabilities, dbIncome: effDbIncome,
@@ -168,7 +175,7 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     beneficiaryRate: +opts.beneficiaryMarginalRate || +entity.beneficiaryMarginalRate || TAX.hr,
     flags: {
       hasDB: dbPots.length > 0 || dbIncome > 0,
-      sparse: pensionDC + isaVal + gia + cash === 0,
+      sparse: effPots.pension + effPots.isa + effPots.gia + effPots.cash === 0,
     },
   }
 }

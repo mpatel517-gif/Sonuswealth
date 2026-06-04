@@ -1358,8 +1358,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 headline: (ms?.surplus >= 0 ? 'In surplus' : 'In deficit'),
                 sub: 'spend, buffer & income sources', tone: (ms?.surplus >= 0 ? 'mint' : 'coral'),
                 content: nowSectionContent },
-              // Methods → its own tile (decumulators only; pacing lens).
-              ...(decSolve ? [{ key: 'methods', q: 'How fast can I spend?', headline: '5 methods',
+              // Methods → its own tile (decumulators with a solved plan only).
+              ...(decSolve?.rankedPaths?.length ? [{ key: 'methods', q: 'How fast can I spend?', headline: '5 methods',
                 sub: 'Bengen · Guyton-Klinger · Vanguard · bucket · floor', tone: 'acc',
                 content: (<MethodsComparison
                   portfolio={(decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)}
@@ -1595,11 +1595,12 @@ function PurposeStatement({ entity, lb, fr, pos, health, decSolve }) {
     ? 'Will my money last? How much you can draw, for how long, and in the most tax-efficient way. Information only.'
     : 'Are you saving enough — and is your plan on track for the life you want? Information only.'
 
-  // Decumulators: lead with the direct answer to the tab's canonical purpose
-  // ("Will my money last?") from the decumulation solve — the headline figure
-  // the drawdown plan produces. Overrides the generic buffer/funded headline.
+  // Decumulators WITH a solved plan: lead with the direct answer to the tab's
+  // canonical purpose. A decumulator with no target income has no routes
+  // (rankedPaths empty) — don't claim "lasts the full plan" when there's no plan;
+  // fall through to the generic buffer/funded headline so grid + drawer agree.
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
-  if (stage === 'decumulator' && decSolve) {
+  if (stage === 'decumulator' && decSolve?.rankedPaths?.length) {
     const fundedPct = fundedRatio > 0 ? Math.round(fundedRatio * 100) : null
     if (lastsAge) {
       headline = `On these assumptions, your money lasts to age ${lastsAge}.`
@@ -1874,9 +1875,11 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
   const routeName = decSolve?.rankedPaths?.[0]?.name
   const sev = seqVuln?.severity || seqVuln?.level
-  // Adaptive face: a decumulator asks "how do I draw it down?"; an accumulator
-  // (no decSolve) asks "am I on track?" — same tile, the question + answer flip.
-  const isDecum = !!decSolve
+  // Adaptive face: a decumulator WITH a solved plan asks "how do I draw it down?";
+  // an accumulator — or a decumulator with no target income (no routes) — asks
+  // "am I on track?". Gate on rankedPaths so the tile matches the drawer (which
+  // shows the FI face when there are no routes), never claiming a plan that isn't.
+  const isDecum = !!(decSolve?.rankedPaths?.length)
   const baseTiles = [
     { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
     isDecum

@@ -7,6 +7,7 @@ import assert from 'node:assert'
 import { extractDecumulationContext, simulatePath } from '../src/engine/decumulation-solver.js'
 import { TAX } from '../src/engine/fq-calculator.js'
 import BRUCE from '../src/rules/personas/persona-a.json' with { type: 'json' }
+import DC from '../src/rules/personas/mrT-decum-complex.json' with { type: 'json' }
 
 const NOW = new Date('2026-06-03'), IHT2027 = new Date('2027-04-06')
 let pass = 0, fail = 0
@@ -49,6 +50,20 @@ t('synthetic cash-only pot: per-pot grows at ~3%, flat at 5%', () => {
   const flatEnd = flat.schedule.at(-1)?.balances?.cash ?? flat.schedule.at(-1)?.bal?.cash
   // schedule shape may not expose balances; assert the runs differ instead.
   assert.notDeepEqual(flat.schedule, pot.schedule, 'cash grows differently under per-pot vs flat')
+})
+
+// ── per-line CGT: GIA disposals use the real blended embedded gain, not flat 0.4
+const dcx = extractDecumulationContext(DC, { incomeTarget: 40000, horizonAge: 90, inflation: 0 })
+t('Mr T GIA blended embedded gain ≈ 0.295 (real), not the flat 0.4', () => {
+  assert.ok(dcx.giaGainBlended != null && Math.abs(dcx.giaGainBlended - 62000 / 210000) < 0.01, `got ${dcx.giaGainBlended}`)
+})
+t('Bruce has no GIA cost basis → giaGainBlended null → falls back to 0.4', () => {
+  assert.equal(ctx.giaGainBlended, null)
+})
+t('per-line CGT changes the sim when blended gain ≠ 0.4', () => {
+  const flat = simulatePath(dcx, ['gia', 'isa', 'pension', 'cash'], { now: NOW, iht2027: IHT2027 })
+  const ph = simulatePath(dcx, ['gia', 'isa', 'pension', 'cash'], { now: NOW, iht2027: IHT2027, perHolding: true })
+  assert.notDeepEqual(flat.schedule.at(-1), ph.schedule.at(-1), 'real GIA gain (0.295) differs from flat 0.4')
 })
 
 console.log(`\ndecumulation-pot-growth — pass=${pass} fail=${fail}`)

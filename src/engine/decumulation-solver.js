@@ -119,14 +119,48 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     return out
   })()
 
+  // Blended embedded-gain fraction for the GIA pot — value-weighted real gain of
+  // the unwrapped holdings, replacing the flat 0.4 assumption. (True lowest-gain-
+  // first per-line disposal is the per-holding sequencer; this is the accurate
+  // aggregate within the 4-pot model.) Consumed by simulatePath only when opted in.
+  const giaGainBlended = (() => {
+    const gh = holdings.filter(h => h.isPot && h.category === 'investments'
+      && !/ISA/.test(h.taxonomyId) && h.embeddedGainPct != null && +h.currentValue > 0)
+    if (!gh.length) return null
+    const v = gh.reduce((s, h) => s + +h.currentValue, 0)
+    return gh.reduce((s, h) => s + +h.currentValue * Math.min(1, Math.max(0, +h.embeddedGainPct)), 0) / v
+  })()
+
+  // Pot scalars from the holdings, as a FALLBACK only where the object-shape
+  // readers above found nothing — fixes typed-array personas (e.g. Mr T) whose
+  // pots were all 0 because the legacy readers don't see assets.investments[]/
+  // bank[]/pensions[]. Object-shape personas keep their values via `||`.
+  // Sum only the SEQUENCEABLE holdings (+ conditional sequence-risk reserve) so
+  // the drawable pot fallback never includes excluded/relief-locked assets
+  // (e.g. BPR-AIM) — keeping the legacy 4-pot sim aligned with the classifier.
+  const potSum = { pension: 0, isa: 0, gia: 0, cash: 0 }
+  const drawable = [...(evaluation.sequenceable || []), ...((evaluation.reserve?.sequence) || [])]
+  for (const h of drawable) {
+    if (!(+h.currentValue > 0)) continue
+    const k = h.category === 'pensions' ? 'pension' : h.category === 'cash' ? 'cash' : /ISA/.test(h.taxonomyId) ? 'isa' : 'gia'
+    if (k in potSum) potSum[k] += +h.currentValue
+  }
+  // Floor fallback — DB + state from the evaluation where the object readers
+  // found nothing (typed-array personas). Object personas keep their values.
+  const evDbIncome = (evaluation.secureIncome || [])
+    .filter(s => /DB|annuity/i.test(s.streamType)).reduce((a, s) => a + (+s.grossAnnual || 0), 0)
+  const evState = (evaluation.secureIncome || []).find(s => s.streamType === 'state')
+  const effDbIncome = dbIncome || evDbIncome
+  const effStatePension = (+inc.statePension?.annual || +inc.statePension) || evState?.grossAnnual || statePensionAnnual
+
   return {
     age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
     married, estateToSpouseFraction,
-    pots: { pension: pensionDC, isa: isaVal, gia, cash },
-    potGrowth,
+    pots: { pension: pensionDC || potSum.pension, isa: isaVal || potSum.isa, gia: gia || potSum.gia, cash: cash || potSum.cash },
+    potGrowth, giaGainBlended,
     holdings, evaluation,
-    property, liabilities, dbIncome,
-    secure: { statePensionAnnual, rental, dividends },
+    property, liabilities, dbIncome: effDbIncome,
+    secure: { statePensionAnnual: effStatePension, rental, dividends },
     incomeTargetAnnual,
     isHigherRateTaxpayer: !!entity.isHigherRateTaxpayer,
     // Beneficiary's marginal income-tax rate for the post-75 inherited-pension
@@ -181,10 +215,13 @@ export function simulatePath(ctx, strategy, opts = {}) {
   let depletedAtAge = null
   const startYear = opts.now ? opts.now.getFullYear() : 2026
 
-  // Per-pot growth (decision B) is opt-in so the flat-rate baselines stay stable;
-  // when on, each pot grows at its blended rate (cash ~3% vs equity ~6%) instead
-  // of one rate for all four — fixes cash being grown at the equity assumption.
-  const usePotGrowth = !!(opts.perPotGrowth && ctx.potGrowth)
+  // Per-holding accuracy (decision B) is opt-in so the flat-rate baselines stay
+  // stable; when on, each pot grows at its blended rate (cash ~3% vs equity ~6%)
+  // and GIA disposals use the real blended embedded gain instead of the flat 0.4.
+  // perPotGrowth kept as an alias for back-compat with the pot-growth suite.
+  const perHolding = !!(opts.perHolding || opts.perPotGrowth)
+  const usePotGrowth = perHolding && !!ctx.potGrowth
+  const giaGainFrac = (perHolding && ctx.giaGainBlended != null) ? ctx.giaGainBlended : ctx.giaGainFraction
   for (let age = ctx.age; age <= ctx.horizonAge; age++) {
     const yIdx = age - ctx.age
     // Grow pots at start of year (nominal).
@@ -225,7 +262,7 @@ export function simulatePath(ctx, strategy, opts = {}) {
       const d = allocate(totalGross)
       const pclsTaxFree = Math.min(d.pension * 0.25, lsaRemaining)
       const pensionTaxable = d.pension - pclsTaxFree
-      const giaGain = d.gia * ctx.giaGainFraction
+      const giaGain = d.gia * giaGainFrac
       const tx = withdrawalTaxForYear({
         pensionDrawdown: pensionTaxable, statePension: sp,
         otherTaxableIncome: ctx.secure.rental + ctx.dbIncome, dividends: ctx.secure.dividends,

@@ -30,6 +30,7 @@ import {
   cashflowHealth,
   // §A NOW
   calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow, inferLifeStage,
+  calcAge,
   liquidityBuffer, recommendedSurplusAllocation,
   debtRatio,
   // §B TRAJECTORY
@@ -61,7 +62,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 // for decumulators — replaces the relabeled-G-K "Optimal" + the forward-table stub.
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
-import { compareMethods, recommendMethodForGoal, methodPath } from '../engine/withdrawal-methods.js'
+import { compareMethods, recommendMethodForGoal, methodPath, METHODS } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
 // L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
@@ -2086,11 +2087,7 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
               <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{openTile?.q || CF_TILE_TITLES[open]}</h2>
               <RevealStagger interval={60} startDelay={40}>
                 {openTile?.content || null}
-                {open === 'lastability' && <>
-                  <FundedRatioGaugeV2 ratio={+(fr?.ratio || fr?.value || 1.0)} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
-                  <SwrRegimePicker regime={swrRegime} onChange={setSwrRegime} swr={swr} />
-                  <FiProgressTile fi={fi} />
-                </>}
+                {open === 'lastability' && <LastabilityDrawer entity={entity} decSolve={decSolve} fr={fr} fi={fi} />}
                 {open === 'drawdown' && <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />}
                 {open === 'resilience' && <>
                   <SequenceStressHero entity={entity} seqVuln={seqVuln} />
@@ -3673,6 +3670,233 @@ function MethodDetail({ method, opts, horizon, recommended, onBack }) {
       </div>
     </DrillStackProvider>
   )
+}
+// ── Accumulation projection — the accumulator face of "Will my money last?" ──
+// Compound a pot forward with annual saving. Pure & deterministic; mirrors
+// methodPath's grammar so the chart/back-solve language is shared.
+function accumProjection({ pot, annualSaving, growth, age0, years }) {
+  const out = []
+  let bal = +pot || 0
+  const g = growth != null ? +growth : 0.05
+  const sv = +annualSaving || 0
+  const n = Math.max(1, years)
+  for (let y = 0; y <= n; y++) { out.push({ age: age0 + y, balance: Math.round(bal) }); bal = bal * (1 + g) + sv }
+  return out
+}
+// Back-solve: the annual saving needed to reach fiTarget by targetAge (bisection).
+function solveSavingForFI({ pot, growth, age0, targetAge, fiTarget }) {
+  const years = Math.max(1, targetAge - age0)
+  let lo = 0, hi = Math.max(fiTarget, 1e5)
+  for (let i = 0; i < 44; i++) {
+    const mid = (lo + hi) / 2
+    const end = accumProjection({ pot, annualSaving: mid, growth, age0, years }).slice(-1)[0].balance
+    if (end >= fiTarget) hi = mid; else lo = mid
+  }
+  return Math.round(hi)
+}
+// Rising pot vs the FI target line — labelled axes + "FI reached" marker.
+function AccumChart({ path, target }) {
+  const pts = (path || []).filter(Boolean)
+  if (pts.length < 2) return null
+  const maxV = Math.max(...pts.map(r => r.balance || 0), target || 0, 1) * 1.05
+  const W = 320, H = 150, pL = 44, pR = 10, pT = 12, pB = 26, pw = W - pL - pR, ph = H - pT - pB
+  const n = pts.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const line = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const area = `M${px(0).toFixed(1)},${py(0).toFixed(1)} ` + pts.map((r, i) => 'L' + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ') + ` L${px(n - 1).toFixed(1)},${py(0).toFixed(1)} Z`
+  const reachIdx = pts.findIndex(r => (r.balance || 0) >= (target || Infinity))
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your savings over time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Projected savings climbing toward your financial-independence target, on your assumptions">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        {target > 0 && target < maxV && (
+          <g>
+            <line x1={pL} y1={py(target)} x2={W - pR} y2={py(target)} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="4 2" />
+            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">FI target {_gk(target)}</text>
+          </g>
+        )}
+        <path d={area} fill="var(--c-acc)" opacity="0.12" />
+        <path d={line} fill="none" stroke="var(--c-acc)" strokeWidth="1.75" />
+        {reachIdx > 0 && (
+          <g>
+            <line x1={px(reachIdx)} y1={pT} x2={px(reachIdx)} y2={pT + ph} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="3 2" />
+            <text x={px(reachIdx)} y={pT - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="middle">FI at {pts[reachIdx].age}</text>
+          </g>
+        )}
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {pts[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+    </div>
+  )
+}
+
+// "Will my money last?" — rebuilt to the interactive bar (founder 2026-06-04:
+// every tile must inform graphically, support multi-variable what-if + back-solve,
+// and reconcile). Decumulator: a real depletion chart on the recommended method
+// with pot / draw / growth levers + a "make it last to age X" back-solve; the
+// secure-income floor is named as the second lens (never welded with "but"); the
+// funded gauge stays as a pots-only secondary read with the gap explained.
+// Accumulator: a savings projection toward the FI target with pot / saving / growth
+// levers + a "reach FI by age X" back-solve — closing P4-03 (the accumulator had
+// zero interactive surfaces) and P4-14 (funded gauge had no back-solve).
+function LastabilityDrawer({ entity, decSolve, fr, fi }) {
+  if (decSolve?.rankedPaths?.length) return <LastDecum entity={entity} decSolve={decSolve} fr={fr} />
+  return <LastAccum entity={entity} fi={fi} />
+}
+
+function LastDecum({ decSolve, fr }) {
+  const inp = decSolve.inputs || {}
+  const age0 = inp.currentAge || 65
+  const horizonAge = inp.horizonAge || 95
+  // Simulate PAST the plan horizon so "will it last?" can actually be explored —
+  // the back-solve target and the depletion curve must reach beyond the plan, not
+  // clamp at it. (Plan horizon 95 made "make it last to 100" a no-op.)
+  const simEndAge = Math.max(horizonAge + 5, 105)
+  const years = Math.max(1, simEndAge - age0)
+  const portfolio0 = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+  const seedG = Math.round((inp.growth ?? 0.05) * 1000) / 10
+  const seedPotK = Math.max(10, Math.round(portfolio0 / 1000))
+  const essentials = Math.round((inp.incomeTargetAnnual || 0) * 0.6)
+  const primaryGoal = decSolve.binding?.primaryGoal || 'min_lifetime_tax'
+  const methodId = recommendMethodForGoal(primaryGoal)
+  const plain = METHOD_PLAIN[methodId] || { name: (METHODS[methodId] || {}).label || 'your plan' }
+  const secureGross = decSolve.floor?.grossAnnual || 0
+  const infl = inp.inflation ?? 0.025
+
+  const [gPct, setGPct] = useState(seedG)
+  const [potK, setPotK] = useState(seedPotK)
+  const [drawScale, setDrawScale] = useState(1)
+  const dirty = Math.abs(gPct - seedG) > 0.001 || potK !== seedPotK || Math.abs(drawScale - 1) > 0.001
+  const reset = () => { setGPct(seedG); setPotK(seedPotK); setDrawScale(1) }
+  const liveOpts = useMemo(() => ({ portfolio: potK * 1000, years, growth: gPct / 100, inflation: infl, essentialsAnnual: essentials, age: age0, rateScale: drawScale }), [potK, gPct, drawScale, years, infl, essentials, age0])
+  const path = useMemo(() => { try { return methodPath(methodId, liveOpts) } catch { return [] } }, [methodId, liveOpts])
+  const depletes = path.find(r => (r.balance || 0) <= 0)
+  const lastsHorizon = !depletes                    // survives the whole simulation
+  const lastsAge = depletes ? depletes.age : simEndAge
+  const w1 = path[0]?.withdrawal ?? 0
+  const onTargetAge = (tAge) => setDrawScale(solveDrawScaleForAge(methodId, { portfolio: potK * 1000, years, growth: gPct / 100, inflation: infl, essentialsAnnual: essentials, age: age0 }, tAge))
+  const frRatio = +(fr?.ratio || fr?.value || 0)
+
+  return (<>
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>The answer, on your plan</div>
+      <div style={{ fontSize: 15, color: 'var(--c-text)', lineHeight: 1.5 }}>
+        Your <strong>{_gk(potK * 1000)}</strong> of pots, drawn using <strong>{plain.name}</strong>, {lastsHorizon
+          ? <>last beyond <strong style={{ color: 'var(--c-mint-text)' }}>age {horizonAge}</strong> — your full plan and more — on these assumptions.</>
+          : <>run low at <strong style={{ color: 'var(--c-coral-text)' }}>age {lastsAge}</strong> on these assumptions.</>}
+      </div>
+      {secureGross > 0 && (
+        <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          On top of the pots, your <strong style={{ color: 'var(--c-mint-text)' }}>secure income {_gk(secureGross)}/yr</strong> (state pension, DB &amp; guaranteed income) is paid <strong>for life</strong> — it never runs out. The pots only have to cover the gap above it.
+        </div>
+      )}
+    </div>
+
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Explore it — drag any lever</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+        Year-1 income <strong style={{ color: 'var(--c-text)' }}>{_gk(w1)}</strong> · {lastsHorizon ? <>lasts past age <strong style={{ color: 'var(--c-mint-text)' }}>{horizonAge}</strong></> : <>runs out at age <strong style={{ color: 'var(--c-coral-text)' }}>{lastsAge}</strong></>}
+      </div>
+      <MethodChart path={path} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Pot at retirement" value={potK} min={Math.max(10, Math.round(seedPotK * 0.3))} max={Math.round(seedPotK * 2)} step={10} fmt={() => _gk(potK * 1000)} onChange={setPotK} dirty={potK !== seedPotK} />
+        <SolverSlider label="Draw level" value={drawScale} min={0.4} max={2} step={0.05} fmt={() => `${_gk(w1)}/yr`} onChange={setDrawScale} dirty={Math.abs(drawScale - 1) > 0.001} />
+        <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — make it last to" value={Math.min(Math.max(lastsAge, age0 + 5), 105)} min={age0 + 5} max={105} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want it to last to — the engine solves the most you could draw, and the chart + numbers follow.</div>
+      </div>
+    </div>
+
+    {frRatio > 0 && (
+      <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>Second lens — pots only</div>
+        <FundedRatioGaugeV2 ratio={frRatio} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
+          This gauge weighs your <strong>investable pots alone</strong> against a safe-withdrawal target — it deliberately ignores secure income. That's why it can read "{Math.round(frRatio * 100)}% funded" while the plan above lasts to {lastsHorizon ? `age ${horizonAge}+` : `age ${lastsAge}`}: {secureGross > 0 ? `the difference is the ${_gk(secureGross)}/yr of secure income carrying the rest.` : 'the two simply measure different things.'}
+        </div>
+      </div>
+    )}
+
+    <div className="sw-card" style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How this pace plays out</div>
+      <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(methodId, { age0, w1, w2: path[1]?.withdrawal ?? w1, portfolio: liveOpts.portfolio, essentialsAnnual: essentials })}</div>
+    </div>
+    <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
+      A constant-return illustration on your assumptions — not a forecast. Real markets vary year to year; see "What if markets fall?" for the stochastic view.
+    </div>
+  </>)
+}
+
+function LastAccum({ entity, fi }) {
+  const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+  const fiTarget = Math.round(fi?.fiTarget || 0)
+  const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
+  const seedSaveAnnual = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); const net = (+(m?.surplus) || 0) - (+(m?.deficit) || 0); return Math.max(0, Math.round(net * 12)) } catch { return 0 } })()
+  const seedPotK = Math.max(1, Math.round(invested0 / 1000))
+  const seedSaveK = Math.max(0, Math.round(seedSaveAnnual / 1000))
+  const seedG = 5
+  const horizonAge = Math.min(100, age0 + 45)
+  const years = Math.max(1, horizonAge - age0)
+
+  const [potK, setPotK] = useState(seedPotK)
+  const [saveK, setSaveK] = useState(seedSaveK)
+  const [gPct, setGPct] = useState(seedG)
+  const dirty = potK !== seedPotK || saveK !== seedSaveK || Math.abs(gPct - seedG) > 0.001
+  const reset = () => { setPotK(seedPotK); setSaveK(seedSaveK); setGPct(seedG) }
+  const path = useMemo(() => accumProjection({ pot: potK * 1000, annualSaving: saveK * 1000, growth: gPct / 100, age0, years }), [potK, saveK, gPct, age0, years])
+  const reachIdx = path.findIndex(r => (r.balance || 0) >= fiTarget)
+  const fiAge = reachIdx >= 0 ? path[reachIdx].age : null
+  const onTargetAge = (tAge) => { const sv = solveSavingForFI({ pot: potK * 1000, growth: gPct / 100, age0, targetAge: tAge, fiTarget }); setSaveK(Math.round(sv / 1000)) }
+
+  if (!fiTarget) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Add your investable savings and a target retirement income to project your path to financial independence.</div>
+
+  return (<>
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>The answer, on your plan</div>
+      <div style={{ fontSize: 15, color: 'var(--c-text)', lineHeight: 1.5 }}>
+        Saving <strong>{_gk(saveK * 1000)}/yr</strong> at <strong>{gPct}%</strong>, your <strong>{_gk(potK * 1000)}</strong> reaches your <strong>{_gk(fiTarget)}</strong> independence target {fiAge
+          ? <>at <strong style={{ color: 'var(--c-mint-text)' }}>age {fiAge}</strong>.</>
+          : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong> — raise saving or growth below.</>}
+      </div>
+    </div>
+
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Explore it — drag any lever</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <AccumChart path={path} target={fiTarget} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Savings now" value={potK} min={0} max={Math.max(50, Math.round(seedPotK * 2 + 50))} step={5} fmt={() => _gk(potK * 1000)} onChange={setPotK} dirty={potK !== seedPotK} />
+        <SolverSlider label="Saving / yr" value={saveK} min={0} max={Math.max(20, Math.round(seedSaveK * 2 + 20))} step={1} fmt={() => `${_gk(saveK * 1000)}/yr`} onChange={setSaveK} dirty={saveK !== seedSaveK} />
+        <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — reach FI by" value={Math.min(Math.max(fiAge || (age0 + 20), age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want to be independent by — the engine solves how much you'd need to save each year, and the chart follows.</div>
+      </div>
+    </div>
+
+    <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.5 }}>
+      The 25× target is a long-standing planning rule of thumb (a ~4% withdrawal), not a guarantee. A constant-return illustration on your assumptions — not a forecast.
+    </div>
+  </>)
 }
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)

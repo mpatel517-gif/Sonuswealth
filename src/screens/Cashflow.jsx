@@ -2091,6 +2091,7 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                 {open === 'drawdown' && <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />}
                 {open === 'resilience' && <>
                   <SequenceStressHero entity={entity} seqVuln={seqVuln} />
+                  {decSolve?.rankedPaths?.length ? <StressExplorer decSolve={decSolve} /> : null}
                   {pos && !pos.insufficient_data && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1 && (() => {
                     const startYear = new Date().getFullYear()
                     const pyp = pos.per_year_percentiles
@@ -2102,7 +2103,6 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                     </>)
                   })()}
                   {seqVuln && seqVuln.good_path && seqVuln.bad_path && !seqVuln.insufficient_data && <SequenceStressVisV2 goodSequence={seqVuln.good_path} badSequence={seqVuln.bad_path} horizonYears={seqVuln.horizon_years || 30} />}
-                  <GuytonKlingerCorridor path={gkPath} />
                 </>}
                 {open === 'whatif' && <GoalSeekCard entity={entity} />}
               </RevealStagger>
@@ -3897,6 +3897,149 @@ function LastAccum({ entity, fi }) {
       The 25× target is a long-standing planning rule of thumb (a ~4% withdrawal), not a guarantee. A constant-return illustration on your assumptions — not a forecast.
     </div>
   </>)
+}
+
+// ── Adjustable market-shock model — the interactive core of "What if markets
+// fall?" (replaces the fabricated ±20% GK corridor, P4-06). Injects a single
+// crash year into an otherwise constant-return drawdown, so the user can drag the
+// crash SIZE, its TIMING, and the draw and watch the depletion age move — plus
+// back-solve the largest crash the plan can absorb. Pure & deterministic.
+function stressPath({ portfolio, years, growth, inflation = 0.025, draw, crashPct, crashAtYear, age0 }) {
+  let bal = +portfolio || 0
+  let w = +draw || 0
+  const g = growth != null ? +growth : 0.05
+  const out = [{ age: age0, balance: Math.round(bal) }]
+  const n = Math.max(1, years)
+  for (let y = 1; y <= n; y++) {
+    const yg = (y === crashAtYear) ? -Math.abs(crashPct) : g
+    bal = Math.max(0, bal * (1 + yg) - w)
+    out.push({ age: age0 + y, balance: Math.round(bal) })
+    w *= (1 + inflation)
+  }
+  return out
+}
+function _depAge(path, age0, years) { const d = path.find(p => (p.balance || 0) <= 0); return d ? d.age : age0 + years }
+// Back-solve: the biggest one-year crash the plan still survives to targetAge.
+function solveSurvivableCrash({ portfolio, years, growth, inflation, draw, crashAtYear, age0, targetAge }) {
+  let lo = 0, hi = 0.9
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2
+    const dep = _depAge(stressPath({ portfolio, years, growth, inflation, draw, crashPct: mid, crashAtYear, age0 }), age0, years)
+    if (dep >= targetAge) lo = mid; else hi = mid   // survives → try a bigger crash
+  }
+  return Math.round(lo * 100) / 100
+}
+// Baseline vs stressed pot path — labelled axes, both depletion markers.
+function StressChart({ baseline, stressed, crashAtAge }) {
+  const a = (baseline || []).filter(Boolean), b = (stressed || []).filter(Boolean)
+  if (a.length < 2) return null
+  const maxV = Math.max(...a.map(r => r.balance || 0), ...b.map(r => r.balance || 0), 1) * 1.05
+  const W = 320, H = 160, pL = 44, pR = 10, pT = 12, pB = 28, pw = W - pL - pR, ph = H - pT - pB
+  const n = a.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const mk = pts => pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const depB = b.findIndex(r => (r.balance || 0) <= 0)
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  const crashIdx = a.findIndex(r => r.age === crashAtAge)
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your pot — calm markets vs a crash</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Your pot over time under calm markets versus an early crash, on your assumptions">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        {crashIdx > 0 && (
+          <g>
+            <line x1={px(crashIdx)} y1={pT} x2={px(crashIdx)} y2={pT + ph} stroke="var(--c-amber-text)" strokeWidth="0.75" strokeDasharray="2 2" />
+            <text x={px(crashIdx)} y={pT - 3} fontSize="8" fill="var(--c-amber-text)" textAnchor="middle">crash</text>
+          </g>
+        )}
+        <path d={mk(a)} fill="none" stroke="var(--c-mint-text)" strokeWidth="1.75" />
+        <path d={mk(b)} fill="none" stroke="var(--c-coral-text)" strokeWidth="1.75" />
+        {depB >= 0 && (
+          <g>
+            <line x1={px(depB)} y1={pT} x2={px(depB)} y2={pT + ph} stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 2" />
+            <text x={px(depB)} y={pT - 3} fontSize="8" fill="var(--c-coral-text)" textAnchor="middle">runs out</text>
+          </g>
+        )}
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {a[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+      <div style={{ display: 'flex', gap: 14, marginTop: 2, fontSize: 10, color: 'var(--c-text3)' }}>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-mint-text)', verticalAlign: 'middle', marginRight: 4 }} />Calm markets</span>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-coral-text)', verticalAlign: 'middle', marginRight: 4 }} />After the crash</span>
+      </div>
+    </div>
+  )
+}
+
+// Interactive "What if markets fall?" — drag the crash, see the damage, back-solve
+// the crash you can survive. Sits ABOVE the real stochastic views (sequence-risk
+// story + Monte-Carlo bands), which stay as the engine's own uncertainty read.
+function StressExplorer({ decSolve }) {
+  const inp = decSolve.inputs || {}
+  const age0 = inp.currentAge || 65
+  const horizonAge = inp.horizonAge || 95
+  const simEndAge = Math.max(horizonAge + 5, 105)
+  const years = Math.max(1, simEndAge - age0)
+  const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+  const growth = inp.growth ?? 0.05
+  const inflation = inp.inflation ?? 0.025
+  const secureGross = decSolve.floor?.grossAnnual || 0
+  const seedDraw = Math.max(0, (inp.incomeTargetAnnual || 0) - secureGross)   // what the pots must cover
+
+  const [crashPctI, setCrashPctI] = useState(30)   // % drop, integer
+  const [crashYr, setCrashYr] = useState(1)        // years from now
+  const [drawScale, setDrawScale] = useState(100)  // % of plan draw, integer
+  const dirty = crashPctI !== 30 || crashYr !== 1 || drawScale !== 100
+  const reset = () => { setCrashPctI(30); setCrashYr(1); setDrawScale(100) }
+  const draw = seedDraw * (drawScale / 100)
+  const common = { portfolio, years, growth, inflation, draw, age0 }
+  const baseline = useMemo(() => stressPath({ ...common, crashPct: 0, crashAtYear: -1 }), [portfolio, years, growth, inflation, draw, age0])
+  const stressed = useMemo(() => stressPath({ ...common, crashPct: crashPctI / 100, crashAtYear: crashYr }), [portfolio, years, growth, inflation, draw, age0, crashPctI, crashYr])
+  const depBase = _depAge(baseline, age0, years)
+  const depStress = _depAge(stressed, age0, years)
+  const baseSurvives = depBase >= simEndAge
+  const stressSurvives = depStress >= simEndAge
+  const onSurvivable = (tAge) => { const c = solveSurvivableCrash({ ...common, crashAtYear: crashYr, targetAge: tAge }); setCrashPctI(Math.round(c * 100)) }
+
+  if (!(portfolio > 0) || !(seedDraw > 0)) return null   // pure secure-income plan: nothing to stress
+
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Stress it yourself — drag the crash</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+        A <strong style={{ color: 'var(--c-coral-text)' }}>{crashPctI}% crash</strong> {crashYr <= 1 ? 'next year' : `in ${crashYr} years`} {stressSurvives
+          ? <>still leaves your pots lasting <strong style={{ color: 'var(--c-mint-text)' }}>beyond age {horizonAge}</strong>{secureGross > 0 ? <> — and your {_gk(secureGross)}/yr secure income carries on regardless.</> : '.'}</>
+          : <>brings your pots' end forward to <strong style={{ color: 'var(--c-coral-text)' }}>age {depStress}</strong>{baseSurvives
+              ? <> — your plan otherwise lasts beyond age {horizonAge}.</>
+              : (depBase - depStress > 0 ? <> — about <strong>{depBase - depStress} years</strong> sooner than calm markets (age {depBase}).</> : '.')}{secureGross > 0 ? <> Your {_gk(secureGross)}/yr secure income is unaffected.</> : ''}</>}
+      </div>
+      <StressChart baseline={baseline} stressed={stressed} crashAtAge={age0 + crashYr} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Crash size" value={crashPctI} min={5} max={60} step={5} fmt={v => `−${v}%`} onChange={setCrashPctI} dirty={crashPctI !== 30} />
+        <SolverSlider label="When it hits" value={crashYr} min={1} max={Math.min(20, years)} step={1} fmt={v => v <= 1 ? 'next yr' : `in ${v}y`} onChange={setCrashYr} dirty={crashYr !== 1} />
+        <SolverSlider label="Your draw" value={drawScale} min={50} max={150} step={5} fmt={() => `${_gk(draw)}/yr`} onChange={setDrawScale} dirty={drawScale !== 100} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — still last to" value={Math.min(Math.max(depStress, age0 + 5), simEndAge)} min={age0 + 5} max={simEndAge} step={1} fmt={v => `age ${v}`} onChange={onSurvivable} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you'd still want to be funded to — the engine solves the <strong>biggest crash your plan could absorb</strong> and still get there.</div>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        A single-shock illustration on your assumptions — not a forecast. The sequence-risk story and Monte-Carlo range below model many market paths, not one crash.
+      </div>
+    </div>
+  )
 }
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)

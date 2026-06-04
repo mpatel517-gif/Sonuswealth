@@ -3466,23 +3466,67 @@ function MethodChart({ path }) {
     </div>
   )
 }
-// Per-method drawer (founder 2026-06-04): tap a method → its own page. Plain-
-// English mechanism + an INTERACTIVE worked example — a growth slider re-runs the
-// engine path live, so the user can play with the assumption and watch the pot
-// chart + the year-by-year numbers move (not a static read).
+// Tiny pot-trajectory sparkline for the compact method rows (balance-sheet grammar).
+function MiniSparkline({ path, color = 'var(--c-acc)' }) {
+  const pts = (path || []).filter(Boolean)
+  if (pts.length < 2) return null
+  const W = 60, H = 22
+  const maxV = Math.max(...pts.map(r => r.balance || 0), 1)
+  const n = pts.length
+  const px = i => (i / (n - 1)) * W
+  const py = v => H - (Math.max(0, v) / maxV) * (H - 3) - 1.5
+  const d = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const dep = pts.some(r => (r.balance || 0) <= 0)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ display: 'block', flexShrink: 0 }} aria-hidden="true">
+      <path d={d} fill="none" stroke={dep ? 'var(--c-coral-text)' : color} strokeWidth="1.5" />
+    </svg>
+  )
+}
+// Back-solve: find the draw level (rateScale) so the pot lasts to ~targetAge.
+// Higher scale → draws more → depletes earlier; bisection converges on the most
+// you could draw and still reach the target. The "drag the outcome, solve the
+// lever" interaction the founder wants everywhere.
+function solveDrawScaleForAge(methodId, baseOpts, targetAge) {
+  const age0 = baseOpts.age || 65
+  const endAge = age0 + (baseOpts.years || 30) - 1
+  const tgt = Math.min(targetAge, endAge + 1)
+  let lo = 0.3, hi = 3
+  for (let i = 0; i < 26; i++) {
+    const mid = (lo + hi) / 2
+    let path = []
+    try { path = methodPath(methodId, { ...baseOpts, rateScale: mid }) } catch { /* */ }
+    const dep = path.find(r => (r.balance || 0) <= 0)
+    const depAge = dep ? dep.age : endAge + 1
+    if (depAge >= tgt) lo = mid; else hi = mid
+  }
+  return Math.round(lo * 100) / 100
+}
+// Per-method drawer — INTERACTIVE, MULTI-VARIABLE + BACK-SOLVE. Flex the pot, the
+// draw level and growth and watch the chart / income / longevity move; or drag
+// the "last to age" target and the engine solves the draw for you. (founder
+// 2026-06-04: "interactive = all equations, not one"; "back solver everywhere".)
 function MethodDetail({ method, opts, horizon, recommended, onBack }) {
   const p = METHOD_PLAIN[method.id] || { name: method.label }
+  const age0 = opts.age || 65
+  const endAge = age0 + (opts.years || 30) - 1
   const seedG = Math.round((opts.growth ?? 0.05) * 1000) / 10
+  const seedPotK = Math.max(10, Math.round((opts.portfolio || 0) / 1000))
   const [gPct, setGPct] = useState(seedG)
-  const path = useMemo(() => { try { return methodPath(method.id, { ...opts, growth: gPct / 100 }) } catch { return [] } }, [method.id, opts, gPct])
+  const [potK, setPotK] = useState(seedPotK)
+  const [drawScale, setDrawScale] = useState(1)
+  const dirty = Math.abs(gPct - seedG) > 0.001 || potK !== seedPotK || Math.abs(drawScale - 1) > 0.001
+  const reset = () => { setGPct(seedG); setPotK(seedPotK); setDrawScale(1) }
+  const liveOpts = useMemo(() => ({ ...opts, portfolio: potK * 1000, growth: gPct / 100, rateScale: drawScale }), [opts, potK, gPct, drawScale])
+  const path = useMemo(() => { try { return methodPath(method.id, liveOpts) } catch { return [] } }, [method.id, liveOpts])
   const depletes = path.find(r => (r.balance || 0) <= 0)
   const lastsHorizon = !depletes
-  const age0 = path[0]?.age ?? opts.age
-  const w1 = path[0]?.withdrawal ?? method.year1Withdrawal
+  const lastsAge = depletes ? depletes.age : endAge
+  const w1 = path[0]?.withdrawal ?? 0
   const w2 = path[1]?.withdrawal ?? w1
-  // Representative years: 1, 5, 10, 20, and the final/depletion year.
   const idxs = [...new Set([0, 4, 9, 19, path.length - 1].filter(i => i >= 0 && i < path.length))]
   const rows = idxs.map(i => path[i]).filter(Boolean)
+  const onTargetAge = (tAge) => setDrawScale(solveDrawScaleForAge(method.id, { ...opts, portfolio: potK * 1000, growth: gPct / 100 }, tAge))
   return (
     <DrillStackProvider>
       <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -3499,15 +3543,28 @@ function MethodDetail({ method, opts, horizon, recommended, onBack }) {
           </div>
 
           <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it plays out for you</div>
-            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(method.id, { age0, w1, w2, portfolio: opts.portfolio, essentialsAnnual: opts.essentialsAnnual })}</div>
-            <MethodChart path={path} />
-            <div style={{ marginTop: 10 }}>
-              <SolverSlider label="Growth assumption (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
-              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 3 }}>
-                Drag to see how the pot and your income respond.{Math.abs(gPct - seedG) > 0.001 && <> · <button onClick={() => setGPct(seedG)} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 10 }}>reset</button></>}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Explore it — drag any lever</div>
+              {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
             </div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+              Year-1 income <strong style={{ color: 'var(--c-text)' }}>{_gk(w1)}</strong> · {lastsHorizon ? <>lasts to age <strong style={{ color: 'var(--c-mint-text)' }}>{endAge}+</strong></> : <>runs out at age <strong style={{ color: 'var(--c-coral-text)' }}>{lastsAge}</strong></>}
+            </div>
+            <MethodChart path={path} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+              <SolverSlider label="Starting pot" value={potK} min={Math.max(10, Math.round(seedPotK * 0.3))} max={Math.round(seedPotK * 2)} step={10} fmt={() => _gk(potK * 1000)} onChange={setPotK} dirty={potK !== seedPotK} />
+              <SolverSlider label="Draw level" value={drawScale} min={0.4} max={2} step={0.05} fmt={() => `${_gk(w1)}/yr`} onChange={setDrawScale} dirty={Math.abs(drawScale - 1) > 0.001} />
+              <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+            </div>
+            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+              <SolverSlider label="↩ Back-solve — make it last to" value={Math.min(Math.max(lastsAge, age0 + 5), 105)} min={age0 + 5} max={105} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want it to last to — the engine solves the most you could draw, and the chart + numbers follow.</div>
+            </div>
+          </div>
+
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it plays out for you</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(method.id, { age0, w1, w2, portfolio: liveOpts.portfolio, essentialsAnnual: opts.essentialsAnnual })}</div>
             {rows.length > 1 && (
               <div style={{ marginTop: 12, overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
@@ -3529,7 +3586,7 @@ function MethodDetail({ method, opts, horizon, recommended, onBack }) {
                   </tbody>
                 </table>
                 <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
-                  Constant-return illustration on your assumptions (not a forecast); real markets vary year to year.
+                  Constant-return illustration on your assumptions (not a forecast); real markets vary year to year — see "What if markets fall?" for the stochastic view.
                 </div>
               </div>
             )}
@@ -3539,7 +3596,7 @@ function MethodDetail({ method, opts, horizon, recommended, onBack }) {
             <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6 }}>
               <strong style={{ color: 'var(--c-mint-text)' }}>Strength:</strong> {method.strength}.<br />
               <strong style={{ color: 'var(--c-amber-text)' }}>Watch:</strong> {method.weakness}.<br />
-              <strong style={{ color: 'var(--c-text)' }}>Lasts:</strong> {lastsHorizon ? `to age ${horizon}+ at ${gPct}% growth` : `funds run low by age ${depletes?.age}`}.
+              <strong style={{ color: 'var(--c-text)' }}>Lasts:</strong> {lastsHorizon ? `to age ${endAge}+ on these levers` : `funds run low by age ${lastsAge}`}.
             </div>
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
@@ -3562,42 +3619,35 @@ function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnu
     ? <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>Pacing needs a drawable pot (pension / ISA / GIA / cash). Your income here comes from secure sources, or it hasn&rsquo;t been captured yet.</div>
     : (() => {
       const ws = methods.map(m => m.year1Withdrawal || 0).filter(Boolean)
-      const maxW1 = Math.max(...ws, 1)
       const lo = Math.min(...ws), hi = Math.max(...ws)
       const allLast = methods.every(m => m.lastsHorizon)
       return (
-        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
             <strong style={{ color: 'var(--c-text)' }}>Five ways to pace what you spend</strong> from your {_gk(portfolio)} of pots.{' '}
-            {allLast ? `On your assumptions all five last to age ${horizon}+` : 'How long each lasts differs'} — so the real choice is{' '}
-            <strong style={{ color: 'var(--c-text)' }}>how much you take early</strong> ({_gk(lo)}–{_gk(hi)}/yr in year one) and{' '}
-            <strong style={{ color: 'var(--c-text)' }}>how steady it stays</strong>. Tap any one for how it works and a worked example. An illustration — not advice.
+            {allLast ? `On your assumptions all five last to age ${horizon}+` : 'How long each lasts differs'} — the choice is{' '}
+            <strong style={{ color: 'var(--c-text)' }}>how much you take early</strong> ({_gk(lo)}–{_gk(hi)}/yr) and{' '}
+            <strong style={{ color: 'var(--c-text)' }}>how steady it stays</strong>. Tap one to open it — see how it works and drag the levers. An illustration, not advice.
           </div>
+          {/* Compact DRAWER ROWS (founder: "make it a drawer, not 5 cards on one
+              page") — name + income shape + a pot-trajectory sparkline + year-1
+              income + lasts-age. The detail lives in the opened drawer. */}
           {methods.map(m => {
             const rec = m.id === recId
             const p = METHOD_PLAIN[m.id] || { name: m.label, shape: '' }
+            const spark = (() => { try { return methodPath(m.id, opts) } catch { return [] } })()
             return (
-              <button key={m.id} onClick={() => setOpenMethod(m)} className="sw-lift sw-pressable" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', padding: '11px 12px', borderRadius: 12, background: 'var(--c-surface)', border: rec ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
-                      {p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1 priority</span>}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>{m.label} · {m.source}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: rec ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}</div>
-                    <div style={{ fontSize: 9.5, color: 'var(--c-text3)' }}>year-1 income</div>
-                  </div>
+              <button key={m.id} onClick={() => setOpenMethod(m)} className="sw-lift sw-pressable" style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface)', border: rec ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>#1</span>}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.shape}</div>
                 </div>
-                <div style={{ marginTop: 7, height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+                <MiniSparkline path={spark} color={rec ? 'var(--c-acc)' : 'var(--c-text3)'} />
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: rec ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}</div>
+                  <div style={{ fontSize: 9, color: 'var(--c-text3)' }}>yr-1 · to {m.lastsHorizon ? `${horizon}+` : m.depletesAtAge}</div>
                 </div>
-                <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>{m.summary}</div>
-                <div style={{ marginTop: 5, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-                  <strong style={{ color: 'var(--c-text2)' }}>Income shape:</strong> {p.shape}.
-                </div>
-                <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>How it works + example ›</div>
+                <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
               </button>
             )
           })}

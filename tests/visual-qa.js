@@ -11,7 +11,7 @@
  *        node tests/visual-qa.js --verbose             (show all detail rows)
  */
 
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
 import {
@@ -194,6 +194,16 @@ let totalChecks = 0;
 let totalFails  = 0;
 
 const runIds = fxArg ? [fxArg] : FIXTURE_IDS;
+
+// Fixtures live outside the repo (local engine fixture suite). When the dir is
+// absent (e.g. CI runners) skip cleanly rather than spew per-fixture load
+// errors — the harness still runs in full on a machine that has the fixtures.
+if (!existsSync(FIXTURES_DIR)) {
+  console.log(
+    `\n${C.yellow}SKIP: fixtures dir not present — visual QA needs the local Mr T fixture suite.${C.reset}`
+  );
+  process.exit(0);
+}
 
 console.log(`\n${C.bold}A5.5 VISUAL QA — Mr T Fixture Suite${C.reset}`);
 console.log(`Engines : calcFQ · calcRisk · calcNetWorth · monthlyFlow · prcPccCurrent`);

@@ -1111,6 +1111,21 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     }
   }, [decSolve])
 
+  // Year-1 income range across the 5 pacing methods — drives the "How fast can
+  // I spend?" tile headline so it reads as a real spending range, not "5 methods".
+  const methodsRange = useMemo(() => {
+    if (!decSolve?.rankedPaths?.length) return null
+    try {
+      const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+      const ws = compareMethods({
+        portfolio, years: Math.max(1, (decSolve.inputs?.horizonAge || 95) - (decSolve.inputs?.currentAge || 65)),
+        growth: decSolve.inputs?.growth ?? 0.05, inflation: decSolve.inputs?.inflation ?? 0.025,
+        essentialsAnnual: Math.round((decSolve.inputs?.incomeTargetAnnual || 0) * 0.6), age: decSolve.inputs?.currentAge || 65,
+      }).map(m => m.year1Withdrawal || 0).filter(Boolean)
+      return ws.length ? { lo: Math.min(...ws), hi: Math.max(...ws) } : null
+    } catch { return null }
+  }, [decSolve])
+
   // 1000-run Monte Carlo per spec §5.4 / §5.5 (O-CF-RULES-01).
   const pos = useMemo(
     () => cf_probabilityOfSuccess(entity, CMA_BUNDLE, 1000, trajOpts),
@@ -1344,8 +1359,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 tone: (msNet > 0 ? 'mint' : msNet < 0 ? 'coral' : 'acc'),
                 content: nowSectionContent },
               // Methods → its own tile (decumulators with a solved plan only).
-              ...(decSolve?.rankedPaths?.length ? [{ key: 'methods', q: 'How fast can I spend?', headline: '5 methods',
-                sub: 'Bengen · Guyton-Klinger · Vanguard · bucket · floor', tone: 'acc',
+              ...(decSolve?.rankedPaths?.length ? [{ key: 'methods', q: 'How fast can I spend?',
+                headline: methodsRange ? `${fmtSeedNum(methodsRange.lo)}–${fmtSeedNum(methodsRange.hi)}/yr` : 'Pace options',
+                sub: 'five ways to pace it — steady ↔ flexible', tone: 'acc',
                 content: (<MethodsComparison
                   portfolio={(decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)}
                   years={(decSolve.inputs?.horizonAge || 95) - (decSolve.inputs?.currentAge || 65)}
@@ -1415,15 +1431,20 @@ function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, hea
         <div style={{ marginTop: 12 }}>
           <SectionDelimiter
             letter="C"
-            title="DEPTH · Analytical layer"
-            subtitle="Why it works — and what could break it. Diagnostic / power-user."
+            title="What waiting costs you"
+            subtitle="The price of leaving things as they are — and where charges quietly erode the plan."
             chipClass="sw-chip-violet"
           />
           <RevealStagger interval={60} startDelay={50}>
             <CoIOdometerWithHalo coi={coi} />
             <CfCoiVariantsCard coiVar={coiVar} />
-            <PrcPccStubCard prcPcc={prcPcc} />
-            <RealityEngineStubCard reality={reality} />
+            {/* PRC/PCC Spread + Reality Engine stub cards REMOVED from the user
+                surface (founder decision 2026-06-04). Both are founder-IP stubs
+                that rendered "methodology in progress" / "Experimental" to users
+                — engineer diagnostics, not a cost the user can act on. They live
+                in the engine (cf_prcPccSpread / cf_realityEngineFactorisation)
+                for when the methodology is defined; until then they don't face
+                users. O-CF-RULES-07 / O-CF-RULES-09. */}
             <MaxDrawdownCard mdd={mdd} />
             <EfficientFrontierV2
               userPosition={eff?.user_position || null}
@@ -3353,35 +3374,65 @@ function AssumptionsPanel({ methodology }) {
 // Five withdrawal-PACING methods (how fast to spend the pot), a different lens
 // from the draw ORDER. Standalone so it renders both inside the drawdown drawer
 // (withToggle) and as its own "How fast can I spend?" question-tile (always open).
+// Plain-English layer over the academic method names. The founder's complaint:
+// "5 methods" / "Bengen · Guyton-Klinger" means nothing to a real user. Lead
+// with what each one DOES and the income SHAPE (the real differentiator — every
+// method "lasts to 95+" here, so that line discriminates nothing); keep the
+// academic name as small provenance for the curious.
+const METHOD_PLAIN = {
+  bengen:          { name: 'Steady & predictable',           shape: 'a fixed income that rises with inflation' },
+  guyton_klinger:  { name: 'Flexible guardrails',            shape: 'more on average, but it rises and falls with markets' },
+  vanguard:        { name: 'A share of your pot',            shape: 'tracks the pot, smoothed by a floor and a ceiling' },
+  bucket:          { name: 'Cash-buffer first',              shape: 'steady — you spend cash in downturns so you never sell low' },
+  floor_guardrail: { name: 'Protect essentials, flex the rest', shape: 'essentials are never cut; the extra flexes up and down' },
+}
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)
   const body = (() => {
     let methods = []
     try { methods = compareMethods({ portfolio, years: Math.max(1, years), growth, inflation, essentialsAnnual, age }) } catch { methods = [] }
     if (portfolio <= 0 || !methods.length || methods.every(m => !m.year1Withdrawal)) {
-      return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Method comparison needs a drawable pot (pension/ISA/GIA/cash) to pace. Your income here comes from secure sources or hasn&rsquo;t been captured yet.</div>
+      return <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>Pacing needs a drawable pot (pension / ISA / GIA / cash). Your income here comes from secure sources, or it hasn&rsquo;t been captured yet.</div>
     }
     const recId = recommendMethodForGoal(primaryGoal)
-    const maxW1 = Math.max(...methods.map(m => m.year1Withdrawal || 0), 1)
+    const ws = methods.map(m => m.year1Withdrawal || 0).filter(Boolean)
+    const maxW1 = Math.max(...ws, 1)
+    const lo = Math.min(...ws), hi = Math.max(...ws)
+    const allLast = methods.every(m => m.lastsHorizon)
     return (
-      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-          The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan (and from the single withdrawal-<em>rate</em> assumption behind the funded gauge: this compares how fast to spend, not one rate). Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* Decision frame in plain English — what this IS and the trade-off,
+            before any method name. */}
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
+          <strong style={{ color: 'var(--c-text)' }}>Five ways to pace what you spend</strong> from your {_gk(portfolio)} of pots.{' '}
+          {allLast ? `On your assumptions all five last to age ${horizon}+` : 'How long each lasts differs'} — so the real choice is{' '}
+          <strong style={{ color: 'var(--c-text)' }}>how much you take early</strong> ({_gk(lo)}–{_gk(hi)}/yr in year one) and{' '}
+          <strong style={{ color: 'var(--c-text)' }}>how steady it stays</strong>. More now means less cushion if markets fall. An illustration on your assumptions — not advice.
         </div>
         {methods.map(m => {
           const rec = m.id === recId
+          const p = METHOD_PLAIN[m.id] || { name: m.label, shape: '' }
           return (
-            <div key={m.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: rec ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>{m.label}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1</span>}</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}/yr</span>
+            <div key={m.id} style={{ padding: '11px 12px', borderRadius: 12, background: 'var(--c-surface)', border: rec ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                    {p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1 priority</span>}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>{m.label} · {m.source}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: rec ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}</div>
+                  <div style={{ fontSize: 9.5, color: 'var(--c-text3)' }}>year-1 income</div>
+                </div>
               </div>
-              <div style={{ marginTop: 5, height: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)' }} />
+              <div style={{ marginTop: 7, height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
               </div>
-              <div style={{ marginTop: 5, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>{m.summary}</div>
-              <div style={{ marginTop: 3, fontSize: 10, color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>
-                {m.lastsHorizon ? `Lasts to age ${horizon}+` : `Funds low by age ${m.depletesAtAge}`} · keeps {m.strength} · watch: {m.weakness}
+              <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>{m.summary}</div>
+              <div style={{ marginTop: 5, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+                <strong style={{ color: 'var(--c-text2)' }}>Income shape:</strong> {p.shape}.{' '}
+                <strong style={{ color: 'var(--c-text2)' }}>Watch:</strong> {m.weakness}.{!allLast && m.depletesAtAge ? ` Funds run low by age ${m.depletesAtAge}.` : ''}
               </div>
             </div>
           )

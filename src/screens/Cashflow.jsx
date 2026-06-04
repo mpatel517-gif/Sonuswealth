@@ -1138,6 +1138,57 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     [entity, bv, cv]
   )
 
+  // §A "Now" section content — built here (parent scope: entity/incomeAll/ms/
+  // flow/accountantMode/surplusAlloc/lb/setDrillView all available) and passed
+  // as the 'now' question-tile's render-prop content, so the drill buttons keep
+  // working and nothing is re-typed.
+  const nowSectionContent = (
+    <RevealStagger interval={60} startDelay={50}>
+      <CashflowMoneySankey
+        entity={entity}
+        incomeAll={incomeAll}
+        ms={ms}
+        flow={flow}
+      />
+      <div style={{ position: 'relative' }}>
+        <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
+        <button
+          onClick={() => setDrillView('surplus')}
+          className="sw-chip sw-chip-sm sw-press"
+          style={{
+            position: 'absolute', top: 14, right: 14,
+            cursor: 'pointer', fontSize: 11, fontWeight: 700,
+            background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+            color: 'var(--c-acc)',
+          }}
+          title="Open full surplus breakdown"
+        >
+          Breakdown ›
+        </button>
+      </div>
+      <EssentialsDiscretionarySplit ms={ms} />
+      <SubscriptionTracker entity={entity} />
+      <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} />
+      <LiquidityBufferCard lb={lb} />
+      <div style={{ position: 'relative' }}>
+        <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
+        <button
+          onClick={() => setDrillView('income')}
+          className="sw-chip sw-chip-sm sw-press"
+          style={{
+            position: 'absolute', top: 14, right: 14,
+            cursor: 'pointer', fontSize: 11, fontWeight: 700,
+            background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+            color: 'var(--c-acc)',
+          }}
+        >
+          Breakdown ›
+        </button>
+      </div>
+      <IncomeBreakdownByBand incomeAll={incomeAll} />
+    </RevealStagger>
+  )
+
   // ── Render ─────────────────────────────────────────────────────────────
   // L3 drill overlay — takes full screen priority
   if (drillView === 'surplus') {
@@ -1282,93 +1333,14 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           className="sw-tab-slide"
           style={{ display: 'contents' }}
         >
-          {/* ════ SECTION A ════════════════════════════════════════════ */}
-          <SectionDelimiter
-            letter="A"
-            title="NOW · This month, this year"
-            subtitle="Where your money goes — and what's left."
-            chipClass="sw-chip-mint"
-          />
-
-          <RevealStagger interval={60} startDelay={50}>
-            {/* v0.3 R3v2 SIGNATURE COMP — Money-in / Money-out Sankey.
-                Founder direction 2026-05-26: the screen owes a signature
-                story-comp showing where money comes from and where it goes.
-                The calendar heatmap was carrying the SIGNATURE tag in code
-                comments but failed the dataviz contract (decoration not data).
-                Sankey is the canonical R3 signature per route-3-cashflow.md §4.1. */}
-            <CashflowMoneySankey
-              entity={entity}
-              incomeAll={incomeAll}
-              ms={ms}
-              flow={flow}
-            />
-
-            {/* Phase 2 Batch C — new waterfall replaces local version.
-                MATH-01/02 fix: steps derived purely from engine; no hardcoded
-                fallbacks (£78k / £29k / etc removed — Mr T's real gross is
-                £67,420, was being masked by the magic numbers). Surplus is
-                arithmetic-computed from the deductions so the visible total
-                always reconciles. Empty state when engine returns no income. */}
-            <div style={{ position: 'relative' }}>
-              <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
-              {/* L3 drill affordance — tap to open SurplusDrillPanel */}
-              <button
-                onClick={() => setDrillView('surplus')}
-                className="sw-chip sw-chip-sm sw-press"
-                style={{
-                  position: 'absolute', top: 14, right: 14,
-                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                  color: 'var(--c-acc)',
-                }}
-                title="Open full surplus breakdown"
-              >
-                Breakdown ›
-              </button>
-            </div>
-            <EssentialsDiscretionarySplit ms={ms} />
-            {/* Bill calendar removed 2026-06-02 — founder direction: scheduled
-                outflows / calendar live on Timeline (§C Action Calendar), not
-                Cashflow. The BillCalendar component is retained below for reuse
-                by Timeline but no longer rendered here. */}
-            <SubscriptionTracker entity={entity} />
-            <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} />
-            <LiquidityBufferCard lb={lb} />
-            {/* CAT-03: Domain O split — salary / dividends / rental /
-                drawdown / interest / pension. Sits ABOVE the tax-band
-                view so the user sees the source breakdown first. */}
-            <div style={{ position: 'relative' }}>
-              <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
-              <button
-                onClick={() => setDrillView('income')}
-                className="sw-chip sw-chip-sm sw-press"
-                style={{
-                  position: 'absolute', top: 14, right: 14,
-                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                  color: 'var(--c-acc)',
-                }}
-              >
-                Breakdown ›
-              </button>
-            </div>
-            <IncomeBreakdownByBand incomeAll={incomeAll} />
-          </RevealStagger>
-
-          {/* ════ SECTION B ════════════════════════════════════════════ */}
-          <SectionDelimiter
-            letter="B"
-            title="TRAJECTORY · This year to retirement"
-            subtitle="Will it last?"
-            chipClass="sw-chip-blue"
-          />
+          {/* WHOLE-TAB QUESTION-TILE GRID (redesign complete): §A "Now" + the
+              four trajectory tiles + §C "Costs" are now one adaptive grid, each
+              tile opening a full-screen page that renders the SAME components
+              (moved, not rewritten). The long A/B/C scroll the founder flagged
+              is gone; the headline band above answers "will my money last?". */}
           {/* A4 — pin the face (Building wealth / Drawing income) or leave Auto. */}
           <LifeStageOverrideChip entity={entity} />
 
-          {/* §B is now four question-tiles, each opening a full-screen page that
-              renders the SAME components (moved, not rewritten). Kills the long
-              scroll the founder flagged; §A/§C migrate to the same grammar next. */}
           <CashflowTrajectoryTiles
             entity={entity}
             fr={fr}
@@ -1380,29 +1352,32 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             swrRegime={swrRegime}
             setSwrRegime={setSwrRegime}
             decSolve={decSolve}
+            extraTiles={[
+              // §A "Now" → first tile (the whole NOW section moved intact).
+              { key: 'now', position: 'start', q: 'Am I OK right now?',
+                headline: (ms?.surplus >= 0 ? 'In surplus' : 'In deficit'),
+                sub: 'spend, buffer & income sources', tone: (ms?.surplus >= 0 ? 'mint' : 'coral'),
+                content: nowSectionContent },
+              // Methods → its own tile (decumulators only; pacing lens).
+              ...(decSolve ? [{ key: 'methods', q: 'How fast can I spend?', headline: '5 methods',
+                sub: 'Bengen · Guyton-Klinger · Vanguard · bucket · floor', tone: 'acc',
+                content: (<MethodsComparison
+                  portfolio={(decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)}
+                  years={(decSolve.inputs?.horizonAge || 95) - (decSolve.inputs?.currentAge || 65)}
+                  growth={decSolve.inputs?.growth ?? 0.05}
+                  inflation={decSolve.inputs?.inflation ?? 0.025}
+                  essentialsAnnual={Math.round((decSolve.inputs?.incomeTargetAnnual || 0) * 0.6)}
+                  age={decSolve.inputs?.currentAge || 65}
+                  horizon={decSolve.inputs?.horizonAge || 95}
+                  primaryGoal={decSolve.binding?.primaryGoal || 'min_lifetime_tax'} />) }] : []),
+              // §C "Costs/Depth" → last tile (engine internals, always-open here).
+              { key: 'costs', q: "What's it costing?", headline: 'Engine depth',
+                sub: 'cost of inaction · frontier · PRC/PCC', tone: 'acc',
+                content: (<EngineInternalsReveal alwaysOpen coi={coi} coiVar={coiVar} prcPcc={prcPcc} reality={reality} mdd={mdd} eff={eff} fi={fi} health={health} fr={fr} pos={pos} />) },
+            ]}
           />
 
-          {/* ════ SECTION C — ENGINE INTERNALS (collapsed by default) ═════════
-              R3v2 (2026-05-26): everything below this line is diagnostic /
-              power-user. It moves the methodology behind a single user toggle
-              so the screen reads as a story above, with the maths available
-              on demand. Founder direction: story first, methodology behind a
-              reveal.
-
-              The toggle uses local state on this component (re-mounts reset
-              to collapsed — by design; this is depth content, not state). */}
-          <EngineInternalsReveal
-            coi={coi}
-            coiVar={coiVar}
-            prcPcc={prcPcc}
-            reality={reality}
-            mdd={mdd}
-            eff={eff}
-            fi={fi}
-            health={health}
-            fr={fr}
-            pos={pos}
-          />
+          {/* §C engine internals moved into the 'costs' question-tile (extraTiles). */}
         </div>
 
         {/* Disclaimer footer */}
@@ -1423,10 +1398,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
 // "Show engine detail" toggle so the screen reads as a narrative above the
 // fold. Power users / IFA reviewers expand to see the methodology.
 
-function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, health, fr, pos }) {
-  const [open, setOpen] = useState(false)
+function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, health, fr, pos, alwaysOpen = false }) {
+  const [open, setOpen] = useState(!!alwaysOpen)
   return (
-    <div style={{ marginTop: 16 }}>
+    <div style={{ marginTop: alwaysOpen ? 0 : 16 }}>
+      {!alwaysOpen && (
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -1449,6 +1425,7 @@ function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, hea
           {open ? 'Hide' : 'Show methodology'}
         </span>
       </button>
+      )}
       {open && (
         <div style={{ marginTop: 12 }}>
           <SectionDelimiter
@@ -1884,7 +1861,7 @@ function QuestionTile({ q, headline, sub, tone, onClick }) {
     </button>
   )
 }
-function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, swrRegime, setSwrRegime, decSolve }) {
+function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, swrRegime, setSwrRegime, decSolve, extraTiles = [] }) {
   const [open, setOpen] = useState(null)
   const ratio = +(fr?.ratio || fr?.value || 0)
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
@@ -1893,7 +1870,7 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
   // Adaptive face: a decumulator asks "how do I draw it down?"; an accumulator
   // (no decSolve) asks "am I on track?" — same tile, the question + answer flip.
   const isDecum = !!decSolve
-  const tiles = [
+  const baseTiles = [
     { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
     isDecum
       ? { key: 'drawdown', q: 'How do I draw it down?', headline: routeName || 'Your plan', sub: lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map', tone: 'acc' }
@@ -1901,6 +1878,12 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
     { key: 'resilience', q: 'What could break it?', headline: sev ? String(sev) : 'Stress test', sub: 'sequence & market risk', tone: 'acc' },
     { key: 'whatif', q: 'What would change it most?', headline: 'Model levers', sub: 'what-if & goal-seek', tone: 'acc' },
   ]
+  // Whole-tab grid: §A "now" tiles first, the trajectory four, then §C "costs"
+  // (and methods) last — each extra tile carries its own render-prop content.
+  const startTiles = extraTiles.filter(t => t.position === 'start')
+  const endTiles = extraTiles.filter(t => t.position !== 'start')
+  const tiles = [...startTiles, ...baseTiles, ...endTiles]
+  const openTile = tiles.find(t => t.key === open)
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
@@ -1911,8 +1894,9 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
           <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '14px 16px 96px' }}>
               <button onClick={() => setOpen(null)} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{CF_TILE_TITLES[open]}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{openTile?.q || CF_TILE_TITLES[open]}</h2>
               <RevealStagger interval={60} startDelay={40}>
+                {openTile?.content || null}
                 {open === 'lastability' && <>
                   <FundedRatioGaugeV2 ratio={+(fr?.ratio || fr?.value || 1.0)} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
                   <SwrRegimePicker regime={swrRegime} onChange={setSwrRegime} swr={swr} />
@@ -3278,6 +3262,57 @@ function AssumptionsPanel({ methodology }) {
 // growth) AND reorder their priorities, and watch the plan re-solve — their
 // inputs, not our forecast.
 // Compliance: routes are "ranked under your priorities", never "optimal/best".
+// Five withdrawal-PACING methods (how fast to spend the pot), a different lens
+// from the draw ORDER. Standalone so it renders both inside the drawdown drawer
+// (withToggle) and as its own "How fast can I spend?" question-tile (always open).
+function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
+  const [open, setOpen] = useState(!withToggle)
+  const body = (() => {
+    let methods = []
+    try { methods = compareMethods({ portfolio, years: Math.max(1, years), growth, inflation, essentialsAnnual, age }) } catch { methods = [] }
+    if (portfolio <= 0 || !methods.length || methods.every(m => !m.year1Withdrawal)) {
+      return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Method comparison needs a drawable pot (pension/ISA/GIA/cash) to pace. Your income here comes from secure sources or hasn&rsquo;t been captured yet.</div>
+    }
+    const recId = recommendMethodForGoal(primaryGoal)
+    const maxW1 = Math.max(...methods.map(m => m.year1Withdrawal || 0), 1)
+    return (
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+          The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan (and from the single withdrawal-<em>rate</em> assumption behind the funded gauge: this compares how fast to spend, not one rate). Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
+        </div>
+        {methods.map(m => {
+          const rec = m.id === recId
+          return (
+            <div key={m.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: rec ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>{m.label}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1</span>}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}/yr</span>
+              </div>
+              <div style={{ marginTop: 5, height: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)' }} />
+              </div>
+              <div style={{ marginTop: 5, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>{m.summary}</div>
+              <div style={{ marginTop: 3, fontSize: 10, color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>
+                {m.lastsHorizon ? `Lasts to age ${horizon}+` : `Funds low by age ${m.depletesAtAge}`} · keeps {m.strength} · watch: {m.weakness}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  })()
+  if (!withToggle) return body
+  return (
+    <div style={{ marginTop: 14 }}>
+      <button onClick={() => setOpen(s => !s)} className="sw-pressable"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', cursor: 'pointer' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>Compare withdrawal methods</span>
+        <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{open ? 'Hide ▲' : 'How fast to spend? ▼'}</span>
+      </button>
+      {open && body}
+    </div>
+  )
+}
 function ScenarioForwardSummary({ entity, decSolve }) {
   // Seed the controls from the engine's RESOLVED inputs (honest defaults, never
   // hardcoded). Sparse personas have no inputs → panel won't render (no routes).
@@ -3544,53 +3579,19 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           </div>
         </div>
 
-        {/* MethodDrawer — five ways to PACE withdrawals (how much each year),
-            a different lens from the draw ORDER (which pot) above. Gross pacing
-            rules on the total pot — deliberately NOT the plan's net figures. */}
-        <div style={{ marginTop: 14 }}>
-          <button onClick={() => setShowMethods(s => !s)} className="sw-pressable"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', cursor: 'pointer' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>Compare withdrawal methods</span>
-            <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{showMethods ? 'Hide ▲' : 'How fast to spend? ▼'}</span>
-          </button>
-          {showMethods && (() => {
-            let methods = []
-            try { methods = compareMethods({ portfolio, years: Math.max(1, horizon - currentAge), growth: growthPct / 100, inflation: seed.inflation ?? 0.025, essentialsAnnual, age: currentAge }) } catch { methods = [] }
-            // compareMethods ALWAYS returns 5 entries, so guard on the real
-            // condition: no drawable pot to pace → don't render five £0/yr rows
-            // with bogus "lasts to age X" verdicts (sparse-degradation fix).
-            if (portfolio <= 0 || !methods.length || methods.every(m => !m.year1Withdrawal)) {
-              return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Method comparison needs a drawable pot (pension/ISA/GIA/cash) to pace. Your income here comes from secure sources or hasn&rsquo;t been captured yet.</div>
-            }
-            const recId = recommendMethodForGoal(primaryGoal)
-            const maxW1 = Math.max(...methods.map(m => m.year1Withdrawal || 0), 1)
-            return (
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-                  The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan above (and from the single withdrawal-<em>rate</em> assumption behind the funded gauge: this compares how fast to spend, not one rate). Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
-                </div>
-                {methods.map(m => {
-                  const rec = m.id === recId
-                  return (
-                    <div key={m.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: rec ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>{m.label}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1</span>}</span>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}/yr</span>
-                      </div>
-                      <div style={{ marginTop: 5, height: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)' }} />
-                      </div>
-                      <div style={{ marginTop: 5, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>{m.summary}</div>
-                      <div style={{ marginTop: 3, fontSize: 10, color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>
-                        {m.lastsHorizon ? `Lasts to age ${horizon}+` : `Funds low by age ${m.depletesAtAge}`} · keeps {m.strength} · watch: {m.weakness}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })()}
-        </div>
+        {/* Five ways to PACE withdrawals — a different lens from the draw ORDER
+            above. Same component renders standalone in the 'methods' tile. */}
+        <MethodsComparison
+          portfolio={portfolio}
+          years={horizon - currentAge}
+          growth={growthPct / 100}
+          inflation={seed.inflation ?? 0.025}
+          essentialsAnnual={essentialsAnnual}
+          age={currentAge}
+          horizon={horizon}
+          primaryGoal={primaryGoal}
+          withToggle
+        />
 
         {/* What this plan assumes — surfaces solve.methodology (assumptions + named rules). */}
         <AssumptionsPanel methodology={solve.methodology} />

@@ -104,6 +104,7 @@ export default function X28TopBar({
   rulesVersion = BRAND.rulesVersion,
   dataDate = BRAND.dataDate,
   showNowPill = true,
+  showWindowRow = true,
   onNowTap,
 }) {
   // hydrate from storage if uncontrolled on first render
@@ -164,6 +165,10 @@ export default function X28TopBar({
       borderBottom: '1px solid var(--c-sep)',
     }}>
       {/* ── Row 1 — Window pill · rules chip · Now pill ──────────────────── */}
+      {/* Cashflow passes showWindowRow={false}: this row's tax-year selector +
+          rules chip + NOW duplicate the global header's TAX YEAR control
+          (founder 2026-06-04 — "one is duplicated"). */}
+      {showWindowRow && (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, minHeight: 30,
       }}>
@@ -287,6 +292,7 @@ export default function X28TopBar({
           </button>
         )}
       </div>
+      )}
 
       {/* ── Row 2 — 4-mode ghost-tab toggle (subtle pale active state) ──── */}
       <div

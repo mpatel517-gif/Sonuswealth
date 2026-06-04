@@ -1233,14 +1233,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <div style={S.headerTitle}>Cashflow</div>
-        <button
-          onClick={() => setAccountantMode(m => !m)}
-          className={`sw-chip sw-chip-sm sw-press ${accountantMode ? 'sw-chip-mint' : ''}`}
-          style={{ cursor: 'pointer', fontWeight: 700, letterSpacing: 0.4 }}
-          title="Toggle simple / accountant view"
-        >
-          {accountantMode ? 'P&L view' : 'Simple view'}
-        </button>
+        {/* P&L view toggle REMOVED (founder 2026-06-04 — "redundant"): the
+            accountant view is auto-inferred (inferAccountantMode) and the
+            waterfall already shows its own Simple/Accountant indicator, so a
+            floating top-level toggle was redundant chrome. */}
+        <div style={{ width: 1 }} />
       </div>
 
       {/* ── Scrollable body — STORY-FIRST ORDER (R3v2 founder direction 2026-05-26) ─
@@ -1270,6 +1267,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             viewMode={viewMode}
             onWindowChange={setWindowId}
             onViewModeChange={setViewMode}
+            showWindowRow={false}
           />
         </FadeInOnMount>
 

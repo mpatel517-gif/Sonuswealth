@@ -3385,68 +3385,164 @@ function AssumptionsPanel({ methodology }) {
 // method "lasts to 95+" here, so that line discriminates nothing); keep the
 // academic name as small provenance for the curious.
 const METHOD_PLAIN = {
-  bengen:          { name: 'Steady & predictable',           shape: 'a fixed income that rises with inflation' },
-  guyton_klinger:  { name: 'Flexible guardrails',            shape: 'more on average, but it rises and falls with markets' },
-  vanguard:        { name: 'A share of your pot',            shape: 'tracks the pot, smoothed by a floor and a ceiling' },
-  bucket:          { name: 'Cash-buffer first',              shape: 'steady — you spend cash in downturns so you never sell low' },
-  floor_guardrail: { name: 'Protect essentials, flex the rest', shape: 'essentials are never cut; the extra flexes up and down' },
+  bengen:          { name: 'Steady & predictable',           shape: 'a fixed income that rises with inflation',
+    how: 'You take 4% of your starting pot in year one, then give yourself an inflation pay-rise every year after — no matter what your investments do.' },
+  guyton_klinger:  { name: 'Flexible guardrails',            shape: 'more on average, but it rises and falls with markets',
+    how: 'You start a little higher, then follow two rules: after a bad year you skip your inflation rise, and after a good year you take an extra one — so your income gently tracks your luck.' },
+  vanguard:        { name: 'A share of your pot',            shape: 'tracks the pot, smoothed by a floor and a ceiling',
+    how: 'Each year you take a set percentage of whatever your pot is worth that year — but a cap and a floor stop your income from jumping or dropping too far.' },
+  bucket:          { name: 'Cash-buffer first',              shape: 'steady — you spend cash in downturns so you never sell low',
+    how: 'You split your money into three pots — cash, medium-risk and growth. You spend from cash, and only refill it from growth after good years, so you never sell investments in a crash.' },
+  floor_guardrail: { name: 'Protect essentials, flex the rest', shape: 'essentials are never cut; the extra flexes up and down',
+    how: 'First you lock in enough safe income to cover your essentials for life. Only the money above essentials flexes up and down — so a bad market can trim your luxuries but never your basics.' },
+}
+// Worked example in plain English, using THIS user's real numbers (from the
+// engine's methodPath), so the abstract rule becomes concrete.
+function methodNarrative(id, { age0, w1, w2, portfolio, essentialsAnnual }) {
+  const m = v => _gk(v || 0)
+  switch (id) {
+    case 'bengen':
+      return `Year 1 (age ${age0}): you draw ${m(w1)} — that's 4% of your ${m(portfolio)} pot. Year 2: you add an inflation pay-rise to ${m(w2)}, and you take it whether markets rose or fell. The upside is certainty — your income never surprises you. The risk: a bad early run shrinks the pot while your withdrawals keep climbing.`
+    case 'guyton_klinger':
+      return `Year 1 (age ${age0}): you draw ${m(w1)}. After a strong year you'd give yourself a raise; after a poor year you'd skip the inflation rise (and trim a little if it's really bad). Over time this usually pays more than a fixed rule — the trade-off is your income moving up and down with markets.`
+    case 'vanguard':
+      return `Year 1 (age ${age0}): you take ${m(w1)} — a set share of today's pot. If the pot grows, next year's income rises; if it falls, it dips to around ${m(w2)} — but a ceiling and floor stop either from lurching. You stay responsive to markets without the whiplash.`
+    case 'bucket':
+      return `Year 1 (age ${age0}): you spend ${m(w1)} from your cash bucket — roughly two years of spending kept in cash. In a downturn you keep spending cash and leave your investments alone to recover, refilling the bucket after good years. The catch: it only works if you actually top the bucket back up.`
+    case 'floor_guardrail': {
+      const disc = Math.max(0, (w1 || 0) - (essentialsAnnual || 0))
+      return `Your essentials (about ${m(essentialsAnnual)}/yr) are secured first at a safe rate — they're never cut. On top, your discretionary income starts around ${m(disc)}/yr and flexes with markets. In a crash your basics are untouched and only the extra dips. This fixes the main flaw of the other four — none of them protect the income you actually need.`
+    }
+    default: return ''
+  }
+}
+// Per-method drawer (founder 2026-06-04): tap a method → its own page with the
+// plain-English mechanism + a worked example on the user's real numbers + a few
+// representative years from the engine path. Sits above the methods drawer.
+function MethodDetail({ method, opts, horizon, recommended, onBack }) {
+  const p = METHOD_PLAIN[method.id] || { name: method.label }
+  const path = useMemo(() => { try { return methodPath(method.id, opts) } catch { return [] } }, [method.id, opts])
+  const age0 = path[0]?.age ?? opts.age
+  const w1 = path[0]?.withdrawal ?? method.year1Withdrawal
+  const w2 = path[1]?.withdrawal ?? w1
+  // Representative years: 1, 5, 10, 20, and the final/depletion year.
+  const idxs = [...new Set([0, 4, 9, 19, path.length - 1].filter(i => i >= 0 && i < path.length))]
+  const rows = idxs.map(i => path[i]).filter(Boolean)
+  return (
+    <DrillStackProvider>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '14px 16px 96px' }}>
+          <button onClick={onBack} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Methods</button>
+          <h2 style={{ fontSize: 21, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 2px' }}>
+            {p.name}{recommended && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 8, verticalAlign: 'middle' }}>fits your #1 priority</span>}
+          </h2>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 14 }}>{method.label} · {method.source}</div>
+
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it works</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text)', lineHeight: 1.55 }}>{p.how || method.summary}</div>
+          </div>
+
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it plays out for you</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(method.id, { age0, w1, w2, portfolio: opts.portfolio, essentialsAnnual: opts.essentialsAnnual })}</div>
+            {rows.length > 1 && (
+              <div style={{ marginTop: 12, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                  <thead>
+                    <tr style={{ color: 'var(--c-text3)', textAlign: 'left' }}>
+                      <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Age</th>
+                      <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>You draw</th>
+                      <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Pot left</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => (
+                      <tr key={i} style={{ borderTop: '1px solid var(--c-sep, var(--c-border))' }}>
+                        <td style={{ padding: '5px 8px 5px 0', color: 'var(--c-text)' }}>{r.age}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--c-text)' }}>{_gk(r.withdrawal)}</td>
+                        <td style={{ padding: '5px 0 5px 8px', textAlign: 'right', color: r.balance <= 0 ? 'var(--c-coral-text)' : 'var(--c-text3)' }}>{r.balance <= 0 ? 'gone' : _gk(r.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
+                  Constant-return illustration on your assumptions (not a forecast); real markets vary year to year.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="sw-card" style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--c-mint-text)' }}>Strength:</strong> {method.strength}.<br />
+              <strong style={{ color: 'var(--c-amber-text)' }}>Watch:</strong> {method.weakness}.<br />
+              <strong style={{ color: 'var(--c-text)' }}>Lasts:</strong> {method.lastsHorizon ? `to age ${horizon}+ on these assumptions` : `funds run low by age ${method.depletesAtAge}`}.
+            </div>
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
+            A general approach advisers reference, shown as an illustration on your assumptions — not a personal recommendation.
+          </div>
+        </div>
+      </div>
+    </DrillStackProvider>
+  )
 }
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)
-  const body = (() => {
-    let methods = []
-    try { methods = compareMethods({ portfolio, years: Math.max(1, years), growth, inflation, essentialsAnnual, age }) } catch { methods = [] }
-    if (portfolio <= 0 || !methods.length || methods.every(m => !m.year1Withdrawal)) {
-      return <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>Pacing needs a drawable pot (pension / ISA / GIA / cash). Your income here comes from secure sources, or it hasn&rsquo;t been captured yet.</div>
-    }
-    const recId = recommendMethodForGoal(primaryGoal)
-    const ws = methods.map(m => m.year1Withdrawal || 0).filter(Boolean)
-    const maxW1 = Math.max(...ws, 1)
-    const lo = Math.min(...ws), hi = Math.max(...ws)
-    const allLast = methods.every(m => m.lastsHorizon)
-    return (
-      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Decision frame in plain English — what this IS and the trade-off,
-            before any method name. */}
-        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
-          <strong style={{ color: 'var(--c-text)' }}>Five ways to pace what you spend</strong> from your {_gk(portfolio)} of pots.{' '}
-          {allLast ? `On your assumptions all five last to age ${horizon}+` : 'How long each lasts differs'} — so the real choice is{' '}
-          <strong style={{ color: 'var(--c-text)' }}>how much you take early</strong> ({_gk(lo)}–{_gk(hi)}/yr in year one) and{' '}
-          <strong style={{ color: 'var(--c-text)' }}>how steady it stays</strong>. More now means less cushion if markets fall. An illustration on your assumptions — not advice.
-        </div>
-        {methods.map(m => {
-          const rec = m.id === recId
-          const p = METHOD_PLAIN[m.id] || { name: m.label, shape: '' }
-          return (
-            <div key={m.id} style={{ padding: '11px 12px', borderRadius: 12, background: 'var(--c-surface)', border: rec ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
-                    {p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1 priority</span>}
+  const [openMethod, setOpenMethod] = useState(null)
+  const opts = { portfolio, years: Math.max(1, years), growth, inflation, essentialsAnnual, age }
+  let methods = []
+  try { methods = compareMethods(opts) } catch { methods = [] }
+  const recId = recommendMethodForGoal(primaryGoal)
+  const usable = portfolio > 0 && methods.length && methods.some(m => m.year1Withdrawal)
+  const body = !usable
+    ? <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>Pacing needs a drawable pot (pension / ISA / GIA / cash). Your income here comes from secure sources, or it hasn&rsquo;t been captured yet.</div>
+    : (() => {
+      const ws = methods.map(m => m.year1Withdrawal || 0).filter(Boolean)
+      const maxW1 = Math.max(...ws, 1)
+      const lo = Math.min(...ws), hi = Math.max(...ws)
+      const allLast = methods.every(m => m.lastsHorizon)
+      return (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
+            <strong style={{ color: 'var(--c-text)' }}>Five ways to pace what you spend</strong> from your {_gk(portfolio)} of pots.{' '}
+            {allLast ? `On your assumptions all five last to age ${horizon}+` : 'How long each lasts differs'} — so the real choice is{' '}
+            <strong style={{ color: 'var(--c-text)' }}>how much you take early</strong> ({_gk(lo)}–{_gk(hi)}/yr in year one) and{' '}
+            <strong style={{ color: 'var(--c-text)' }}>how steady it stays</strong>. Tap any one for how it works and a worked example. An illustration — not advice.
+          </div>
+          {methods.map(m => {
+            const rec = m.id === recId
+            const p = METHOD_PLAIN[m.id] || { name: m.label, shape: '' }
+            return (
+              <button key={m.id} onClick={() => setOpenMethod(m)} className="sw-lift sw-pressable" style={{ textAlign: 'left', cursor: 'pointer', width: '100%', padding: '11px 12px', borderRadius: 12, background: 'var(--c-surface)', border: rec ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                      {p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1 priority</span>}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>{m.label} · {m.source}</div>
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>{m.label} · {m.source}</div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: rec ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}</div>
+                    <div style={{ fontSize: 9.5, color: 'var(--c-text3)' }}>year-1 income</div>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: rec ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}</div>
-                  <div style={{ fontSize: 9.5, color: 'var(--c-text3)' }}>year-1 income</div>
+                <div style={{ marginTop: 7, height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
                 </div>
-              </div>
-              <div style={{ marginTop: 7, height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
-              </div>
-              <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>{m.summary}</div>
-              <div style={{ marginTop: 5, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-                <strong style={{ color: 'var(--c-text2)' }}>Income shape:</strong> {p.shape}.{' '}
-                <strong style={{ color: 'var(--c-text2)' }}>Watch:</strong> {m.weakness}.{!allLast && m.depletesAtAge ? ` Funds run low by age ${m.depletesAtAge}.` : ''}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
-  })()
-  if (!withToggle) return body
-  return (
+                <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>{m.summary}</div>
+                <div style={{ marginTop: 5, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>
+                  <strong style={{ color: 'var(--c-text2)' }}>Income shape:</strong> {p.shape}.
+                </div>
+                <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>How it works + example ›</div>
+              </button>
+            )
+          })}
+        </div>
+      )
+    })()
+  const shell = !withToggle ? body : (
     <div style={{ marginTop: 14 }}>
       <button onClick={() => setOpen(s => !s)} className="sw-pressable"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', cursor: 'pointer' }}>
@@ -3455,6 +3551,12 @@ function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnu
       </button>
       {open && body}
     </div>
+  )
+  return (
+    <>
+      {shell}
+      {openMethod && <MethodDetail method={openMethod} opts={opts} horizon={horizon} recommended={openMethod.id === recId} onBack={() => setOpenMethod(null)} />}
+    </>
   )
 }
 function ScenarioForwardSummary({ entity, decSolve }) {

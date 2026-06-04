@@ -12,8 +12,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Guard import.meta.env — it's defined by Vite in the browser but undefined in
+// a plain node context (tests), where unguarded access throws. Matches the
+// optional-chaining pattern used across the rest of the engine/hooks.
+const supabaseUrl = import.meta?.env?.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check .env.local');
@@ -25,12 +28,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * - Respects Row Level Security policies
  * - Use for all user-facing operations
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// Only instantiate when configured — createClient throws on undefined url/key,
+// which would break importing this module in a node/test context (no Vite env).
+// In the browser the env is always present, so this is a real client there.
+export const supabase = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  })
+  : null;
 
 /**
  * Table names (canonical, avoid typos)

@@ -25,7 +25,7 @@ import { netWorth, fq as calcFQ, ani as _aniSel } from '../engine/selectors/inde
 const calcANI = (e, b) => _aniSel(e, b)
 import {
   // Core
-  fmt, calcRisk, fqBand, riskBand,
+  fmt, calcRisk, fqBand, riskBand, TAX,
   // Cashflow Health (§3B)
   cashflowHealth,
   // §A NOW
@@ -61,6 +61,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 // for decumulators — replaces the relabeled-G-K "Optimal" + the forward-table stub.
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
+import { extractAccumulationContext } from '../engine/accumulation-solver.js'
 import { compareMethods, recommendMethodForGoal, methodPath, METHODS } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
@@ -2085,13 +2086,37 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime,
   const targetInc = decSolve?.inputs?.incomeTargetAnnual || 0
   const secureInc = decSolve?.floor?.grossAnnual || 0
   const fromPots = Math.max(0, targetInc - secureInc)
+  // Accumulator forward-income headline — today's pots projected to retirement and
+  // converted at the SWR, plus the State Pension floor. Mirrors AccumIncomeNetwork
+  // so the tile face matches the drawer. (Mr T has no decSolve, so this is his
+  // "where my income comes from".)
+  const accumIncome = useMemo(() => {
+    try {
+      const c = extractAccumulationContext(entity)
+      if (!c) return null
+      const years = Math.max(0.5, (c.retirementAge || 67) - (c.age || 45))
+      const g = c.growth || 0.05, swr = TAX?.swr || 0.04
+      const pots = ['pension', 'isa', 'gia'].reduce((s, k) => {
+        const mo = k === 'pension' ? (c.monthlyContribution || 0) : 0
+        return s + _fvAccum(c.pots[k] || 0, mo, years, g)
+      }, 0)
+      const spRaw = entity?.income?.statePension
+      const sp = +(spRaw?.annual ?? (typeof spRaw === 'number' ? spRaw : 0)) || +(TAX?.statePensionFull || 0)
+      const total = pots * swr + sp
+      return { total, retAge: c.retirementAge || 67, hasData: pots > 0 || sp > 0 }
+    } catch { return null }
+  }, [entity])
   const drawdownTile = isDecum
     ? { key: 'drawdown', q: 'Where my income comes from',
         headline: secureInc ? `${fmtSeedNum(secureInc)} + ${fmtSeedNum(fromPots)}` : (targetInc ? `${fmtSeedNum(targetInc)}/yr` : 'Your income plan'),
         sub: secureInc ? 'secure income + your pots, tax-smart order' : 'a tax-smart order across your pots', tone: 'acc' }
     : decumStage
       ? { key: 'drawdown', q: 'Where my income comes from', headline: 'Set a target', sub: 'add a target income to plan it', tone: 'acc' }
-      : null
+      : (accumIncome?.hasData
+        ? { key: 'drawdown', q: 'Where my income will come from',
+            headline: `${fmtSeedNum(accumIncome.total)}/yr`,
+            sub: `your pots projected to age ${accumIncome.retAge}, plus State Pension`, tone: 'acc' }
+        : null)
   // Tile-face sparklines — REAL engine series only (balance-sheet grammar, P4-04).
   // Lastability: the pot trajectory (depletion for decum, accumulation for accum).
   // Resilience: the Monte-Carlo median pot path. Others have no honest single
@@ -2143,7 +2168,9 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime,
               <RevealStagger interval={60} startDelay={40}>
                 {openTile?.content || null}
                 {open === 'lastability' && <LastabilityDrawer entity={entity} decSolve={decSolve} fr={fr} fi={fi} />}
-                {open === 'drawdown' && <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />}
+                {open === 'drawdown' && (isDecum
+                  ? <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />
+                  : <AccumIncomeNetwork entity={entity} />)}
                 {open === 'resilience' && (isDecum ? <>
                   {/* Decumulator: the drawdown sits in markets — sequence-risk story,
                       interactive crash explorer, then the engine's Monte-Carlo range. */}
@@ -3403,6 +3430,153 @@ function DrawNetworkDiagram({ route, network, netTotal, currentAge }) {
       </div>
       <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
         Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The <span style={{ color: 'var(--c-mint-text)', fontWeight: 700 }}>green floor</span> is guaranteed income (state pension, DB, rental) that isn&rsquo;t drawn from a pot &mdash; it keeps paying even after the pots run out. The year-by-year table below has the exact figures.
+      </div>
+    </div>
+  )
+}
+
+// ── Accumulator forward-income network (the accumulation-side equivalent of
+// DrawNetworkDiagram). Mr T isn't drawing income yet, so the decumulation solver
+// never runs for him and the pots→income draw map is hidden. This builds the
+// FORWARD picture every accumulator needs: today's pots, projected to retirement
+// at a draggable growth rate, converted to a sustainable income (SWR) and added
+// to the State Pension floor. Same visual grammar as the draw map (pots left →
+// income sink right, green guaranteed floor), but lifecycle-correct: it answers
+// "where will my income come from" instead of "where does it come from now".
+// FCA: projection under the user's assumptions, not a forecast or advice.
+function _fvAccum(current, monthly, years, annualRate) {
+  const r = Math.pow(1 + annualRate, 1 / 12) - 1
+  const months = Math.round(years * 12)
+  const fvCurrent = current * Math.pow(1 + annualRate, years)
+  const annuity = r === 0 ? months : (Math.pow(1 + r, months) - 1) / r
+  return fvCurrent + monthly * annuity
+}
+function AccumIncomeNetwork({ entity }) {
+  let ctx = null
+  try { ctx = extractAccumulationContext(entity) } catch { ctx = null }
+  const age0 = ctx?.age || 45
+  const [retAge, setRetAge] = useState(ctx?.retirementAge || 67)
+  const [gPct, setGPct] = useState(Math.round((ctx?.growth || 0.05) * 1000) / 10)
+  const [dirty, setDirty] = useState(false)
+  if (!ctx) return null
+
+  const swr = TAX?.swr || 0.04
+  // State Pension floor (status-checked figure from the bundle; entity override wins).
+  const spRaw = entity?.income?.statePension
+  const sp = +(spRaw?.annual ?? (typeof spRaw === 'number' ? spRaw : 0)) || +(TAX?.statePensionFull || 0)
+  const spa = +(spRaw?.startAge ?? TAX?.spa) || 67
+
+  const years = Math.max(0.5, retAge - age0)
+  const growth = gPct / 100
+  const contribMo = ctx.monthlyContribution || 0
+
+  // Income-producing pots projected to retirement. The monthly contribution is
+  // allocated to the pension (where UK retirement saving overwhelmingly lands);
+  // ISA/GIA grow on their balances. Cash is a kept buffer, not an income pot.
+  const proj = {
+    pension: _fvAccum(ctx.pots.pension || 0, contribMo, years, growth),
+    isa: _fvAccum(ctx.pots.isa || 0, 0, years, growth),
+    gia: _fvAccum(ctx.pots.gia || 0, 0, years, growth),
+  }
+  const incomePots = [
+    { id: 'pension', today: ctx.pots.pension || 0, at: proj.pension, contrib: contribMo },
+    { id: 'isa', today: ctx.pots.isa || 0, at: proj.isa, contrib: 0 },
+    { id: 'gia', today: ctx.pots.gia || 0, at: proj.gia, contrib: 0 },
+  ].filter(p => p.today > 0 || p.at > 0)
+  const projTotal = incomePots.reduce((s, p) => s + p.at, 0)
+  const potsIncome = projTotal * swr
+  const cashBuf = ctx.pots.cash || 0
+  const totalIncome = potsIncome + sp
+
+  if (projTotal <= 0 && sp <= 0) {
+    return (
+      <div style={{ marginTop: 12, padding: '12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.6 }}>
+        Add your pensions and investments to see how today&rsquo;s pots are projected to turn into a retirement income.
+      </div>
+    )
+  }
+
+  // Node rows: income pots (with edge) → optional cash buffer (kept, no edge) →
+  // State Pension floor (green, guaranteed).
+  const nodes = [
+    ...incomePots.map(p => ({ ...p, kind: 'pot' })),
+    ...(cashBuf > 0 ? [{ id: 'cash', today: cashBuf, at: cashBuf, kind: 'buffer' }] : []),
+    ...(sp > 0 ? [{ id: 'floor', kind: 'floor', at: sp }] : []),
+  ]
+  const nRows = nodes.length
+  const rowH = 74, padY = 12
+  const H = padY * 2 + nRows * rowH - 14
+  const viewW = 340, leftW = 168, sinkX = 262, sinkCY = H / 2
+  const rowCY = i => padY + i * rowH + 28
+
+  return (
+    <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 }}>
+        Your money map — income at {retAge}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 10 }}>
+        Today&rsquo;s pots grown to age {retAge} at {gPct}% a year, then turned into a sustainable income at a {Math.round(swr * 1000) / 10}% withdrawal rate, plus your State Pension. Drag the assumptions to see the picture move.
+      </div>
+      <div style={{ position: 'relative', width: '100%', maxWidth: viewW, margin: '0 auto' }}>
+        <svg width="100%" viewBox={`0 0 ${viewW} ${H}`} style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Forward income map: pots projected to retirement income">
+          {nodes.map((n, i) => {
+            if (n.kind === 'buffer') return null
+            const y = rowCY(i), first = n.kind === 'pot' && i === 0
+            const stroke = n.kind === 'floor' ? 'var(--c-mint-text)' : 'var(--c-acc)'
+            return (
+              <path key={n.id} d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
+                fill="none" stroke={stroke} strokeWidth={first ? 2.4 : 1.7}
+                opacity={n.kind === 'floor' ? 0.85 : (first ? 1 : 0.55)}
+                strokeDasharray={n.kind === 'floor' ? '5 3' : undefined} />
+            )
+          })}
+        </svg>
+        {nodes.map((n, i) => {
+          if (n.kind === 'floor') {
+            return (
+              <div key={n.id} style={{ position: 'absolute', left: 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8,
+                padding: '7px 9px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 12%, var(--c-surface))',
+                border: '1px solid var(--c-mint-text)', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-mint-text)' }}>FLOOR</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>State Pension</span>
+                </div>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--c-mint-text)', marginTop: 1 }}>{_gk(n.at)}/yr from age {spa}</div>
+                <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>guaranteed, inflation-linked</div>
+              </div>
+            )
+          }
+          const buffer = n.kind === 'buffer'
+          return (
+            <div key={n.id} style={{ position: 'absolute', left: 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8,
+              padding: '7px 9px', borderRadius: 10, background: 'var(--c-surface)', boxSizing: 'border-box',
+              border: (!buffer && i === 0) ? '1px solid var(--c-acc)' : '1px solid var(--c-border)', opacity: buffer ? 0.66 : 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{_POT_PRETTY[n.id] || n.id}</span>
+                {n.contrib > 0 && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>+{_gmo(n.contrib * 12)}/mo in</span>}
+              </div>
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(n.today)} today</div>
+              <div style={{ fontSize: 9.5, fontWeight: 600, color: buffer ? 'var(--c-text3)' : 'var(--c-acc)', marginTop: 1 }}>
+                {buffer ? 'kept as buffer — not drawn' : `→ ${_gk(n.at)} at ${retAge}`}
+              </div>
+            </div>
+          )
+        })}
+        {/* Income sink (right) */}
+        <div style={{ position: 'absolute', right: 0, top: `${(sinkCY - 26) / H * 100}%`, width: 92,
+          padding: '7px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface))', border: '1px solid var(--c-acc)', boxSizing: 'border-box', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text)' }}>Income at {retAge}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', marginTop: 1 }}>{_gk(totalIncome)}/yr</div>
+          <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gmo(totalIncome)}/mo</div>
+        </div>
+      </div>
+      {/* Draggable assumptions — the picture moves as the user changes their mind. */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+        <SolverSlider label="Retirement age" value={retAge} min={55} max={75} step={1} fmt={v => `age ${v}`} onChange={v => { setRetAge(v); setDirty(true) }} dirty={dirty} />
+        <SolverSlider label="Growth (nominal)" value={gPct} min={2} max={8} step={0.5} fmt={v => `${v}%`} onChange={v => { setGPct(v); setDirty(true) }} dirty={dirty} />
+      </div>
+      <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>
+        Pots are projected at your chosen growth, then converted at a {Math.round(swr * 1000) / 10}% sustainable withdrawal rate — the same rule the &ldquo;will it last&rdquo; plan uses when you start drawing. {retAge < spa ? `Your State Pension starts at ${spa}, so your pots cover the ${spa - retAge}-year gap first.` : ''} A projection under your assumptions — not a forecast or personal advice.
       </div>
     </div>
   )

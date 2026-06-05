@@ -4890,6 +4890,27 @@ function _LeverStartHere({ top, easy, fmtImpact }) {
     </div>
   )
 }
+// One lever = one row with its OWN real-unit slider + live effect (direct
+// manipulation, replacing the abstract single "size of change %" slider the
+// founder found unintuitive/broken). Effect colours mint when it helps.
+function _LeverControl({ label, effort, effect, helps, isTop, setting, children }) {
+  const ec = effort ? _EFFORT_COLOR[effort.tone] : null
+  const oc = helps ? 'var(--c-mint-text)' : 'var(--c-text3)'
+  return (
+    <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--c-surface)', border: isTop ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{label}</span>
+          {isTop && <span className="sw-chip sw-chip-sm sw-chip-blue">biggest</span>}
+          {effort && <span style={{ fontSize: 9, fontWeight: 700, color: ec, border: `1px solid ${ec}`, borderRadius: 100, padding: '0 6px', whiteSpace: 'nowrap' }}>{effort.tag}</span>}
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: oc, whiteSpace: 'nowrap', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{effect}</span>
+      </div>
+      <div style={{ marginTop: 6 }}>{children}</div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 3 }}>{setting}</div>
+    </div>
+  )
+}
 function LeversDecum({ decSolve }) {
   const inp = decSolve.inputs || {}
   const age0 = inp.currentAge || 65
@@ -4901,65 +4922,72 @@ function LeversDecum({ decSolve }) {
   const inflation = inp.inflation ?? 0.025
   const essentials = Math.round((inp.incomeTargetAnnual || 0) * 0.6)
   const methodId = recommendMethodForGoal(decSolve.binding?.primaryGoal || 'min_lifetime_tax')
-  const [sizePct, setSizePct] = useState(10)
-
   const base = { portfolio, years, growth, inflation, essentialsAnnual: essentials, age: age0 }
-  const idxAtHorizon = horizonAge - age0
-  const depOf = (opts) => { try { const p = methodPath(methodId, opts); const d = p.find(r => (r.balance || 0) <= 0); return d ? d.age : simEndAge } catch { return simEndAge } }
-  // Estate left at the plan horizon — the metric that DIFFERENTIATES levers once
-  // the pot already outlives the horizon (where "extra years" saturates at the cap).
-  const estateOf = (opts) => { try { const p = methodPath(methodId, opts); const row = p[Math.min(Math.max(0, idxAtHorizon), p.length - 1)]; return Math.max(0, row?.balance || 0) } catch { return 0 } }
-  const result = useMemo(() => {
-    const f = sizePct / 100
-    const baseDep = depOf(base)
-    const survives = baseDep >= simEndAge
-    const measure = survives ? estateOf : depOf
-    const baseVal = measure(base)
-    const dy = Math.max(1, Math.round(years * f / 5))
-    const optsFor = {
-      spend: { ...base, rateScale: 1 - f },
-      grow:  { ...base, growth: growth * (1 + f) },
-      pot:   { ...base, portfolio: portfolio * (1 + f) },
-      delay: { ...base, portfolio: portfolio * Math.pow(1 + growth, dy), years: years - dy, age: age0 + dy },
-    }
-    const meta = {
-      spend: { label: `Spend ${sizePct}% less from your pots`, detail: 'lower the income you draw each year' },
-      grow:  { label: `Earn ${(growth * 100 * f).toFixed(1)}% more growth`, detail: `e.g. lower fees or more risk (${(growth * 100).toFixed(1)}% → ${(growth * 100 * (1 + f)).toFixed(1)}%)` },
-      pot:   { label: `Add ${_gk(portfolio * f)} to your pots`, detail: 'top up before you start drawing' },
-      delay: { label: `Start ${dy} ${dy === 1 ? 'year' : 'years'} later`, detail: 'let the pot grow and draw for fewer years' },
-    }
-    const levers = Object.keys(optsFor).map(k => ({ key: k, ...meta[k], delta: measure(optsFor[k]) - baseVal }))
-      .sort((a, b) => b.delta - a.delta)
-    return { baseDep, survives, levers }
-  }, [sizePct, portfolio, growth, inflation, essentials, age0, years, methodId])
+  const idxH = horizonAge - age0
+  const gBase = Math.round(growth * 1000) / 10
+  const pathOf = (o) => { try { return methodPath(methodId, o) } catch { return [] } }
+  const depOf = (o) => { const p = pathOf(o); const d = p.find(r => (r.balance || 0) <= 0); return d ? d.age : simEndAge }
+  const estateOf = (o) => { const p = pathOf(o); const r = p[Math.min(Math.max(0, idxH), p.length - 1)]; return Math.max(0, r?.balance || 0) }
+  const baseDep = depOf(base)
+  const survives = baseDep >= simEndAge
+  const measure = survives ? estateOf : depOf
+  const baseVal = measure(base)
+  const baseDraw = pathOf(base)[0]?.withdrawal || 0
+  const seedAdd = Math.max(10, Math.round(portfolio * 0.1 / 1000))
+
+  // Each lever has its OWN real-unit slider, seeded at a sensible EXAMPLE step.
+  const [growP, setGrowP] = useState(Math.round((gBase + 0.5) * 4) / 4)
+  const [spendLess, setSpendLess] = useState(10)
+  const [addK, setAddK] = useState(seedAdd)
+  const [delayY, setDelayY] = useState(2)
+  const reset = () => { setGrowP(Math.round((gBase + 0.5) * 4) / 4); setSpendLess(10); setAddK(seedAdd); setDelayY(2) }
 
   if (!(portfolio > 0)) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Your income here comes from secure sources (state pension, DB, annuities), so there's no drawable pot to flex. Add investable pots to explore the levers.</div>
-  const survives = result.survives
-  const maxDelta = Math.max(1, ...result.levers.map(l => Math.abs(l.delta)))
-  const topLab = result.levers[0]?.label
-  const fmtDelta = (d) => survives
-    ? (d > 0 ? `+${_gk(d)} left` : d < 0 ? `${_gk(d)} left` : 'no change')
-    : (d > 0 ? `+${d} yrs` : d < 0 ? `${d} yrs` : 'no change')
+
+  const optsSpend = { ...base, rateScale: 1 - spendLess / 100 }
+  const spendDraw = pathOf(optsSpend)[0]?.withdrawal || 0
+  const lv = [
+    { key: 'grow', label: 'Earn a bit more growth', val: measure({ ...base, growth: growP / 100 }),
+      setting: `${growP}%/yr (was ${gBase}%) — e.g. lower fund fees`,
+      control: <SolverSlider label="Growth rate" value={growP} min={gBase} max={gBase + 3} step={0.25} fmt={v => `${v}%`} onChange={setGrowP} dirty={Math.abs(growP - gBase) > 0.01} /> },
+    { key: 'spend', label: 'Spend a little less', val: measure(optsSpend),
+      setting: spendLess === 0 ? `drawing ${_gk(baseDraw)}/yr` : `draw ${_gk(spendDraw)}/yr (was ${_gk(baseDraw)})`,
+      control: <SolverSlider label="Spend less" value={spendLess} min={0} max={40} step={5} fmt={v => v === 0 ? 'no change' : `${v}% less`} onChange={setSpendLess} dirty={spendLess !== 0} /> },
+    { key: 'pot', label: 'Add to your pots first', val: measure({ ...base, portfolio: portfolio + addK * 1000 }),
+      setting: addK === 0 ? 'no top-up' : `+${_gk(addK * 1000)} (pot becomes ${_gk(portfolio + addK * 1000)})`,
+      control: <SolverSlider label="Top up" value={addK} min={0} max={Math.max(50, Math.round(portfolio / 1000))} step={10} fmt={v => v === 0 ? '£0' : `+${_gk(v * 1000)}`} onChange={setAddK} dirty={addK !== 0} /> },
+    { key: 'delay', label: 'Start drawing later', val: measure(delayY > 0 ? { ...base, portfolio: portfolio * Math.pow(1 + growth, delayY), years: years - delayY, age: age0 + delayY } : base),
+      setting: delayY === 0 ? `from age ${age0}` : `from age ${age0 + delayY} (${delayY} ${delayY === 1 ? 'yr' : 'yrs'} later)`,
+      control: <SolverSlider label="Delay start" value={delayY} min={0} max={8} step={1} fmt={v => v === 0 ? 'no change' : `${v}y later`} onChange={setDelayY} dirty={delayY !== 0} /> },
+  ].map(l => ({ ...l, delta: l.val - baseVal }))
+  const topKey = lv.reduce((best, l) => Math.abs(l.delta) > Math.abs(best.delta) ? l : best, lv[0]).key
+  const fmtOut = (d) => survives
+    ? (d > 0 ? `+${_gk(d)}` : d < 0 ? `${_gk(d)}` : '£0')
+    : (d > 0 ? `+${d} ${d === 1 ? 'yr' : 'yrs'}` : d < 0 ? `${d} yrs` : '0')
+  const topLabel = lv.find(l => l.key === topKey)?.label || ''
+
   return (
     <div className="sw-card" style={{ padding: '12px 14px' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>{survives ? 'What grows your estate most' : 'What buys you the most extra years'}</div>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What would change it most?</div>
       <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.5, marginBottom: 4 }}>
-        Today your pots {survives ? <>last beyond <strong style={{ color: 'var(--c-mint-text)' }}>age {horizonAge}</strong> — so the question is what they leave over</> : <>run out around <strong style={{ color: 'var(--c-coral-text)' }}>age {result.baseDep}</strong></>}. The single change that helps most: <strong>{topLab ? topLab.replace(/^(\w)/, c => c.toLowerCase()) : '—'}</strong>.
+        Today your money {survives
+          ? <>lasts beyond <strong style={{ color: 'var(--c-mint-text)' }}>age {horizonAge}</strong>, leaving about <strong>{_gk(baseVal)}</strong> for your family</>
+          : <>runs out at <strong style={{ color: 'var(--c-coral-text)' }}>age {baseDep}</strong></>}.
+        Each lever below is set to an example move — <strong>drag any one</strong> to make it yours and watch the {survives ? 'amount left' : 'age it lasts to'} change.
       </div>
-      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>{survives ? `Each bar shows how much more your pots would be worth at age ${horizonAge}` : 'Each bar shows how many extra years that one change buys'}, at the size you set below.</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {result.levers.map(l => (
-          <_LeverRow key={l.key} label={l.label} detail={l.detail} magnitude={Math.abs(l.delta)} max={maxDelta}
-            positive={l.delta >= 0} deltaLabel={fmtDelta(l.delta)} effort={LEVER_EFFORT[l.key]} />
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>Right now, the biggest mover is <strong style={{ color: 'var(--c-acc)' }}>{topLabel.toLowerCase()}</strong>. {survives ? `Each figure = extra left for your family at age ${horizonAge}.` : 'Each figure = extra years your money lasts.'}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {lv.map(l => (
+          <_LeverControl key={l.key} label={l.label} effort={LEVER_EFFORT[l.key]} effect={fmtOut(l.delta)} helps={l.delta > 0} isTop={l.key === topKey && Math.abs(l.delta) > 0} setting={l.setting}>
+            {l.control}
+          </_LeverControl>
         ))}
       </div>
-      <_LeverStartHere top={result.levers[0]} easy={_easyWin(result.levers)} fmtImpact={fmtDelta} />
-      <div style={{ marginTop: 12 }}>
-        <SolverSlider label="Size of the change" value={sizePct} min={5} max={30} step={5} fmt={v => `${v}%`} onChange={setSizePct} dirty={sizePct !== 10} />
-        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Bigger changes move the needle more — drag to see how sensitive each lever is.</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+        <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset to examples</button>
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
-        Each lever's <strong>effect</strong> (the bar) is on your assumptions; its <strong>effort</strong> tag is a general guide — weigh both. A constant-return illustration, not a forecast or a recommendation. "Years" caps at your simulated horizon (age {simEndAge}).
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        Each effect is on your assumptions; the effort tag is a general guide — weigh both. A constant-return illustration, not a forecast or a recommendation.
       </div>
     </div>
   )
@@ -4970,53 +4998,63 @@ function LeversAccum({ entity, fi }) {
   const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
   const seedSaveAnnual = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); const net = (+(m?.surplus) || 0) - (+(m?.deficit) || 0); return Math.max(0, Math.round(net * 12)) } catch { return 0 } })()
   const growth = 0.05
+  const gBase = Math.round(growth * 1000) / 10
   const horizonAge = Math.min(100, age0 + 50)
   const years = Math.max(1, horizonAge - age0)
-  const [sizePct, setSizePct] = useState(10)
-
   const fiAgeOf = ({ pot = invested0, saving = seedSaveAnnual, g = growth, target = fiTarget }) => {
-    const path = accumProjection({ pot, annualSaving: saving, growth: g, age0, years })
-    const hit = path.find(r => (r.balance || 0) >= target)
+    const hit = accumProjection({ pot, annualSaving: saving, growth: g, age0, years }).find(r => (r.balance || 0) >= target)
     return hit ? hit.age : horizonAge + 1
   }
-  const result = useMemo(() => {
-    if (!fiTarget) return null
-    const f = sizePct / 100
-    const baseAge = fiAgeOf({})
-    const extraSave = Math.max(1000, Math.round(fiTarget * 0.01 * (sizePct / 10)))   // a meaningful saving bump scaled by size
-    const levers = [
-      { key: 'save', label: `Save ${_gk(extraSave)}/yr more`, detail: seedSaveAnnual > 0 ? `on top of your current ${_gk(seedSaveAnnual)}/yr` : 'you currently save nothing spare', age: fiAgeOf({ saving: seedSaveAnnual + extraSave }) },
-      { key: 'grow', label: `Earn ${(growth * 100 * f).toFixed(1)}% more growth`, detail: `e.g. lower fees (${(growth * 100).toFixed(1)}% → ${(growth * 100 * (1 + f)).toFixed(1)}%)`, age: fiAgeOf({ g: growth * (1 + f) }) },
-      { key: 'pot',  label: `Add ${_gk(invested0 * f)} now`, detail: 'a lump sum into investments today', age: fiAgeOf({ pot: invested0 * (1 + f) }) },
-      { key: 'target', label: `Need ${sizePct}% less income`, detail: 'a lower retirement target lowers the finish line', age: fiAgeOf({ target: fiTarget * (1 - f) }) },
-    ].map(l => ({ ...l, delta: baseAge - l.age })).sort((a, b) => b.delta - a.delta)   // delta = years SOONER
-    return { baseAge, levers }
-  }, [sizePct, fiTarget, invested0, seedSaveAnnual, age0, years])
+  // example steps in real units
+  const seedExtra = Math.max(1, Math.round(Math.max(2000, fiTarget * 0.01) / 1000))   // £k/yr more
+  const seedLump = Math.max(5, Math.round((invested0 * 0.1) / 1000))                   // £k lump
+  const [saveK, setSaveK] = useState(seedExtra)
+  const [growP, setGrowP] = useState(Math.round((gBase + 0.5) * 4) / 4)
+  const [lumpK, setLumpK] = useState(seedLump)
+  const [lessPct, setLessPct] = useState(10)
+  const reset = () => { setSaveK(seedExtra); setGrowP(Math.round((gBase + 0.5) * 4) / 4); setLumpK(seedLump); setLessPct(10) }
 
-  if (!result) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Add your investable savings and a target retirement income to see which lever moves your independence date most.</div>
-  const reached = result.baseAge <= horizonAge
-  const maxDelta = Math.max(1, ...result.levers.map(l => Math.abs(l.delta)))
-  const top = result.levers[0]
+  if (!fiTarget) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Add your investable savings and a target retirement income to see which lever moves your independence date most.</div>
+  const baseAge = fiAgeOf({})
+  const reached = baseAge <= horizonAge
+  const lv = [
+    { key: 'save', label: 'Save more each year', age: fiAgeOf({ saving: seedSaveAnnual + saveK * 1000 }),
+      setting: seedSaveAnnual > 0 ? `${_gk((seedSaveAnnual + saveK * 1000))}/yr total (was ${_gk(seedSaveAnnual)})` : `${_gk(saveK * 1000)}/yr (you save nothing spare now)`,
+      control: <SolverSlider label="Extra saving" value={saveK} min={0} max={Math.max(20, seedExtra * 4)} step={1} fmt={v => v === 0 ? 'no change' : `+${_gk(v * 1000)}/yr`} onChange={setSaveK} dirty={saveK !== 0} /> },
+    { key: 'grow', label: 'Earn a bit more growth', age: fiAgeOf({ g: growP / 100 }),
+      setting: `${growP}%/yr (was ${gBase}%) — e.g. lower fund fees`,
+      control: <SolverSlider label="Growth rate" value={growP} min={gBase} max={gBase + 3} step={0.25} fmt={v => `${v}%`} onChange={setGrowP} dirty={Math.abs(growP - gBase) > 0.01} /> },
+    { key: 'pot', label: 'Add a lump sum now', age: fiAgeOf({ pot: invested0 + lumpK * 1000 }),
+      setting: lumpK === 0 ? 'no lump sum' : `+${_gk(lumpK * 1000)} today (pot becomes ${_gk(invested0 + lumpK * 1000)})`,
+      control: <SolverSlider label="Lump sum" value={lumpK} min={0} max={Math.max(50, Math.round(invested0 / 1000))} step={5} fmt={v => v === 0 ? '£0' : `+${_gk(v * 1000)}`} onChange={setLumpK} dirty={lumpK !== 0} /> },
+    { key: 'target', label: 'Plan to need less income', age: fiAgeOf({ target: fiTarget * (1 - lessPct / 100) }),
+      setting: lessPct === 0 ? `target ${_gk(fiTarget)}` : `target ${_gk(fiTarget * (1 - lessPct / 100))} (was ${_gk(fiTarget)})`,
+      control: <SolverSlider label="Need less" value={lessPct} min={0} max={40} step={5} fmt={v => v === 0 ? 'no change' : `${v}% less`} onChange={setLessPct} dirty={lessPct !== 0} /> },
+  ].map(l => ({ ...l, delta: baseAge - l.age }))   // delta = years SOONER
+  const topKey = lv.reduce((best, l) => l.delta > best.delta ? l : best, lv[0]).key
+  const fmtOut = (d) => d > 0 ? `${d} ${d === 1 ? 'yr' : 'yrs'} sooner` : d < 0 ? `${-d} yrs later` : 'no change'
+  const topLabel = lv.find(l => l.key === topKey)?.label || ''
+
   return (
     <div className="sw-card" style={{ padding: '12px 14px' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What gets you there soonest</div>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What would change it most?</div>
       <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.5, marginBottom: 4 }}>
-        On today's plan you reach independence {reached ? <>around <strong style={{ color: 'var(--c-mint-text)' }}>age {result.baseAge}</strong></> : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong></>}. The single change that helps most: <strong>{top ? top.label.replace(/^(\w)/, c => c.toLowerCase()) : '—'}</strong>.
+        On today's plan you reach independence {reached ? <>around <strong style={{ color: 'var(--c-mint-text)' }}>age {baseAge}</strong></> : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong></>}.
+        Each lever below is set to an example move — <strong>drag any one</strong> to make it yours and watch your independence age move.
       </div>
-      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>Each bar shows how many years sooner that one change gets you there, at the size you set below.</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {result.levers.map(l => (
-          <_LeverRow key={l.key} label={l.label} detail={l.detail} magnitude={Math.abs(l.delta)} max={maxDelta}
-            positive={l.delta >= 0} deltaLabel={l.delta > 0 ? `${l.delta} yrs sooner` : l.delta < 0 ? `${-l.delta} yrs later` : 'no change'} effort={LEVER_EFFORT[l.key]} />
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>Right now, the biggest mover is <strong style={{ color: 'var(--c-acc)' }}>{topLabel.toLowerCase()}</strong>. Each figure = how many years sooner you'd get there.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {lv.map(l => (
+          <_LeverControl key={l.key} label={l.label} effort={LEVER_EFFORT[l.key]} effect={fmtOut(l.delta)} helps={l.delta > 0} isTop={l.key === topKey && l.delta > 0} setting={l.setting}>
+            {l.control}
+          </_LeverControl>
         ))}
       </div>
-      <_LeverStartHere top={result.levers[0]} easy={_easyWin(result.levers)} fmtImpact={(d) => d > 0 ? `${d} yrs sooner` : 'no change'} />
-      <div style={{ marginTop: 12 }}>
-        <SolverSlider label="Size of the change" value={sizePct} min={5} max={30} step={5} fmt={v => `${v}%`} onChange={setSizePct} dirty={sizePct !== 10} />
-        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Bigger changes move the needle more — drag to see how sensitive each lever is.</div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+        <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset to examples</button>
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
-        Each lever's <strong>effect</strong> (the bar) is on your assumptions; its <strong>effort</strong> tag is a general guide — weigh both. The 25× target is a planning rule of thumb. An illustration, not a forecast or a recommendation.
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        Each effect is on your assumptions; the effort tag is a general guide — weigh both. The 25× target is a planning rule of thumb. An illustration, not a forecast or a recommendation.
       </div>
     </div>
   )

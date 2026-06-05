@@ -63,6 +63,7 @@ import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
 import { extractAccumulationContext } from '../engine/accumulation-solver.js'
 import { sequenceDrawHoldings, evaluateDrawRoutes } from '../engine/decumulation-sequence.js'
+import { allocateSurplus } from '../engine/surplus-allocation.js'
 import { compareMethods, recommendMethodForGoal, methodPath, METHODS } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
@@ -1207,6 +1208,84 @@ function DeficitFixAnalysis({ ms, msNet, lb }) {
   )
 }
 
+// ── SurplusAllocationEngine — "where should my next £1 go?" (founder 2026-06-05:
+// "if I have surplus what should I do — reinvest where/how?"). The accumulation
+// twin of the draw-order: a priority selector scores the candidate homes (debt /
+// buffer / pension / ISA / GIA) on tax · growth · access · safety and recommends
+// where to deploy spare cashflow + the why. Info/guidance, not advice.
+const _ALLOC_PRIORITY = [
+  { id: 'grow', label: 'Grow fastest' },
+  { id: 'flex', label: 'Stay flexible' },
+  { id: 'derisk', label: 'Cut risk' },
+]
+const _ALLOC_FACTOR = { tax: 'Tax', growth: 'Growth', access: 'Access', safety: 'Safety' }
+function SurplusAllocationEngine({ ms, msNet, entity }) {
+  const [priority, setPriority] = useState('grow')
+  const surplus = Math.max(0, Math.round(msNet))
+  const r = useMemo(() => { try { return allocateSurplus(entity, { priority, surplusMonthly: surplus }) } catch { return null } }, [entity, priority, surplus])
+  if (!r || surplus <= 0 || !r.candidates?.length) return null
+  const maxW = Math.max(...r.candidates.map(c => c.weighted), 1)
+  return (
+    <div>
+      <div style={{ padding: '10px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 8%, var(--c-surface))', border: '1px solid var(--c-border)', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.5 }}>
+          You have <strong style={{ color: 'var(--c-mint-text)' }}>{_gk(surplus)}/mo spare</strong> ({_gk(r.surplusAnnual)}/yr). This is the money that builds your wealth — where it goes is the single biggest lever you control right now. There's no one answer: it depends what matters most to you.
+        </div>
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>
+        Where should it go? — what matters most?
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+        {_ALLOC_PRIORITY.map(p => (
+          <button key={p.id} onClick={() => setPriority(p.id)} className="sw-pressable" style={{
+            fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+            border: '1px solid ' + (priority === p.id ? 'var(--c-acc)' : 'var(--c-border)'),
+            background: priority === p.id ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+            color: priority === p.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{p.label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+        {r.factors.map((f, i) => <span key={i} style={{ fontSize: 9, fontWeight: 600, color: 'var(--c-text3)', padding: '2px 7px', borderRadius: 100, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>{f}</span>)}
+      </div>
+      {/* Scored homes */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+        {r.candidates.map(c => {
+          const win = c.rank === 1
+          return (
+            <div key={c.id} style={{ padding: '9px 11px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid ' + (win ? 'var(--c-acc)' : 'var(--c-border)') }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 0 }}>{c.name}</span>
+                {win && <span style={{ fontSize: 8, fontWeight: 800, color: '#fff', background: 'var(--c-acc)', padding: '2px 6px', borderRadius: 100, letterSpacing: 0.3 }}>RECOMMENDED</span>}
+                <span style={{ fontSize: 12, fontWeight: 800, color: win ? 'var(--c-acc)' : 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{c.weighted}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 5 }}>
+                <div style={{ width: `${(c.weighted / maxW) * 100}%`, height: '100%', background: win ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 5 }}>
+                {Object.entries(c.scores).map(([k, v]) => <span key={k} style={{ fontSize: 9, color: 'var(--c-text3)' }}>{_ALLOC_FACTOR[k]} <strong style={{ color: 'var(--c-text2)' }}>{v}</strong></span>)}
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45, marginTop: 5 }}>{c.reason}</div>
+            </div>
+          )
+        })}
+      </div>
+      {/* Recommended allocation — where the £ actually goes */}
+      {r.allocation?.length > 0 && (
+        <div style={{ padding: '9px 11px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 8%, var(--c-surface))', border: '1px solid var(--c-acc)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--c-acc)', marginBottom: 6 }}>Recommended split of your {_gk(surplus)}/mo</div>
+          {r.allocation.map((a, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, marginBottom: 2 }}>
+              <span style={{ color: 'var(--c-text)' }}>{i + 1}. {a.name}</span>
+              <span style={{ color: 'var(--c-acc)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{_gk(a.amount)}/mo</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>{r.disclaimer}</div>
+    </div>
+  )
+}
+
 // "Am I OK right now?" rebuilt to the drawer bar (founder 2026-06-04: "apply
 // this logic to all tiles"). Leads with the net position + an INTERACTIVE
 // break-even model (trim spend / add income + a back-solve that closes the gap),
@@ -1265,8 +1344,10 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gk(income)}</span><span>out {_gk(out)}</span></div>
         <div style={{ marginTop: 12, borderTop: '1px solid var(--c-sep)', paddingTop: 10 }}>
-          {/* Engine-grade gap analysis: honest decomposition + scored fixes. */}
+          {/* Engine-grade gap analysis (deficit) OR surplus-allocation engine
+              (surplus) — the symmetric "what do I DO" answer. */}
           {inDeficit && <DeficitFixAnalysis ms={ms} msNet={msNet} lb={lb} />}
+          {!inDeficit && msNet > 0 && <SurplusAllocationEngine ms={ms} msNet={msNet} entity={entity} />}
           {/* Fine-tune — the manual levers, demoted below the recommendation. */}
           <details style={{ marginTop: inDeficit ? 12 : 0 }}>
             <summary style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', cursor: 'pointer' }}>Or fine-tune it yourself</summary>

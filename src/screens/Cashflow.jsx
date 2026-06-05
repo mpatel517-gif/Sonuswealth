@@ -1351,6 +1351,22 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           />
         </FadeInOnMount>
 
+        {/* ── YOUR MONEY MAP — signature centrepiece (founder 2026-06-05) ──────
+            The money-flow Sankey was buried 3 levels deep (Am I OK now? → Where
+            your money flows → sub-drawer), so the tab "lacked visibility from the
+            start" and the most important diagram looked missing. Elevated to the
+            landing, under the answer band, above the tiles. Reconciled to
+            cashflowFlow (same source as the hero, waterfall, Home). Works for
+            every persona — accumulator (income → spend → surplus → savings) and
+            decumulator (incl. pot draws → income → spend). */}
+        <FadeInOnMount delay={90}>
+          <div className="sw-card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 2 }}>Your money map</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 8 }}>Where your money comes from, and where it goes — every figure traces to the same engine as the cards above.</div>
+            <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
+          </div>
+        </FadeInOnMount>
+
         {/* Cashflow Health Score REMOVED (founder decision 2026-06-04): the
             composite band needed an apology note ("reads Healthy but surplus is
             £0") and blended accumulation metrics into a single number that

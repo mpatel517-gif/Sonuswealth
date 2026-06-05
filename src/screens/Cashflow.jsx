@@ -285,7 +285,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
     { label: 'Essentials',           value: -essAnn,      colour: 'var(--c-amber-text)', kind: 'deduction', note: 'Housing, bills, transport' },
     { label: 'Debt service',         value: -debtAnn,     colour: 'var(--c-acc3, var(--c-text3))', kind: 'deduction', note: 'Loans and cards' },
     { label: 'Protection premiums',  value: -protAnn,     colour: 'var(--c-coral-text)', kind: 'deduction', note: 'Life · CI · IP · PMI' },
-    { label: 'Net surplus × 12',     value: surplusAnn,   colour: surplusAnn >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)', kind: 'surplus', note: null },
+    { label: surplusAnn >= 0 ? 'Net surplus × 12' : 'Net deficit × 12', value: surplusAnn,   colour: surplusAnn >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)', kind: 'surplus', note: null },
   ].filter(s => Math.abs(s.value) > 0)
 
   const maxAbs = Math.max(...steps.map(s => Math.abs(s.value)), 1)
@@ -1324,18 +1324,15 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
              Sheet on Cashflow?". Other statements are reachable via the sidebar
              and contextual deep-links. Strip stays on the screens where it fits. */}
 
-        {/* §1 — Today / Future / Plan / What if — PRIMARY navigation chrome.
-            Moved to top of body (was mid-page round 7) so the user has the
-            time-axis context before reading any number. */}
-        <FadeInOnMount delay={20}>
-          <X28TopBar
-            window={windowId}
-            viewMode={viewMode}
-            onWindowChange={setWindowId}
-            onViewModeChange={setViewMode}
-            showWindowRow={false}
-          />
-        </FadeInOnMount>
+        {/* §1 — Today/Future/Plan/What-if 4-way control REMOVED (founder
+            2026-06-05: "fold into drawers"). The control was decorative —
+            Future/Plan only showed "coming soon" and What-if was a SILENT
+            no-op (audit CF-01). The time + scenario functions already live
+            inside the drawers that own them: the income-network drawer has
+            retirement-age/growth projection sliders, and "What if markets
+            fall?" owns the scenario/stress lens. viewMode still exists in the
+            shared store for deep-link scenario seeds (below), just no longer
+            driven by a dead tab bar. */}
 
         {/* §2 — STORY BANNER — the 10-second answer.
             R3v2 (2026-05-26): real-answer card now computes a single sentence
@@ -1385,23 +1382,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           <ScenarioSeedBanner seed={activeSeed} onDismiss={() => setActiveSeed(null)} />
         )}
 
-        {/* View-mode context chip — differentiates Today/Future/Plan visually.
-            Phase 2: remove once each mode branches to distinct content. */}
-        {viewMode !== 'scenario' && viewMode !== 'actual' && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '6px 16px',
-            background: 'var(--c-surface2)',
-            borderRadius: 'var(--r-md, 12px)',
-            fontSize: 11, fontWeight: 600, color: 'var(--c-text2)',
-            letterSpacing: '0.04em',
-            margin: '0 0 4px',
-          }}>
-            <span style={{ color: 'var(--c-acc)' }}>●</span>
-            {viewMode === 'forecast' && "Showing today's figures — forward-modelled spend isn't on this tab yet (coming soon). See Timeline for projections."}
-            {viewMode === 'plan'     && "Showing today's figures — plan-vs-actual variance isn't on this tab yet (coming soon)."}
-          </div>
-        )}
+        {/* View-mode "coming soon" context chip REMOVED with the 4-way control
+            (founder 2026-06-05). It only ever apologised for Future/Plan being
+            empty; with the control gone there's nothing to annotate. */}
 
         {/* View-mode + window aware container — re-key triggers reveal animations */}
         <div
@@ -2029,7 +2012,7 @@ function TileSparkline({ pts, color }) {
     </svg>
   )
 }
-function QuestionTile({ q, headline, sub, tone, onClick, spark }) {
+function QuestionTile({ q, headline, sub, tone, onClick, spark, teaser }) {
   const accent = tone === 'coral' ? 'var(--c-coral-text)' : tone === 'mint' ? 'var(--c-mint-text)' : 'var(--c-acc)'
   return (
     <button onClick={onClick} className="sw-card sw-lift sw-pressable" style={{
@@ -2040,10 +2023,27 @@ function QuestionTile({ q, headline, sub, tone, onClick, spark }) {
       <div style={{ fontSize: 19, fontWeight: 800, color: accent, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{headline}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>{sub}</div>}
       {spark && spark.length > 1 && <TileSparkline pts={spark} color={accent} />}
-      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>View ›</div>
+      {/* Teaser — the reason to dig in (founder 2026-06-05: "encourage them to
+          dig deeper to get the answer they're looking for"). Says what's behind
+          the tile, so the click is earned, not blind. */}
+      {teaser && <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45 }}>{teaser}</div>}
+      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>{teaser ? 'Dig in ›' : 'View ›'}</div>
     </button>
   )
 }
+// What each tile reveals — the promise that earns the tap. Keyed by tile.key.
+const TILE_TEASER = {
+  now: 'Inside: your live surplus or deficit, what’s driving it, and the first move that closes the gap.',
+  drawdown: 'Inside: how today’s pots turn into a retirement income — drag your retirement age and growth to test it.',
+  lastability: 'Inside: how close you are to never needing to work, and what gets you there sooner.',
+  costs: 'Inside: what tax, fees and inaction quietly cost you — ordered by deadline.',
+  resilience: 'Inside: how a bad market run would hit you, and whether your buffer holds.',
+  whatif: 'Inside: every lever you control, ranked by how much it moves your future.',
+  methods: 'Inside: five ways to turn pots into a paycheck, compared side by side.',
+}
+// Tile priority — problem-first, left→right by decision importance (founder
+// 2026-06-05): what’s wrong now → the income plan → progress → cost → risk → levers.
+const TILE_ORDER = { now: 0, drawdown: 1, lastability: 2, methods: 3, costs: 4, resilience: 5, whatif: 6 }
 function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime, setSwrRegime, decSolve, extraTiles = [] }) {
   const [open, setOpen] = useState(null)
   const ratio = +(fr?.ratio || fr?.value || 0)
@@ -2152,12 +2152,16 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime,
   // (and methods) last — each extra tile carries its own render-prop content.
   const startTiles = extraTiles.filter(t => t.position === 'start')
   const endTiles = extraTiles.filter(t => t.position !== 'start')
+  // Problem-first ordering by decision importance, not source array (founder
+  // 2026-06-05: tiles "were just there", not ordered). Sort the combined set by
+  // TILE_ORDER so it reads now → income → on-track → cost → risk → levers.
   const tiles = [...startTiles, ...baseTiles, ...endTiles]
+    .sort((a, b) => (TILE_ORDER[a.key] ?? 99) - (TILE_ORDER[b.key] ?? 99))
   const openTile = tiles.find(t => t.key === open)
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} spark={t.spark} onClick={() => setOpen(t.key)} />)}
+        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} spark={t.spark} teaser={TILE_TEASER[t.key]} onClick={() => setOpen(t.key)} />)}
       </div>
       {open && (
         <DrillStackProvider>

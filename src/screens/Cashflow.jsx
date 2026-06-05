@@ -1272,7 +1272,7 @@ function SurplusAllocationEngine({ ms, msNet, entity }) {
       {/* Recommended allocation — where the £ actually goes */}
       {r.allocation?.length > 0 && (
         <div style={{ padding: '9px 11px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 8%, var(--c-surface))', border: '1px solid var(--c-acc)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--c-acc)', marginBottom: 6 }}>Recommended split of your {_gk(surplus)}/mo</div>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--c-acc)', marginBottom: 6 }}>{r.allocation.length > 1 ? `Recommended split of your ${_gk(surplus)}/mo` : `Where to put your ${_gk(surplus)}/mo`}</div>
           {r.allocation.map((a, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, marginBottom: 2 }}>
               <span style={{ color: 'var(--c-text)' }}>{i + 1}. {a.name}</span>
@@ -1291,6 +1291,11 @@ function SurplusAllocationEngine({ ms, msNet, entity }) {
 // break-even model (trim spend / add income + a back-solve that closes the gap),
 // then COMPACT ROWS that open detail sub-drawers — replacing the old 8-card
 // static scroll. msNet = signed monthly net (surplus − deficit), engine-sourced.
+// Mini-visual primitives for the row faces (founder 2026-06-05: the plain rows
+// "don't feel as professional as the rest" — give each a real at-a-glance visual).
+const _Trk = ({ children, h = 7 }) => <div style={{ flex: 1, height: h, borderRadius: 5, background: 'var(--c-surface2)', overflow: 'hidden', display: 'flex' }}>{children}</div>
+const _SegBar = ({ pct, color }) => <div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, height: '100%', background: color }} />
+const _SRC_COLORS = ['var(--c-acc)', 'var(--c-mint-text)', 'var(--c-amber-text)', 'var(--c-coral-text)', 'var(--c-text3)']
 function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, surplusAlloc, onSurplusBreakdown, onIncomeBreakdown }) {
   const [openRow, setOpenRow] = useState(null)
   const [trim, setTrim] = useState(0)     // £/mo spending cut (delta on engine baseline)
@@ -1304,29 +1309,62 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
   const essPct = income > 0 ? Math.round(((ms.essential || 0) / income) * 100) : null
   const dirty = trim > 0 || extra > 0
   const inDeficit = msNet < 0
+  // Row-face data (at-a-glance mini-visuals).
+  const _max = Math.max(income, out, 1)
+  const incomeSegs = (incomeAll?.items || []).slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 5)
+    .map((it, i) => ({ pct: (it.amount || 0) / Math.max(1, incomeAll?.total || income) * 100, color: _SRC_COLORS[i % 5] }))
+  const bm = lb?.months || 0
+  const bufColor = bm >= 6 ? 'var(--c-mint-text)' : bm >= 3 ? 'var(--c-amber-text)' : 'var(--c-coral-text)'
   const rows = [
-    { key: 'flow', label: 'Where your money flows', stat: `${_gk(income)} in · ${_gk(out)} out`, render: (
+    { key: 'flow', label: 'Where your money flows', stat: `${_gk(income)} in · ${_gk(out)} out`,
+      face: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 8, width: 20, color: 'var(--c-text3)', fontWeight: 700 }}>IN</span><_Trk><_SegBar pct={income / _max * 100} color="var(--c-mint-text)" /></_Trk></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 8, width: 20, color: 'var(--c-text3)', fontWeight: 700 }}>OUT</span><_Trk><_SegBar pct={out / _max * 100} color="var(--c-coral-text)" /></_Trk></div>
+        </div>
+      ), render: (
       <>
         <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
         <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
         <button onClick={onSurplusBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full surplus breakdown ›</button>
       </>
     ) },
-    { key: 'split', label: 'Essentials vs discretionary', stat: essPct != null ? `${essPct}% essential` : '—', render: (
+    { key: 'split', label: 'Essentials vs discretionary', stat: essPct != null ? `${essPct}% essential` : '—',
+      face: (
+        <div>
+          <_Trk><_SegBar pct={essPct || 0} color="var(--c-mint-text)" /><_SegBar pct={100 - (essPct || 0)} color="var(--c-amber-text)" /></_Trk>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: 'var(--c-text3)', marginTop: 2 }}><span style={{ color: 'var(--c-mint-text)' }}>essentials</span><span style={{ color: 'var(--c-amber-text)' }}>discretionary</span></div>
+        </div>
+      ), render: (
       <>
         <EssentialsDiscretionarySplit ms={ms} />
         <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>Subscriptions count toward essentials. Automatic detection arrives with Open Banking; until then they're inside the figures above.</div>
       </>
     ) },
-    { key: 'income', label: 'Income — by source & tax band', stat: `${_gk(incomeAll?.total || income)} · ${incomeAll?.items?.length || 0} src`, render: (
+    { key: 'income', label: 'Income — by source & tax band', stat: `${_gk(incomeAll?.total || income)} · ${incomeAll?.items?.length || 0} src`,
+      face: (
+        <div>
+          <_Trk>{incomeSegs.map((s, i) => <_SegBar key={i} pct={s.pct} color={s.color} />)}</_Trk>
+          <div style={{ fontSize: 8, color: 'var(--c-text3)', marginTop: 2 }}>by income stream, biggest first</div>
+        </div>
+      ), render: (
       <>
         <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
         <IncomeBreakdownByBand incomeAll={incomeAll} />
         <button onClick={onIncomeBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full income breakdown ›</button>
       </>
     ) },
-    { key: 'buffer', label: 'Your safety buffer', stat: lb?.months != null ? (lb.months >= 24 ? `${Math.round(lb.months / 12)}+ yrs` : `${Math.round(lb.months)} mo`) : '—', render: <LiquidityBufferCard lb={lb} /> },
-    ...(ms.surplus > 0 ? [{ key: 'alloc', label: 'What to do with your surplus', stat: `${_gk(ms.surplus)}/mo spare`, render: <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} /> }] : []),
+    { key: 'buffer', label: 'Your safety buffer', stat: lb?.months != null ? (lb.months >= 24 ? `${Math.round(lb.months / 12)}+ yrs` : `${Math.round(lb.months)} mo`) : '—',
+      face: (
+        <div style={{ position: 'relative' }}>
+          <_Trk><_SegBar pct={Math.min(100, bm / 12 * 100)} color={bufColor} /></_Trk>
+          <div style={{ position: 'absolute', left: '50%', top: -2, bottom: 6, width: 1, background: 'var(--c-text3)' }} />
+          <div style={{ fontSize: 8, color: 'var(--c-text3)', marginTop: 2 }}>{bm >= 6 ? 'covered' : `${Math.round(bm)} of 6-month target`} · marker = 6 mo</div>
+        </div>
+      ), render: <LiquidityBufferCard lb={lb} /> },
+    // 'What to do with your surplus' row REMOVED (agent D5, 2026-06-05): the lead
+    // now renders the full SurplusAllocationEngine for surplus personas, so this
+    // row was a faceless duplicate of it.
   ]
   const open = rows.find(r => r.key === openRow)
   return (
@@ -1360,12 +1398,16 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
           </details>
         </div>
       </div>
-      {/* COMPACT ROWS → detail sub-drawers */}
+      {/* COMPACT ROWS → detail sub-drawers. Each carries an at-a-glance mini-
+          visual on its face so it reads engine-grade before you tap (founder). */}
       {rows.map(r => (
-        <button key={r.key} onClick={() => setOpenRow(r.key)} className="sw-lift sw-pressable" style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer', width: '100%', padding: '11px 13px', borderRadius: 12, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{r.label}</div>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text2)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.stat}</div>
-          <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
+        <button key={r.key} onClick={() => setOpenRow(r.key)} className="sw-lift sw-pressable" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8, textAlign: 'left', cursor: 'pointer', width: '100%', padding: '12px 14px', borderRadius: 12, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{r.label}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text2)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.stat}</div>
+            <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
+          </div>
+          {r.face && <div>{r.face}</div>}
         </button>
       ))}
       {open && (
@@ -2950,7 +2992,7 @@ function LiquidityBufferCard({ lb }) {
   )
 }
 
-// ── §A.7a Income by source — Domain O split (CAT-03) ────────────────────
+// ── §A.7a Income by source (reconciled to canonical incomeAll.items) ────────
 // Spec §4.3: split income into salary / dividends / rental / drawdown /
 // interest / pension instead of presenting a single income band. Reads
 // entity.income (array or object shape) and groups by canonical source.
@@ -2987,23 +3029,21 @@ function classifyIncomeSource(rawType) {
   return 'other'
 }
 function IncomeBySourceCard({ entity, incomeAll }) {
-  const inc = entity?.income
-  const incomeArr = Array.isArray(inc)
-    ? inc
-    : (inc && typeof inc === 'object')
-      ? Object.entries(inc).map(([type, amount]) => ({ type, amount }))
-      : []
-  // Group annual amounts.
+  // RECONCILIATION FIX (agent D1/D2, 2026-06-05): this card used to re-parse
+  // entity.income raw, which double-counted / mis-read object fields and summed
+  // to ~3× the real gross (Mr T £252k vs £79k) while dumping £124k into "Other".
+  // Drive it from the CANONICAL incomeAll.items — the same source the row face,
+  // the tax-band breakdown, and the money-map Sankey all use — so it ties out.
   const buckets = {}
-  for (const row of incomeArr) {
+  for (const row of (incomeAll?.items || [])) {
     const src = classifyIncomeSource(row?.type)
-    const amount = +(row?.annual ?? row?.amount ?? row?.monthly_amount * 12 ?? 0)
+    const amount = +(row?.amount ?? row?.annual ?? 0)
     if (!amount) continue
     buckets[src] = (buckets[src] || 0) + amount
   }
   const entries = Object.entries(buckets).sort((a, b) => b[1] - a[1])
   const total = entries.reduce((s, [, v]) => s + v, 0)
-    || +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
+    || +(incomeAll?.total ?? incomeAll?.gross_annual ?? 0)
 
   if (entries.length === 0) {
     return (
@@ -3028,7 +3068,6 @@ function IncomeBySourceCard({ entity, incomeAll }) {
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
         <div style={S.cardTitle}>Income by source</div>
-        <span className="sw-chip sw-chip-sm">Domain O</span>
       </div>
       <div style={{
         marginTop: 'var(--space-md)', display: 'flex',

@@ -62,6 +62,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
 import { extractAccumulationContext } from '../engine/accumulation-solver.js'
+import { sequenceDrawHoldings } from '../engine/decumulation-sequence.js'
 import { compareMethods, recommendMethodForGoal, methodPath, METHODS } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
@@ -3455,6 +3456,86 @@ function _fvAccum(current, monthly, years, annualRate) {
   const annuity = r === 0 ? months : (Math.pow(1 + r, months) - 1) / r
   return fvCurrent + monthly * annuity
 }
+
+// ── DrawOrderDrill — the per-holding priority sequence + WHY (founder
+// 2026-06-05: "if I have 5 pensions which one should be drawn first, taking
+// into account costs, growth, tax… come up with a priority sequencing — that
+// was the whole point of the engine"). Reads the P2 sequencer
+// (decumulation-sequence.js). The GOAL selector is the interactive core: the
+// order CHANGES with the priority, so the user sees there is no single "right"
+// answer — it depends what they're optimising for. Information/guidance, not advice.
+const _GOAL_OPTS = [
+  { id: 'min_lifetime_tax', label: 'Pay less tax' },
+  { id: 'legacy', label: 'Leave more to family' },
+  { id: 'max_lifetime_spend', label: 'Spend more now' },
+  { id: 'income_floor', label: 'Secure income for life' },
+]
+const _WRAP_CHIP = { cash: 'Cash', gia: 'Taxable', pension: 'Pension', isa: 'ISA' }
+function DrawOrderDrill({ entity }) {
+  const [goal, setGoal] = useState('min_lifetime_tax')
+  const seq = useMemo(() => { try { return sequenceDrawHoldings(entity, { goal }) } catch { return null } }, [entity, goal])
+  if (!seq || !seq.order?.length) return null
+  return (
+    <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>
+        Which pot to draw first — and why
+      </div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 10 }}>
+        With several pensions, ISAs and accounts, the order you draw them in changes how much tax and charges you pay. There's no single right answer — it depends what you're optimising for. Pick a priority and watch the order change.
+      </div>
+      {/* Goal selector — the order is a FUNCTION of the priority. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        {_GOAL_OPTS.map(g => (
+          <button key={g.id} onClick={() => setGoal(g.id)} className="sw-pressable" style={{
+            fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+            border: '1px solid ' + (goal === g.id ? 'var(--c-acc)' : 'var(--c-border)'),
+            background: goal === g.id ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+            color: goal === g.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{g.label}</button>
+        ))}
+      </div>
+      {/* Ordered per-holding list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {seq.order.map(o => (
+          <div key={o.id || o.rank} style={{ display: 'flex', gap: 10, alignItems: 'flex-start',
+            padding: '9px 10px', borderRadius: 10, background: 'var(--c-surface)',
+            border: '1px solid ' + (o.rank === 1 ? 'var(--c-acc)' : 'var(--c-border)') }}>
+            <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800, color: o.rank === 1 ? '#fff' : 'var(--c-text2)',
+              background: o.rank === 1 ? 'var(--c-acc)' : 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{o.rank}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)' }}>{o.label}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--c-text3)', padding: '1px 6px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{_WRAP_CHIP[o.wrapper] || o.wrapper}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{_gk(o.value)}</span>
+                {o.charge ? <span style={{ fontSize: 9.5, color: 'var(--c-coral-text)' }}>{(o.charge * 100).toFixed(2)}% charge</span> : null}
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45, marginTop: 3 }}>{o.reason}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Secure floor + excluded — the whole balance sheet, not just the drawable slice */}
+      {seq.netFloorIncome > 0 && (
+        <div style={{ marginTop: 10, fontSize: 10.5, color: 'var(--c-mint-text)', lineHeight: 1.5 }}>
+          Before any of these, <strong>{_gk(seq.netFloorIncome)}/yr</strong> of guaranteed income (State Pension, DB, annuity) covers your floor — so your pots only fund what's above it.
+        </div>
+      )}
+      {seq.excluded?.length > 0 && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--c-text3)', cursor: 'pointer' }}>Not drawn for income ({seq.excluded.length}) — and why</summary>
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {seq.excluded.map((e, i) => (
+              <div key={i} style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.4 }}>
+                <strong style={{ color: 'var(--c-text2)' }}>{e.label}</strong> — {e.reason}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>{seq.disclaimer}</div>
+    </div>
+  )
+}
 function AccumIncomeNetwork({ entity }) {
   let ctx = null
   try { ctx = extractAccumulationContext(entity) } catch { ctx = null }
@@ -3582,6 +3663,8 @@ function AccumIncomeNetwork({ entity }) {
       <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>
         Pots are projected at your chosen growth, then converted at a {Math.round(swr * 1000) / 10}% sustainable withdrawal rate — the same rule the &ldquo;will it last&rdquo; plan uses when you start drawing. {retAge < spa ? `Your State Pension starts at ${spa}, so your pots cover the ${spa - retAge}-year gap first.` : ''} A projection under your assumptions — not a forecast or personal advice.
       </div>
+      {/* Per-holding draw-order drill (founder 2026-06-05: which pot first + why). */}
+      <DrawOrderDrill entity={entity} />
     </div>
   )
 }

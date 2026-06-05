@@ -108,7 +108,7 @@ function pensionHoldings(a, inc, individual = {}) {
       const taxonomyId = toTaxonomyId(p.type, 'pensions')
       const isDB = taxonomyId === 'DB' || DB_RE.test(String(p.type || '')) || p.isPot === false
       out.push({
-        id: p.id || mkId('pen'), taxonomyId, category: 'pensions', provider: p.provider,
+        id: p.id || mkId('pen'), taxonomyId, category: 'pensions', provider: p.provider, name: p.name,
         currentValue: isDB ? null : num(p.value, p.total),
         isPot: !isDB,
         guaranteedAnnual: isDB ? num(p.annualIncome, p.income, p.guaranteedAnnual) : undefined,

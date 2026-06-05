@@ -3472,6 +3472,7 @@ const _GOAL_OPTS = [
 ]
 const _WRAP_CHIP = { cash: 'Cash', gia: 'Taxable', pension: 'Pension', isa: 'ISA' }
 const _WRAP_COLOR = { cash: 'var(--c-text3)', gia: 'var(--c-amber-text)', pension: 'var(--c-acc)', isa: 'var(--c-mint-text)' }
+const _WRAP_NODE_LABEL = { pension: 'Pensions', isa: 'ISAs', gia: 'Investment accounts', cash: 'Cash accounts' }
 const _FACTOR_LABEL = { tax: 'Tax', charge: 'Charges', iht: 'IHT', flex: 'Flexibility' }
 // Plain-English trade-off line for a candidate route (strongest vs weakest factor).
 function _tradeoff(scores) {
@@ -3633,6 +3634,7 @@ function AccumIncomeNetwork({ entity }) {
   // drawers"). The income TOTAL is the same pots either way; the ORDER they're
   // drawn in (and its tax/charge efficiency) is what the goal changes.
   const [goal, setGoal] = useState('min_lifetime_tax')
+  const [expanded, setExpanded] = useState({}) // wrapper -> bool (in-diagram drill)
   const routes = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
   if (!ctx) return null
   // Draw rank per wrapper, from the winning route for this goal.
@@ -3675,14 +3677,34 @@ function AccumIncomeNetwork({ entity }) {
     )
   }
 
-  // Node rows: drawable pots (incl. cash) ORDERED by the draw sequence for the
-  // chosen goal, each numbered with its draw rank, then the State Pension floor.
-  // Cash is a real draw source (drawn first under most goals) — shown with its
-  // rank, consistent with the table below (not a mute "buffer").
-  const drawableNodes = [
-    ...incomePots.map(p => ({ ...p, kind: 'pot', wrapper: p.id, drawRank: wrapperRank[p.id] ?? 98 })),
-    ...(cashBuf > 0 ? [{ id: 'cash', today: cashBuf, at: cashBuf, kind: 'pot', wrapper: 'cash', drawRank: wrapperRank.cash ?? 99 }] : []),
-  ].sort((a, b) => a.drawRank - b.drawRank)
+  // Node rows are driven by the WINNING ROUTE's per-holding sequence, grouped
+  // into wrapper blocks (the sequence keeps a wrapper's holdings contiguous).
+  // A wrapper with >1 holding (e.g. 4 pensions) shows as one aggregate node that
+  // DRILLS IN-PLACE to its individual holdings on tap (founder 2026-06-05).
+  const projByWrapper = { pension: proj.pension, isa: proj.isa, gia: proj.gia, cash: cashBuf }
+  const groups = []
+  ;(routes?.sequence || []).forEach(o => {
+    const last = groups[groups.length - 1]
+    if (last && last.wrapper === o.wrapper) last.items.push(o)
+    else groups.push({ wrapper: o.wrapper, items: [o] })
+  })
+  const drawableNodes = []
+  groups.forEach(g => {
+    const isExp = expanded[g.wrapper] && g.items.length > 1
+    if (isExp) {
+      g.items.forEach(it => drawableNodes.push({ kind: 'pot', leaf: true, id: it.id, label: it.label, today: it.value, at: it.value, drawRank: it.rank, charge: it.charge, wrapper: g.wrapper }))
+    } else {
+      const today = g.items.reduce((s, it) => s + (it.value || 0), 0)
+      const single = g.items.length === 1
+      drawableNodes.push({
+        kind: 'pot', id: g.wrapper, wrapper: g.wrapper,
+        label: single ? g.items[0].label : _WRAP_NODE_LABEL[g.wrapper] || g.wrapper,
+        today, at: projByWrapper[g.wrapper] ?? today, drawRank: g.items[0].rank,
+        count: g.items.length, expandable: g.items.length > 1,
+        contrib: g.wrapper === 'pension' ? contribMo : 0,
+      })
+    }
+  })
   const nodes = [
     ...drawableNodes,
     ...(sp > 0 ? [{ id: 'floor', kind: 'floor', at: sp }] : []),
@@ -3730,20 +3752,33 @@ function AccumIncomeNetwork({ entity }) {
             )
           }
           const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'][(n.drawRank || 1) - 1] || `${n.drawRank}th`
+          const canExpand = n.expandable
+          const isFirstLeaf = n.leaf && n.drawRank === wrapperRank[n.wrapper]
+          const toggle = () => setExpanded(e => ({ ...e, [n.wrapper]: !e[n.wrapper] }))
+          const clickable = canExpand || n.leaf
           return (
-            <div key={n.id} style={{ position: 'absolute', left: 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8,
-              padding: '7px 9px', borderRadius: 10, background: 'var(--c-surface)', boxSizing: 'border-box',
+            <div key={n.id} onClick={clickable ? toggle : undefined}
+              role={clickable ? 'button' : undefined} tabIndex={clickable ? 0 : undefined}
+              className={clickable ? 'sw-pressable' : undefined}
+              title={n.leaf ? 'Tap to fold these back into one node' : (canExpand ? 'Tap to see each holding' : undefined)}
+              style={{ position: 'absolute', left: n.leaf ? 14 : 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8 - (n.leaf ? 14 : 0),
+              padding: '7px 9px', borderRadius: 10, background: n.leaf ? 'var(--c-surface2)' : 'var(--c-surface)', boxSizing: 'border-box',
+              cursor: canExpand ? 'pointer' : 'default',
               border: n.drawRank === 1 ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span style={{ flexShrink: 0, width: 15, height: 15, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 8.5, fontWeight: 800, color: n.drawRank === 1 ? '#fff' : 'var(--c-text2)',
                   background: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{n.drawRank}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{_POT_PRETTY[n.id] || n.id}</span>
-                {n.contrib > 0 && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>+{_gmo(n.contrib * 12)}/mo in</span>}
+                <span style={{ fontSize: n.leaf ? 10 : 11, fontWeight: 700, color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.label || _POT_PRETTY[n.id] || n.id}</span>
+                {n.contrib > 0 && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>+{_gmo(n.contrib * 12)}/mo</span>}
               </div>
-              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(n.today)} today{n.at !== n.today ? ` → ${_gk(n.at)} at ${retAge}` : ''}</div>
-              <div style={{ fontSize: 9.5, fontWeight: 600, color: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-text2)', marginTop: 1 }}>
-                drawn {ord}
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>
+                {_gk(n.today)} today{!n.leaf && n.at !== n.today ? ` → ${_gk(n.at)} at ${retAge}` : ''}{n.charge ? ` · ${(n.charge * 100).toFixed(2)}%` : ''}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginTop: 1 }}>
+                <span style={{ fontSize: 9.5, fontWeight: 600, color: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-text2)' }}>drawn {ord}</span>
+                {canExpand && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>▾ {n.count}</span>}
+                {isFirstLeaf && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>▲ fold</span>}
               </div>
             </div>
           )

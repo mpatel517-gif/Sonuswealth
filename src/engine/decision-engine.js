@@ -153,11 +153,12 @@ export function simulateAction(entity, decisionType, params = {}) {
       const propertyValue = entity?.assets?.property?.total || 450000
       const isa           = entity?.assets?.isa?.value || 0
       // Best path: sell + wrap — tax saved vs status quo
-      const cgtDue   = Math.max(0, (propertyValue - 125000) * 0.24) // 24% CGT above gain
-      const sheltered = Math.min(20000, propertyValue - cgtDue) + Math.min(60000, income)
-      nwDelta    = sheltered * 0.05 * 10  // 5%/yr sheltered for 10yr
+      const assumedGain = Math.max(0, propertyValue - 125000) // assumed acquisition base (model proxy)
+      const cgtDue   = assumedGain * TAX.cgtHigher
+      const sheltered = Math.min(TAX.isaAllowance, propertyValue - cgtDue) + Math.min(TAX.pensionAA, income)
+      nwDelta    = sheltered * (TAX.growthDefault ?? 0.05) * 10  // sheltered growth for 10yr
       fqDelta    = 5
-      ihtDelta   = -(propertyValue * 0.40 - (propertyValue * 0.10)) // partial estate removal
+      ihtDelta   = -(propertyValue * TAX.ihtRate - (propertyValue * 0.10)) // partial estate removal (0.10 = retained-share proxy)
       horizon    = 10
       confidence = 'MED'
       break
@@ -178,8 +179,8 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-11': { // BTL: §24 exposure review
       const rentalIncome = entity?.income?.rental || 18000
       const mortgageInt  = entity?.liabilities?.mortgage?.interest || 6000
-      // §24 restricts relief to basic rate (20%) on mortgage interest
-      const extraTax = mortgageInt * (Math.min(income, 125140) > 50270 ? 0.20 : 0)
+      // §24 restricts relief to basic rate on mortgage interest — HR taxpayers lose (hr − br)
+      const extraTax = mortgageInt * (Math.min(income, TAX.art) > TAX.brt ? (TAX.hr - TAX.br) : 0)
       nwDelta    = extraTax > 0 ? -(extraTax * 5) : 0  // cost of staying vs restructure
       fqDelta    = extraTax > 1000 ? -2 : 0
       ihtDelta   = 0
@@ -227,10 +228,10 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-15': { // Gifting: structure £X to children (7-year PET)
       const gift = params.giftAmount || 50000
-      const annualExempt = 3000
+      const annualExempt = TAX.annualGiftExemption
       const pet = Math.max(0, gift - annualExempt)
-      // IHT saved if donor survives 7 years: 40% of PET (taper applies 3–7yr)
-      const ihtSaved = pet * 0.40
+      // IHT saved if donor survives 7 years: full IHT rate on PET (taper applies 3–7yr)
+      const ihtSaved = pet * TAX.ihtRate
       nwDelta    = 0
       fqDelta    = 1
       ihtDelta   = -(ihtSaved * (age < 73 ? 1 : 0.5)) // discount if survival uncertain
@@ -243,7 +244,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const trustAssets = params.trustValue || 100000
       nwDelta    = 0
       fqDelta    = 1
-      ihtDelta   = -(trustAssets * 0.40 * 0.8) // assets leave estate minus entry charge
+      ihtDelta   = -(trustAssets * TAX.ihtRate * 0.8) // assets leave estate minus entry-charge proxy (0.8)
       horizon    = 10
       confidence = 'LOW'
       break
@@ -251,10 +252,10 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-17': { // Will: simple, mirror, or life-interest
       const estate = _nw(entity)
-      const nrb = (TAX.nrb || 325000) + (TAX.rnrb || 175000)
+      const nrb = TAX.nrb + TAX.rnrb
       const exposure = Math.max(0, estate - nrb)
       // Mirror will / life-interest trust can defer IHT to second death
-      ihtDelta   = -(exposure * 0.10) // modest deferral saving
+      ihtDelta   = -(exposure * 0.10) // modest deferral saving (0.10 = deferral proxy, not a tax rate)
       nwDelta    = 0
       fqDelta    = 1
       horizon    = 20
@@ -310,8 +311,8 @@ export function simulateAction(entity, decisionType, params = {}) {
       const cgtExempt = TAX.cgaAllowance || 3000
       const gains     = entity?.assets?.gia?.unrealisedGain || 20000
       const harvested = Math.min(gains, cgtExempt)
-      // Future CGT saved by crystallising at 0% now
-      nwDelta    = harvested * 0.24  // 24% CGT avoided on this tranche
+      // Future CGT saved by crystallising within the exempt amount now
+      nwDelta    = harvested * TAX.cgtHigher  // higher-rate CGT avoided on this tranche
       fqDelta    = 2
       ihtDelta   = 0
       horizon    = 1
@@ -323,7 +324,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const losses = entity?.assets?.gia?.unrealisedLoss || 10000
       const gains  = entity?.assets?.gia?.unrealisedGain || 20000
       const offset = Math.min(losses, gains)
-      nwDelta    = offset * 0.24  // CGT saved at 24%
+      nwDelta    = offset * TAX.cgtHigher  // CGT saved at higher rate
       fqDelta    = 2
       ihtDelta   = 0
       horizon    = 1
@@ -361,9 +362,9 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-26': { // EIS / SEIS: invest for relief
       const invest = params.eisAmount || 20000
-      const seis   = invest <= 200000
-      const relief = seis ? invest * 0.50 : invest * 0.30
-      const lossRelief = invest * (seis ? 0.855 : 0.765) // after income tax credit
+      const seis   = invest <= 200000  // SEIS annual investment limit £200k (ITA 2007; no bundle key)
+      const relief = seis ? invest * TAX.seisITRate : invest * TAX.eisITRate
+      const lossRelief = invest * (seis ? 0.855 : 0.765) // after income tax credit (model proxy)
       nwDelta    = relief  // upfront income tax relief
       fqDelta    = 2
       ihtDelta   = -(invest) // EIS/SEIS assets qualify for BPR after 2yr
@@ -386,8 +387,8 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-28': { // BPR portfolio: 2-year IHT planning
       const bprInvest = params.bprAmount || 100000
       // After 2yr qualifying period, full IHT exemption
-      ihtDelta   = -(bprInvest * 0.40)
-      nwDelta    = bprInvest * 0.06 * 2 // typical AIM return
+      ihtDelta   = -(bprInvest * TAX.ihtRate)
+      nwDelta    = bprInvest * 0.06 * 2 // typical AIM return (market assumption)
       fqDelta    = 3
       horizon    = 2
       confidence = 'MED'
@@ -396,8 +397,8 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-29': { // Charitable giving: payroll, gift aid, legacy
       const donation = params.donationAmount || 5000
-      const giftAid  = donation * 0.25  // 25p per £1 for charity
-      const taxBack   = income > 50270 ? donation * 0.20 : 0  // HR reclaim
+      const giftAid  = donation * 0.25  // 25p per £1 for charity (basic-rate gross-up, structural)
+      const taxBack   = income > TAX.brt ? donation * (TAX.hr - TAX.br) : 0  // HR reclaim
       nwDelta    = taxBack
       fqDelta    = 1
       ihtDelta   = -(donation) // charitable gifts exempt from IHT estate
@@ -435,7 +436,7 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-32': { // Redundancy: lump-sum deployment
       const lumpSum = params.redundancyAmount || 50000
-      const taxFree = Math.min(30000, lumpSum)
+      const taxFree = Math.min(TAX.redundancyTaxFree, lumpSum)
       const taxable = Math.max(0, lumpSum - taxFree)
       // Optimal: pension + ISA wrap of post-tax balance
       nwDelta    = taxFree * 0.07 * 10 + (taxable * 0.55) * 0.07 * 10
@@ -462,10 +463,10 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-34': { // Divorce: financial settlement structuring
       const totalAssets = _nw(entity)
       // CGT on asset splits between spouses during tax year of separation — 3yr window
-      const cgtExposure = totalAssets * 0.10 * 0.24
+      const cgtExposure = totalAssets * 0.10 * TAX.cgtHigher  // 0.10 = assumed taxable-split proxy
       nwDelta    = -(cgtExposure)
       fqDelta    = -3
-      ihtDelta   = totalAssets * 0.20 * 0.40 // estate change post-split
+      ihtDelta   = totalAssets * 0.20 * TAX.ihtRate // estate change post-split (0.20 = split proxy)
       horizon    = 3
       confidence = 'LOW'
       break
@@ -473,15 +474,15 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-35': { // Business sale: exit + BADR planning
       const saleProceeds = params.saleProceeds || 500000
-      const badrLimit    = 1000000
+      const badrLimit    = TAX.badrLifetimeLimit
       const gainOnBADR   = Math.min(saleProceeds, badrLimit)
       const gainOver     = Math.max(0, saleProceeds - badrLimit)
-      const cgtBADR      = gainOnBADR * 0.14  // BADR rate (2026)
-      const cgtNormal    = gainOver   * 0.24
-      const cgtStandard  = saleProceeds * 0.24
+      const cgtBADR      = gainOnBADR * TAX.badrRate  // BADR rate (FA 2026 = 18%)
+      const cgtNormal    = gainOver   * TAX.cgtHigher
+      const cgtStandard  = saleProceeds * TAX.cgtHigher
       nwDelta    = cgtStandard - cgtBADR - cgtNormal  // tax saving vs no BADR
       fqDelta    = 5
-      ihtDelta   = -(saleProceeds * 0.40 * 0.5) // BPR lost on sale; partial SIPP wrap
+      ihtDelta   = -(saleProceeds * TAX.ihtRate * 0.5) // BPR lost on sale; partial SIPP wrap (0.5 proxy)
       horizon    = 1
       confidence = 'MED'
       break
@@ -489,10 +490,10 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-36': { // Director loan: extract or repay
       const dlBalance = entity?.liabilities?.directorLoan?.balance || 50000
-      // Section 455 tax: 33.75% if not repaid within 9 months of year end
-      const s455 = dlBalance * 0.3375
+      // Section 455 tax if not repaid within 9 months of year end (CTA 2010 s455)
+      const s455 = dlBalance * TAX.s455Rate
       // Repay vs declare dividend to clear
-      const divTax = dlBalance * (TAX.dividendBR ?? 0.1075)
+      const divTax = dlBalance * TAX.dividendBR
       nwDelta    = s455 - divTax  // dividend cheaper than 455 charge
       fqDelta    = 2
       ihtDelta   = 0
@@ -529,18 +530,18 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-39': { // Emigration: UK tax residency exit planning
       const ukAssets = _nw(entity)
-      // Deemed disposal on exit; rebasing CGT base cost
-      const cgtOnExit = Math.max(0, ukAssets * 0.15) * 0.24
+      // Deemed disposal on exit; rebasing CGT base cost (0.15 = assumed embedded-gain proxy)
+      const cgtOnExit = Math.max(0, ukAssets * 0.15) * TAX.cgtHigher
       nwDelta    = -(cgtOnExit)
       fqDelta    = 1
-      ihtDelta   = -(ukAssets * 0.40 * 0.30) // partial estate removal if domicile changes
+      ihtDelta   = -(ukAssets * TAX.ihtRate * 0.30) // partial estate removal if domicile changes (0.30 proxy)
       horizon    = 3
       confidence = 'LOW'
       break
     }
 
     case 'DE-40': { // Long-term care: self-fund vs deferred payment
-      const carePerYear  = 60000
+      const carePerYear  = 60000 // market assumption — typical residential care cost/yr (no bundle key)
       const carePotential = 3 // average LTC duration years
       const totalCost    = carePerYear * carePotential
       const propertyValue = entity?.assets?.property?.total || 450000
@@ -548,7 +549,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const deferredCost = totalCost * 1.07 ** carePotential
       nwDelta    = -(totalCost)
       fqDelta    = -2
-      ihtDelta   = Math.min(0, -(propertyValue * 0.40)) // property used = estate reduction
+      ihtDelta   = Math.min(0, -(propertyValue * TAX.ihtRate)) // property used = estate reduction
       horizon    = 3
       confidence = 'LOW'
       break
@@ -585,11 +586,13 @@ export function enumeratePaths(entity, decisionType) {
   const aa     = TAX.pensionAA || 60000
 
   const _fmt = (n) => n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${n}`
+  const _gbp = (n) => `£${Math.round(n).toLocaleString('en-GB')}`
+  const _pc  = (r) => `${+(r * 100).toFixed(2)}%`
 
   const pathDefs = {
     'DE-01': [
       { id: 'lump',   label: 'Take lump sum now',            riskLevel: 'high',   detail: 'Crystallises full tax liability in one year — may push into higher band.' },
-      { id: 'phased', label: 'Phase drawdown over 5–10 yrs', riskLevel: 'medium', detail: 'Spread income across years to stay within basic-rate band (£50,270).' },
+      { id: 'phased', label: 'Phase drawdown over 5–10 yrs', riskLevel: 'medium', detail: `Spread income across years to stay within basic-rate band (${_gbp(TAX.brt)}).` },
       { id: 'defer',  label: 'Defer — keep invested',        riskLevel: 'low',    detail: 'SIPP stays sheltered; access from age 57. Reduces IHT if you die before drawing.' },
     ],
     'DE-02': [
@@ -642,7 +645,7 @@ export function enumeratePaths(entity, decisionType) {
       { id: 'offset_re', label: 'Offset mortgage',  riskLevel: 'medium', detail: 'Link savings to reduce interest. Flexible; no fixed rate security.' },
     ],
     'DE-11': [
-      { id: 'hold_btl',     label: 'Hold & review annually',      riskLevel: 'high',   detail: '§24 restricts interest relief to 20% basic rate. HR taxpayers lose out.' },
+      { id: 'hold_btl',     label: 'Hold & review annually',      riskLevel: 'high',   detail: `§24 restricts interest relief to ${_pc(TAX.br)} basic rate. HR taxpayers lose out.` },
       { id: 'incorporate',  label: 'Incorporate to Ltd Co',        riskLevel: 'medium', detail: 'Corp tax (25%) on profits; full interest deductible. SDLT + CGT on transfer.' },
       { id: 'sell_btl',     label: 'Sell — exit the BTL',         riskLevel: 'low',    detail: 'CGT at 24%; capital released. End §24 drag and management overhead.' },
     ],
@@ -698,7 +701,7 @@ export function enumeratePaths(entity, decisionType) {
     ],
     'DE-22': [
       { id: 'no_harvest',  label: 'No action',                         riskLevel: 'high',   detail: 'Annual CGT exempt (£3k) wasted. Future disposal fully taxed.' },
-      { id: 'harvest_now', label: 'Realise £3k gain this tax year',    riskLevel: 'low',    detail: 'Sell and rebuy (bed-and-breakfast rules: wait 30 days or use spouse/ISA).' },
+      { id: 'harvest_now', label: `Realise ${_gbp(TAX.cgaAllowance)} gain this tax year`,    riskLevel: 'low',    detail: 'Sell and rebuy (bed-and-breakfast rules: wait 30 days or use spouse/ISA).' },
       { id: 'harvest_isa', label: 'Realise gain + rebuy inside ISA',   riskLevel: 'low',    detail: 'Bed-and-ISA: use £20k ISA allowance to shelter future gains.' },
     ],
     'DE-23': [
@@ -713,18 +716,18 @@ export function enumeratePaths(entity, decisionType) {
     ],
     'DE-25': [
       { id: 'salary_only',   label: 'Full PAYE salary',                riskLevel: 'medium', detail: 'Simple. NI on full amount. No corp tax saving.' },
-      { id: 'optimal_mix',   label: 'Salary to NI threshold + divs',   riskLevel: 'low',    detail: '£9,100 salary + dividends. Minimises NI and corp tax.' },
+      { id: 'optimal_mix',   label: 'Salary to NI threshold + divs',   riskLevel: 'low',    detail: `${_gbp(TAX.employerNICThreshold)} salary + dividends. Minimises NI and corp tax.` },
       { id: 'pension_route', label: 'Employer pension contribution',    riskLevel: 'low',    detail: 'Company contributes direct to SIPP. Corp tax relief + no NI.' },
     ],
     'DE-26': [
       { id: 'no_eis',    label: 'No EIS/SEIS — hold cash/GIA',  riskLevel: 'low',    detail: 'No relief but capital fully accessible. No binary startup risk.' },
-      { id: 'seis',      label: 'SEIS (up to £200k, 50% relief)', riskLevel: 'high', detail: '50% income tax relief + CGT/IHT benefits. Very high investment risk.' },
-      { id: 'eis',       label: 'EIS (up to £1m, 30% relief)',   riskLevel: 'high',  detail: '30% relief + IHT after 2yr. Illiquid 3yr minimum hold.' },
+      { id: 'seis',      label: `SEIS (up to £200k, ${_pc(TAX.seisITRate)} relief)`, riskLevel: 'high', detail: `${_pc(TAX.seisITRate)} income tax relief + CGT/IHT benefits. Very high investment risk.` },
+      { id: 'eis',       label: `EIS (up to £1m, ${_pc(TAX.eisITRate)} relief)`,   riskLevel: 'high',  detail: `${_pc(TAX.eisITRate)} relief + IHT after 2yr. Illiquid 3yr minimum hold.` },
     ],
     'DE-27': [
       { id: 'no_vct',    label: 'No VCT',                      riskLevel: 'low',    detail: 'No relief; capital liquid and accessible.' },
-      { id: 'vct_5k',    label: 'VCT £5k (£1,500 relief)',     riskLevel: 'medium', detail: 'Modest relief; 5yr hold required. Tax-free dividends.' },
-      { id: 'vct_max',   label: 'VCT £200k (max, 30% relief)', riskLevel: 'high',   detail: '£60k income tax reclaim. High concentration in smaller companies.' },
+      { id: 'vct_5k',    label: `VCT £5k (${_gbp(5000 * TAX.vctITRate)} relief)`,     riskLevel: 'medium', detail: 'Modest relief; 5yr hold required. Tax-free dividends.' },
+      { id: 'vct_max',   label: `VCT £200k (max, ${_pc(TAX.vctITRate)} relief)`, riskLevel: 'high',   detail: `${_gbp(200000 * TAX.vctITRate)} income tax reclaim. High concentration in smaller companies.` },
     ],
     'DE-28': [
       { id: 'no_bpr',     label: 'No BPR — existing estate',   riskLevel: 'high',   detail: 'IHT at 40% on qualifying estate. No relief.' },
@@ -734,7 +737,7 @@ export function enumeratePaths(entity, decisionType) {
     'DE-29': [
       { id: 'no_give',    label: 'No charitable giving',        riskLevel: 'medium', detail: 'Estate taxed at 40% IHT; no charitable deduction.' },
       { id: 'gift_aid',   label: 'Gift Aid one-off donation',   riskLevel: 'low',    detail: 'Charity receives 125% of gift. HR taxpayer reclaims extra 20%.' },
-      { id: 'legacy',     label: '10% legacy reduces IHT rate', riskLevel: 'low',    detail: 'Leave ≥10% estate to charity: IHT rate drops 40%→36% on remainder.' },
+      { id: 'legacy',     label: '10% legacy reduces IHT rate', riskLevel: 'low',    detail: `Leave ≥10% estate to charity: IHT rate drops ${_pc(TAX.ihtRate)}→${_pc(TAX.ihtRate - 0.04)} on remainder.` },
     ],
     'DE-30': [
       { id: 'no_plan',    label: 'No formal plan — ad-hoc',       riskLevel: 'high',   detail: 'Fees paid from income/savings as they arise. Cash-flow shock risk.' },
@@ -762,8 +765,8 @@ export function enumeratePaths(entity, decisionType) {
       { id: 'deferred',     label: 'Deferred sale of family home',   riskLevel: 'high',   detail: 'Mesher order — home sold on trigger event (youngest child 18). CGT deferred.' },
     ],
     'DE-35': [
-      { id: 'no_badr',    label: 'Sell without BADR — 24% CGT',   riskLevel: 'high',   detail: 'Full CGT rate. No planning.' },
-      { id: 'badr_claim', label: 'BADR — 14% on first £1m gain',  riskLevel: 'low',    detail: 'Ensure 2yr qualifying period met. Trustees check. Max lifetime gain £1m.' },
+      { id: 'no_badr',    label: `Sell without BADR — ${_pc(TAX.cgtHigher)} CGT`,   riskLevel: 'high',   detail: 'Full CGT rate. No planning.' },
+      { id: 'badr_claim', label: `BADR — ${_pc(TAX.badrRate)} on first ${_gbp(TAX.badrLifetimeLimit)} gain`,  riskLevel: 'low',    detail: `Ensure 2yr qualifying period met. Trustees check. Max lifetime gain ${_gbp(TAX.badrLifetimeLimit)}.` },
       { id: 'earnout',    label: 'Staged earnout structure',       riskLevel: 'medium', detail: 'Spread proceeds over 2–3 years. Tax payment deferred; BADR on each tranche.' },
     ],
     'DE-36': [
@@ -773,7 +776,7 @@ export function enumeratePaths(entity, decisionType) {
     ],
     'DE-37': [
       { id: 'keep_db',    label: 'Retain DB scheme',               riskLevel: 'low',    detail: 'Guaranteed income; inflation-linked. Safeguarded benefit. Default for most.' },
-      { id: 'transfer_dc',label: 'Transfer to SIPP (CETV)',        riskLevel: 'high',   detail: 'Requires FCA-regulated advice if CETV > £30k. Loses guarantees.' },
+      { id: 'transfer_dc',label: 'Transfer to SIPP (CETV)',        riskLevel: 'high',   detail: `Requires FCA-regulated advice if CETV > ${_gbp(TAX.safeguardedAdviceThreshold)}. Loses guarantees.` },
       { id: 'partial_xfer',label: 'Partial transfer (AVC only)',   riskLevel: 'medium', detail: 'Transfer AVC element only; retain defined benefit core.' },
     ],
     'DE-38': [
@@ -820,54 +823,58 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
   const aa      = TAX.pensionAA || 60000
 
   const _fmt = (n) => n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${Math.round(n)}`
+  // Exact comma-formatted £ + trailing-zero-stripped % — for interpolating live
+  // TAX thresholds/rates into copy (no hardcoded figures in user-facing strings).
+  const _gbp = (n) => `£${Math.round(n).toLocaleString('en-GB')}`
+  const _pc  = (r) => `${+(r * 100).toFixed(2)}%`
 
   const summaries = {
-    'DE-01': `Phased drawdown spreads your SIPP income across multiple tax years, keeping you in the basic-rate band (£50,270) and saving meaningful income tax versus a single crystallisation. Over ${sim.horizon} years the tax difference compounds materially.`,
+    'DE-01': `Phased drawdown spreads your SIPP income across multiple tax years, keeping you in the basic-rate band (up to ${_gbp(TAX.brt)}) and saving meaningful income tax versus a single crystallisation. Over ${sim.horizon} years the tax difference compounds materially.`,
     'DE-02': `Deferring annuity purchase by ${sim.horizon} years could increase your guaranteed income by 20–30% at today's gilt rates. The break-even depends on longevity — get a quote at each review year before committing.`,
     'DE-03': `Increasing your pension contribution exploits tax relief at your marginal rate — every £1 contributed costs less than £1 net. At age ${age} you have ${Math.max(0, 57 - age)} years of sheltered compounding before minimum access age.`,
     'DE-04': `Routing overflow above your workplace scheme into a SIPP gives you investment flexibility while still capturing the employer match. SIPP also removes the pot from your estate (relevant from April 2027).`,
     'DE-05': `Salary sacrifice reduces your National Insurance bill (15% employer + 8% employee on the sacrificed portion). The NI saving alone — ${_fmt(income * 0.05 * (TAX.employerNICRate ?? 0.15))} annually at 5% sacrifice — is pure gain before investment returns.`,
     'DE-09': `Based on the ranked paths, ${chosenPath?.label || 'the top path'} scores highest against your weights. ${nwGain > 0 ? `Projected net-worth benefit: ${_fmt(nwGain)} over ${sim.horizon} years.` : ''} ${ihtSave > 0 ? `IHT exposure reduced by ~${_fmt(ihtSave)}.` : ''}`,
     'DE-06': `Stocks & shares ISAs outperform cash over horizons of 5+ years — the real return differential is ~3%/yr historically. A LISA adds a 25% government bonus but locks capital until first home purchase or age 60. Blend S&S ISA with a cash buffer only if you need access within 2–3 years.`,
-    'DE-07': `Bed-and-ISA crystallises a small CGT charge now in exchange for sheltering all future gains inside the ISA wrapper. At the £20k annual allowance it takes ${Math.max(1, Math.round((entity?.assets?.gia?.value || 50000) / 20000))} tax years to migrate a typical GIA. Spreading over multiple years uses the annual exempt amount (£3k) each time to reduce the CGT cost.`,
+    'DE-07': `Bed-and-ISA crystallises a small CGT charge now in exchange for sheltering all future gains inside the ISA wrapper. At the £20k annual allowance it takes ${Math.max(1, Math.round((entity?.assets?.gia?.value || 50000) / 20000))} tax years to migrate a typical GIA. Spreading over multiple years uses the annual exempt amount (${_gbp(TAX.cgaAllowance)}) each time to reduce the CGT cost.`,
     'DE-08': `Overpaying delivers a guaranteed risk-free return equal to your mortgage rate (${((entity?.liabilities?.mortgage?.rate || 0.045) * 100).toFixed(1)}%). Investing in equities is expected to outperform over 7+ years but carries sequence-of-returns risk. An offset account gives the rate benefit with full flexibility — best of both if your lender offers it at no premium.`,
     'DE-10': `Fixing for 5 years eliminates refinance risk and budgeting uncertainty. The tracker suits borrowers with a large offset savings pot or who expect base rates to fall materially within 12 months. Offset mortgages save interest on the net balance — powerful if you hold £30k+ in savings.`,
     'DE-11': `Section 24 restricts mortgage interest relief to the basic rate (20%) regardless of your marginal rate. For a higher-rate taxpayer this turns a profitable BTL negative on a net basis. Incorporating removes the restriction but triggers SDLT and CGT on the transfer — model both exit and restructure NPVs before deciding.`,
     'DE-12': `Equity release provides liquidity without a forced property sale, but roll-up interest typically doubles the loan balance every 10–12 years at current rates. The no-negative-equity guarantee protects the estate from a shortfall but will consume most or all property value if you live into your late 80s. A drawdown facility minimises roll-up by delaying draws.`,
     'DE-13': `Six months of net expenditure (${_fmt(income * 0.7 / 2)}) is the standard emergency fund target. Holding excess beyond that in a current account destroys real value — easy-access savings at 4.5% or premium bonds are materially better at identical risk. Anything above 6 months should be laddered into short-dated bonds.`,
     'DE-14': `A 12-rung monthly bond ladder yields ~${((0.048 + 0.051) / 2 * 100).toFixed(1)}% on the 12-month tranche while keeping one tranche liquid each month. This beats instant-access rates (~3.5–4.0%) with no meaningful additional risk. Gilts are backed by HMT and interest is free of CGT.`,
-    'DE-15': `The 7-year PET clock starts on the date of the gift. Taper relief reduces the IHT charge on the gift by 20% per year from year 3 onwards — so a gift made at age 65 has a good actuarial chance of escaping IHT entirely. Use the annual exemption (£3k, plus £3k prior-year carry) first at zero cost before starting the PET clock.`,
+    'DE-15': `The 7-year PET clock starts on the date of the gift. Taper relief reduces the IHT charge on the gift by 20% per year from year 3 onwards — so a gift made at age 65 has a good actuarial chance of escaping IHT entirely. Use the annual exemption (${_gbp(TAX.annualGiftExemption)}, plus the same prior-year carry) first at zero cost before starting the PET clock.`,
     'DE-16': `A bare trust is simplest and cheapest but inflexible — the beneficiary gains absolute entitlement at 18. A discretionary trust preserves family flexibility and protects against beneficiary divorce or bankruptcy, but attracts a 10-year periodic IHT charge of up to 6%. An IIP trust bridges: income beneficiary named now, capital distributed later.`,
     'DE-17': `Mirror wills are simple but leave each spouse's half of joint assets fully exposed to sideways disinheritance on remarriage. A life-interest trust will ring-fences the first spouse's share for children while giving the survivor use of the home and income for life. Appropriate for blended families or where there are children from prior relationships.`,
     'DE-18': `An LPA costs £164 to register (per LPA, 2026) — a fraction of the £3,500+ annual cost of a Court of Protection deputy if you lose capacity without one. The financial LPA is the most urgent; the health LPA covers medical decisions. Both can be set up in the same session with a solicitor or via the Gov.uk portal.`,
     'DE-19': `Level-term life is cheapest per £ of cover and covers the mortgage and income replacement gap. Family income benefit (FIB) pays a monthly income to dependants rather than a lump sum — better matched to cash-flow needs and typically 25% cheaper than an equivalent lump-sum policy. Writing any policy in trust keeps the payout outside your estate.`,
     'DE-20': `Critical illness cover pays a tax-free lump sum on diagnosis of a listed condition — heart attack, stroke, cancer cover ~80% of claims. Topping up to 3× salary buys 3 years of income replacement at zero income-tax cost. Premiums are not tax-deductible (personal policy) so suit tax-efficient surplus income.`,
     'DE-21': `Own-occupation income protection pays if you cannot do your specific job — a surgeon who loses dexterity qualifies even if they could work in a shop. Any-occupation is cheapest but almost never pays for a professional. Defer the excess period to 13 or 26 weeks (matching employer sick pay) to reduce premiums materially.`,
-    'DE-22': `The annual CGT exempt amount is now just £3,000 (2026) — use it or lose it each April. Selling and rebuying 30+ days later (or immediately into an ISA via bed-and-ISA) resets your base cost at no net cost except the bid-offer spread and any broker fee. Stacking this annually compounds into a meaningful tax saving over time.`,
+    'DE-22': `The annual CGT exempt amount is now just ${_gbp(TAX.cgaAllowance)} — use it or lose it each April. Selling and rebuying 30+ days later (or immediately into an ISA via bed-and-ISA) resets your base cost at no net cost except the bid-offer spread and any broker fee. Stacking this annually compounds into a meaningful tax saving over time.`,
     'DE-23': `Realising losses in a down market offsets gains from other disposals this year — or carries forward indefinitely to offset future gains. Rebuying inside an ISA (bed-and-ISA) after selling captures the loss and shelters future recovery gains. The 30-day same-asset rule applies; use a spouse account or ISA to rebuy immediately.`,
     'DE-24': `Inter-spouse transfers are free of CGT and IHT. Moving income-producing assets to the lower-rate spouse reduces the household tax bill each year without any gain trigger. Each spouse can also max their own £20k ISA allowance independently — the household tax-free shelter doubles to £40k/yr.`,
-    'DE-25': `The optimal director salary is £9,100 (2026 secondary NI threshold) where employer NI is zero and the personal allowance is largely covered by dividends. Dividends above the basic rate threshold attract 35.75%; pension contributions via the company attract corp tax relief (25%) and no NI — routing surplus above £50k into a SIPP is usually superior to dividends.`,
-    'DE-26': `EIS/SEIS are high-risk investments in early-stage companies — expect 30–50% failure rates in the portfolio. The tax reliefs (50% SEIS income relief, CGT deferral, loss relief) can reduce downside to ~15p per £1 invested in the worst case. These suit higher-rate taxpayers with a genuine tolerance for illiquidity over 3+ years.`,
-    'DE-27': `VCT income tax relief (30%) is the headline attraction, plus tax-free dividends. The 5-year holding requirement and limits on secondary market liquidity are the key constraints. Building a VCT ladder — investing a fixed amount each tax year — smoothes manager and vintage risk. Stick to generalist VCTs from established managers (Octopus, Foresight, Pembroke).`,
+    'DE-25': `The optimal director salary is around the ${_gbp(TAX.employerNICThreshold)} secondary NI threshold where employer NI is zero and the personal allowance is largely covered by dividends. Dividends above the basic rate threshold attract ${_pc(TAX.dividendHR)}; pension contributions via the company attract corp tax relief (${_pc(TAX.corpMainRate)}) and no NI — routing surplus above the higher-rate threshold (${_gbp(TAX.brt)}) into a SIPP is usually superior to dividends.`,
+    'DE-26': `EIS/SEIS are high-risk investments in early-stage companies — expect 30–50% failure rates in the portfolio. The tax reliefs (${_pc(TAX.seisITRate)} SEIS income relief, CGT deferral, loss relief) can reduce downside to ~15p per £1 invested in the worst case. These suit higher-rate taxpayers with a genuine tolerance for illiquidity over 3+ years.`,
+    'DE-27': `VCT income tax relief (${_pc(TAX.vctITRate)}) is the headline attraction, plus tax-free dividends. The 5-year holding requirement and limits on secondary market liquidity are the key constraints. Building a VCT ladder — investing a fixed amount each tax year — smoothes manager and vintage risk. Stick to generalist VCTs from established managers (Octopus, Foresight, Pembroke).`,
     'DE-28': `AIM-listed and unlisted BPR-qualifying investments become IHT-free after just 2 years — faster than the 7-year PET route. The trade-off is investment risk: AIM portfolios carry sector concentration and liquidity risk. Managed BPR funds (Octopus AIM IHT, Foresight) spread across 20–30 names. Confirm qualifying status at inception — not all AIM shares qualify.`,
-    'DE-29': `Gift Aid tops up every £1 donated to £1.25 at no cost to you; higher-rate taxpayers reclaim a further 20p via self-assessment (25p if additional-rate). Payroll giving is pre-tax — a 40% taxpayer gives £600 but only costs them £360. Leaving ≥10% of your net estate to charity reduces the IHT rate on the remainder from 40% to 36%.`,
-    'DE-30': `School fees planning works best with a long runway. A Junior ISA at £9,000/yr from birth produces ~£${Math.round(9000 * 18 * 1.05 / 1000)}k by age 18 at 5%/yr — enough for independent secondary school fees. Grandparent contributions to JISAs avoid IHT via regular-giving-from-income exemption if structured correctly.`,
+    'DE-29': `Gift Aid tops up every £1 donated to £1.25 at no cost to you; higher-rate taxpayers reclaim a further 20p via self-assessment (25p if additional-rate). Payroll giving is pre-tax — a 40% taxpayer gives £600 but only costs them £360. Leaving ≥10% of your net estate to charity reduces the IHT rate on the remainder from ${_pc(TAX.ihtRate)} to ${_pc(TAX.ihtRate - 0.04)}.`,
+    'DE-30': `School fees planning works best with a long runway. A Junior ISA at ${_gbp(TAX.jisaAllowance)}/yr from birth produces ~£${Math.round(TAX.jisaAllowance * 18 * 1.05 / 1000)}k by age 18 at 5%/yr — enough for independent secondary school fees. Grandparent contributions to JISAs avoid IHT via regular-giving-from-income exemption if structured correctly.`,
     'DE-31': `A career break is affordable if liquid assets cover spending for the break plus a 20% buffer for re-employment lag. Check your NI record — a voluntary contribution of £824 buys one qualifying year if your record has gaps. Negotiate an unpaid leave arrangement rather than resignation where possible to preserve employment rights and employer references.`,
-    'DE-32': `The first £30,000 of a redundancy payment is tax-free regardless of length of service (statutory or enhanced). The balance is taxed as employment income — pension contributions from the taxable excess attract full tax relief and remove the amount from the income-tax calculation, turning the redundancy into a compounding IHT-free pot.`,
+    'DE-32': `The first ${_gbp(TAX.redundancyTaxFree)} of a redundancy payment is tax-free regardless of length of service (statutory or enhanced). The balance is taxed as employment income — pension contributions from the taxable excess attract full tax relief and remove the amount from the income-tax calculation, turning the redundancy into a compounding IHT-free pot.`,
     'DE-33': `An inheritance windfall should be deployed in wrapper priority order: pension (tax relief + April 2027 IHT exemption) → ISA (tax-free growth) → GIA (least tax-efficient, last resort). A 30-day rule of doing nothing immediately prevents regret decisions while markets are volatile or emotions are running high after bereavement.`,
     'DE-34': `A clean-break financial order eliminates ongoing dependency and financial contact — strongly preferred where possible. Pension sharing orders ring-fence pension rights at the date of settlement; offsetting against property is risky as it trades a liquid, growing asset for an illiquid one. CGT between spouses is free in the tax year of separation and for 3 years after — use this window.`,
-    'DE-35': `Business Asset Disposal Relief (BADR) reduces CGT to 14% on the first £1m of qualifying gains (2026) — saving up to £100k versus the standard 24% rate. The 2-year qualifying period (≥5% shares, trading company, officer or employee) must be met at completion. Structuring via an earnout can spread proceeds and preserve BADR on each tranche.`,
-    'DE-36': `A Section 455 charge of 33.75% applies to outstanding director loans at the company year-end (9 months to pay). Declaring a dividend to clear the loan is almost always cheaper than the S455 — but the dividend must be legal (sufficient distributable reserves). Repaying from personal funds is cleanest and avoids any income tax event.`,
-    'DE-37': `Pension transfer advice is mandatory if the CETV exceeds £30,000. For most people, the DB guarantee (inflation-linked, spouse's pension, no investment risk) is worth retaining. Transfer to DC makes sense primarily for those with short life expectancy, no dependants, and a desire for IHT-free legacy (from April 2027 SIPPs enter the estate — verify current rules at the point of transfer).`,
+    'DE-35': `Business Asset Disposal Relief (BADR) reduces CGT to ${_pc(TAX.badrRate)} on the first ${_gbp(TAX.badrLifetimeLimit)} of qualifying gains — saving up to ${_gbp(TAX.badrLifetimeLimit * (TAX.cgtHigher - TAX.badrRate))} versus the standard ${_pc(TAX.cgtHigher)} rate. The 2-year qualifying period (≥5% shares, trading company, officer or employee) must be met at completion. Structuring via an earnout can spread proceeds and preserve BADR on each tranche.`,
+    'DE-36': `A Section 455 charge of ${_pc(TAX.s455Rate)} applies to outstanding director loans at the company year-end (9 months to pay). Declaring a dividend to clear the loan is almost always cheaper than the S455 — but the dividend must be legal (sufficient distributable reserves). Repaying from personal funds is cleanest and avoids any income tax event.`,
+    'DE-37': `Pension transfer advice is mandatory if the CETV exceeds ${_gbp(TAX.safeguardedAdviceThreshold)}. For most people, the DB guarantee (inflation-linked, spouse's pension, no investment risk) is worth retaining. Transfer to DC makes sense primarily for those with short life expectancy, no dependants, and a desire for IHT-free legacy (from April 2027 SIPPs enter the estate — verify current rules at the point of transfer).`,
     'DE-38': `A partial annuity — buying a guaranteed income floor while retaining a drawdown pot — hedges longevity risk without sacrificing all growth potential. The annuity rate is highest when bought late (rates rise with age); deferring by 5 years typically adds 25–30% to the annual income. Model the crossover point between annuity income and drawdown depletion at your life expectancy.`,
     'DE-39': `UK tax residency exit requires satisfying the Statutory Residence Test — broadly, spending ≤16 days in the UK (automatic non-resident) or navigating the sufficient ties test. Deemed disposal of assets triggers a CGT event on exit; rebasing base costs in the new jurisdiction may partially offset this. UK residential property gains remain taxable in the UK regardless of residence.`,
-    'DE-40': `Local authority care funding kicks in only when assets fall below £23,250 (England, 2026). Self-funding gives choice of provider and room type; the deferred payment agreement preserves assets while in care but rolls up at ~7% interest. A long-term care immediate-needs annuity (INA) — bought at the point of entering care — provides certainty and removes the longevity risk of self-funding.`,
+    'DE-40': `Local authority care funding kicks in only when assets fall below ${_gbp(TAX.laCareUpperCapital)} (England). Self-funding gives choice of provider and room type; the deferred payment agreement preserves assets while in care but rolls up at ~7% interest. A long-term care immediate-needs annuity (INA) — bought at the point of entering care — provides certainty and removes the longevity risk of self-funding.`,
   }
 
   const stepSets = {
     'DE-01': [
       'Map your SIPP value and current drawdown rate',
-      'Model income against basic-rate threshold (£50,270) each year',
+      `Model income against the basic-rate threshold (${_gbp(TAX.brt)}) each year`,
       'Instruct your scheme to phase payments across tax years',
       'Review annually — thresholds change with each Budget',
     ],
@@ -879,7 +886,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     ],
     'DE-03': [
       'Check unused carry-forward allowances (3 prior tax years)',
-      'Confirm your annual allowance — tapered if adjusted income > £260,000',
+      `Confirm your annual allowance — tapered if adjusted income > ${_gbp(TAX.taperedAAAdj)}`,
       'Instruct your scheme to increase contribution',
       'Consider lump-sum contribution if carry-forward is available',
     ],
@@ -897,7 +904,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     ],
     'DE-09': [
       'Confirm property value and CGT gain (current value minus purchase price + costs)',
-      'Calculate CGT liability at 24% on gain above annual exempt amount (£3,000)',
+      `Calculate CGT liability at ${_pc(TAX.cgtHigher)} on gain above the annual exempt amount (${_gbp(TAX.cgaAllowance)})`,
       'Model post-CGT proceeds split across ISA + pension wrappers',
       'Get a letting agent appraisal if considering BTL',
     ],
@@ -909,7 +916,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     ],
     'DE-07': [
       'Identify GIA holdings with unrealised gains and their base cost',
-      'Calculate CGT on bed: (sale proceeds − base cost − £3k exempt) × 24%',
+      `Calculate CGT on bed: (sale proceeds − base cost − ${_gbp(TAX.cgaAllowance)} exempt) × ${_pc(TAX.cgtHigher)}`,
       'Sell in GIA; wait 30 days and rebuy (or use spouse/ISA to rebuy immediately)',
       'Set a diary reminder each April to repeat for next year\'s £20k ISA allowance',
     ],
@@ -926,7 +933,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
       'If you have £30k+ savings, ask specifically for offset mortgage options',
     ],
     'DE-11': [
-      'Calculate your net rental profit after Section 24 (interest at 20% relief only)',
+      `Calculate your net rental profit after Section 24 (interest at ${_pc(TAX.br)} relief only)`,
       'Model BTL in Ltd Co: corp tax vs personal income tax; SDLT + CGT on transfer',
       'Get a RICS valuation if considering sale — CGT base cost needs verification',
       'Review annually after October Budget for any BTL policy changes',
@@ -950,10 +957,10 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
       'Use a platform that allows gilt purchases at no dealing charge (e.g. interactive investor)',
     ],
     'DE-15': [
-      'Use the £3,000 annual exemption first (plus prior year carry if unused)',
+      `Use the ${_gbp(TAX.annualGiftExemption)} annual exemption first (plus prior year carry if unused)`,
       'Document gift date, amount, and recipient — needed for executors later',
       'Do not put conditions on the gift — must be unconditional to qualify as PET',
-      'Review with solicitor if total lifetime gifts exceed £325,000 NRB',
+      `Review with solicitor if total lifetime gifts exceed the ${_gbp(TAX.nrb)} NRB`,
     ],
     'DE-16': [
       'Define the trust objective: control (discretionary) vs simplicity (bare)',
@@ -1010,7 +1017,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
       'Revisit if income levels change significantly (promotion, career break)',
     ],
     'DE-25': [
-      'Set salary at £9,100 (2026 secondary NI threshold) for the year',
+      `Set salary around the ${_gbp(TAX.employerNICThreshold)} secondary NI threshold for the year`,
       'Pay remainder as dividends — declare from distributable reserves only',
       'Route surplus above dividend basic-rate band into employer pension contribution',
       'Review annually after each Budget as dividend rates and thresholds change',
@@ -1040,7 +1047,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
       'If planning a legacy, instruct your solicitor to include the 10% charitable gift clause',
     ],
     'DE-30': [
-      'Open a Junior ISA (£9,000/yr allowance) as early as possible — compounding time is key',
+      `Open a Junior ISA (${_gbp(TAX.jisaAllowance)}/yr allowance) as early as possible — compounding time is key`,
       'Model total fee cost: confirm school choice and fee inflation assumption (typically 4–5%/yr)',
       'Consider grandparent contributions — regular gifts from income are IHT-free if habitual',
       'Review at age 12 — switch to lower-risk investments as fees are 6 years away',
@@ -1052,7 +1059,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
       'Negotiate unpaid leave or sabbatical with employer before resigning',
     ],
     'DE-32': [
-      'Confirm tax-free element — first £30k is free regardless of service length',
+      `Confirm tax-free element — first ${_gbp(TAX.redundancyTaxFree)} is free regardless of service length`,
       'Calculate tax on the excess and model pension contribution to reduce income-tax charge',
       'Deploy in wrapper order: pension (AA headroom) → ISA → emergency fund → GIA',
       'Do not make irreversible investment decisions within 30 days of redundancy',
@@ -1083,7 +1090,7 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
     ],
     'DE-37': [
       'Request a full CETV statement (valid 3 months) from the DB scheme',
-      'Obtain a pension transfer analysis from a pension transfer specialist (PTS) — mandatory for CETV > £30k',
+      `Obtain a pension transfer analysis from a pension transfer specialist (PTS) — mandatory for CETV > ${_gbp(TAX.safeguardedAdviceThreshold)}`,
       'If transferring, choose a SIPP with a wide investment mandate and low platform costs',
       'Retain a copy of all advice documents — needed for scheme administrator and HMRC',
     ],

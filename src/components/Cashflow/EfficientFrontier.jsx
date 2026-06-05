@@ -9,6 +9,8 @@
 //   · Distance-to-frontier chip showing how much return is left on the table
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
+
 function smoothPath(pts) {
   if (!pts.length) return ''
   let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
@@ -30,6 +32,7 @@ export default function EfficientFrontier({
   frontierPoints = null,
   distanceToFrontier = null,
 }) {
+  const [sel, setSel] = useState(null) // 'you' | 'ref' | 'frontier' → point reveal (drill)
   // If no engine data, show empty state — never render fabricated frontier or gaps.
   if (!userPosArg && !frontierPoints) {
     return (
@@ -150,7 +153,7 @@ export default function EfficientFrontier({
           Expected return →
         </text>
 
-        {/* Frontier curve */}
+        {/* Frontier curve (tappable — drill) */}
         <path d={frontPath}
           className="sw-stroke-draw"
           fill="none" stroke="var(--c-acc)" strokeWidth="2"
@@ -160,31 +163,41 @@ export default function EfficientFrontier({
             '--sw-draw-len': '500',
             filter: 'drop-shadow(0 0 8px var(--c-radar-glow))',
           }} />
+        {frontPts.length > 0 && (
+          <path d={frontPath} fill="none" stroke="transparent" strokeWidth="16"
+            style={{ cursor: 'pointer' }} onClick={() => setSel(sel === 'frontier' ? null : 'frontier')}>
+            <title>Tap the frontier</title>
+          </path>
+        )}
 
         {/* Reference dot (60/40 blend from CMA) — omitted when engine hasn't returned reference */}
         {refPt && reference && (
-          <>
+          <g style={{ cursor: 'pointer' }} onClick={() => setSel(sel === 'ref' ? null : 'ref')}>
+            <circle cx={refPt.x} cy={refPt.y} r="11" fill="transparent" />
             <circle cx={refPt.x} cy={refPt.y} r="5" fill="var(--c-text3)" stroke="var(--c-bg)" strokeWidth="1.5" />
+            {sel === 'ref' && <circle cx={refPt.x} cy={refPt.y} r="9" fill="none" stroke="var(--c-text2)" strokeWidth="1.5" />}
             <text x={refPt.x + 10} y={refPt.y - 6}
               fontSize="9" fontWeight="700" fill="var(--c-text2)"
               fontFamily="Inter,sans-serif">
               {reference.label}
             </text>
-          </>
+          </g>
         )}
 
-        {/* User position dot — accent + glow */}
+        {/* User position dot — accent + glow (tappable — drill) */}
         {userPt && (
-          <>
+          <g style={{ cursor: 'pointer' }} onClick={() => setSel(sel === 'you' ? null : 'you')}>
+            <circle cx={userPt.x} cy={userPt.y} r="13" fill="transparent" />
             <circle cx={userPt.x} cy={userPt.y} r="6.5" fill="var(--c-acc)"
               stroke="var(--c-bg)" strokeWidth="2"
               style={{ filter: 'drop-shadow(0 0 10px var(--c-radar-glow))' }} />
+            {sel === 'you' && <circle cx={userPt.x} cy={userPt.y} r="11" fill="none" stroke="var(--c-acc)" strokeWidth="1.5" />}
             <text x={userPt.x + 12} y={userPt.y - 8}
               fontSize="10" fontWeight="800" fill="var(--c-acc)"
               fontFamily="Inter,sans-serif">
               You
             </text>
-          </>
+          </g>
         )}
 
         {/* Vertical "to frontier" line from user position straight up */}
@@ -200,6 +213,25 @@ export default function EfficientFrontier({
           )
         })()}
       </svg>
+
+      {/* Drill reveal — the tapped point's risk/return + what it means. */}
+      {sel && (() => {
+        const pc = (v) => `${(v * 100).toFixed(1)}%`
+        let body = null
+        if (sel === 'you' && userPosition) {
+          body = <><strong style={{ color: 'var(--c-acc)' }}>Your portfolio</strong> — about <strong>{pc(userPosition.expectedReturn)}</strong> expected return for <strong>{pc(userPosition.volatility)}</strong> volatility (how much the value swings year to year).{gapPct != null && <> The frontier offers roughly <strong style={{ color: 'var(--c-gold)' }}>+{gapPct.toFixed(1)}%/yr</strong> more return at the same risk — that gap is return left on the table.</>}</>
+        } else if (sel === 'ref' && reference) {
+          body = <><strong style={{ color: 'var(--c-text2)' }}>{reference.label}</strong> — a reference blend at about <strong>{pc(reference.expectedReturn)}</strong> return for <strong>{pc(reference.volatility)}</strong> volatility. A yardstick, not a recommendation.</>
+        } else if (sel === 'frontier') {
+          body = <><strong style={{ color: 'var(--c-acc)' }}>The efficient frontier</strong> — the best return theoretically available at each level of risk. Sitting below it means the same risk could, in theory, earn more. It's a model, not a forecast.</>
+        }
+        if (!body) return null
+        return (
+          <div style={{ margin: '12px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            {body}
+          </div>
+        )
+      })()}
     </div>
   )
 }

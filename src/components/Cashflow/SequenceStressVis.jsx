@@ -9,10 +9,21 @@
 //   · Title + plain-English context line
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
+
 function fmt(v) {
   if (Math.abs(v) >= 1_000_000) return `£${(v / 1_000_000).toFixed(1)}m`
   if (Math.abs(v) >= 1_000)     return `£${(v / 1_000).toFixed(0)}k`
   return `£${Math.round(v)}`
+}
+
+// x for data index i, matching buildPath's geometry (so markers line up).
+function xFor(i, n, W, padX = 4) {
+  return padX + (i / (n - 1 || 1)) * (W - padX * 2)
+}
+function yFor(v, pts, H, padY = 6) {
+  const min = Math.min(...pts), max = Math.max(...pts), range = Math.max(1, max - min)
+  return padY + (H - padY * 2) * (1 - (v - min) / range)
 }
 
 function buildPath(pts, W, H, padX = 4, padY = 6) {
@@ -32,6 +43,7 @@ export default function SequenceStressVis({
   badSequence  = null,    // same shape, unfavourable sequence
   horizonYears = 30,
 }) {
+  const [sel, setSel] = useState(null) // tapped year index → good-vs-bad reveal (drill)
   // If no engine data, show an empty state — never render fabricated paths.
   if (!goodSequence && !badSequence) {
     return (
@@ -119,6 +131,18 @@ export default function SequenceStressVis({
                 '--sw-draw-len': '600',
                 filter: 'drop-shadow(0 0 8px var(--c-radar-glow))',
               }} />
+            {sel != null && good[sel] != null && (
+              <g pointerEvents="none">
+                <line x1={xFor(sel, good.length, W)} y1={2} x2={xFor(sel, good.length, W)} y2={H - 2}
+                  stroke="var(--c-acc)" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.7" />
+                <circle cx={xFor(sel, good.length, W)} cy={yFor(good[sel], good, H)} r="3.5" fill="var(--c-acc)" />
+              </g>
+            )}
+            {good.map((_, i) => (
+              <rect key={`gh-${i}`} x={xFor(i, good.length, W) - (W / Math.max(1, good.length - 1)) / 2} y={0}
+                width={W / Math.max(1, good.length - 1)} height={H} fill="transparent"
+                style={{ cursor: 'pointer' }} onClick={() => setSel(sel === i ? null : i)} />
+            ))}
           </svg>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)',
@@ -152,6 +176,18 @@ export default function SequenceStressVis({
                 '--sw-draw-len': '600',
                 filter: 'drop-shadow(0 0 8px var(--c-acc3-bg))',
               }} />
+            {sel != null && bad[sel] != null && (
+              <g pointerEvents="none">
+                <line x1={xFor(sel, bad.length, W)} y1={2} x2={xFor(sel, bad.length, W)} y2={H - 2}
+                  stroke="var(--c-coral, #FF6F7D)" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.7" />
+                <circle cx={xFor(sel, bad.length, W)} cy={yFor(bad[sel], bad, H)} r="3.5" fill="var(--c-coral, #FF6F7D)" />
+              </g>
+            )}
+            {bad.map((_, i) => (
+              <rect key={`bh-${i}`} x={xFor(i, bad.length, W) - (W / Math.max(1, bad.length - 1)) / 2} y={0}
+                width={W / Math.max(1, bad.length - 1)} height={H} fill="transparent"
+                style={{ cursor: 'pointer' }} onClick={() => setSel(sel === i ? null : i)} />
+            ))}
           </svg>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)',
@@ -164,6 +200,22 @@ export default function SequenceStressVis({
           </div>
         </div>
       </div>
+
+      {/* Drill reveal — both paths at the tapped year + the gap that order opens up. */}
+      {sel != null && (good[sel] != null || bad[sel] != null) && (() => {
+        const n = Math.max(good.length, bad.length)
+        const yr = Math.round((sel / Math.max(1, n - 1)) * horizonYears)
+        const g = good[Math.min(sel, good.length - 1)]
+        const b = bad[Math.min(sel, bad.length - 1)]
+        return (
+          <div style={{ margin: '12px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--c-text)' }}>Year {yr}</strong> — gains-first path{' '}
+            <strong style={{ color: 'var(--c-acc)' }}>{fmt(g)}</strong> vs losses-first path{' '}
+            <strong style={{ color: 'var(--c-coral, #FF6F7D)' }}>{fmt(b)}</strong>. Same average return, gap of{' '}
+            <strong>{fmt(Math.abs(g - b))}</strong> <span style={{ color: 'var(--c-text3)' }}>— purely from the order returns arrive in.</span>
+          </div>
+        )
+      })()}
     </div>
   )
 }

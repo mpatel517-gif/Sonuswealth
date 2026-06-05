@@ -15,6 +15,8 @@
 //   · Drop-shadow glow on the score arc
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
+
 const SIZE = 240
 const CX = SIZE / 2
 const CY = SIZE / 2
@@ -68,14 +70,24 @@ const TONE_COLOR = {
   coral: 'var(--c-coral, #FF6F7D)',
 }
 
+// The four bands the gauge is split into — tappable to explain what each means.
+const ZONES = [
+  { id: 'under', label: 'Under-funded', range: '0 – 0.85', tone: 'coral', lo: 0,    hi: 0.85, context: 'Your pots alone cover less than 85% of target income. Secure income (State Pension, DB) must fill a meaningful gap — or the target needs trimming.' },
+  { id: 'approach', label: 'Approaching', range: '0.85 – 1.0', tone: 'gold', lo: 0.85, hi: 1.0,  context: "Close to fully funded, but a market shock or early retirement would push you behind. Little margin for error." },
+  { id: 'ontrack', label: 'On track', range: '1.0 – 1.1', tone: 'mint', lo: 1.0,  hi: 1.1,  context: 'Pots cover the target income at a safe withdrawal rate, with a small cushion. The healthy zone.' },
+  { id: 'over', label: 'Over-funded', range: '1.1+', tone: 'mint', lo: 1.1,  hi: 99,   context: 'Comfortable margin above target — room to spend more, retire earlier, or pass more on.' },
+]
+
 export default function FundedRatioGauge({
   ratio = 1.0,
   confidence = null,    // { low: 0.85, high: 1.18 } percentile band
   fundedYears = null,   // optional context — "covers 27 years"
 }) {
+  const [sel, setSel] = useState(null) // tapped zone id → band explainer (drill)
   const r = Number(ratio) || 0
   const status = statusFor(r)
   const color = TONE_COLOR[status.tone]
+  const liveZone = ZONES.find(z => r >= z.lo && r < z.hi) || ZONES[ZONES.length - 1]
   const fillPath = arcPath(0, r)
   const trackPath = arcPath(0, MAX_RATIO)
 
@@ -232,6 +244,42 @@ export default function FundedRatioGauge({
           )}
         </div>
       </div>
+
+      {/* Tappable zone legend (drill) — what each band of the gauge means. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+        {ZONES.map(z => {
+          const zc = TONE_COLOR[z.tone]
+          const active = sel === z.id
+          const isLive = liveZone.id === z.id
+          return (
+            <button key={z.id} onClick={() => setSel(active ? null : z.id)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '4px 9px', borderRadius: 100, cursor: 'pointer',
+                fontSize: 10.5, fontWeight: 700, letterSpacing: 0.2,
+                color: active || isLive ? zc : 'var(--c-text3)',
+                background: active ? `color-mix(in srgb, ${zc} 16%, transparent)` : 'var(--c-surface2)',
+                border: `1px solid ${active || isLive ? zc : 'var(--c-border)'}`,
+              }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: zc }} />
+              {z.label}{isLive && <span style={{ fontSize: 8.5, fontWeight: 800, opacity: 0.85 }}>· you</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Drill reveal — the tapped band's range + meaning. */}
+      {sel && (() => {
+        const z = ZONES.find(x => x.id === sel)
+        if (!z) return null
+        const zc = TONE_COLOR[z.tone]
+        const isLive = liveZone.id === z.id
+        return (
+          <div style={{ margin: '10px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            <strong style={{ color: zc }}>{z.label}</strong> <span style={{ color: 'var(--c-text3)' }}>(ratio {z.range})</span>{isLive && <strong style={{ color: zc }}> — you're here.</strong>} {z.context}
+          </div>
+        )
+      })()}
     </div>
   )
 }

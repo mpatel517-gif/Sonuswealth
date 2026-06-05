@@ -3545,6 +3545,7 @@ const _POTS = [
   { key: 'pension', label: 'Pension', color: 'var(--c-acc)' },
 ]
 function DepletionCurve({ schedule, depletedAtAge }) {
+  const [sel, setSel] = useState(null) // tapped point index → per-pot balances (drill)
   const pts = (schedule || []).filter(r => r && r.potsEnd)
   if (pts.length < 2) return null
   const maxV = Math.max(...pts.map(r => r.potsTotal || 0), 1) * 1.05
@@ -3601,8 +3602,34 @@ function DepletionCurve({ schedule, depletedAtAge }) {
                   textAnchor={k === 0 ? 'start' : k === xTickIdx.length - 1 ? 'end' : 'middle'}>age {ageOf(i)}</text>
           ))}
           <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+          {/* Selected-age marker (drill) */}
+          {sel != null && pts[sel] && (
+            <g pointerEvents="none">
+              <line x1={px(sel)} y1={pT} x2={px(sel)} y2={pT + ph} stroke="var(--c-acc)" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.85" />
+              <circle cx={px(sel)} cy={py(pts[sel].potsTotal || 0)} r="3.5" fill="var(--c-acc)" />
+            </g>
+          )}
+          {/* Invisible per-age tap-bands → drill (all charts drillable) */}
+          {pts.map((r, i) => (
+            <rect key={`dh-${i}`} x={px(i) - (pw / Math.max(1, n - 1)) / 2} y={pT}
+              width={pw / Math.max(1, n - 1)} height={ph} fill="transparent"
+              style={{ cursor: 'pointer' }} onClick={() => setSel(sel === i ? null : i)} />
+          ))}
         </svg>
       </DrawSVG>
+      {/* Drill reveal — every pot's balance at the tapped age. */}
+      {sel != null && pts[sel] && (
+        <div style={{ margin: '8px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--c-text)' }}>Age {pts[sel].age}</strong> —{' '}
+          {_POTS.filter(p => (pts[sel].potsEnd[p.key] || 0) > 0).map((p, idx, arr) => (
+            <span key={p.key}>
+              <span style={{ color: p.color }}>●</span> {p.label} <strong>{_gk(pts[sel].potsEnd[p.key] || 0)}</strong>{idx < arr.length - 1 ? ' · ' : ''}
+            </span>
+          ))}
+          {' = '}<strong style={{ color: 'var(--c-acc)' }}>{_gk(pts[sel].potsTotal || 0)}</strong> total.
+          {(pts[sel].potsTotal || 0) <= 0 && <span style={{ color: 'var(--c-coral-text)' }}> Pots exhausted — only secure income from here.</span>}
+        </div>
+      )}
       {/* Legend (composition needs a key) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
         {_POTS.map(p => (
@@ -4943,6 +4970,7 @@ function solveSurvivableCrashAccum({ pot, annualSaving, growth, age0, years, cra
   return Math.round(lo * 100) / 100
 }
 function AccumStressChart({ baseline, stressed, target, crashAtAge }) {
+  const [sel, setSel] = useState(null) // tapped age index → calm-vs-crash reveal (drill)
   const a = (baseline || []).filter(Boolean), b = (stressed || []).filter(Boolean)
   if (a.length < 2) return null
   const maxV = Math.max(...a.map(r => r.balance || 0), ...b.map(r => r.balance || 0), target || 0, 1) * 1.05
@@ -4982,11 +5010,38 @@ function AccumStressChart({ baseline, stressed, target, crashAtAge }) {
           <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {a[i].age}</text>
         ))}
         <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+        {/* Selected-age marker (drill) */}
+        {sel != null && a[sel] && (
+          <g pointerEvents="none">
+            <line x1={px(sel)} y1={pT} x2={px(sel)} y2={pT + ph} stroke="var(--c-acc)" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.85" />
+            <circle cx={px(sel)} cy={py(a[sel].balance || 0)} r="3.5" fill="var(--c-mint-text)" />
+            {b[sel] && <circle cx={px(sel)} cy={py(b[sel].balance || 0)} r="3.5" fill="var(--c-coral-text)" />}
+          </g>
+        )}
+        {/* Invisible per-age tap-bands → drill (all charts drillable) */}
+        {a.map((_, i) => (
+          <rect key={`ah-${i}`} x={px(i) - (pw / Math.max(1, n - 1)) / 2} y={pT}
+            width={pw / Math.max(1, n - 1)} height={ph} fill="transparent"
+            style={{ cursor: 'pointer' }} onClick={() => setSel(sel === i ? null : i)} />
+        ))}
       </svg>
       <div style={{ display: 'flex', gap: 14, marginTop: 2, fontSize: 10, color: 'var(--c-text3)' }}>
         <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-mint-text)', verticalAlign: 'middle', marginRight: 4 }} />Calm markets</span>
         <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-coral-text)', verticalAlign: 'middle', marginRight: 4 }} />After the crash</span>
       </div>
+      {/* Drill reveal — both paths at the tapped age + the gap the crash opens. */}
+      {sel != null && a[sel] && (() => {
+        const calm = a[sel].balance || 0
+        const crash = (b[sel] || {}).balance != null ? b[sel].balance : null
+        return (
+          <div style={{ margin: '8px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--c-text)' }}>Age {a[sel].age}</strong> — calm markets{' '}
+            <strong style={{ color: 'var(--c-mint-text)' }}>{_gk(calm)}</strong>
+            {crash != null && <> vs after a crash <strong style={{ color: 'var(--c-coral-text)' }}>{_gk(crash)}</strong>, a gap of <strong>{_gk(Math.abs(calm - crash))}</strong></>}
+            {target > 0 && <span style={{ color: 'var(--c-text3)' }}> · target {_gk(target)}.</span>}
+          </div>
+        )
+      })()}
     </div>
   )
 }

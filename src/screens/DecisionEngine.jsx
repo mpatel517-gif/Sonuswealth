@@ -163,7 +163,15 @@ function fmt(n) {
   return `£${n}`
 }
 
-export default function DecisionEngine({ onBack, onCommit, entity }) {
+// Signed £ for engine deltas (e.g. net-worth / IHT change per path).
+function fmtSigned(n) {
+  if (n == null) return '—'
+  const sign = n > 0 ? '+' : n < 0 ? '−' : ''
+  const a = Math.abs(n)
+  return `${sign}${a >= 1000 ? `£${Math.round(a / 1000)}k` : `£${Math.round(a)}`}`
+}
+
+export default function DecisionEngine({ onBack, onCommit, entity, onAskAI }) {
   const [step, setStep] = useState(0)
   const [decision, setDecision] = useState(null)
   const [context, setContext] = useState({
@@ -184,7 +192,17 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
     if (!decision) return []
     const decId = decision.code || decision.id
     if (decId === 'DE-09') return PROPERTY_PATHS
-    try { return enumeratePaths(entity, decId) } catch { return [] }
+    try {
+      // Engine paths use {id,label,riskLevel,detail,simulation}; the wizard's
+      // step components were built for the property-path shape {title,sub,impact}.
+      // Normalise so every step renders for all 40 cases (not just DE-09).
+      const raw = enumeratePaths(entity, decId)
+      return (raw || []).map(p => ({
+        ...p,
+        title: p.title || p.label,
+        sub:   p.sub || (p.riskLevel ? `${p.riskLevel[0].toUpperCase()}${p.riskLevel.slice(1)} risk` : ''),
+      }))
+    } catch { return [] }
   }, [decision, entity])
 
   // Recommendation from engine for chosen path
@@ -326,7 +344,7 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
       </div>
 
       {step === 0 && (
-        <StepIdentify decision={decision} onPick={(d) => { setDecision(d); setChosen(null) }} />
+        <StepIdentify decision={decision} onPick={(d) => { setDecision(d); setChosen(null) }} onAskAI={onAskAI} />
       )}
       {step === 1 && decision && (
         <StepContext context={context} onChange={setContext} />
@@ -398,7 +416,7 @@ export default function DecisionEngine({ onBack, onCommit, entity }) {
 }
 
 // ── Step 1: Identify ────────────────────────────────────────────────────────
-function StepIdentify({ decision, onPick }) {
+function StepIdentify({ decision, onPick, onAskAI }) {
   const liveTypes = DECISION_TYPES_ALL.filter(d => d.status === 'live')
   const phase2Types = DECISION_TYPES_ALL.filter(d => d.status !== 'live')
 
@@ -410,6 +428,24 @@ function StepIdentify({ decision, onPick }) {
         rewrites the recommendation inside FCA boundaries, stress-tests, and
         commits to the audit trail.
       </div>
+
+      {/* Optional LLM path — describe a decision in plain English (V2). */}
+      {onAskAI && (
+        <button
+          onClick={onAskAI}
+          className="sw-press"
+          style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer',
+            padding: '10px 12px', marginBottom: 6, borderRadius: 12,
+            border: '1px dashed var(--c-acc)', background: 'var(--c-acc-bg)',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+          <span style={{ fontSize: 16 }}>✦</span>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-acc)' }}>
+            Not in the list? Ask in plain English →
+          </span>
+        </button>
+      )}
 
       {/* Live catalogue — all live types are selectable */}
       <DecisionCategory title={`Live decisions (${liveTypes.length})`}>
@@ -440,17 +476,19 @@ function StepIdentify({ decision, onPick }) {
         })}
       </DecisionCategory>
 
-      {/* Phase 2 catalogue — visible but disabled */}
-      <DecisionCategory title={`Coming in Phase 2 (${phase2Types.length})`}>
-        {phase2Types.map(d => (
-          <DisabledDecisionStub
-            key={d.id}
-            id={d.id}
-            title={d.title}
-            status={d.status || 'phase2'}
-          />
-        ))}
-      </DecisionCategory>
+      {/* Phase 2 catalogue — only shown if any stubs remain (all 40 now live). */}
+      {phase2Types.length > 0 && (
+        <DecisionCategory title={`Coming in Phase 2 (${phase2Types.length})`}>
+          {phase2Types.map(d => (
+            <DisabledDecisionStub
+              key={d.id}
+              id={d.id}
+              title={d.title}
+              status={d.status || 'phase2'}
+            />
+          ))}
+        </DecisionCategory>
+      )}
     </div>
   )
 }
@@ -533,26 +571,36 @@ function StepOptions({ paths }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        The engine surfaced <strong>{paths.length}</strong> candidate paths. Each
-        path is fully costed: yield, CGT today, IHT exposure, and liquidity
-        impact. You don't pick yet — the weighting step does that.
+        The engine surfaced <strong>{paths.length}</strong> candidate paths, each
+        costed against your finances. You don't pick yet — the weighting step does that.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {paths.map(p => (
-          <div key={p.id} className="sw-tile" style={{ padding: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.title}</div>
-            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>{p.sub}</div>
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 4, marginTop: 8,
-            }}>
-              <ImpactChip label="Yield/yr"  value={fmt(p.impact.yield_p_a)} good={p.impact.yield_p_a > 0} />
-              <ImpactChip label="CGT today" value={fmt(p.impact.cgt_today)} good={p.impact.cgt_today === 0} />
-              <ImpactChip label="In estate" value={fmt(p.impact.iht_in_estate)} good={p.impact.iht_in_estate < 300_000} />
-              <ImpactChip label="Liquidity" value={fmt(p.impact.liquidity)} good={p.impact.liquidity > 0} />
+        {paths.map(p => {
+          const d = p.simulation?.delta
+          return (
+            <div key={p.id} className="sw-tile" style={{ padding: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.title || p.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>{p.sub || p.detail}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 8 }}>
+                {p.impact ? (
+                  <>
+                    <ImpactChip label="Yield/yr"  value={fmt(p.impact.yield_p_a)} good={p.impact.yield_p_a > 0} />
+                    <ImpactChip label="CGT today" value={fmt(p.impact.cgt_today)} good={p.impact.cgt_today === 0} />
+                    <ImpactChip label="In estate" value={fmt(p.impact.iht_in_estate)} good={p.impact.iht_in_estate < 300_000} />
+                    <ImpactChip label="Liquidity" value={fmt(p.impact.liquidity)} good={p.impact.liquidity > 0} />
+                  </>
+                ) : (
+                  <>
+                    <ImpactChip label="Net worth" value={fmtSigned(d?.nw)}  good={(d?.nw ?? 0) >= 0} />
+                    <ImpactChip label="IHT"       value={fmtSigned(d?.iht)} good={(d?.iht ?? 0) <= 0} />
+                    <ImpactChip label="Horizon"   value={p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—'} good />
+                    <ImpactChip label="Certainty" value={p.simulation?.confidence || '—'} good={p.simulation?.confidence === 'HIGH'} />
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -916,10 +964,19 @@ function StepCommit({ path }) {
           display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
           gap: 6, marginTop: 10,
         }}>
-          <ImpactChip label="Yield/yr"  value={fmt(path.impact.yield_p_a)} good />
-          <ImpactChip label="CGT today" value={fmt(path.impact.cgt_today)} good={path.impact.cgt_today === 0} />
-          <ImpactChip label="In estate" value={fmt(path.impact.iht_in_estate)} />
-          <ImpactChip label="Liquidity" value={fmt(path.impact.liquidity)} good={path.impact.liquidity >= 0} />
+          {path.impact ? (
+            <>
+              <ImpactChip label="Yield/yr"  value={fmt(path.impact.yield_p_a)} good />
+              <ImpactChip label="CGT today" value={fmt(path.impact.cgt_today)} good={path.impact.cgt_today === 0} />
+              <ImpactChip label="In estate" value={fmt(path.impact.iht_in_estate)} />
+              <ImpactChip label="Liquidity" value={fmt(path.impact.liquidity)} good={path.impact.liquidity >= 0} />
+            </>
+          ) : (
+            <>
+              <ImpactChip label="Net worth" value={fmtSigned(path.simulation?.delta?.nw)}  good={(path.simulation?.delta?.nw ?? 0) >= 0} />
+              <ImpactChip label="IHT"       value={fmtSigned(path.simulation?.delta?.iht)} good={(path.simulation?.delta?.iht ?? 0) <= 0} />
+            </>
+          )}
         </div>
       </div>
     </div>

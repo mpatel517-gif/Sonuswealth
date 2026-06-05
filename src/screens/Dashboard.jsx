@@ -386,13 +386,16 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       return setTab('money/trusts')
     }
     if (id === 'decisions') {
-      // v0.3 route-9 §5 — `/decisions#scenario` deep-link (R8 drawdown save).
-      // If opts carries hash 'scenario' + seed, route through DE overlay with
-      // seed; otherwise fall back to existing DE overlay behaviour.
+      // v0.3 route-9 §5 — `/decisions#scenario` deep-link (R8 drawdown save)
+      // still routes to the AI decision-tree (V2) with its seed.
       if (opts && opts.hash === 'scenario') {
         return setDePayload({ ...opts, hash: 'scenario', seed: opts.seed || null })
       }
-      return setDePayload(opts || {})
+      // Plain "Decisions" tap → the deterministic 40-decision catalogue
+      // (DecisionEngine.jsx). Works with no API key and shows all 40 up front;
+      // the LLM "ask in plain English" path is offered from inside it. Fixes
+      // the founder's "I can't see the 40" — the AI front-door hid them.
+      return setMoreScreen('decision')
     }
     // v0.3 route-9 §5 — `/tax#iht-delta` deep-link. Seed carries
     // `{ pension_total, post_2027_delta }` from R1 SIPP-IHT chip.
@@ -1005,7 +1008,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
               { id: 'notif',   icon: '🔔', label: 'Notifications',     body: "What you'll want to know" },
               { id: 'reports', icon: '📊', label: 'Reports',           body: 'On-demand or scheduled exports' },
               { id: 'ifa',     icon: '◊', label: 'IFA Practice',      body: 'Adviser dashboard + client roster' },
-              { id: 'decision', icon: '◆', label: 'Decision Engine',  body: '7-step flow with Decision Wheel weighting' },
+              { id: 'decision', icon: '◆', label: 'All decisions (40)',  body: 'Browse 40 money decisions — scored, no AI needed' },
             ].map(m => (
               <button key={m.id} onClick={() => { setMoreScreen(m.id); setShowMoreMenu(false) }}
                 className="sw-tile sw-tile-interactive sw-press"
@@ -1077,12 +1080,14 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       {moreScreen === 'decision' && (
         <OverlayShell title="Decision Engine" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngine
+            entity={wireEntity}
             onBack={(opts) => {
               setMoreScreen(null)
               // Navigate to Timeline after a commit so user sees their plan.
               if (opts?.committed) setTabSafe('timeline')
             }}
             onCommit={handleCommit}
+            onAskAI={() => { setMoreScreen(null); setDePayload({}) }}
           />
         </OverlayShell>
       )}

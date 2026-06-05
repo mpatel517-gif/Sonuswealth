@@ -1100,6 +1100,113 @@ function CashflowCalendarHeatmap({ entity }) {
 // Render via <MoneyXDrawer activeRoute="flow" entity={entity} onNav={onNav} />.
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 
+// ── DeficitFixAnalysis — the engine-grade "am I OK / how do I fix it" (founder
+// 2026-06-05: "rethink this pill using the network-diagram + engine principle").
+// Same pattern as the draw-order: HONEST decomposition first (a "deficit" that's
+// really deliberate saving is reframed), then a priority selector that SCORES
+// the candidate fixes on impact / effort / durability and recommends one — so
+// the user sees the trade-offs, not just two sliders. Info/guidance, not advice.
+const _FIX_PRIORITY = [
+  { id: 'wealth', label: 'Keep building wealth' },
+  { id: 'easy', label: 'Least effort now' },
+  { id: 'durable', label: 'Fix it for good' },
+]
+const _FIX_W = {
+  wealth: { i: 0.35, e: 0.15, d: 0.20, w: 0.30 },
+  easy: { i: 0.35, e: 0.50, d: 0.10, w: 0.05 },
+  durable: { i: 0.30, e: 0.10, d: 0.50, w: 0.10 },
+}
+const _effortLabel = (s) => s >= 80 ? 'Easy' : s >= 50 ? 'Moderate' : 'Harder'
+const _durLabel = (s) => s >= 80 ? 'Durable' : s >= 40 ? 'Slows wealth' : 'Stop-gap'
+function DeficitFixAnalysis({ ms, msNet, lb }) {
+  const [priority, setPriority] = useState('wealth')
+  const gap = Math.max(0, -msNet)
+  if (gap <= 0) return null
+  const committed = Math.round(ms.committed || 0)
+  const bufMonths = lb?.months != null ? Math.round(lb.months) : null
+  const beforeSaving = msNet + committed // position if not making deliberate contributions
+  const cands = [
+    committed > 0 && { id: 'ease', name: 'Ease your pension / ISA saving', impact: Math.min(gap, committed), effort: 90, durable: 55, wealth: 20,
+      note: `You put ${_gk(committed)}/mo into pensions & ISAs — easing it closes most of the gap instantly, but slows your retirement pot.` },
+    { id: 'trim', name: 'Trim your spending', impact: gap, effort: 55, durable: 85, wealth: 80,
+      note: `Find ${_gk(gap)}/mo across discretionary spend — durable, but needs a habit change.` },
+    { id: 'earn', name: 'Earn a bit more', impact: gap, effort: 35, durable: 90, wealth: 95,
+      note: `An extra ${_gk(gap)}/mo of income closes it for good without touching your savings or lifestyle.` },
+    bufMonths != null && { id: 'buffer', name: 'Cover it from your buffer', impact: gap, effort: 85, durable: 20, wealth: 50,
+      note: `Your buffer covers about ${bufMonths} month${bufMonths === 1 ? '' : 's'} at this rate — a stop-gap, not a fix.` },
+  ].filter(Boolean)
+  const W = _FIX_W[priority]
+  const scored = cands.map(c => {
+    const impactPct = Math.min(100, Math.round((c.impact / gap) * 100))
+    const weighted = Math.round(W.i * impactPct + W.e * c.effort + W.d * c.durable + W.w * c.wealth)
+    return { ...c, impactPct, weighted }
+  }).sort((a, b) => b.weighted - a.weighted).map((c, i) => ({ ...c, rank: i + 1 }))
+  const winner = scored[0]
+  const maxW = Math.max(...scored.map(s => s.weighted), 1)
+  const savingShare = committed > 0 ? Math.min(100, Math.round((Math.min(gap, committed) / gap) * 100)) : 0
+
+  return (
+    <div>
+      {/* HONEST DECOMPOSITION — a "deficit" that's mostly deliberate saving is not overspending. */}
+      {committed > 0 && (
+        <div style={{ padding: '10px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 8%, var(--c-surface))', border: '1px solid var(--c-border)', marginBottom: 12 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.5 }}>
+            <strong>{savingShare}% of your {_gk(gap)}/mo gap is money you choose to save.</strong> You put {_gk(committed)}/mo into pensions & ISAs. Set that aside and your day-to-day position is <strong style={{ color: beforeSaving >= 0 ? 'var(--c-mint-text)' : 'var(--c-text)' }}>{beforeSaving >= 0 ? '+' : '−'}{_gk(Math.abs(beforeSaving))}/mo</strong> — {Math.abs(beforeSaving) < gap * 0.25 ? 'essentially breaking even' : 'closer than the headline suggests'}. The gap is you building wealth faster than salary covers, funded from savings.
+          </div>
+          {/* decomposition bar: deliberate saving vs genuine shortfall */}
+          <div style={{ display: 'flex', height: 8, borderRadius: 5, overflow: 'hidden', marginTop: 8, background: 'var(--c-surface2)' }}>
+            <div style={{ width: `${savingShare}%`, background: 'var(--c-mint-text)' }} title="deliberate saving" />
+            <div style={{ width: `${100 - savingShare}%`, background: 'var(--c-coral-text)' }} title="genuine shortfall" />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--c-text3)', marginTop: 3 }}>
+            <span style={{ color: 'var(--c-mint-text)' }}>deliberate saving {_gk(Math.min(gap, committed))}</span>
+            <span style={{ color: 'var(--c-coral-text)' }}>true shortfall {_gk(Math.max(0, gap - committed))}</span>
+          </div>
+        </div>
+      )}
+      {/* WAYS TO CLOSE IT — scored by what matters to you (mirrors the draw-order). */}
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>
+        Ways to close the {_gk(gap)}/mo gap — what matters most?
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {_FIX_PRIORITY.map(p => (
+          <button key={p.id} onClick={() => setPriority(p.id)} className="sw-pressable" style={{
+            fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+            border: '1px solid ' + (priority === p.id ? 'var(--c-acc)' : 'var(--c-border)'),
+            background: priority === p.id ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+            color: priority === p.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{p.label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {scored.map(c => {
+          const win = c.rank === 1
+          return (
+            <div key={c.id} style={{ padding: '9px 11px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid ' + (win ? 'var(--c-acc)' : 'var(--c-border)') }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 0 }}>{c.name}</span>
+                {win && <span style={{ fontSize: 8, fontWeight: 800, color: '#fff', background: 'var(--c-acc)', padding: '2px 6px', borderRadius: 100, letterSpacing: 0.3 }}>RECOMMENDED</span>}
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: win ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>closes {_gk(c.impact)}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 5 }}>
+                <div style={{ width: `${(c.weighted / maxW) * 100}%`, height: '100%', background: win ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 5, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Effort <strong style={{ color: 'var(--c-text2)' }}>{_effortLabel(c.effort)}</strong></span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Lasting <strong style={{ color: 'var(--c-text2)' }}>{_durLabel(c.durable)}</strong></span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Covers <strong style={{ color: 'var(--c-text2)' }}>{c.impactPct}%</strong> of the gap</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45, marginTop: 5 }}>{c.note}</div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
+        Ranked under your stated priority on your own figures — one illustration of how to close the gap, not a personal recommendation.
+      </div>
+    </div>
+  )
+}
+
 // "Am I OK right now?" rebuilt to the drawer bar (founder 2026-06-04: "apply
 // this logic to all tiles"). Leads with the net position + an INTERACTIVE
 // break-even model (trim spend / add income + a back-solve that closes the gap),
@@ -1158,17 +1265,18 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gk(income)}</span><span>out {_gk(out)}</span></div>
         <div style={{ marginTop: 12, borderTop: '1px solid var(--c-sep)', paddingTop: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>What would fix it? — drag a lever</div>
-            {dirty && <button onClick={() => { setTrim(0); setExtra(0) }} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, fontSize: 11, padding: 0 }}>reset</button>}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--c-text2)', margin: '5px 0 7px' }}>New monthly position: <strong style={{ color: newNet >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>{newNet >= 0 ? '+' : '−'}{_gk(Math.abs(newNet))}/mo</strong></div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-            <SolverSlider label="Trim spending" value={trim} min={0} max={maxTrim} step={50} fmt={v => `−${_gk(v)}/mo`} onChange={setTrim} dirty={trim > 0} />
-            <SolverSlider label="Extra income" value={extra} min={0} max={maxExtra} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setExtra} dirty={extra > 0} />
-          </div>
-          {inDeficit && <button onClick={() => { setExtra(Math.min(deficit, maxExtra)); setTrim(0) }} className="sw-chip sw-chip-sm sw-chip-mint sw-press" style={{ marginTop: 8, cursor: 'pointer', fontWeight: 700 }}>↩ Back-solve: close the {_gk(deficit)}/mo gap</button>}
-          <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>Drag a lever, or let it solve the gap. Illustration on your figures — not advice.</div>
+          {/* Engine-grade gap analysis: honest decomposition + scored fixes. */}
+          {inDeficit && <DeficitFixAnalysis ms={ms} msNet={msNet} lb={lb} />}
+          {/* Fine-tune — the manual levers, demoted below the recommendation. */}
+          <details style={{ marginTop: inDeficit ? 12 : 0 }}>
+            <summary style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', cursor: 'pointer' }}>Or fine-tune it yourself</summary>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', margin: '7px 0 7px' }}>New monthly position: <strong style={{ color: newNet >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>{newNet >= 0 ? '+' : '−'}{_gk(Math.abs(newNet))}/mo</strong>{dirty && <button onClick={() => { setTrim(0); setExtra(0) }} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, fontSize: 11, padding: 0, marginLeft: 8 }}>reset</button>}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+              <SolverSlider label="Trim spending" value={trim} min={0} max={maxTrim} step={50} fmt={v => `−${_gk(v)}/mo`} onChange={setTrim} dirty={trim > 0} />
+              <SolverSlider label="Extra income" value={extra} min={0} max={maxExtra} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setExtra} dirty={extra > 0} />
+            </div>
+            {inDeficit && <button onClick={() => { setExtra(Math.min(deficit, maxExtra)); setTrim(0) }} className="sw-chip sw-chip-sm sw-chip-mint sw-press" style={{ marginTop: 8, cursor: 'pointer', fontWeight: 700 }}>↩ Back-solve: close the {_gk(deficit)}/mo gap</button>}
+          </details>
         </div>
       </div>
       {/* COMPACT ROWS → detail sub-drawers */}

@@ -1383,9 +1383,19 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gk(income)}</span><span>out {_gk(out)}</span></div>
         <div style={{ marginTop: 12, borderTop: '1px solid var(--c-sep)', paddingTop: 10 }}>
           {/* Engine-grade gap analysis (deficit) OR surplus-allocation engine
-              (surplus) — the symmetric "what do I DO" answer. */}
-          {inDeficit && <DeficitFixAnalysis ms={ms} msNet={msNet} lb={lb} />}
-          {!inDeficit && msNet > 0 && <SurplusAllocationEngine ms={ms} msNet={msNet} entity={entity} />}
+              (surplus) — the symmetric "what do I DO" answer. Fed the LIVE
+              adjusted net (newNet = base + trim + extra) so dragging a fine-tune
+              lever updates the gap/allocation interactively (founder 2026-06-05:
+              "if I change extra income the allocation stays static — should be
+              interactive"). Render-gated on base msNet so the surface doesn't
+              swap mid-drag. */}
+          {inDeficit && <DeficitFixAnalysis ms={ms} msNet={newNet} lb={lb} />}
+          {!inDeficit && msNet > 0 && <SurplusAllocationEngine ms={ms} msNet={newNet} entity={entity} />}
+          {inDeficit && newNet >= 0 && (
+            <div style={{ padding: '9px 11px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 12%, var(--c-surface))', border: '1px solid var(--c-mint-text)', fontSize: 12, color: 'var(--c-text)', lineHeight: 1.5 }}>
+              With those changes you&rsquo;d be <strong style={{ color: 'var(--c-mint-text)' }}>{newNet > 0 ? `in surplus ${_gk(newNet)}/mo` : 'breaking even'}</strong> — the gap is closed. Open the levers below to see how.
+            </div>
+          )}
           {/* Fine-tune — the manual levers, demoted below the recommendation. */}
           <details style={{ marginTop: inDeficit ? 12 : 0 }}>
             <summary style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', cursor: 'pointer' }}>Or fine-tune it yourself</summary>

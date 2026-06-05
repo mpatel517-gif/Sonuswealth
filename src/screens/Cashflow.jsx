@@ -3481,10 +3481,15 @@ function _tradeoff(scores) {
   if (hi[0] === lo[0]) return 'balanced across factors'
   return `strong on ${_FACTOR_LABEL[hi[0]].toLowerCase()}, weaker on ${_FACTOR_LABEL[lo[0]].toLowerCase()}`
 }
-function DrawOrderDrill({ entity }) {
-  const [goal, setGoal] = useState('min_lifetime_tax')
+function DrawOrderDrill({ entity, goal: goalProp, setGoal: setGoalProp, routes }) {
+  // Controlled when a parent shares the goal (so the diagram + drill move
+  // together); self-contained otherwise.
+  const [goalLocal, setGoalLocal] = useState('min_lifetime_tax')
+  const goal = goalProp ?? goalLocal
+  const setGoal = setGoalProp ?? setGoalLocal
   const [showRoutes, setShowRoutes] = useState(false)
-  const r = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
+  const rLocal = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
+  const r = routes || rLocal
   if (!r || !r.sequence?.length) return null
   const maxW = Math.max(...r.candidates.map(c => c.weighted), 1)
   return (
@@ -3622,7 +3627,17 @@ function AccumIncomeNetwork({ entity }) {
   const [retAge, setRetAge] = useState(ctx?.retirementAge || 67)
   const [gPct, setGPct] = useState(Math.round((ctx?.growth || 0.05) * 1000) / 10)
   const [dirty, setDirty] = useState(false)
+  // Shared draw-order GOAL — drives BOTH the diagram (node order + rank badges)
+  // and the DrawOrderDrill below it, so the picture changes with the priority
+  // (founder 2026-06-05: "the diagram is static, it doesn't change with the
+  // drawers"). The income TOTAL is the same pots either way; the ORDER they're
+  // drawn in (and its tax/charge efficiency) is what the goal changes.
+  const [goal, setGoal] = useState('min_lifetime_tax')
+  const routes = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
   if (!ctx) return null
+  // Draw rank per wrapper, from the winning route for this goal.
+  const wrapperRank = {}
+  ;(routes?.sequence || []).forEach(o => { if (wrapperRank[o.wrapper] == null) wrapperRank[o.wrapper] = o.rank })
 
   const swr = TAX?.swr || 0.04
   // State Pension floor (status-checked figure from the bundle; entity override wins).
@@ -3660,11 +3675,16 @@ function AccumIncomeNetwork({ entity }) {
     )
   }
 
-  // Node rows: income pots (with edge) → optional cash buffer (kept, no edge) →
-  // State Pension floor (green, guaranteed).
+  // Node rows: drawable pots (incl. cash) ORDERED by the draw sequence for the
+  // chosen goal, each numbered with its draw rank, then the State Pension floor.
+  // Cash is a real draw source (drawn first under most goals) — shown with its
+  // rank, consistent with the table below (not a mute "buffer").
+  const drawableNodes = [
+    ...incomePots.map(p => ({ ...p, kind: 'pot', wrapper: p.id, drawRank: wrapperRank[p.id] ?? 98 })),
+    ...(cashBuf > 0 ? [{ id: 'cash', today: cashBuf, at: cashBuf, kind: 'pot', wrapper: 'cash', drawRank: wrapperRank.cash ?? 99 }] : []),
+  ].sort((a, b) => a.drawRank - b.drawRank)
   const nodes = [
-    ...incomePots.map(p => ({ ...p, kind: 'pot' })),
-    ...(cashBuf > 0 ? [{ id: 'cash', today: cashBuf, at: cashBuf, kind: 'buffer' }] : []),
+    ...drawableNodes,
     ...(sp > 0 ? [{ id: 'floor', kind: 'floor', at: sp }] : []),
   ]
   const nRows = nodes.length
@@ -3679,13 +3699,12 @@ function AccumIncomeNetwork({ entity }) {
         Your money map — income at {retAge}
       </div>
       <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 10 }}>
-        Today&rsquo;s pots grown to age {retAge} at {gPct}% a year, then turned into a sustainable income at a {Math.round(swr * 1000) / 10}% withdrawal rate, plus your State Pension. Drag the assumptions to see the picture move.
+        Today&rsquo;s pots grown to age {retAge} at {gPct}% a year, then turned into a sustainable income at a {Math.round(swr * 1000) / 10}% withdrawal rate, plus your State Pension. The number on each pot is the order it&rsquo;s drawn for <strong style={{ color: 'var(--c-text2)' }}>{(_GOAL_OPTS.find(g => g.id === goal) || {}).label}</strong> — change the priority below and the order re-draws.
       </div>
       <div style={{ position: 'relative', width: '100%', maxWidth: viewW, margin: '0 auto' }}>
         <svg width="100%" viewBox={`0 0 ${viewW} ${H}`} style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Forward income map: pots projected to retirement income">
           {nodes.map((n, i) => {
-            if (n.kind === 'buffer') return null
-            const y = rowCY(i), first = n.kind === 'pot' && i === 0
+            const y = rowCY(i), first = n.kind === 'pot' && n.drawRank === 1
             const stroke = n.kind === 'floor' ? 'var(--c-mint-text)' : 'var(--c-acc)'
             return (
               <path key={n.id} d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
@@ -3710,18 +3729,21 @@ function AccumIncomeNetwork({ entity }) {
               </div>
             )
           }
-          const buffer = n.kind === 'buffer'
+          const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'][(n.drawRank || 1) - 1] || `${n.drawRank}th`
           return (
             <div key={n.id} style={{ position: 'absolute', left: 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8,
               padding: '7px 9px', borderRadius: 10, background: 'var(--c-surface)', boxSizing: 'border-box',
-              border: (!buffer && i === 0) ? '1px solid var(--c-acc)' : '1px solid var(--c-border)', opacity: buffer ? 0.66 : 1 }}>
+              border: n.drawRank === 1 ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ flexShrink: 0, width: 15, height: 15, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 8.5, fontWeight: 800, color: n.drawRank === 1 ? '#fff' : 'var(--c-text2)',
+                  background: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{n.drawRank}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>{_POT_PRETTY[n.id] || n.id}</span>
                 {n.contrib > 0 && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>+{_gmo(n.contrib * 12)}/mo in</span>}
               </div>
-              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(n.today)} today</div>
-              <div style={{ fontSize: 9.5, fontWeight: 600, color: buffer ? 'var(--c-text3)' : 'var(--c-acc)', marginTop: 1 }}>
-                {buffer ? 'kept as buffer — not drawn' : `→ ${_gk(n.at)} at ${retAge}`}
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(n.today)} today{n.at !== n.today ? ` → ${_gk(n.at)} at ${retAge}` : ''}</div>
+              <div style={{ fontSize: 9.5, fontWeight: 600, color: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-text2)', marginTop: 1 }}>
+                drawn {ord}
               </div>
             </div>
           )
@@ -3742,8 +3764,9 @@ function AccumIncomeNetwork({ entity }) {
       <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>
         Pots are projected at your chosen growth, then converted at a {Math.round(swr * 1000) / 10}% sustainable withdrawal rate — the same rule the &ldquo;will it last&rdquo; plan uses when you start drawing. {retAge < spa ? `Your State Pension starts at ${spa}, so your pots cover the ${spa - retAge}-year gap first.` : ''} A projection under your assumptions — not a forecast or personal advice.
       </div>
-      {/* Per-holding draw-order drill (founder 2026-06-05: which pot first + why). */}
-      <DrawOrderDrill entity={entity} />
+      {/* Per-holding draw-order drill — SHARES the goal so diagram + drill move
+          together (founder 2026-06-05: "the diagram doesn't change with the drawers"). */}
+      <DrawOrderDrill entity={entity} goal={goal} setGoal={setGoal} routes={routes} />
     </div>
   )
 }

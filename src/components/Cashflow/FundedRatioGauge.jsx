@@ -204,9 +204,21 @@ export default function FundedRatioGauge({
           </div>
           <div style={{
             fontSize: 14, fontWeight: 600, color: 'var(--c-text)',
-            lineHeight: 1.5, marginBottom: 10,
+            lineHeight: 1.5, marginBottom: 8,
           }}>
             {status.context}
+          </div>
+          {/* Plain-English meaning of the number itself — "what does 0.48 mean?"
+              (founder 2026-06-05). The ratio is opaque without it. */}
+          <div style={{
+            fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10,
+            padding: '7px 9px', borderRadius: 9,
+            background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+          }}>
+            <strong style={{ color: 'var(--c-text)' }}>{r.toFixed(2)} means</strong> your investable pots
+            would cover about <strong style={{ color }}>{Math.round(r * 100)}%</strong> of your target
+            income for life at a safe withdrawal rate. <strong>1.00</strong> = pots alone fully cover it;
+            below that, secure income (State Pension, DB) is expected to make up the rest.
           </div>
           {fundedYears != null && (
             <div style={{ fontSize: 12, color: 'var(--c-text2)' }}>

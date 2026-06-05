@@ -715,9 +715,21 @@ body {
    ───────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sw-app-topbar__tagline { display: none !important; }
+  /* Keep the NW/Wealth/Risk/CoI pills NEXT TO the avatar down to 600px
+     (founder 2026-06-05: "the 3 anchors should be next to the user name —
+     we had it there before"). The old rule hid them at ≤768 and dropped
+     them into a detached full-width strip — that strip IS the "wrong place".
+     There's room beside the avatar at this width once the wordmark shrinks
+     (rule below); only true-mobile (≤600) can't fit them. */
+  .sw-app-topbar__brand > div:last-child > div:first-child {
+    font-size: 16px !important; letter-spacing: 0 !important;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;
+  }
+}
+@media (max-width: 600px) {
+  /* True mobile: avatar + 4 pills + theme + more + settings can't share one
+     row, so fall back to the full-width strip just below the header. */
   .sw-app-topbar__anchors { display: none !important; }
-  /* …but restore them as a full-width strip below the header (founder 2026-06-05):
-     consistent NW/Wealth/Risk/CoI on every tab at narrow widths. */
   .sw-mobile-anchors { display: flex !important; }
 }
 

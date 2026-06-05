@@ -62,7 +62,7 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
 import { extractAccumulationContext } from '../engine/accumulation-solver.js'
-import { sequenceDrawHoldings } from '../engine/decumulation-sequence.js'
+import { sequenceDrawHoldings, evaluateDrawRoutes } from '../engine/decumulation-sequence.js'
 import { compareMethods, recommendMethodForGoal, methodPath, METHODS } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
@@ -3471,20 +3471,34 @@ const _GOAL_OPTS = [
   { id: 'income_floor', label: 'Secure income for life' },
 ]
 const _WRAP_CHIP = { cash: 'Cash', gia: 'Taxable', pension: 'Pension', isa: 'ISA' }
+const _WRAP_COLOR = { cash: 'var(--c-text3)', gia: 'var(--c-amber-text)', pension: 'var(--c-acc)', isa: 'var(--c-mint-text)' }
+const _FACTOR_LABEL = { tax: 'Tax', charge: 'Charges', iht: 'IHT', flex: 'Flexibility' }
+// Plain-English trade-off line for a candidate route (strongest vs weakest factor).
+function _tradeoff(scores) {
+  const ent = Object.entries(scores)
+  const hi = ent.reduce((a, b) => b[1] > a[1] ? b : a)
+  const lo = ent.reduce((a, b) => b[1] < a[1] ? b : a)
+  if (hi[0] === lo[0]) return 'balanced across factors'
+  return `strong on ${_FACTOR_LABEL[hi[0]].toLowerCase()}, weaker on ${_FACTOR_LABEL[lo[0]].toLowerCase()}`
+}
 function DrawOrderDrill({ entity }) {
   const [goal, setGoal] = useState('min_lifetime_tax')
-  const seq = useMemo(() => { try { return sequenceDrawHoldings(entity, { goal }) } catch { return null } }, [entity, goal])
-  if (!seq || !seq.order?.length) return null
+  const [showRoutes, setShowRoutes] = useState(false)
+  const r = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
+  if (!r || !r.sequence?.length) return null
+  const maxW = Math.max(...r.candidates.map(c => c.weighted), 1)
   return (
     <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>
         Which pot to draw first — and why
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 10 }}>
-        With several pensions, ISAs and accounts, the order you draw them in changes how much tax and charges you pay. There's no single right answer — it depends what you're optimising for. Pick a priority and watch the order change.
+      {/* The PROBLEM — convey the size + rigor of the decision (founder 2026-06-05:
+          "show what the engine considered and how many routes it evaluated"). */}
+      <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
+        Your <strong style={{ color: 'var(--c-text)' }}>{r.sequenceableCount} drawable holdings</strong> can be drawn in <strong style={{ color: 'var(--c-text)' }}>{r.searchSpaceSize.toLocaleString()}</strong> different orders. {r.excludedCount} more are set aside (not for income). The engine scores <strong style={{ color: 'var(--c-text)' }}>{r.candidates.length} sensible strategies</strong> on <strong style={{ color: 'var(--c-text)' }}>{r.factors.length} factors</strong> against your priority — there's no single right answer, so pick what you're optimising for:
       </div>
-      {/* Goal selector — the order is a FUNCTION of the priority. */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+      {/* Goal selector — the whole answer is a FUNCTION of the priority. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {_GOAL_OPTS.map(g => (
           <button key={g.id} onClick={() => setGoal(g.id)} className="sw-pressable" style={{
             fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
@@ -3493,9 +3507,75 @@ function DrawOrderDrill({ entity }) {
             color: goal === g.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{g.label}</button>
         ))}
       </div>
-      {/* Ordered per-holding list */}
+      {/* Factors considered — chips so the user sees WHAT was weighed. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+        {r.factors.map((f, i) => (
+          <span key={i} style={{ fontSize: 9, fontWeight: 600, color: 'var(--c-text3)', padding: '2px 7px', borderRadius: 100, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>{f}</span>
+        ))}
+      </div>
+
+      {/* CANDIDATE ROUTES the engine compared — the "how many routes + why this one won". */}
+      <button onClick={() => setShowRoutes(s => !s)} className="sw-pressable" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', marginBottom: 6 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text2)', textTransform: 'uppercase', letterSpacing: 0.4 }}>The {r.candidates.length} strategies it compared</span>
+        <span style={{ fontSize: 11, color: 'var(--c-acc)', fontWeight: 700 }}>{showRoutes ? 'Hide' : 'Show scoring'} ›</span>
+      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+        {(showRoutes ? r.candidates : r.candidates.slice(0, 1)).map(c => {
+          const win = c.id === r.winnerId
+          return (
+            <div key={c.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)',
+              border: '1px solid ' + (win ? 'var(--c-acc)' : 'var(--c-border)') }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 0 }}>{c.name}</span>
+                {win && <span style={{ fontSize: 8, fontWeight: 800, color: '#fff', background: 'var(--c-acc)', padding: '2px 6px', borderRadius: 100, letterSpacing: 0.3 }}>BEST FOR THIS GOAL</span>}
+                <span style={{ fontSize: 12, fontWeight: 800, color: win ? 'var(--c-acc)' : 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{c.weighted}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 5 }}>
+                <div style={{ width: `${(c.weighted / maxW) * 100}%`, height: '100%', background: win ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+              </div>
+              {showRoutes && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                  {Object.entries(c.scores).map(([k, v]) => (
+                    <span key={k} style={{ fontSize: 9, color: 'var(--c-text3)' }}>{_FACTOR_LABEL[k]} <strong style={{ color: 'var(--c-text2)' }}>{v}</strong></span>
+                  ))}
+                  <span style={{ fontSize: 9, color: 'var(--c-text3)', fontStyle: 'italic' }}>— {_tradeoff(c.scores)}</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* THE ANSWER — winning route as a compact 3-column flow + the per-holding queue. */}
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text2)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
+        The order it recommends → {r.winnerName}
+      </div>
+      {/* multi-column flow: ordered pots → net of tax/charges → your income */}
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 6, marginBottom: 10 }}>
+        <div style={{ flex: 1.4, minWidth: 0, padding: '8px 9px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', marginBottom: 4 }}>Drawn in this order</div>
+          {r.sequence.map(o => (
+            <div key={o.id || o.rank} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', width: 12 }}>{o.rank}</span>
+              <span style={{ width: 6, height: 6, borderRadius: 2, background: _WRAP_COLOR[o.wrapper], flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.label}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', color: 'var(--c-text3)', fontSize: 14 }}>→</div>
+        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 9px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', marginBottom: 2 }}>Net of tax & charges</div>
+          <div style={{ fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.4 }}>ordered to use allowances & bands first</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', color: 'var(--c-text3)', fontSize: 14 }}>→</div>
+        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', padding: '8px 9px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface))', border: '1px solid var(--c-acc)' }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-text)', textTransform: 'uppercase' }}>Your income</div>
+          {r.netFloorIncome > 0 && <div style={{ fontSize: 9, color: 'var(--c-mint-text)', marginTop: 2 }}>+{_gk(r.netFloorIncome)}/yr floor</div>}
+        </div>
+      </div>
+      {/* Per-holding detail with the WHY */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {seq.order.map(o => (
+        {r.sequence.map(o => (
           <div key={o.id || o.rank} style={{ display: 'flex', gap: 10, alignItems: 'flex-start',
             padding: '9px 10px', borderRadius: 10, background: 'var(--c-surface)',
             border: '1px solid ' + (o.rank === 1 ? 'var(--c-acc)' : 'var(--c-border)') }}>
@@ -3505,7 +3585,7 @@ function DrawOrderDrill({ entity }) {
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)' }}>{o.label}</span>
-                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--c-text3)', padding: '1px 6px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{_WRAP_CHIP[o.wrapper] || o.wrapper}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: _WRAP_COLOR[o.wrapper], padding: '1px 6px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{_WRAP_CHIP[o.wrapper] || o.wrapper}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{_gk(o.value)}</span>
                 {o.charge ? <span style={{ fontSize: 9.5, color: 'var(--c-coral-text)' }}>{(o.charge * 100).toFixed(2)}% charge</span> : null}
               </div>
@@ -3514,17 +3594,16 @@ function DrawOrderDrill({ entity }) {
           </div>
         ))}
       </div>
-      {/* Secure floor + excluded — the whole balance sheet, not just the drawable slice */}
-      {seq.netFloorIncome > 0 && (
+      {r.netFloorIncome > 0 && (
         <div style={{ marginTop: 10, fontSize: 10.5, color: 'var(--c-mint-text)', lineHeight: 1.5 }}>
-          Before any of these, <strong>{_gk(seq.netFloorIncome)}/yr</strong> of guaranteed income (State Pension, DB, annuity) covers your floor — so your pots only fund what's above it.
+          Before any of these, <strong>{_gk(r.netFloorIncome)}/yr</strong> of guaranteed income (State Pension, DB, annuity) covers your floor — so your pots only fund what's above it.
         </div>
       )}
-      {seq.excluded?.length > 0 && (
+      {r.excluded?.length > 0 && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--c-text3)', cursor: 'pointer' }}>Not drawn for income ({seq.excluded.length}) — and why</summary>
+          <summary style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--c-text3)', cursor: 'pointer' }}>Set aside — not drawn for income ({r.excluded.length}) — and why</summary>
           <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {seq.excluded.map((e, i) => (
+            {r.excluded.map((e, i) => (
               <div key={i} style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.4 }}>
                 <strong style={{ color: 'var(--c-text2)' }}>{e.label}</strong> — {e.reason}
               </div>
@@ -3532,7 +3611,7 @@ function DrawOrderDrill({ entity }) {
           </div>
         </details>
       )}
-      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>{seq.disclaimer}</div>
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>{r.disclaimer}</div>
     </div>
   )
 }

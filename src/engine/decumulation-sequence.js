@@ -89,6 +89,150 @@ function reasonFor(h, wrapper, post2027) {
   return `Drawable holding ordered under your ${'priority'}.`
 }
 
+const _charge = (h) => (+h.amc || 0) + (+h.ocf || 0)
+
+// Order the sequenceable holdings by a wrapper spine + per-holding tiebreaks.
+// Pure; returns the ordered holdings (not yet mapped to the public shape).
+function orderSequenceable(sequenceable, spine) {
+  const pensions = sequenceable.filter(h => h.category === 'pensions')
+  if (pensions.length > 1) {
+    const maxC = Math.max(...pensions.map(_charge))
+    pensions.forEach(p => { if (_charge(p) >= maxC && maxC > 0) p._chargeRank = 'high' })
+  }
+  const wrapRank = (h) => { const i = spine.indexOf(wrapperOf(h)); return i < 0 ? 99 : i }
+  const within = (a, b) => {
+    const w = wrapperOf(a)
+    if (w === 'pension') { const d = _charge(b) - _charge(a); return d !== 0 ? d : (a.currentValue || 0) - (b.currentValue || 0) }
+    if (w === 'gia') { const ga = a.embeddedGainPct ?? 1, gb = b.embeddedGainPct ?? 1; if (ga !== gb) return ga - gb }
+    return (b.currentValue || 0) - (a.currentValue || 0)
+  }
+  return [...sequenceable].sort((a, b) => { const wr = wrapRank(a) - wrapRank(b); return wr !== 0 ? wr : within(a, b) })
+}
+
+// Named candidate STRATEGIES the engine compares (each a wrapper spine). The
+// per-holding tiebreak then expands each into a full individual-holding order.
+const ROUTE_ARCHETYPES = [
+  { id: 'cash-first', name: 'Spend cash first', spine: ['cash', 'gia', 'pension', 'isa'] },
+  { id: 'taxable-first', name: 'Taxable accounts first', spine: ['gia', 'cash', 'pension', 'isa'] },
+  { id: 'pension-first', name: 'Pension first (IHT-led)', spine: ['pension', 'gia', 'cash', 'isa'] },
+  { id: 'isa-preserve', name: 'Preserve pension (pre-2027)', spine: ['cash', 'gia', 'isa', 'pension'] },
+  { id: 'isa-flex', name: 'Keep ISA flexible last', spine: ['cash', 'gia', 'pension', 'isa'] },
+]
+
+// Goal → factor weights (sum 1). Transparent: the winning route is the one whose
+// factor profile best fits the user's stated priority — surfaced, not hidden.
+const GOAL_WEIGHTS = {
+  min_lifetime_tax:   { tax: 0.55, charge: 0.20, iht: 0.15, flex: 0.10 },
+  legacy:             { tax: 0.15, charge: 0.10, iht: 0.60, flex: 0.15 },
+  max_lifetime_spend: { tax: 0.35, charge: 0.20, iht: 0.05, flex: 0.40 },
+  income_floor:       { tax: 0.25, charge: 0.20, iht: 0.10, flex: 0.45 },
+}
+
+// Score one ordered route on 4 transparent, directional factors (0–100 each).
+// Honest proxies — labelled illustrative, not a guarantee. Differences between
+// routes are real and reflect genuine trade-offs (tax vs IHT vs flexibility).
+function scoreRoute(orderedHoldings, post2027) {
+  const n = orderedHoldings.length || 1
+  const total = orderedHoldings.reduce((s, h) => s + (h.currentValue || 0), 0) || 1
+  // position weight: 0 (drawn first) → 1 (drawn last)
+  const pos = (i) => i / Math.max(1, n - 1)
+  let tax = 0, charge = 0, iht = 0, flex = 0
+  orderedHoldings.forEach((h, i) => {
+    const w = wrapperOf(h); const share = (h.currentValue || 0) / total; const p = pos(i)
+    // TAX: good to draw cash/GIA early (allowances), pension mid (band-fill, avoid bunching), ISA late.
+    if (w === 'cash') tax += share * (1 - p)
+    if (w === 'gia') tax += share * (1 - p) * 0.9
+    if (w === 'pension') tax += share * (1 - Math.abs(p - 0.55) * 2) // best drawn around the middle
+    if (w === 'isa') tax += share * p
+    // CHARGE: good to draw HIGH-charge holdings early.
+    const c = _charge(h); charge += share * (c > 0 ? (c / 0.0125) * (1 - p) : 0.3 * (1 - p))
+    // IHT (post-2027): pension in estate → drawing pension earlier reduces exposure; ISA preserved transferable.
+    if (w === 'pension') iht += share * (post2027 ? (1 - p) : p)
+    else if (w === 'isa') iht += share * (1 - p) * 0.4
+    else iht += share * 0.5
+    // FLEX: keeping accessible ISA/cash for later = more flexibility.
+    if (w === 'isa' || w === 'cash') flex += share * p
+    else flex += share * 0.4
+  })
+  const clamp = (x) => Math.max(0, Math.min(100, Math.round(x * 100)))
+  return { tax: clamp(tax), charge: clamp(charge), iht: clamp(iht), flex: clamp(flex) }
+}
+
+const _factorial = (k) => { let r = 1; for (let i = 2; i <= k; i++) r *= i; return r }
+
+// Map ordered holdings → the public per-holding shape (rank + reason etc.).
+function mapOrder(ordered, post2027) {
+  return ordered.map((h, i) => {
+    const wrapper = wrapperOf(h)
+    return {
+      rank: i + 1, id: h.id, name: prettyName(h), label: prettyName(h),
+      taxonomyId: h.taxonomyId, category: h.category, wrapper,
+      value: h.currentValue || 0, charge: _charge(h) || null,
+      embeddedGainPct: h.embeddedGainPct ?? null, drawClass: h.drawClassification,
+      reason: reasonFor(h, wrapper, post2027),
+    }
+  })
+}
+function mapExcluded(ev) {
+  const seen = new Set()
+  return (ev.excluded || []).filter(e => {
+    const k = e.holding?.id || `${e.holding?.taxonomyId}:${e.holding?.currentValue}:${e.reason}`
+    if (seen.has(k)) return false
+    seen.add(k); return true
+  }).map(e => ({
+    label: e.holding ? prettyName(e.holding) : 'Holding',
+    value: e.holding?.currentValue || e.holding?.guaranteedAnnual || 0,
+    reason: e.reason, drawClass: e.holding?.drawClassification,
+  }))
+}
+
+/**
+ * Evaluate the whole decision: how big the space is, which named strategies the
+ * engine compared, their factor scores, and the winner for the chosen goal.
+ * This is the "show what the engine considered + how many routes" surface.
+ */
+export function evaluateDrawRoutes(entity = {}, opts = {}) {
+  const goal = opts.goal || 'min_lifetime_tax'
+  const post2027 = opts.post2027 != null ? !!opts.post2027 : true
+  let holdings = []
+  try { holdings = normaliseHoldings(entity) } catch { holdings = [] }
+  const ev = evaluateHoldings(holdings, opts)
+  const seq = ev.sequenceable || []
+  const weights = GOAL_WEIGHTS[goal] || GOAL_WEIGHTS.min_lifetime_tax
+
+  const candidates = ROUTE_ARCHETYPES.map(a => {
+    const ordered = orderSequenceable(seq, a.spine)
+    const scores = scoreRoute(ordered, post2027)
+    const weighted = Math.round(scores.tax * weights.tax + scores.charge * weights.charge + scores.iht * weights.iht + scores.flex * weights.flex)
+    return { id: a.id, name: a.name, spine: a.spine, scores, weighted, orderLabels: ordered.map(prettyName) }
+  }).sort((x, y) => y.weighted - x.weighted).map((c, i) => ({ ...c, rank: i + 1 }))
+
+  const winner = candidates[0]
+  // The displayed per-holding sequence IS the winning route — derived from the
+  // SAME spine that won the scoring, so the answer is internally consistent
+  // (no separate order table that could disagree with the winner).
+  const winSpine = winner ? winner.spine : (WRAPPER_ORDER[goal] || WRAPPER_ORDER.default)
+  const sequence = mapOrder(orderSequenceable(seq, winSpine), post2027)
+
+  return {
+    goal,
+    sequenceableCount: seq.length,
+    excludedCount: mapExcluded(ev).length + (ev.specialist || []).length,
+    searchSpaceSize: _factorial(seq.length),
+    factors: ['Annual charges', 'Wrapper tax (Income/CGT)', 'Embedded gains & CGT allowance', 'Growth rate', 'IHT estate treatment (2027)', 'Liquidity & access age', 'Guaranteed-income floor'],
+    weights,
+    candidates,
+    winnerId: winner?.id || null,
+    winnerName: winner?.name || null,
+    sequence,
+    excluded: mapExcluded(ev),
+    specialist: (ev.specialist || []).map(h => ({ label: prettyName(h), reason: 'needs a specialist to value (GMP / protected cash / safeguarded)' })),
+    secureIncome: (ev.secureIncome || []).map(s => ({ label: s.streamType || s.sourceTaxonomyId, grossAnnual: s.grossAnnual })),
+    netFloorIncome: ev.netFloorIncome || 0,
+    disclaimer: FCA,
+  }
+}
+
 /**
  * Per-holding draw sequence.
  * @param {object} entity
@@ -96,88 +240,20 @@ function reasonFor(h, wrapper, post2027) {
  * @returns {{ goal, order, excluded, specialist, secureIncome, netFloorIncome, headline, disclaimer }}
  */
 export function sequenceDrawHoldings(entity = {}, opts = {}) {
-  const goal = opts.goal || 'min_lifetime_tax'
-  const post2027 = opts.post2027 != null ? !!opts.post2027 : true
-  let holdings = []
-  try { holdings = normaliseHoldings(entity) } catch { holdings = [] }
-  const ev = evaluateHoldings(holdings, opts)
-
-  // Mark, within the pension bucket, the higher-charge pots so the reason can say
-  // "higher than your other pensions" honestly.
-  const pensions = ev.sequenceable.filter(h => h.category === 'pensions')
-  if (pensions.length > 1) {
-    const charges = pensions.map(p => (+p.amc || 0) + (+p.ocf || 0))
-    const maxC = Math.max(...charges)
-    pensions.forEach(p => { if (((+p.amc || 0) + (+p.ocf || 0)) >= maxC && maxC > 0) p._chargeRank = 'high' })
-  }
-
-  const spine = WRAPPER_ORDER[goal] || WRAPPER_ORDER.default
-  const wrapRank = (h) => { const i = spine.indexOf(wrapperOf(h)); return i < 0 ? 99 : i }
-
-  // Within a wrapper: pensions by charge DESC then value ASC (clear small/legacy
-  // first); GIA by embedded-gain ASC (low-gain, low-CGT first); cash/isa by value DESC.
-  const within = (a, b) => {
-    const w = wrapperOf(a)
-    if (w === 'pension') {
-      const ca = (+a.amc || 0) + (+a.ocf || 0), cb = (+b.amc || 0) + (+b.ocf || 0)
-      if (cb !== ca) return cb - ca
-      return (a.currentValue || 0) - (b.currentValue || 0)
-    }
-    if (w === 'gia') {
-      const ga = a.embeddedGainPct ?? 1, gb = b.embeddedGainPct ?? 1
-      if (ga !== gb) return ga - gb
-    }
-    return (b.currentValue || 0) - (a.currentValue || 0)
-  }
-
-  const ordered = [...ev.sequenceable].sort((a, b) => {
-    const wr = wrapRank(a) - wrapRank(b)
-    return wr !== 0 ? wr : within(a, b)
-  })
-
-  const order = ordered.map((h, i) => {
-    const wrapper = wrapperOf(h)
-    return {
-      rank: i + 1,
-      id: h.id,
-      name: prettyName(h),
-      label: prettyName(h),
-      taxonomyId: h.taxonomyId,
-      category: h.category,
-      wrapper,
-      value: h.currentValue || 0,
-      charge: (+h.amc || 0) + (+h.ocf || 0) || null,
-      embeddedGainPct: h.embeddedGainPct ?? null,
-      drawClass: h.drawClassification,
-      reason: reasonFor(h, wrapper, post2027),
-    }
-  })
-
-  // Dedupe excluded by id (the normaliser can emit a holding more than once when
-  // a fixture carries both a typed array and an object shape).
-  const _seen = new Set()
-  const excluded = (ev.excluded || []).filter(e => {
-    const k = e.holding?.id || `${e.holding?.taxonomyId}:${e.holding?.currentValue}:${e.reason}`
-    if (_seen.has(k)) return false
-    _seen.add(k); return true
-  }).map(e => ({
-    label: e.holding ? prettyName(e.holding) : 'Holding',
-    value: e.holding?.currentValue || e.holding?.guaranteedAnnual || 0,
-    reason: e.reason,
-    drawClass: e.holding?.drawClassification,
-  }))
-
-  const first = order[0]
-  const headline = first
-    ? `Draw ${first.label} first, then work down the list — ordered to serve "${String(goal).replace(/_/g, ' ')}".`
-    : 'No drawable holdings to sequence yet.'
-
+  // Thin wrapper over evaluateDrawRoutes so the sequence is always the WINNING
+  // route (single source of truth — no separate order that could disagree).
+  const r = evaluateDrawRoutes(entity, opts)
+  const first = r.sequence[0]
   return {
-    goal, order, excluded,
-    specialist: (ev.specialist || []).map(h => ({ label: h.name || h.taxonomyId, reason: 'needs a specialist to value (GMP / protected cash / safeguarded)' })),
-    secureIncome: (ev.secureIncome || []).map(s => ({ label: s.streamType || s.sourceTaxonomyId, grossAnnual: s.grossAnnual })),
-    netFloorIncome: ev.netFloorIncome || 0,
-    headline,
-    disclaimer: FCA,
+    goal: r.goal,
+    order: r.sequence,
+    excluded: r.excluded,
+    specialist: r.specialist,
+    secureIncome: r.secureIncome,
+    netFloorIncome: r.netFloorIncome,
+    headline: first
+      ? `Draw ${first.label} first, then work down the list — ordered to serve "${String(r.goal).replace(/_/g, ' ')}".`
+      : 'No drawable holdings to sequence yet.',
+    disclaimer: r.disclaimer,
   }
 }

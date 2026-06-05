@@ -716,6 +716,9 @@ body {
 @media (max-width: 768px) {
   .sw-app-topbar__tagline { display: none !important; }
   .sw-app-topbar__anchors { display: none !important; }
+  /* …but restore them as a full-width strip below the header (founder 2026-06-05):
+     consistent NW/Wealth/Risk/CoI on every tab at narrow widths. */
+  .sw-mobile-anchors { display: flex !important; }
 }
 
 /* ── Desktop brand de-duplication (2026-05-28) ────────────────────────────

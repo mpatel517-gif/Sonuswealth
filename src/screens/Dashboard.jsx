@@ -726,6 +726,31 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         </div>
       </div>
 
+      {/* ── Mobile/tablet anchor strip (founder 2026-06-05) ──────────────
+          The top-right pills (NW/Wealth/Risk/CoI) are hidden ≤768px to stop the
+          header overflowing — but that left Cashflow (and any tab without its own
+          in-body anchors) with NO scores on narrow screens. This full-width row
+          restores the same 4 anchors on EVERY tab at ≤768px, so they're
+          consistent for all users. Hidden >768 (the header pills show there). */}
+      {(() => {
+        const sg = (v) => (typeof v === 'number' && isFinite(v)) ? (Math.abs(v) >= 1e6 ? `£${(v / 1e6).toFixed(2)}m` : Math.abs(v) >= 1e3 ? `£${Math.round(v / 1e3)}k` : `£${Math.round(v)}`) : '—'
+        let coi = 0; try { coi = +(totalCoI?.(entity)?.total ?? 0) } catch (_e) { /* */ }
+        const cell = (l, v, c) => (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5px 4px', minWidth: 0 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase' }}>{l}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: c, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+          </div>
+        )
+        return (
+          <div className="sw-mobile-anchors" style={{ display: 'none', gap: 6, padding: '4px 12px 6px', background: 'var(--c-bg)', borderBottom: '1px solid var(--c-border)' }}>
+            {cell('NW', sg(headerNW), 'var(--c-text)')}
+            {cell('Wealth', fq?.total != null ? `${fq.total}` : '—', 'var(--c-acc)')}
+            {cell('Risk', headerRisk?.total != null ? `${headerRisk.total}` : '—', headerRiskBand?.colour || 'var(--c-gold)')}
+            {cell('CoI', sg(coi), 'var(--c-coral, #FF6F7D)')}
+          </div>
+        )
+      })()}
+
       {/* ── Global Tax Year chip ────────────────────────────────────────
           Founder direction 2026-05-28: TY must be visible on every page.
           Rendered here so every routed screen inherits it. */}

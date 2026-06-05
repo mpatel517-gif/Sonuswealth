@@ -4252,6 +4252,85 @@ function StressExplorerAccum({ entity, fi }) {
     </div>
   )
 }
+// Decision dimensions per method — the "paper" the founder wants: how each one
+// behaves on the axes that actually drive the choice. Qualitative facts (FCA-safe:
+// general characteristics of each approach, not a recommendation). Quantitative
+// columns (year-1, lasts, estate) come from the engine at runtime.
+const METHOD_COMPARE = {
+  bengen:          { income: 'Fixed, rises with inflation', stability: 'Very steady', crash: 'Keeps paying the same — the pot absorbs the hit', estate: 'Medium', suits: 'a predictable monthly paycheck' },
+  guyton_klinger:  { income: 'Highest on average', stability: 'Moves with markets', crash: 'Skips your pay-rise (and trims) after bad years', estate: 'Lower', suits: 'the most income over your life' },
+  vanguard:        { income: 'Tracks the pot', stability: 'Moves, but capped', crash: 'Income dips — a floor limits how far', estate: 'Medium', suits: 'staying responsive without whiplash' },
+  bucket:          { income: 'Steady', stability: 'Steady', crash: 'You spend cash, never sell investments low', estate: 'Medium', suits: 'peace of mind in a downturn' },
+  floor_guardrail: { income: 'Essentials fixed + flexible extra', stability: 'Basics fixed, extra flexes', crash: 'Essentials untouched; only the extra dips', estate: 'Varies', suits: 'never cutting the income you need' },
+}
+// Goal → method, in the founder's own words — the choose-by-priority guide.
+const PRIORITY_GUIDE = [
+  { goal: 'income_floor',       want: 'My essentials never get cut' },
+  { goal: 'max_lifetime_spend', want: 'The most income I can spend' },
+  { goal: 'min_lifetime_tax',   want: 'Smooth, controllable income' },
+  { goal: 'legacy',             want: 'Leave more behind' },
+]
+function MethodsCompareTable({ methods, recId, horizon }) {
+  if (!methods?.length) return null
+  const cell = { padding: '7px 8px', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.35, verticalAlign: 'top', borderTop: '1px solid var(--c-border)' }
+  const head = { padding: '6px 8px', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--c-text3)', textAlign: 'left', whiteSpace: 'nowrap' }
+  return (
+    <div style={{ marginTop: 4, overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid var(--c-border)', borderRadius: 12 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 540, fontVariantNumeric: 'tabular-nums' }}>
+        <thead>
+          <tr>
+            <th style={{ ...head, position: 'sticky', left: 0, background: 'var(--c-surface)' }}>Method</th>
+            <th style={{ ...head, textAlign: 'right' }}>Year-1 income</th>
+            <th style={head}>Income over time</th>
+            <th style={head}>In a crash</th>
+            <th style={{ ...head, textAlign: 'right' }}>Lasts to</th>
+          </tr>
+        </thead>
+        <tbody>
+          {methods.map(m => {
+            const c = METHOD_COMPARE[m.id] || {}
+            const p = METHOD_PLAIN[m.id] || { name: m.label }
+            const rec = m.id === recId
+            return (
+              <tr key={m.id} style={{ background: rec ? 'var(--c-tint-blue)' : 'transparent' }}>
+                <td style={{ ...cell, fontWeight: 700, color: 'var(--c-text)', position: 'sticky', left: 0, background: rec ? 'var(--c-tint-blue)' : 'var(--c-surface)' }}>
+                  {p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 4 }}>#1</span>}
+                </td>
+                <td style={{ ...cell, textAlign: 'right', fontWeight: 700, color: 'var(--c-text)' }}>{_gk(m.year1Withdrawal)}</td>
+                <td style={cell}>{c.income || '—'}</td>
+                <td style={cell}>{c.crash || '—'}</td>
+                <td style={{ ...cell, textAlign: 'right', color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-amber-text)' }}>{m.lastsHorizon ? `${horizon}+` : m.depletesAtAge}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+function MethodsChooseGuide({ recId, onPick, methods }) {
+  const has = id => methods?.some(m => m.id === id)
+  return (
+    <div style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>Which should you pick? Start from what matters most</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {PRIORITY_GUIDE.map(g => {
+          const mid = recommendMethodForGoal(g.goal)
+          const p = METHOD_PLAIN[mid] || {}
+          if (!has(mid)) return null
+          const isRec = mid === recId
+          return (
+            <button key={g.goal} onClick={() => onPick(mid)} className="sw-pressable" style={{ display: 'flex', alignItems: 'baseline', gap: 8, textAlign: 'left', cursor: 'pointer', width: '100%', background: 'none', border: 'none', padding: '2px 0' }}>
+              <span style={{ fontSize: 12, color: 'var(--c-text2)', flex: 1, lineHeight: 1.4 }}>"{g.want}"</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: isRec ? 'var(--c-acc)' : 'var(--c-text)', whiteSpace: 'nowrap' }}>→ {p.name}{isRec && ' ★'}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>★ = fits the priority on your plan today. These are general approaches advisers reference, shown as illustration — not a personal recommendation.</div>
+    </div>
+  )
+}
 function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
   const [open, setOpen] = useState(!withToggle)
   const [openMethod, setOpenMethod] = useState(null)
@@ -4269,10 +4348,13 @@ function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnu
       return (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
-            <strong style={{ color: 'var(--c-text)' }}>Five ways to pace what you spend</strong> from your {_gk(portfolio)} of pots.{' '}
-            {allLast ? `On your assumptions all five last to age ${horizon}+` : 'How long each lasts differs'} — the choice is{' '}
-            <strong style={{ color: 'var(--c-text)' }}>how much you take early</strong> ({_gk(lo)}–{_gk(hi)}/yr) and{' '}
-            <strong style={{ color: 'var(--c-text)' }}>how steady it stays</strong>. Tap one to open it — see how it works and drag the levers. An illustration, not advice.
+            <strong style={{ color: 'var(--c-text)' }}>There's no single "right" one.</strong> All five pace the same {_gk(portfolio)} of pots, and {allLast ? `on your assumptions all five last to age ${horizon}+` : 'they differ in how long they last'} — so the real difference is what they <strong style={{ color: 'var(--c-text)' }}>trade off</strong>: how much you take early ({_gk(lo)}–{_gk(hi)}/yr) versus how <strong style={{ color: 'var(--c-text)' }}>steady</strong> it stays and how protected you are in a crash. Pick by what you value most.
+          </div>
+          <MethodsChooseGuide recId={recId} methods={methods} onPick={(id) => setOpenMethod(methods.find(m => m.id === id))} />
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>How they compare, side by side</div>
+            <MethodsCompareTable methods={methods} recId={recId} horizon={horizon} />
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>Same pot, same horizon, your assumptions. Tap any method below to open it, see a worked example, and drag the levers. An illustration, not advice.</div>
           </div>
           {/* Compact DRAWER ROWS (founder: "make it a drawer, not 5 cards on one
               page") — name + income shape + a pot-trajectory sparkline + year-1

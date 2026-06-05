@@ -307,6 +307,22 @@ function AppInner() {
     } catch (_e) { /* noop */ }
   }, [persona])
 
+  // BUG-2026-06-05 (founder: "Mr T sometimes becomes Bruce, changes
+  // intermittently"). `persona` was resolved from ?demo= ONLY at mount
+  // (useState initialiser). Any later URL change — browser back/forward, a
+  // deep link, a snap script, an address-bar edit that didn't full-reload —
+  // left `persona` (and therefore the anchors + the whole tile set, which is
+  // life-stage-driven) stranded on the OLD persona while the URL showed the
+  // new one. Worse, the persist effect above then rewrote the STALE persona
+  // back to localStorage, so the desync survived reloads. Confirmed live:
+  // url ?demo=a but anchors/tiles = mrt-core. The URL is the source of truth
+  // in demo mode — re-sync persona to it whenever it changes.
+  useEffect(() => {
+    if (isDemoMode && urlParams.demo && ENTITIES[urlParams.demo] && urlParams.demo !== persona) {
+      setPersona(urlParams.demo)
+    }
+  }, [urlParams.demo, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [obData,           setObData]            = useState({ age: 38, focus: [], setup: [] })
   const [showPersonaSelect, setShowPersonaSelect] = useState(false)
 

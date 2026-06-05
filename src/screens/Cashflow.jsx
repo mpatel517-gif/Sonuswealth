@@ -1397,8 +1397,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
               tile opening a full-screen page that renders the SAME components
               (moved, not rewritten). The long A/B/C scroll the founder flagged
               is gone; the headline band above answers "will my money last?". */}
-          {/* A4 — pin the face (Building wealth / Drawing income) or leave Auto. */}
-          <LifeStageOverrideChip entity={entity} />
+          {/* Life-stage is auto-detected and trusted; quiet one-line correction
+              only if the detection is wrong (replaces the old loud 3-chip bar). */}
+          <LifeStageCorrection entity={entity} />
 
           <CashflowTrajectoryTiles
             entity={entity}
@@ -2177,42 +2178,48 @@ function SectionDelimiter({ letter, title, subtitle, chipClass = 'sw-chip-mint' 
   )
 }
 
-// A4 — manual life-stage override. The §B face is inferred (inferLifeStage),
-// but "not everyone wants a drawdown" — the user can pin it. Commits a
-// PREFERENCE_SET event → folds into entity.preferences.lifeStageOverride, which
-// inferBranch/inferLifeStage already read, so the drawdown plan card flips to
-// the FI face (and back) on the next fold. Two real branches only (the engine
-// knows accumulator/decumulator) + Auto — no cosmetic 4th option. Preserve/
-// legacy intent lives in the drawdown plan's priority reorder, not here.
-function LifeStageOverrideChip({ entity }) {
+// Life-stage CORRECTION (redesigned 2026-06-05, founder: the old 3-chip "This
+// view: Auto / Building wealth / Drawing income" bar was loud jargon for a
+// once-in-a-lifetime fact, mislabelled a "view" when it actually persists into the
+// engine app-wide). Now: trust the detection, state it in ONE quiet line, and only
+// if it's wrong reveal a plain real-world question. The choice persists (it's a
+// fact about you), and we say so — it changes how every screen models you.
+function LifeStageCorrection({ entity }) {
   const { commit } = useEvents()
   const pid = entity?.id || entity?.personaId
   const override = entity?.preferences?.lifeStageOverride || null
   const inferred = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
-  const set = (val) => { if (pid) commit(pid, { type: EV.PREFERENCE_SET, ts: Date.now(), payload: { lifeStageOverride: val } }) }
-  const seg = (val, label) => {
+  const effective = override || inferred
+  const [open, setOpen] = useState(false)
+  const set = (val) => { if (pid) commit(pid, { type: EV.PREFERENCE_SET, ts: Date.now(), payload: { lifeStageOverride: val } }); setOpen(false) }
+  const phrase = (s) => s === 'decumulator' ? 'drawing an income in retirement' : 'still building toward retirement'
+
+  if (!open) return (
+    <div style={{ fontSize: 11.5, color: 'var(--c-text3)', lineHeight: 1.5, margin: '2px 0 12px' }}>
+      Set up for someone <strong style={{ color: 'var(--c-text2)' }}>{phrase(effective)}</strong>{override ? ' — your choice' : ''}.{' '}
+      <button onClick={() => setOpen(true)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--c-acc)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>Not right?</button>
+    </div>
+  )
+  const opt = (val, label, sub) => {
     const isOn = val === null ? !override : override === val
     return (
-      <button key={val || 'auto'} onClick={() => set(val)} className="sw-press"
-        style={{ padding: '4px 11px', borderRadius: 'var(--r-pill, 999px)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-          border: isOn ? '1px solid var(--c-acc)' : '1px solid var(--c-border)',
-          background: isOn ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'transparent',
-          color: isOn ? 'var(--c-acc)' : 'var(--c-text3)' }}>
-        {label}
+      <button onClick={() => set(val)} className="sw-pressable" style={{ display: 'block', textAlign: 'left', width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
+        border: isOn ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)', background: isOn ? 'color-mix(in srgb, var(--c-acc) 10%, transparent)' : 'var(--c-surface)' }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)' }}>{label}{isOn && ' ✓'}</span>
+        <span style={{ display: 'block', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1 }}>{sub}</span>
       </button>
     )
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '2px 0 12px' }}>
-      <span style={{ fontSize: 10, color: 'var(--c-text3)', fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>This view:</span>
-      {seg(null, 'Auto')}
-      {seg('accumulator', 'Building wealth')}
-      {seg('decumulator', 'Drawing income')}
-      {!override && (
-        <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>
-          detected: {inferred === 'decumulator' ? 'drawing income' : 'building wealth'}
-        </span>
-      )}
+    <div className="sw-card" style={{ padding: '12px 14px', margin: '2px 0 12px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginBottom: 2 }}>Have you started taking a regular income from your pensions or investments?</div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.5 }}>This sets whether Sonuswealth plans for you as <em>building wealth</em> or <em>drawing it down</em> — and it changes every screen, not just this one.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {opt('decumulator', "Yes — I'm drawing an income", 'Show my drawdown plan and how long it lasts')}
+        {opt('accumulator', 'No — still building', 'Show my progress to financial independence')}
+        {opt(null, 'Let Sonuswealth decide', `Auto from your data — currently: ${phrase(inferred)}`)}
+      </div>
+      <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', padding: '8px 0 0', color: 'var(--c-text3)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
     </div>
   )
 }

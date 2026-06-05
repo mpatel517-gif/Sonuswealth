@@ -731,21 +731,110 @@ function HealthScoreDrillPanelInner({ entity, onClose }) {
 // This replaces the calendar-heatmap-as-signature mis-tag flagged by the
 // dataviz critique. The heatmap stays as a secondary depth strip.
 // ─────────────────────────────────────────────────────────────────────────────
+const SRC_LABELS = {
+  employment: 'Employment', 'self-employment': 'Self-employment',
+  dividends: 'Dividends', rental: 'Rental', 'savings-interest': 'Interest',
+  'state-pension': 'State pension', drawdown: 'Pension drawdown',
+  overseas: 'Overseas', other: 'Other',
+}
+// ── MoneyFlowDrill — breaks down whichever money-map node was tapped (founder
+// 2026-06-05: "you haven't made this diagram drillable"). Drills to SOURCE: the
+// real components behind each box, from the engine where available, with a plain
+// meaning and a pointer to the surface that owns the detail. Info, not advice.
+function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose }) {
+  if (!drill) return null
+  const id = drill.target || drill.node || ''
+  const val = +drill.value || 0
+  let rows = []      // { label, value }
+  let note = ''
+  let owns = null    // deep-link hint to the owning surface
+  try {
+    if (id.startsWith('src:')) {
+      const items = (incomeAll?.items || []).filter(it => (SRC_LABELS[it.type] || 'Other') === drill.label)
+      rows = items.map(it => ({ label: it.name || it.label || SRC_LABELS[it.type] || it.type, value: +it.amount || 0 }))
+      note = 'Gross income before tax — tax and NI are taken at the next stage.'
+      owns = drill.label === 'Rental' ? 'Property on My Money' : 'Income on My Money'
+    } else if (id === 'stage:tax') {
+      let it = null, ni = null
+      try { it = incomeTaxDetail(entity) } catch { /* */ }
+      try { ni = nicsDetail(entity) } catch { /* */ }
+      if (it?.bands?.length) (it.bands).filter(b => (b.tax || 0) > 0).forEach(b => rows.push({ label: `Income tax — ${b.label || b.name || (b.rate ? Math.round(b.rate * 100) + '%' : 'band')}`, value: Math.round(b.tax) }))
+      else if (it?.total_tax) rows.push({ label: 'Income tax', value: Math.round(it.total_tax) })
+      if (ni?.class1) rows.push({ label: 'National Insurance (Class 1)', value: ni.class1 })
+      if (ni?.class4) rows.push({ label: 'National Insurance (Class 4)', value: ni.class4 })
+      if (!rows.length) rows.push({ label: 'Income tax & NI', value: val })
+      note = it?.marginal_rate != null ? `Your marginal rate is ${Math.round(it.marginal_rate * 100)}% — the tax on your next £1 of income.` : 'Income tax and National Insurance on your earnings.'
+      owns = 'Tax & Estate'
+    } else if (id === 'stage:pension') {
+      rows = [{ label: 'Pension & ISA contributions', value: val }]
+      note = 'Money you set aside into pensions/ISAs — it leaves your cashflow but builds your wealth (it is not "spent").'
+      owns = 'My Money'
+    } else if (id === 'stage:essentials') {
+      const ex = entity?.expenses || {}
+      const cats = ex.categories || ex.breakdown || null
+      if (cats && typeof cats === 'object') rows = Object.entries(cats).map(([k, v]) => ({ label: k, value: +((v && v.amount) ?? v) * (((v && v.amount) ?? v) < 2000 ? 12 : 1) }))
+      if (!rows.length) rows = [{ label: 'Housing, bills, food, transport', value: val }]
+      note = 'Your committed day-to-day spending. Track it by category to see what moves the number most.'
+      owns = 'spending detail'
+    } else if (id === 'stage:debt') {
+      const libs = entity?.liabilities || entity?.debts || []
+      const arr = Array.isArray(libs) ? libs : Object.values(libs || {})
+      rows = arr.map(l => ({ label: l.name || l.type || 'Debt', value: Math.round((+l.monthlyPayment || +l.payment || 0) * 12) || +l.annualPayment || 0 })).filter(r => r.value > 0)
+      if (!rows.length) rows = [{ label: 'Loan & card repayments', value: val }]
+      note = 'Annual repayments across your loans and cards. Clearing higher-rate debt first frees the most cashflow.'
+      owns = 'Liabilities on My Money'
+    } else if (id === 'stage:protection') {
+      rows = [{ label: 'Insurance premiums (Life · CI · IP · PMI)', value: val }]
+      note = 'Protection premiums that keep your plan intact if income stops.'
+      owns = 'Protection on Tax & Estate'
+    } else if (id === 'sink:net') {
+      const gross = f.gross || 0
+      rows = [
+        { label: 'Gross income', value: Math.round(gross) },
+        { label: 'less Tax & NI', value: -Math.round(f.taxAndNI || 0) },
+        { label: 'less Pension/ISA', value: -Math.round(f.committed || 0) },
+        { label: 'less Essentials', value: -Math.round(f.essentials || 0) },
+        { label: 'less Debt service', value: -Math.round(f.debtService || 0) },
+        ...(f.protection > 0 ? [{ label: 'less Protection', value: -Math.round(f.protection) }] : []),
+      ]
+      note = (f.surplusAnnual < 0)
+        ? 'You spend more than comes in — the gap is funded from savings or borrowing. Closing it is priority one.'
+        : 'What is left after everything — available to save or invest.'
+      owns = null
+    } else {
+      rows = [{ label: drill.label || 'Flow', value: val }]
+    }
+  } catch { rows = [{ label: drill.label || 'Flow', value: val }] }
+
+  return (
+    <div style={{ marginTop: 10, padding: '11px 12px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--c-text)' }}>{drill.label || 'Breakdown'}{val ? <span style={{ color: 'var(--c-text3)', fontWeight: 600, fontSize: 11 }}> · {_gk(Math.abs(val))}/yr</span> : null}</div>
+        <button onClick={onClose} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0 }}>Close ✕</button>
+      </div>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {rows.map((r, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11.5 }}>
+            <span style={{ color: 'var(--c-text2)' }}>{r.label}</span>
+            <span style={{ color: r.value < 0 ? 'var(--c-coral-text)' : 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{r.value < 0 ? '−' : ''}{_gk(Math.abs(r.value))}</span>
+          </div>
+        ))}
+      </div>
+      {note && <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.5 }}>{note}</div>}
+      {owns && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-acc)', fontWeight: 600 }}>Full detail: {owns} →</div>}
+    </div>
+  )
+}
 function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
   // Single source of truth: cashflowFlow (net-of-tax). All aggregates below come
   // from it so the Sankey ties out to the reconciliation strip and to Home's
   // surplus by construction (2026-06-02 correctness gate).
   const f = flow || cashflowFlow(entity)
+  const [drill, setDrill] = useState(null) // tapped node → inline breakdown
 
   // Source nodes derived from the SAME income items that f.gross sums (grouped by
   // type) — so Σ sources === f.gross exactly. Previously these were re-summed
   // from entity.income sub-fields, which drifted from the engine total.
-  const SRC_LABELS = {
-    employment: 'Employment', 'self-employment': 'Self-employment',
-    dividends: 'Dividends', rental: 'Rental', 'savings-interest': 'Interest',
-    'state-pension': 'State pension', drawdown: 'Pension drawdown',
-    overseas: 'Overseas', other: 'Other',
-  }
   const byLabel = {}
   for (const it of (incomeAll?.items || [])) {
     const lbl = SRC_LABELS[it.type] || 'Other'
@@ -849,8 +938,13 @@ function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
       <Sankey
         nodes={nodes}
         links={links}
+        onFlowTap={setDrill}
         ariaLabel={`Money flow Sankey. ${sources.length} sources totalling £${Math.round(gross/1000)}k, ${stages.length} expense stages, ${sinkLabel.toLowerCase()} £${Math.round(Math.abs(surplus)/1000)}k.`}
       />
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, textAlign: 'center' }}>
+        Tap any box to break it down →
+      </div>
+      {drill && <MoneyFlowDrill drill={drill} entity={entity} f={f} incomeAll={incomeAll} onClose={() => setDrill(null)} />}
       {/* V-3 fix (2026-05-28): explicit reconciliation strip so the headline
           ("Net deficit −£86k") ties out visibly to the receipt items. Before
           this strip the user could read Rental + Dividends + State pension on

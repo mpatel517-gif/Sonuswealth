@@ -13,6 +13,8 @@
 // Reading direction matches mental model: top = money in, bottom = money left.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
+
 function fmt(v) {
   if (Math.abs(v) >= 1_000_000) return `£${(v / 1_000_000).toFixed(1)}m`
   if (Math.abs(v) >= 1_000)     return `£${(v / 1_000).toFixed(0)}k`
@@ -35,6 +37,7 @@ const TONE = {
 }
 
 export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
+  const [sel, setSel] = useState(null) // tapped step → running-balance reveal (drill)
   // Convert steps into running balance.
   // Dataviz fix (2026-05-26): the surplus step is the OUTCOME of the chain,
   // not a deduction. The previous logic added the surplus value (= the
@@ -101,10 +104,13 @@ export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
           const pctOfGross = Math.abs((s.kind === 'income' ? s.value : s.value) / gross * 100)
 
           return (
-            <div key={s.id} className="sw-cinema"
+            <div key={s.id} className="sw-cinema sw-pressable" role="button" tabIndex={0}
+              onClick={() => setSel(sel === i ? null : i)}
+              title="Tap to see how this step changes your running balance"
               style={{
                 position: 'relative',
                 animationDelay: `${i * 80}ms`,
+                cursor: 'pointer',
               }}>
               <div style={{
                 display: 'grid',
@@ -180,6 +186,16 @@ export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
                 </div>
               </div>
 
+              {/* Drill reveal — how this step moves the running balance. */}
+              {sel === i && (
+                <div style={{ gridColumn: '1 / -1', margin: '6px 0 2px', padding: '7px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+                  {isFirst
+                    ? <>Your gross income — the starting point everything below is taken from.</>
+                    : isLast
+                      ? <>What&rsquo;s left after every deduction: <strong style={{ color: 'var(--c-acc)' }}>{fmt(s.runningAfter)}</strong>.</>
+                      : <>Running balance <strong>{fmt(s.runningBefore)}</strong> {s.value < 0 ? '−' : '+'} {fmt(Math.abs(s.value))} = <strong style={{ color: 'var(--c-text)' }}>{fmt(s.runningAfter)}</strong> · {pctOfGross.toFixed(0)}% of gross{s.note ? ` · ${s.note}` : ''}.</>}
+                </div>
+              )}
               {/* Connecting trail to next step (visual deduction indicator) */}
               {!isLast && s.kind !== 'income' && (
                 <div style={{

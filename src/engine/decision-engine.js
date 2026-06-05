@@ -17,7 +17,7 @@ function _nw(entity)  { try { return netWorth(entity) }    catch { return 0 } }
 function _fq(entity)  { try { return calcFQ(entity).total } catch { return 0 } }
 function _risk(entity){ try { return calcRisk(entity).total } catch { return 0 } }
 function _iht(entity) {
-  try { return te_ihtExposure(entity).chargeableEstate * 0.40 } catch { return 0 }
+  try { return te_ihtExposure(entity).chargeableEstate * TAX.ihtRate } catch { return 0 }
 }
 function _age(entity)  { return entity?.individual?.age || entity?.age || 0 }
 
@@ -124,7 +124,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const cap = TAX.isaAllowance || 20000
       const wrapped = Math.min(gia, cap)
       // CGT exempt on future gains once wrapped; cgt on gains above annual exempt on bed
-      const cgtOnBed = Math.max(0, wrapped * 0.15 - (TAX.cgaAllowance || 3000)) * 0.24
+      const cgtOnBed = Math.max(0, wrapped * 0.15 - TAX.cgaAllowance) * TAX.cgtHigher // 0.15 = embedded-gain proxy
       nwDelta    = wrapped * 0.05 * 10 - cgtOnBed  // 5%/yr sheltered minus bed cost
       fqDelta    = 2
       ihtDelta   = 0
@@ -771,7 +771,7 @@ export function enumeratePaths(entity, decisionType) {
     ],
     'DE-36': [
       { id: 'repay_loan',  label: 'Repay director loan',             riskLevel: 'low',    detail: 'Clears S455 exposure. No tax cost. Requires company liquidity.' },
-      { id: 'div_clear',   label: 'Declare dividend to clear',       riskLevel: 'medium', detail: 'Tax at 10.75%–39.35%. Avoids S455 if dividend before year-end.' },
+      { id: 'div_clear',   label: 'Declare dividend to clear',       riskLevel: 'medium', detail: `Tax at ${_pc(TAX.dividendBR)}–${_pc(TAX.dividendAR)}. Avoids S455 if dividend before year-end.` },
       { id: 'write_off',   label: 'Write off loan (BIK + CT)',       riskLevel: 'high',   detail: 'Taxed as employment income + BIK charge. Rarely optimal.' },
     ],
     'DE-37': [

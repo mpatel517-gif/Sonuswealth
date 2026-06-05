@@ -4048,17 +4048,24 @@ function StressExplorer({ decSolve }) {
 // items "fixed" (multi-variable what-if) to see the remaining waste, charts the
 // PRICE OF WAITING (cost compounds over a horizon slider), and keeps the full
 // methodology depth collapsed below for power users.
+// urgency: 'deadline' = has a clock; 'annual' = resets each tax year (use-it-or-
+// lose-it before 5 April); 'anytime' = no fixed date. action = the plain next step.
 const COI_DOMAIN_PLAIN = {
-  drawdown:           { label: 'Pension & IHT timing', why: 'pulling pension into your estate before the 2027 rule, or drawing in the wrong order' },
-  wrapperSequencing:  { label: 'Un-sheltered investments', why: 'tax drag on holdings sitting outside an ISA or pension' },
-  contributions:      { label: 'Unused pension relief', why: 'higher-rate relief left unclaimed on pension headroom' },
-  taxAllowances:      { label: 'Unused ISA allowance', why: 'cash that could be sheltered from tax each April' },
-  estatePlanning:     { label: 'Estate & will gaps', why: 'lost residence nil-rate band or no current will' },
-  protection:         { label: 'Protection gaps', why: 'cover missing against death or illness' },
-  debt:               { label: 'Expensive debt', why: 'interest you could refinance or clear' },
-  gifting:            { label: 'Gifting allowances', why: 'annual gift exemptions left unused' },
-  propertyDecisions:  { label: 'Property decisions', why: 'tax or cost tied up in property choices' },
-  investmentStrategy: { label: 'Investment efficiency', why: 'return given up versus an efficient mix' },
+  drawdown:           { label: 'Pension & IHT timing', why: 'pulling pension into your estate before the 2027 rule, or drawing in the wrong order', urgency: 'deadline', action: 'Review your draw order & timing before the April 2027 rule' },
+  wrapperSequencing:  { label: 'Un-sheltered investments', why: 'tax drag on holdings sitting outside an ISA or pension', urgency: 'annual', action: 'Move holdings into an ISA/pension over time ("Bed & ISA")' },
+  contributions:      { label: 'Unused pension relief', why: 'higher-rate relief left unclaimed on pension headroom', urgency: 'annual', action: 'Top up your pension to claim the higher-rate relief' },
+  taxAllowances:      { label: 'Unused ISA allowance', why: 'cash that could be sheltered from tax each April', urgency: 'annual', action: "Use this year's £20k ISA before 5 April" },
+  estatePlanning:     { label: 'Estate & will gaps', why: 'lost residence nil-rate band or no current will', urgency: 'anytime', action: 'Make or update your will; check the residence nil-rate band' },
+  protection:         { label: 'Protection gaps', why: 'cover missing against death or illness', urgency: 'anytime', action: 'Review life and income-protection cover' },
+  debt:               { label: 'Expensive debt', why: 'interest you could refinance or clear', urgency: 'anytime', action: 'Refinance or clear the most expensive debt first' },
+  gifting:            { label: 'Gifting allowances', why: 'annual gift exemptions left unused', urgency: 'annual', action: 'Use your £3k annual gift exemption before 5 April' },
+  propertyDecisions:  { label: 'Property decisions', why: 'tax or cost tied up in property choices', urgency: 'anytime', action: 'Review how your property is held' },
+  investmentStrategy: { label: 'Investment efficiency', why: 'return given up versus an efficient mix', urgency: 'anytime', action: 'Review your fund mix against a lower-cost efficient blend' },
+}
+const _COST_URGENCY = {
+  deadline: { tag: 'Clock ticking', tone: 'coral' },
+  annual:   { tag: 'Before 5 Apr', tone: 'amber' },
+  anytime:  { tag: 'Anytime', tone: 'neutral' },
 }
 function CostDrawer({ coi, depth }) {
   const rows = useMemo(() => Object.entries(coi?.byDomain || {})
@@ -4087,6 +4094,29 @@ function CostDrawer({ coi, depth }) {
       <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>A mix of one-off exposures (like tax that falls due) and recurring drag (like unused allowances each year). Tick the ones you'd tackle to see what's left. Information only, not advice.</div>
     </div>
 
+    {(() => {
+      const g = { deadline: rows.filter(r => r.urgency === 'deadline'), annual: rows.filter(r => r.urgency === 'annual'), anytime: rows.filter(r => r.urgency === 'anytime') }
+      const sumOf = a => a.reduce((s, r) => s + r.v, 0)
+      const names = a => a.map(r => r.label).join(', ')
+      const step = (n, color, head, items, note) => items.length ? (
+        <div style={{ display: 'flex', gap: 9, marginBottom: 8 }}>
+          <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: color, color: 'var(--c-bg)', fontSize: 11, fontWeight: 800, lineHeight: '18px', textAlign: 'center' }}>{n}</span>
+          <span style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--c-text)' }}>{head}</strong> — {names(items)} <span style={{ color: 'var(--c-text3)' }}>({_gk(sumOf(items))})</span>. {note}
+          </span>
+        </div>
+      ) : null
+      return (
+        <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 8 }}>Where to start — order by deadline, not just size</div>
+          {step(1, 'var(--c-coral-text)', 'Now — there’s a clock', g.deadline, coi?.daysToImpact > 0 && coi.daysToImpact < 365 ? `${coi.daysToImpact} days left.` : 'Time-sensitive.')}
+          {step(2, 'var(--c-amber-text)', 'Before 5 April — use-it-or-lose-it', g.annual, 'These allowances reset each tax year; unused, they’re gone.')}
+          {step(3, 'var(--c-text3)', 'When you can — no fixed date', g.anytime, 'Worth doing, but no deadline.')}
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.5 }}>The biggest number isn’t always the first move — a smaller item with a deadline can matter more. Each item below carries its next step.</div>
+        </div>
+      )
+    })()}
+
     <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>If you tackled…</div>
@@ -4102,14 +4132,18 @@ function CostDrawer({ coi, depth }) {
               background: on ? 'var(--c-surface2)' : 'var(--c-surface)', border: '1px solid var(--c-border)', width: '100%', opacity: on ? 0.6 : 1 }}>
               <span style={{ width: 16, height: 16, flexShrink: 0, borderRadius: 5, border: `1.5px solid ${on ? 'var(--c-mint-text)' : 'var(--c-text3)'}`, background: on ? 'var(--c-mint-text)' : 'transparent', color: 'var(--c-bg)', fontSize: 11, fontWeight: 900, lineHeight: '14px', textAlign: 'center' }}>{on ? '✓' : ''}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', textDecoration: on ? 'line-through' : 'none' }}>{r.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: on ? 'var(--c-text3)' : 'var(--c-coral-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(r.v)}</span>
+                <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', textDecoration: on ? 'line-through' : 'none' }}>{r.label}</span>
+                    {!on && r.urgency && _COST_URGENCY[r.urgency] && (() => { const u = _COST_URGENCY[r.urgency]; const c = u.tone === 'coral' ? 'var(--c-coral-text)' : u.tone === 'amber' ? 'var(--c-amber-text)' : 'var(--c-text3)'; return <span style={{ fontSize: 9, fontWeight: 700, color: c, border: `1px solid ${c}`, borderRadius: 100, padding: '0 6px', whiteSpace: 'nowrap' }}>{u.tag}</span> })()}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: on ? 'var(--c-text3)' : 'var(--c-coral-text)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{_gk(r.v)}</span>
                 </span>
                 <span style={{ display: 'block', height: 4, marginTop: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)' }}>
                   <span style={{ display: 'block', height: '100%', width: `${Math.max(3, (r.v / maxRow) * 100)}%`, borderRadius: 3, background: on ? 'var(--c-tint-neutral-2)' : 'var(--c-coral-text)' }} />
                 </span>
                 <span style={{ display: 'block', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.4 }}>{r.why}</span>
+                {r.action && <span style={{ display: 'block', fontSize: 10.5, color: on ? 'var(--c-text3)' : 'var(--c-acc)', marginTop: 3, fontWeight: 600, lineHeight: 1.4 }}>→ {r.action}</span>}
               </span>
             </button>
           )
@@ -4792,12 +4826,34 @@ function LeversCard({ entity, decSolve, fi }) {
   const isDecum = !!(decSolve?.rankedPaths?.length)
   return isDecum ? <LeversDecum decSolve={decSolve} /> : <LeversAccum entity={entity} fi={fi} />
 }
-function _LeverRow({ label, detail, deltaLabel, magnitude, max, positive }) {
+// How hard each lever is to actually pull — the second axis of the decision
+// (the biggest lever isn't always the one to do). Effort + a plain "how".
+const LEVER_EFFORT = {
+  grow:   { tag: 'Easiest', tone: 'mint',  how: 'usually just switching to lower-cost funds — no lifestyle change' },
+  pot:    { tag: 'Moderate', tone: 'amber', how: 'needs spare capital to put in' },
+  save:   { tag: 'Moderate', tone: 'amber', how: 'redirect spare income into savings' },
+  spend:  { tag: 'Harder',  tone: 'coral', how: 'a real cut to how you live' },
+  delay:  { tag: 'Harder',  tone: 'coral', how: 'work or retire later' },
+  target: { tag: 'Harder',  tone: 'coral', how: 'plan to live on less in retirement' },
+}
+const _EFFORT_RANK = { grow: 0, pot: 1, save: 1, spend: 2, delay: 2, target: 2 }
+const _EFFORT_COLOR = { mint: 'var(--c-mint-text)', amber: 'var(--c-amber-text)', coral: 'var(--c-coral-text)' }
+// Easiest lever that still has real impact (≥25% of the biggest) — the "quick win".
+function _easyWin(levers) {
+  const maxD = Math.max(1, ...levers.map(l => Math.abs(l.delta)))
+  return [...levers].filter(l => l.delta > 0 && Math.abs(l.delta) >= 0.25 * maxD)
+    .sort((a, b) => (_EFFORT_RANK[a.key] - _EFFORT_RANK[b.key]) || (b.delta - a.delta))[0] || null
+}
+function _LeverRow({ label, detail, deltaLabel, magnitude, max, positive, effort }) {
   const col = positive ? 'var(--c-mint-text)' : 'var(--c-coral-text)'
+  const ec = effort ? _EFFORT_COLOR[effort.tone] : null
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{label}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{label}</span>
+          {effort && <span style={{ fontSize: 9, fontWeight: 700, color: ec, border: `1px solid ${ec}`, borderRadius: 100, padding: '0 6px', whiteSpace: 'nowrap' }}>{effort.tag}</span>}
+        </div>
         <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1, lineHeight: 1.4 }}>{detail}</div>
         <div style={{ display: 'block', height: 4, marginTop: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)' }}>
           <div style={{ height: '100%', width: `${Math.max(3, (magnitude / (max || 1)) * 100)}%`, borderRadius: 3, background: col }} />
@@ -4805,6 +4861,24 @@ function _LeverRow({ label, detail, deltaLabel, magnitude, max, positive }) {
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 64 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: col, fontVariantNumeric: 'tabular-nums' }}>{deltaLabel}</div>
+      </div>
+    </div>
+  )
+}
+// "Where to start" — reconciles impact (biggest bar) with effort (easiest win).
+function _LeverStartHere({ top, easy, fmtImpact }) {
+  if (!top) return null
+  const sameAsTop = easy && easy.key === top.key
+  return (
+    <div style={{ marginTop: 10, padding: '9px 11px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--c-text3)', marginBottom: 4 }}>Where to start</div>
+      <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
+        <strong style={{ color: 'var(--c-text)' }}>Biggest effect:</strong> {top.label.replace(/^(\w)/, c => c.toLowerCase())} ({fmtImpact(top.delta)}).{' '}
+        {sameAsTop
+          ? <>Happily that's also one of the <strong style={{ color: 'var(--c-mint-text)' }}>easiest</strong> to do — {LEVER_EFFORT[easy.key]?.how}.</>
+          : easy
+            ? <><strong style={{ color: 'var(--c-mint-text)' }}>Easiest meaningful win:</strong> {easy.label.replace(/^(\w)/, c => c.toLowerCase())} ({fmtImpact(easy.delta)}) — {LEVER_EFFORT[easy.key]?.how}.</>
+            : null}
       </div>
     </div>
   )
@@ -4869,15 +4943,16 @@ function LeversDecum({ decSolve }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {result.levers.map(l => (
           <_LeverRow key={l.key} label={l.label} detail={l.detail} magnitude={Math.abs(l.delta)} max={maxDelta}
-            positive={l.delta >= 0} deltaLabel={fmtDelta(l.delta)} />
+            positive={l.delta >= 0} deltaLabel={fmtDelta(l.delta)} effort={LEVER_EFFORT[l.key]} />
         ))}
       </div>
+      <_LeverStartHere top={result.levers[0]} easy={_easyWin(result.levers)} fmtImpact={fmtDelta} />
       <div style={{ marginTop: 12 }}>
         <SolverSlider label="Size of the change" value={sizePct} min={5} max={30} step={5} fmt={v => `${v}%`} onChange={setSizePct} dirty={sizePct !== 10} />
         <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Bigger changes move the needle more — drag to see how sensitive each lever is.</div>
       </div>
       <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
-        A constant-return illustration on your assumptions — not a forecast or a recommendation. "Years" caps at your simulated horizon (age {simEndAge}).
+        Each lever's <strong>effect</strong> (the bar) is on your assumptions; its <strong>effort</strong> tag is a general guide — weigh both. A constant-return illustration, not a forecast or a recommendation. "Years" caps at your simulated horizon (age {simEndAge}).
       </div>
     </div>
   )
@@ -4925,15 +5000,16 @@ function LeversAccum({ entity, fi }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {result.levers.map(l => (
           <_LeverRow key={l.key} label={l.label} detail={l.detail} magnitude={Math.abs(l.delta)} max={maxDelta}
-            positive={l.delta >= 0} deltaLabel={l.delta > 0 ? `${l.delta} yrs sooner` : l.delta < 0 ? `${-l.delta} yrs later` : 'no change'} />
+            positive={l.delta >= 0} deltaLabel={l.delta > 0 ? `${l.delta} yrs sooner` : l.delta < 0 ? `${-l.delta} yrs later` : 'no change'} effort={LEVER_EFFORT[l.key]} />
         ))}
       </div>
+      <_LeverStartHere top={result.levers[0]} easy={_easyWin(result.levers)} fmtImpact={(d) => d > 0 ? `${d} yrs sooner` : 'no change'} />
       <div style={{ marginTop: 12 }}>
         <SolverSlider label="Size of the change" value={sizePct} min={5} max={30} step={5} fmt={v => `${v}%`} onChange={setSizePct} dirty={sizePct !== 10} />
         <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Bigger changes move the needle more — drag to see how sensitive each lever is.</div>
       </div>
       <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>
-        The 25× target is a planning rule of thumb. A constant-return illustration on your assumptions — not a forecast or a recommendation.
+        Each lever's <strong>effect</strong> (the bar) is on your assumptions; its <strong>effort</strong> tag is a general guide — weigh both. The 25× target is a planning rule of thumb. An illustration, not a forecast or a recommendation.
       </div>
     </div>
   )

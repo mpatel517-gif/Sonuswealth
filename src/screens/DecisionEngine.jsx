@@ -27,7 +27,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { simulateAction, enumeratePaths, generateRecommendation, stressTest } from '../engine/decision-engine.js'
 import { objectiveFor, optionGloss } from '../engine/decision-content.js'
-import { PathComparisonChart, BeforeAfterBar } from '../components/Decisions/DecisionCharts.jsx'
+import { PathComparisonChart, DecisionTrajectoryChart, BeforeAfterBar } from '../components/Decisions/DecisionCharts.jsx'
 import { checklistFor, reviewHintFor } from '../engine/decision-commit-content.js'
 import { DECISION_TYPES_ALL, DECISION_CATEGORIES } from '../engine/decision-catalogue.js'
 
@@ -640,21 +640,31 @@ function StepContext({ context, onChange }) {
   )
 }
 
+// Decisions where time is the point — they get a trajectory chart on top of the
+// comparison bars (pension contributions, mortgage overpay-vs-invest, drawdown
+// timing). The trajectory self-hides if before/after data is missing.
+const TIME_BASED_DECISIONS = new Set(['DE-01', 'DE-02', 'DE-03', 'DE-04', 'DE-05', 'DE-08'])
+
 // ── Step 3: Options ─────────────────────────────────────────────────────────
 function StepOptions({ paths, decId }) {
   const isProperty = decId === 'DE-09'
-  // Chart the metric that actually differs between options. Net worth if it
-  // varies; else inheritance tax; else no chart (e.g. wills/trusts don't change
-  // net worth — three identical £0 bars would be noise). Founder 2026-06-06.
+  // Headline metric = the FIRST that actually differs between options, so every
+  // decision shows a real comparison: net worth → inheritance tax → financial-
+  // health score. If none differ numerically (e.g. wills/POA differ in approach
+  // not in your numbers) we say so rather than drawing identical bars. The chart
+  // OWNS this metric — the option cards below show only the other figures, so no
+  // number is shown twice (founder 2026-06-06: charts were redundant + anemic).
   const varies = (key) => new Set(paths.map(p => Math.round((p.simulation?.delta?.[key]) || 0))).size > 1
-  const chartKey = varies('nw') ? 'nw' : varies('iht') ? 'iht' : null
+  const chartKey = varies('nw') ? 'nw' : varies('iht') ? 'iht' : varies('fq') ? 'fq' : null
+  const showTrajectory = TIME_BASED_DECISIONS.has(decId)
+  const horizon = paths[0]?.simulation?.horizon
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
         Here are <strong>{paths.length}</strong> ways to go, each worked out with your own
         numbers. You don't choose yet — the next step lets you set what matters most.
       </div>
-      {chartKey && (
+      {chartKey ? (
         <div style={{ marginBottom: 14 }}>
           <PathComparisonChart
             paths={paths}
@@ -662,10 +672,34 @@ function StepOptions({ paths, decId }) {
             axisLabel={isProperty && chartKey === 'nw' ? 'Cash freed up vs today' : undefined}
           />
         </div>
+      ) : (
+        <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          These options differ in <strong>approach and risk</strong>, not in your headline numbers —
+          compare the details on each below.
+        </div>
+      )}
+      {showTrajectory && (
+        <div style={{ marginBottom: 14 }}>
+          <DecisionTrajectoryChart paths={paths} horizon={horizon} />
+        </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {paths.map(p => {
           const d = p.simulation?.delta
+          // Build the chip set, EXCLUDING whatever the headline chart already
+          // shows, so the card never repeats the chart's number.
+          const chips = []
+          if (p.impact) {
+            chips.push({ label: 'Income / yr', value: fmt(p.impact.yield_p_a), good: p.impact.yield_p_a > 0 })
+            chips.push({ label: 'Tax to pay now', value: fmt(p.impact.cgt_today), good: p.impact.cgt_today === 0 })
+            chips.push({ label: 'Left in your estate', value: fmt(p.impact.iht_in_estate), good: p.impact.iht_in_estate < 300_000 })
+            if (chartKey !== 'nw') chips.push({ label: 'Cash freed up', value: fmt(p.impact.liquidity), good: p.impact.liquidity > 0 })
+          } else {
+            if (chartKey !== 'nw') chips.push({ label: 'Net worth', value: fmtSigned(d?.nw), good: (d?.nw ?? 0) >= 0 })
+            if (chartKey !== 'iht') chips.push({ label: 'Inheritance tax', value: fmtSigned(d?.iht), good: (d?.iht ?? 0) <= 0 })
+            chips.push({ label: 'Time frame', value: p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—', good: true })
+            chips.push({ label: 'Confidence', value: CONF_LABEL[p.simulation?.confidence] || p.simulation?.confidence || '—', good: p.simulation?.confidence === 'HIGH' })
+          }
           return (
             <div key={p.id} className="sw-tile" style={{ padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.plainLabel || p.title || p.label}</div>
@@ -675,22 +709,10 @@ function StepOptions({ paths, decId }) {
                 </div>
               )}
               <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.45 }}>{p.sub || p.detail}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, marginTop: 8 }}>
-                {p.impact ? (
-                  <>
-                    <ImpactChip label="Income / yr"  value={fmt(p.impact.yield_p_a)} good={p.impact.yield_p_a > 0} />
-                    <ImpactChip label="Tax to pay now" value={fmt(p.impact.cgt_today)} good={p.impact.cgt_today === 0} />
-                    <ImpactChip label="Left in your estate" value={fmt(p.impact.iht_in_estate)} good={p.impact.iht_in_estate < 300_000} />
-                    <ImpactChip label="Cash freed up" value={fmt(p.impact.liquidity)} good={p.impact.liquidity > 0} />
-                  </>
-                ) : (
-                  <>
-                    <ImpactChip label="Net worth" value={fmtSigned(d?.nw)}  good={(d?.nw ?? 0) >= 0} />
-                    <ImpactChip label="Inheritance tax"       value={fmtSigned(d?.iht)} good={(d?.iht ?? 0) <= 0} />
-                    <ImpactChip label="Time frame"   value={p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—'} good />
-                    <ImpactChip label="Confidence" value={CONF_LABEL[p.simulation?.confidence] || p.simulation?.confidence || '—'} good={p.simulation?.confidence === 'HIGH'} />
-                  </>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 4, marginTop: 8 }}>
+                {chips.map((c, ci) => (
+                  <ImpactChip key={ci} label={c.label} value={c.value} good={c.good} />
+                ))}
               </div>
             </div>
           )

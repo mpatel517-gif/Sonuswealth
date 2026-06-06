@@ -2741,6 +2741,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         onViewModeChange={setViewMode}
         rulesVersion={BRAND.rulesVersion}
         dataDate={BRAND.dataDate}
+        showWindowRow={false}
       />
 
       {/* P13-6 (2026-05-28, IFA hardening): SIPP-IHT April 2027 countdown banner.

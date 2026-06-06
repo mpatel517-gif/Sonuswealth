@@ -1653,6 +1653,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
 
+        <DecisionDrawers screen="flow" onOpen={onOpenDecision} />
+
         {/* §0 — STATEMENT STRIP (MoneyXDrawer) REMOVED from Cashflow (founder
              decision 2026-06-04, locking a 3×-oscillating call). The Balance
              Sheet / Income Statement / Tax / Protection / Trusts / Cost-of-
@@ -1780,8 +1782,6 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
 
           {/* §C engine internals moved into the 'costs' question-tile (extraTiles). */}
         </div>
-
-        <DecisionDrawers screen="flow" onOpen={onOpenDecision} />
 
         {/* Disclaimer footer */}
         <div style={S.disclaimer}>

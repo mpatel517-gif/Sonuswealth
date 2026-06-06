@@ -3580,6 +3580,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
 
   return (
     <div className="screen">
+      <DecisionDrawers screen="money" onOpen={onOpenDecision} />
+
       {/* ── X28 top-bar: 7 windows + 4 view modes + rules chip ───────────── */}
       <div style={{ margin: '0 -16px' }}>
         <X28TopBar
@@ -3589,6 +3591,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           onViewModeChange={(m) => { setViewMode(m); if (m !== 'scenario') setScenarioEntity(null) }}
           rulesVersion={BRAND.rulesVersion}
           dataDate={BRAND.dataDate}
+          showWindowRow={false}
         />
       </div>
 
@@ -4586,8 +4589,6 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
 
       </>
       )}{/* ── /G13 empty-state ternary (heroTotals == 0 ? empty : <>...</>) ── */}
-
-      <DecisionDrawers screen="money" onOpen={onOpenDecision} />
 
       {/* ── Disclaimer + rules ──────────────────────────────────────────── */}
       <p className="disclaimer">{BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}</p>

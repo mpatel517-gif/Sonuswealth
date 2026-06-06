@@ -2488,6 +2488,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         onViewModeChange={setViewMode}
         rulesVersion={TAX.ver || 'UK-2026.1'}
         dataDate={entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        showWindowRow={false}
       />
 
       {/* Z1 — Triple Anchor REMOVED 2026-05-28 (founder direction).

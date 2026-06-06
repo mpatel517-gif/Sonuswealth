@@ -26,6 +26,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { simulateAction, enumeratePaths, generateRecommendation, stressTest } from '../engine/decision-engine.js'
+import { TAX } from '../engine/fq-calculator.js'
 import { objectiveFor, optionGloss } from '../engine/decision-content.js'
 import { PathComparisonChart, DecisionTrajectoryChart, BeforeAfterBar } from '../components/Decisions/DecisionCharts.jsx'
 import { checklistFor, reviewHintFor } from '../engine/decision-commit-content.js'
@@ -68,6 +69,7 @@ const PROPERTY_PATHS = [
       complexity:   1,
     },
     scores: { tax: 0.6, risk: 0.7, liquidity: 0.2, legacy: 0.5 },
+    bottomLine: 'Bottom line: keeps your home with no tax to pay — but it earns nothing and stays fully in your estate.',
     explanation: 'No income, and no capital gains tax to pay. Stays in your estate at full value, so it could be taxed when you die unless the main-home allowance applies.',
   },
   {
@@ -84,6 +86,7 @@ const PROPERTY_PATHS = [
       complexity:   3,
     },
     scores: { tax: 0.3, risk: 0.4, liquidity: 0.5, legacy: 0.5 },
+    bottomLine: 'Bottom line: turns the home into yearly rental income — but you become a landlord and pay income tax on the rent.',
     explanation: 'Earns rent after costs, but the landlord rules limit how much mortgage interest you can offset against tax. Still counts toward your estate, with tenants and upkeep to manage.',
   },
   {
@@ -98,6 +101,7 @@ const PROPERTY_PATHS = [
       complexity:   2,
     },
     scores: { tax: 0.7, risk: 0.6, liquidity: 0.95, legacy: 0.7 },
+    bottomLine: 'Bottom line: frees a large lump sum and cuts your future tax — but you pay capital gains tax now.',
     explanation: 'You pay capital gains tax now, but free up a large lump of cash. Moving it into an ISA and a pension shelters future growth from tax and trims your estate.',
   },
   {
@@ -112,6 +116,7 @@ const PROPERTY_PATHS = [
       complexity:   4,
     },
     scores: { tax: 0.4, risk: 0.5, liquidity: 0.2, legacy: 0.5 },
+    bottomLine: 'Bottom line: more rental income — but your money stays locked in property and capital gains tax is due on the sale.',
     explanation: 'Earns more rent, but ties your money up in property again. Capital gains tax is due on the sale, and your money stays concentrated in one type of asset.',
   },
 ]
@@ -401,7 +406,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
         <StepContext context={context} onChange={setContext} />
       )}
       {step === 2 && decision && (
-        <StepOptions paths={computedPaths} decId={decision.code || decision.id} />
+        <StepOptions paths={computedPaths} decId={decision.code || decision.id} entity={entity} />
       )}
       {step === 3 && decision && (
         <StepWeights weights={weights} onChange={setWeights} />
@@ -661,16 +666,68 @@ const NW_METRIC_LABEL = {
 // headline bar; the per-option figures + 'Good if' carry the comparison.
 const SUPPRESS_NW_CHART = new Set(['DE-11', 'DE-12', 'DE-19', 'DE-20', 'DE-21', 'DE-40'])
 
+// Continuous "model it" levers (PP-3 Goal-Seek): decisions where you control an
+// AMOUNT. The Options step shows a slider bounded by the max allowed and
+// recomputes the comparison live. `param` must match the simulateAction key.
+function leverFor(decId) {
+  const isa = TAX.isaAllowance || 20000
+  const aa  = TAX.pensionAA || 60000
+  const M = {
+    'DE-03': { param: 'contribution',   label: 'How much you pay into your pension',  max: aa,     step: 1000,  def: Math.min(aa, 20000) },
+    'DE-06': { param: 'isaAmount',      label: 'How much you put in an ISA this year', max: isa,   step: 500,   def: isa },
+    'DE-08': { param: 'monthlySurplus', label: 'Spare money each month',              max: 3000,   step: 50,    def: 500, perMonth: true },
+    'DE-15': { param: 'giftAmount',     label: 'How much you gift',                   max: 200000, step: 5000,  def: 50000 },
+    'DE-26': { param: 'eisAmount',      label: 'How much you invest (EIS/SEIS)',      max: 200000, step: 5000,  def: 20000 },
+    'DE-27': { param: 'vctAmount',      label: 'How much you invest in VCTs',         max: 200000, step: 5000,  def: 20000 },
+    'DE-28': { param: 'bprAmount',      label: 'How much you hold in BPR assets',     max: 500000, step: 10000, def: 100000 },
+    'DE-29': { param: 'donationAmount', label: 'How much you donate',                 max: 50000,  step: 1000,  def: 5000 },
+  }
+  return M[decId] || null
+}
+
+function OptionLever({ lever, value, onChange }) {
+  const f = (v) => `£${Math.round(+v).toLocaleString('en-GB')}${lever.perMonth ? '/mo' : ''}`
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14, background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 'var(--r-lg, 20px)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', minWidth: 0 }}>{lever.label}</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-acc)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{f(value)}</span>
+      </div>
+      <input type="range" min={0} max={lever.max} step={lever.step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%' }} aria-label={lever.label} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 2 }}>
+        <span>{f(0)}</span><span>max {f(lever.max)}</span>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.5 }}>
+        Drag to model the amount — the comparison below updates with your number.
+      </div>
+    </div>
+  )
+}
+
 // ── Step 3: Options ─────────────────────────────────────────────────────────
-function StepOptions({ paths, decId }) {
+function StepOptions({ paths, decId, entity }) {
   const isProperty = decId === 'DE-09'
+  // PP-3 "model it" lever: decisions with a controllable amount get a slider
+  // (bounded by the max allowed) that recomputes the comparison live.
+  const lever = leverFor(decId)
+  const [leverVal, setLeverVal] = useState(lever?.def ?? 0)
+  const view = useMemo(() => {
+    if (!lever || !entity) return paths
+    return paths.map(p => {
+      try {
+        const sim = simulateAction(entity, decId, { [lever.param]: leverVal, pathId: p.id, riskLevel: p.riskLevel })
+        return { ...p, simulation: { ...(p.simulation || {}), ...sim } }
+      } catch { return p }
+    })
+  }, [paths, lever, leverVal, entity, decId])
   // Headline metric = the FIRST that actually differs between options, so every
   // decision shows a real comparison: net worth → inheritance tax → financial-
   // health score. If none differ numerically (e.g. wills/POA differ in approach
   // not in your numbers) we say so rather than drawing identical bars. The chart
   // OWNS this metric — the option cards below show only the other figures, so no
   // number is shown twice (founder 2026-06-06: charts were redundant + anemic).
-  const varies = (key) => new Set(paths.map(p => Math.round((p.simulation?.delta?.[key]) || 0))).size > 1
+  const varies = (key) => new Set(view.map(p => Math.round((p.simulation?.delta?.[key]) || 0))).size > 1
   // For property (keep/let/sell) the metric that varies meaningfully AND that the
   // user weighs is INCOME, not cash-freed (which is £0 for 3 of 4 options and read
   // as a contradiction next to the income chip). Founder 2026-06-06. Other
@@ -683,16 +740,17 @@ function StepOptions({ paths, decId }) {
   const chartAxisLabel = chartKey === 'nw' && NW_METRIC_LABEL[decId] ? `${nwLabel} vs today` : undefined
   const suppressedCost = SUPPRESS_NW_CHART.has(decId) && !chartKey
   const showTrajectory = TIME_BASED_DECISIONS.has(decId)
-  const horizon = paths[0]?.simulation?.horizon
+  const horizon = view[0]?.simulation?.horizon
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
         Here are <strong>{paths.length}</strong> ways to go, each worked out with your own
         numbers. You don't choose yet — the next step lets you set what matters most.
       </div>
+      {lever && <OptionLever lever={lever} value={leverVal} onChange={setLeverVal} />}
       {chartKey ? (
         <div style={{ marginBottom: 14 }}>
-          <PathComparisonChart paths={paths} valueKey={chartKey} axisLabel={chartAxisLabel} />
+          <PathComparisonChart paths={view} valueKey={chartKey} axisLabel={chartAxisLabel} />
         </div>
       ) : (
         <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
@@ -703,11 +761,11 @@ function StepOptions({ paths, decId }) {
       )}
       {showTrajectory && (
         <div style={{ marginBottom: 14 }}>
-          <DecisionTrajectoryChart paths={paths} horizon={horizon} />
+          <DecisionTrajectoryChart paths={view} horizon={horizon} />
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {paths.map(p => {
+        {view.map(p => {
           const d = p.simulation?.delta
           // Build the chip set, EXCLUDING whatever the headline chart already
           // shows, so the card never repeats the chart's number.
@@ -730,6 +788,9 @@ function StepOptions({ paths, decId }) {
           return (
             <div key={p.id} className="sw-tile" style={{ padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.plainLabel || p.title || p.label}</div>
+              {p.bottomLine && (
+                <div style={{ fontSize: 12, color: 'var(--c-text)', marginTop: 5, lineHeight: 1.5, paddingLeft: 8, borderLeft: '2px solid var(--c-acc)' }}>{p.bottomLine}</div>
+              )}
               {p.goodIf && (
                 <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 3, lineHeight: 1.45 }}>
                   <span style={{ fontWeight: 700, color: 'var(--c-acc)' }}>Good if</span> {p.goodIf}
@@ -817,7 +878,9 @@ function DecisionWheel({ weights }) {
         textTransform: 'uppercase', letterSpacing: 0.5,
         zIndex: 1,
       }} title="Decision Wheel is a visualisation. Drag the priority sliders below to change weights.">View only</div>
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" style={{ maxWidth: 240 }}>
+      {/* viewBox padded so the edge labels ("Estate" on the left, "Risk" on the
+          right) aren't clipped by the SVG bounds (founder 2026-06-06: ":state"). */}
+      <svg viewBox={`-34 -16 ${SIZE + 68} ${SIZE + 32}`} width="100%" style={{ maxWidth: 248 }}>
         {/* Guide rings */}
         {[0.25, 0.5, 0.75, 1].map(s => (
           <circle key={s} cx={CX} cy={CY} r={R * s}

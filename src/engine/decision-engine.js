@@ -156,8 +156,9 @@ export function simulateAction(entity, decisionType, params = {}) {
       const aa          = TAX.pensionAA || 60000
       const currentContrib = entity?.assets?.sipp?.annualContrib || 0
       const headroom    = Math.max(0, Math.min(aa, income) - currentContrib)
-      nwDelta    = headroom * _marginalRate(income)   // benefit = tax relief retained, at YOUR marginal rate (not a flat 45%)
-      fqDelta    = headroom > 10000 ? 5 : headroom > 2000 ? 2 : 0
+      const contribution = params.contribution != null ? Math.max(0, Math.min(+params.contribution, aa)) : headroom // slidable, up to the allowance
+      nwDelta    = contribution * _marginalRate(income)   // benefit = tax relief retained, at YOUR marginal rate (not a flat 45%)
+      fqDelta    = contribution > 10000 ? 5 : contribution > 2000 ? 2 : 0
       ihtDelta   = 0 // unused pensions count toward the estate from Apr 2027 (enacted) — a contribution no longer lastingly removes value from your estate
       horizon    = Math.max(1, 57 - age)
       confidence = 'MED'
@@ -193,7 +194,9 @@ export function simulateAction(entity, decisionType, params = {}) {
       const cap = TAX.isaAllowance || 20000
       // Differential growth on what you can actually invest THIS year — the lower
       // of the ISA allowance and your investable surplus/cash — not a flat constant.
-      const investableIsa = Math.max(0, Math.min(cap, params.monthlySurplus ? params.monthlySurplus * 12 : (entity?.assets?.cash?.savings || cap)))
+      const investableIsa = params.isaAmount != null
+        ? Math.max(0, Math.min(+params.isaAmount, cap))
+        : Math.max(0, Math.min(cap, params.monthlySurplus ? params.monthlySurplus * 12 : (entity?.assets?.cash?.savings || cap)))
       nwDelta    = investableIsa * (TAX.growthDefault ?? 0.05) * 10
       fqDelta    = 3
       ihtDelta   = 0

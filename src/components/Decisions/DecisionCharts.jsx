@@ -51,9 +51,12 @@ function fmtSigned(v) {
 //   betterUp: a positive change points right (good). For IHT a SMALLER bill is
 //   better, so we flip the bar direction but keep the displayed figure honest.
 const METRIC = {
-  nw:   { caption: 'Net-worth change vs today',          unit: '£',   betterUp: true,  signed: true },
-  iht:  { caption: 'Inheritance-tax change vs today',    unit: '£',   betterUp: false, signed: true },
-  fq:   { caption: 'Financial-health score change',      unit: 'pts', betterUp: true,  signed: true },
+  nw:     { caption: 'Net-worth change vs today',          unit: '£',   betterUp: true,  signed: true },
+  iht:    { caption: 'Inheritance-tax change vs today',    unit: '£',   betterUp: false, signed: true },
+  fq:     { caption: 'Financial-health score change',      unit: 'pts', betterUp: true,  signed: true },
+  // A LEVEL (income each year), not a change-vs-today — signed:false so bars read
+  // "£17k" not "+£17k", and the footer doesn't say "change versus today".
+  income: { caption: 'Income each year',                   unit: '£',   betterUp: true,  signed: false },
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,12 +95,14 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
 
   // One unit for the WHOLE chart so bars never mix "£2,030" with "£15k".
   const useK = meta.unit === '£' && maxAbs >= 10_000
+  const signed = meta.signed !== false   // income is a LEVEL → no leading '+'
   const fmtBar = (n) => {
+    const plus = signed ? '+' : ''
     if (meta.unit === 'pts') {
-      const s = n > 0 ? '+' : n < 0 ? '−' : ''
+      const s = n > 0 ? plus : n < 0 ? '−' : ''
       return n === 0 ? '0 pts' : `${s}${Math.abs(Math.round(n))} pts`
     }
-    const a = Math.abs(n), s = n > 0 ? '+' : n < 0 ? '−' : ''
+    const a = Math.abs(n), s = n > 0 ? plus : n < 0 ? '−' : ''
     if (a === 0) return '£0'
     if (a >= 1_000_000) return `${s}£${(a / 1e6).toFixed(1)}m`
     if (useK) return `${s}£${Math.round(a / 1000)}k`
@@ -144,9 +149,11 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
       </div>
 
       <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
-        {anyNeg
-          ? 'The line marks today — longer bars to the right are better, to the left are worse.'
-          : 'Longer bars are better. All figures are the change versus where you are today.'}
+        {!signed
+          ? 'Longer bars mean more income each year. Rental income is taxable; income from an ISA or pension is not.'
+          : anyNeg
+            ? 'The line marks today — longer bars to the right are better, to the left are worse.'
+            : 'Longer bars are better. All figures are the change versus where you are today.'}
         {valueKey === 'iht' && ' A bar to the right means a smaller inheritance-tax bill.'}
       </div>
     </div>

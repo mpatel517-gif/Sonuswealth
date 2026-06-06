@@ -226,7 +226,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       // Keep impact (drives the 4 property chips); add a comparable simulation so
       // the comparison chart renders. nw proxy = cash freed up by the option.
       ...p,
-      simulation: p.simulation || { delta: { nw: p.impact?.liquidity || 0, iht: (p.impact?.iht_in_estate ?? 0) - 450000 } },
+      simulation: p.simulation || { delta: { nw: p.impact?.liquidity || 0, iht: (p.impact?.iht_in_estate ?? 0) - 450000, income: p.impact?.yield_p_a || 0 } },
     })))
     try {
       // Engine paths use {id,label,riskLevel,detail,simulation}; the wizard's
@@ -657,7 +657,11 @@ function StepOptions({ paths, decId }) {
   // OWNS this metric — the option cards below show only the other figures, so no
   // number is shown twice (founder 2026-06-06: charts were redundant + anemic).
   const varies = (key) => new Set(paths.map(p => Math.round((p.simulation?.delta?.[key]) || 0))).size > 1
-  const chartKey = varies('nw') ? 'nw' : varies('iht') ? 'iht' : varies('fq') ? 'fq' : null
+  // For property (keep/let/sell) the metric that varies meaningfully AND that the
+  // user weighs is INCOME, not cash-freed (which is £0 for 3 of 4 options and read
+  // as a contradiction next to the income chip). Founder 2026-06-06. Other
+  // decisions fall through net worth → IHT → financial-health score.
+  const chartKey = isProperty ? 'income' : (varies('nw') ? 'nw' : varies('iht') ? 'iht' : varies('fq') ? 'fq' : null)
   const showTrajectory = TIME_BASED_DECISIONS.has(decId)
   const horizon = paths[0]?.simulation?.horizon
   return (
@@ -668,11 +672,7 @@ function StepOptions({ paths, decId }) {
       </div>
       {chartKey ? (
         <div style={{ marginBottom: 14 }}>
-          <PathComparisonChart
-            paths={paths}
-            valueKey={chartKey}
-            axisLabel={isProperty && chartKey === 'nw' ? 'Cash freed up vs today' : undefined}
-          />
+          <PathComparisonChart paths={paths} valueKey={chartKey} />
         </div>
       ) : (
         <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
@@ -692,10 +692,14 @@ function StepOptions({ paths, decId }) {
           // shows, so the card never repeats the chart's number.
           const chips = []
           if (p.impact) {
-            chips.push({ label: 'Income / yr', value: fmt(p.impact.yield_p_a), good: p.impact.yield_p_a > 0 })
-            chips.push({ label: 'Tax to pay now', value: fmt(p.impact.cgt_today), good: p.impact.cgt_today === 0 })
+            // Chart owns income → don't repeat it on the card. "Capital gains tax"
+            // (not "Tax to pay now") so £0 for keep/let reads correctly as "no
+            // sale = no CGT"; rental income tax is separate + ongoing (noted in
+            // the option text), not a one-off now.
+            if (chartKey !== 'income') chips.push({ label: 'Income / yr', value: fmt(p.impact.yield_p_a), good: p.impact.yield_p_a > 0 })
+            chips.push({ label: 'Capital gains tax', value: fmt(p.impact.cgt_today), good: p.impact.cgt_today === 0 })
+            chips.push({ label: 'Cash freed up', value: fmt(p.impact.liquidity), good: p.impact.liquidity > 0 })
             chips.push({ label: 'Left in your estate', value: fmt(p.impact.iht_in_estate), good: p.impact.iht_in_estate < 300_000 })
-            if (chartKey !== 'nw') chips.push({ label: 'Cash freed up', value: fmt(p.impact.liquidity), good: p.impact.liquidity > 0 })
           } else {
             if (chartKey !== 'nw') chips.push({ label: 'Net worth', value: fmtSigned(d?.nw), good: (d?.nw ?? 0) >= 0 })
             if (chartKey !== 'iht') chips.push({ label: 'Inheritance tax', value: fmtSigned(d?.iht), good: (d?.iht ?? 0) <= 0 })

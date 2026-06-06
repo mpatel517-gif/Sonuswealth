@@ -53,7 +53,7 @@ const _PATH_FACTORS = {
   'DE-13': { current_acct: { nw: 0, fq: 0, conf: 'HIGH' }, easy_access: { nw: 1, conf: 'HIGH' }, premium_bond: { nw: 0.95, conf: 'HIGH' } },
   'DE-14': { instant_only: { nw: 0, conf: 'HIGH' }, ladder_3: { nw: 0.5, conf: 'HIGH' }, ladder_12: { nw: 1, conf: 'HIGH' } },
   'DE-15': { annual_exempt: { iht: 0.1, conf: 'HIGH' }, pet_gift: { iht: 1, conf: 'MED' }, trust_gift: { iht: 1, conf: 'LOW' } },
-  'DE-16': { bare_trust: { iht: 0.3, conf: 'HIGH' }, disc_trust: { iht: 1, conf: 'MED' }, iip_trust: { iht: 0.7, conf: 'MED' } },
+  'DE-16': { bare_trust: { iht: 1, conf: 'HIGH' }, disc_trust: { iht: 0.6, conf: 'MED' }, iip_trust: { iht: 0.7, conf: 'MED' } }, // bare=outright PET (full removal after 7yr) beats discretionary=CLT (20% entry charge + periodic) on net IHT relief — was inverted
   'DE-17': { simple_will: { nw: 0.9, conf: 'MED' }, mirror_will: { nw: 0.95, conf: 'MED' }, li_trust_will: { nw: 1, iht: 1, conf: 'HIGH' } },
   'DE-18': { no_lpa: { nw: 0, conf: 'HIGH' }, fin_lpa: { nw: 0.7, conf: 'MED' }, both_lpas: { nw: 1, conf: 'HIGH' } },
   'DE-19': { term: { nw: 0.8, conf: 'MED' }, fib: { nw: 0.9, conf: 'MED' }, wol_trust: { nw: 1, iht: 1, conf: 'LOW' } },
@@ -92,6 +92,22 @@ function _pathFactor(decisionType, pathId, riskLevel) {
     high:   { nw: 1,   iht: 1,   fq: 1,   conf: 'LOW' },
   }
   return byRisk[riskLevel] || { nw: 1, iht: 1, fq: 1 }
+}
+
+// Marginal income-tax rate for this entity — replaces hardcoded 40/45% in relief
+// and cost decisions. 2026/27 bands from TAX.
+function _marginalRate(income) {
+  if (income > (TAX.art ?? 125140)) return TAX.ar ?? 0.45
+  if (income > (TAX.brt ?? 50270))  return TAX.hr ?? 0.40
+  if (income > (TAX.pa  ?? 12570))  return TAX.br ?? 0.20
+  return 0
+}
+
+// Dividend tax rate by the entity's marginal band (directors are usually HR/AR).
+function _dividendRate(income) {
+  if (income > (TAX.art ?? 125140)) return TAX.dividendAR ?? 0.3935
+  if (income > (TAX.brt ?? 50270))  return TAX.dividendHR ?? 0.3575
+  return TAX.dividendBR ?? 0.1075
 }
 
 // ── simulateAction ────────────────────────────────────────────────────────────
@@ -140,9 +156,9 @@ export function simulateAction(entity, decisionType, params = {}) {
       const aa          = TAX.pensionAA || 60000
       const currentContrib = entity?.assets?.sipp?.annualContrib || 0
       const headroom    = Math.max(0, Math.min(aa, income) - currentContrib)
-      nwDelta    = headroom * 1.45   // 45% tax relief (HR taxpayer) rough compound
+      nwDelta    = headroom * _marginalRate(income)   // benefit = tax relief retained, at YOUR marginal rate (not a flat 45%)
       fqDelta    = headroom > 10000 ? 5 : headroom > 2000 ? 2 : 0
-      ihtDelta   = -(headroom * TAX.ihtRate) // SIPP contribution out of estate (pre-2027). £×rate, not £×years.
+      ihtDelta   = 0 // unused pensions count toward the estate from Apr 2027 (enacted) — a contribution no longer lastingly removes value from your estate
       horizon    = Math.max(1, 57 - age)
       confidence = 'MED'
       break
@@ -154,7 +170,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const employerGain = salary * workplacePct
       nwDelta    = employerGain * Math.min(20, Math.max(0, 60 - age))
       fqDelta    = employerGain > 2000 ? 4 : 1
-      ihtDelta   = -(employerGain * Math.min(20, Math.max(0, 60 - age)) * TAX.ihtRate) // cumulative pension out of estate
+      ihtDelta   = 0 // pensions enter the estate from Apr 2027 (enacted) — no lasting IHT relief from routing contributions
       horizon    = Math.max(1, 60 - age)
       confidence = 'MED'
       break
@@ -167,7 +183,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const niSaved    = sacrificed * (TAX.employerNICRate ?? 0.15)
       nwDelta    = niSaved * Math.min(20, Math.max(0, 65 - age))
       fqDelta    = niSaved > 500 ? 3 : 1
-      ihtDelta   = -(sacrificed * Math.min(20, Math.max(0, 65 - age)) * TAX.ihtRate) // cumulative sacrifice out of estate
+      ihtDelta   = 0 // pensions enter the estate from Apr 2027 (enacted) — sacrifice no longer removes value from your estate
       horizon    = Math.max(1, 65 - age)
       confidence = 'MED'
       break
@@ -175,9 +191,10 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-06': { // ISA: stocks & shares vs cash vs LISA split
       const cap = TAX.isaAllowance || 20000
-      const existingIsa = entity?.assets?.isa?.value || 0
-      // S&S ISA over cash: ~3% real return differential over 10yr
-      nwDelta    = cap * 0.03 * 10
+      // Differential growth on what you can actually invest THIS year — the lower
+      // of the ISA allowance and your investable surplus/cash — not a flat constant.
+      const investableIsa = Math.max(0, Math.min(cap, params.monthlySurplus ? params.monthlySurplus * 12 : (entity?.assets?.cash?.savings || cap)))
+      nwDelta    = investableIsa * (TAX.growthDefault ?? 0.05) * 10
       fqDelta    = 3
       ihtDelta   = 0
       horizon    = 10
@@ -205,7 +222,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const surplus  = params.monthlySurplus || 500
       const annualSurplus = surplus * 12
       // Invest outperforms overpay when return > mortgage rate net of tax
-      const investReturn = annualSurplus * 0.07 * 10
+      const investReturn = annualSurplus * (TAX.growthDefault ?? 0.05) * 10
       const overpayReturn = annualSurplus * rate * 10
       nwDelta    = investReturn - overpayReturn
       fqDelta    = nwDelta > 0 ? 3 : 1
@@ -259,9 +276,12 @@ export function simulateAction(entity, decisionType, params = {}) {
       const propertyValue = entity?.assets?.property?.total || 450000
       const releaseRate   = 0.55 // max LTV for equity release
       const released      = propertyValue * releaseRate * 0.25 // typical drawdown
-      nwDelta    = released // immediate liquidity gain
+      // A lifetime mortgage is a LOAN, not wealth: ~neutral today, then net worth
+      // erodes as interest rolls up. The debt does reduce the taxable estate.
+      const rolledInterest = released * (Math.pow(1.07, 15) - 1) // ~7%/yr rolled up over the horizon
+      nwDelta    = -(rolledInterest)
       fqDelta    = 2
-      ihtDelta   = -(released * TAX.ihtRate) // released principal leaves the estate
+      ihtDelta   = -(released * TAX.ihtRate) // the loan/spent cash reduces the estate
       horizon    = 15
       confidence = 'LOW'
       break
@@ -399,11 +419,14 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-24': { // Spousal transfer: equalise allowances
-      // Transfer assets to use lower-rate spouse's CGT / PA / ISA allowance
-      const savingsOnTransfer = (TAX.pa || 12570) * 0.20  // basic rate saved
+      // Move income/gains from the higher earner to a lower-rate spouse: saving =
+      // shiftable higher-band income (capped by spouse PA headroom) × the rate gap.
+      const shiftable = Math.max(0, income - (TAX.brt ?? 50270))
+      const rateGap   = Math.max(0, _marginalRate(income) - (TAX.br ?? 0.20))
+      const savingsOnTransfer = Math.min(shiftable, TAX.pa ?? 12570) * rateGap
       nwDelta    = savingsOnTransfer * 5
       fqDelta    = 2
-      ihtDelta   = 0
+      ihtDelta   = 0 // inter-spouse transfers are IHT-exempt — equalising doesn't change combined-estate IHT
       horizon    = 5
       confidence = 'MED'
       break
@@ -433,7 +456,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const lossRelief = invest * (seis ? 0.855 : 0.765) // after income tax credit (model proxy)
       nwDelta    = relief  // upfront income tax relief
       fqDelta    = 2
-      ihtDelta   = -(invest) // EIS/SEIS assets qualify for BPR after 2yr
+      ihtDelta   = -(invest * TAX.ihtRate) // BPR after 2yr removes the value from the estate → IHT saved at the IHT rate (mirrors DE-28)
       horizon    = 3
       confidence = 'LOW'
       break
@@ -467,7 +490,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const taxBack   = income > TAX.brt ? donation * (TAX.hr - TAX.br) : 0  // HR reclaim
       nwDelta    = taxBack
       fqDelta    = 1
-      ihtDelta   = -(donation) // charitable gifts exempt from IHT estate
+      ihtDelta   = -(donation * TAX.ihtRate) // charitable gift leaves the estate → IHT saved at the IHT rate
       horizon    = 1
       confidence = 'HIGH'
       break
@@ -505,9 +528,10 @@ export function simulateAction(entity, decisionType, params = {}) {
       const taxFree = Math.min(TAX.redundancyTaxFree, lumpSum)
       const taxable = Math.max(0, lumpSum - taxFree)
       // Optimal: pension + ISA wrap of post-tax balance
-      nwDelta    = taxFree * 0.07 * 10 + (taxable * 0.55) * 0.07 * 10
+      const netOfTax = taxable * (1 - _marginalRate(income)) // what's left after YOUR marginal rate, not a flat 45%
+      nwDelta    = (taxFree + netOfTax) * (TAX.growthDefault ?? 0.05) * 10
       fqDelta    = 4
-      ihtDelta   = -(Math.min(lumpSum, TAX.pensionAA || 60000) * TAX.ihtRate)
+      ihtDelta   = 0 // pensions enter the estate from Apr 2027 (enacted) — no lasting IHT relief
       horizon    = 10
       confidence = 'MED'
       break
@@ -518,9 +542,10 @@ export function simulateAction(entity, decisionType, params = {}) {
       const pensionAA = Math.min(TAX.pensionAA || 60000, income)
       const toISA     = TAX.isaAllowance || 20000
       const toSIPP    = Math.min(pensionAA, received - toISA)
-      nwDelta    = toSIPP * 0.45 + toISA * 0.05 * 10
+      // Consistent model: pension relief at YOUR marginal rate + growth on both wrappers.
+      nwDelta    = toSIPP * _marginalRate(income) + (toSIPP + toISA) * (TAX.growthDefault ?? 0.05) * 10
       fqDelta    = 5
-      ihtDelta   = -(toSIPP * TAX.ihtRate)
+      ihtDelta   = 0 // pensions enter the estate from Apr 2027 (enacted) — no lasting IHT relief
       horizon    = 10
       confidence = 'MED'
       break
@@ -529,10 +554,11 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-34': { // Divorce: financial settlement structuring
       const totalAssets = _nw(entity)
       // CGT on asset splits between spouses during tax year of separation — 3yr window
-      const cgtExposure = totalAssets * 0.10 * TAX.cgtHigher  // 0.10 = assumed taxable-split proxy
-      nwDelta    = -(cgtExposure)
+      // Transfers between spouses are CGT-free in the year of separation + the
+      // following 3 tax years (TCGA 1992 s58, extended by FA 2023) — no CGT in-window.
+      nwDelta    = 0
       fqDelta    = -3
-      ihtDelta   = totalAssets * 0.20 * TAX.ihtRate // estate change post-split (0.20 = split proxy)
+      ihtDelta   = -(totalAssets * 0.20 * TAX.ihtRate) // assets leaving your estate REDUCE your IHT (≤0 is good)
       horizon    = 3
       confidence = 'LOW'
       break
@@ -541,14 +567,15 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-35': { // Business sale: exit + BADR planning
       const saleProceeds = params.saleProceeds || 500000
       const badrLimit    = TAX.badrLifetimeLimit
-      const gainOnBADR   = Math.min(saleProceeds, badrLimit)
-      const gainOver     = Math.max(0, saleProceeds - badrLimit)
+      const gain         = params.gain ?? Math.max(0, saleProceeds * 0.7) // CGT is on the GAIN, not gross proceeds (base-cost proxy if not supplied)
+      const gainOnBADR   = Math.min(gain, badrLimit)
+      const gainOver     = Math.max(0, gain - badrLimit)
       const cgtBADR      = gainOnBADR * TAX.badrRate  // BADR rate (FA 2026 = 18%)
       const cgtNormal    = gainOver   * TAX.cgtHigher
-      const cgtStandard  = saleProceeds * TAX.cgtHigher
-      nwDelta    = cgtStandard - cgtBADR - cgtNormal  // tax saving vs no BADR
+      const cgtStandard  = gain * TAX.cgtHigher
+      nwDelta    = cgtStandard - cgtBADR - cgtNormal  // CGT saving vs no BADR, on the gain
       fqDelta    = 5
-      ihtDelta   = -(saleProceeds * TAX.ihtRate * 0.5) // BPR lost on sale; partial SIPP wrap (0.5 proxy)
+      ihtDelta   = (saleProceeds * TAX.ihtRate * 0.5) // selling a BPR-qualifying business LOSES that relief → estate (and IHT) goes UP
       horizon    = 1
       confidence = 'MED'
       break
@@ -559,7 +586,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       // Section 455 tax if not repaid within 9 months of year end (CTA 2010 s455)
       const s455 = dlBalance * TAX.s455Rate
       // Repay vs declare dividend to clear
-      const divTax = dlBalance * TAX.dividendBR
+      const divTax = dlBalance * _dividendRate(income) // directors are usually higher/additional-rate dividend payers
       nwDelta    = s455 - divTax  // dividend cheaper than 455 charge
       fqDelta    = 2
       ihtDelta   = 0
@@ -576,7 +603,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const transferFactor = dbAnnual > 0 ? dbCETV / dbAnnual : 0
       nwDelta    = transferFactor > 30 ? dbCETV * 0.10 : -(dbCETV * 0.05)
       fqDelta    = transferFactor > 30 ? 2 : -2
-      ihtDelta   = transferFactor > 30 ? -(dbCETV * TAX.ihtRate) : 0
+      ihtDelta   = 0 // DC pensions enter the estate from Apr 2027 (enacted) — a DB→DC transfer no longer creates an IHT-free legacy
       horizon    = Math.max(1, 65 - age)
       confidence = 'LOW'
       break
@@ -586,9 +613,11 @@ export function simulateAction(entity, decisionType, params = {}) {
       const sippRemaining = entity?.assets?.sipp?.total || 100000
       const partialAnnuity = sippRemaining * 0.50
       // Buy guaranteed income on half; keep half in drawdown
-      nwDelta    = partialAnnuity * 0.04 * 10  // annuity income stream
+      // Buying an annuity converts capital to income — net worth is ~neutral at
+      // purchase (the £/yr guaranteed income is its own metric, not a NW gain).
+      nwDelta    = 0
       fqDelta    = 3
-      ihtDelta   = 0  // annuitised portion leaves estate
+      ihtDelta   = -(partialAnnuity * TAX.ihtRate) // capital converted to income leaves the estate
       horizon    = 10
       confidence = 'MED'
       break
@@ -600,7 +629,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const cgtOnExit = Math.max(0, ukAssets * 0.15) * TAX.cgtHigher
       nwDelta    = -(cgtOnExit)
       fqDelta    = 1
-      ihtDelta   = -(ukAssets * TAX.ihtRate * 0.30) // partial estate removal if domicile changes (0.30 proxy)
+      ihtDelta   = 0 // UK IHT follows domicile / long-term residence, NOT tax residence — emigrating doesn't remove the estate from IHT until the LTR/deemed-domicile clock unwinds
       horizon    = 3
       confidence = 'LOW'
       break
@@ -615,7 +644,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const deferredCost = totalCost * 1.07 ** carePotential
       nwDelta    = -(totalCost)
       fqDelta    = -2
-      ihtDelta   = Math.min(0, -(propertyValue * TAX.ihtRate)) // property used = estate reduction
+      ihtDelta   = -(Math.min(totalCost, propertyValue) * TAX.ihtRate) // estate reduced by what care actually consumes, capped at the asset
       horizon    = 3
       confidence = 'LOW'
       break

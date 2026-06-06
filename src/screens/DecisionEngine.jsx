@@ -647,6 +647,20 @@ function StepContext({ context, onChange }) {
 // timing). The trajectory self-hides if before/after data is missing.
 const TIME_BASED_DECISIONS = new Set(['DE-01', 'DE-02', 'DE-03', 'DE-04', 'DE-05', 'DE-08'])
 
+// What the engine's nwDelta REALLY represents for decisions where it isn't net
+// worth (founder 2026-06-06: premiums / loans / income / tax were mislabelled
+// "Net worth"). Used to relabel the chip + chart axis. Absent → 'Net worth'.
+const NW_METRIC_LABEL = {
+  'DE-01': 'Tax saved',        'DE-02': 'Income uplift',
+  'DE-11': 'Tax cost (5yr)',   'DE-12': 'Long-run loan cost',
+  'DE-18': 'Cost avoided',
+  'DE-19': 'Premium (10yr)',   'DE-20': 'Premium (5yr)',  'DE-21': 'Premium (5yr)',
+}
+// Cost-type decisions where a "longer bar = better" comparison would give bad
+// advice (cheapest cover / loan / tax exposure isn't "best"). Suppress the
+// headline bar; the per-option figures + 'Good if' carry the comparison.
+const SUPPRESS_NW_CHART = new Set(['DE-11', 'DE-12', 'DE-19', 'DE-20', 'DE-21', 'DE-40'])
+
 // ── Step 3: Options ─────────────────────────────────────────────────────────
 function StepOptions({ paths, decId }) {
   const isProperty = decId === 'DE-09'
@@ -661,7 +675,13 @@ function StepOptions({ paths, decId }) {
   // user weighs is INCOME, not cash-freed (which is £0 for 3 of 4 options and read
   // as a contradiction next to the income chip). Founder 2026-06-06. Other
   // decisions fall through net worth → IHT → financial-health score.
-  const chartKey = isProperty ? 'income' : (varies('nw') ? 'nw' : varies('iht') ? 'iht' : varies('fq') ? 'fq' : null)
+  const canChartNw = !isProperty && varies('nw') && !SUPPRESS_NW_CHART.has(decId)
+  const chartKey = isProperty ? 'income'
+    : (canChartNw ? 'nw' : varies('iht') ? 'iht' : varies('fq') ? 'fq' : null)
+  const nwLabel = NW_METRIC_LABEL[decId] || 'Net worth'
+  // When the headline metric isn't net worth, caption the chart honestly.
+  const chartAxisLabel = chartKey === 'nw' && NW_METRIC_LABEL[decId] ? `${nwLabel} vs today` : undefined
+  const suppressedCost = SUPPRESS_NW_CHART.has(decId) && !chartKey
   const showTrajectory = TIME_BASED_DECISIONS.has(decId)
   const horizon = paths[0]?.simulation?.horizon
   return (
@@ -672,12 +692,13 @@ function StepOptions({ paths, decId }) {
       </div>
       {chartKey ? (
         <div style={{ marginBottom: 14 }}>
-          <PathComparisonChart paths={paths} valueKey={chartKey} />
+          <PathComparisonChart paths={paths} valueKey={chartKey} axisLabel={chartAxisLabel} />
         </div>
       ) : (
         <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 14, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
-          These options differ in <strong>approach and risk</strong>, not in your headline numbers —
-          compare the details on each below.
+          {suppressedCost
+            ? <>These options trade off <strong>cost against the cover or benefit</strong> they give — the cheapest isn't automatically best. Compare the figures and "Good if" on each below.</>
+            : <>These options differ in <strong>approach and risk</strong>, not in your headline numbers — compare the details on each below.</>}
         </div>
       )}
       {showTrajectory && (
@@ -701,7 +722,7 @@ function StepOptions({ paths, decId }) {
             chips.push({ label: 'Cash freed up', value: fmt(p.impact.liquidity), good: p.impact.liquidity > 0 })
             chips.push({ label: 'Left in your estate', value: fmt(p.impact.iht_in_estate), good: p.impact.iht_in_estate < 300_000 })
           } else {
-            if (chartKey !== 'nw') chips.push({ label: 'Net worth', value: fmtSigned(d?.nw), good: (d?.nw ?? 0) >= 0 })
+            if (chartKey !== 'nw') chips.push({ label: nwLabel, value: fmtSigned(d?.nw), good: (d?.nw ?? 0) >= 0 })
             if (chartKey !== 'iht') chips.push({ label: 'Inheritance tax', value: fmtSigned(d?.iht), good: (d?.iht ?? 0) <= 0 })
             chips.push({ label: 'Time frame', value: p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—', good: true })
             chips.push({ label: 'Confidence', value: CONF_LABEL[p.simulation?.confidence] || p.simulation?.confidence || '—', good: p.simulation?.confidence === 'HIGH' })

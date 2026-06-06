@@ -1338,7 +1338,7 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
         </div>
       ), render: (
       <>
-        <EssentialsDiscretionarySplit ms={ms} />
+        <EssentialsDiscretionarySplit ms={ms} entity={entity} />
         <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>Subscriptions count toward essentials. Automatic detection arrives with Open Banking; until then they're inside the figures above.</div>
       </>
     ) },
@@ -2748,13 +2748,16 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, flow, accountantMo
 // not by reviving this dead function.
 
 // ── §A.2 Essentials vs Discretionary (§4.4) ─────────────────────────────
-function EssentialsDiscretionarySplit({ ms }) {
+function EssentialsDiscretionarySplit({ ms, entity }) {
   const essentialsPct = (ms?.income || 0) > 0
     ? Math.min(100, Math.round(((ms?.essential || 0) / ms.income) * 100))
     : 0
-  // ONS Living Costs and Food Survey 2022-23, Table A6 — UK households aged 45-54,
-  // essential spend as % of disposable income.
-  const cohortMedian = 58 // Source: ONS
+  // ONS Living Costs and Food Survey 2022-23, Table A6 — essential spend as % of
+  // disposable income for UK households aged 45-54. We only surface it to users in
+  // that band — no fabricated benchmark for other ages.
+  const cohortMedian = 58
+  const cohortAge = (() => { try { return calcAge(entity) } catch { return null } })()
+  const showCohort = cohortAge != null && cohortAge >= 45 && cohortAge <= 54
   const colour = essentialsPct >= 70 ? 'var(--c-coral-text)'
               : essentialsPct >= 60 ? 'var(--c-amber-text)'
               : 'var(--c-mint-text)'
@@ -2779,8 +2782,8 @@ function EssentialsDiscretionarySplit({ ms }) {
         <div className="fill" style={{ width: `${essentialsPct}%`, background: colour }} />
       </div>
       <div style={S.implication}>
-        UK 45-54 cohort median: {cohortMedian}% (Source: ONS Living Costs and Food Survey).
-        {essentialsPct >= 70 && ' If essentials exceed 70%, a single income shock creates a cashflow gap within weeks.'}
+        {showCohort && `UK 45-54 cohort median: ${cohortMedian}% (Source: ONS Living Costs and Food Survey). `}
+        {essentialsPct >= 70 && 'If essentials exceed 70%, a single income shock creates a cashflow gap within weeks.'}
       </div>
     </div>
   )

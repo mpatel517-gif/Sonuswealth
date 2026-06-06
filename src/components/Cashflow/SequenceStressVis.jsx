@@ -62,7 +62,7 @@ export default function SequenceStressVis({
       }}>
         <div className="sw-eyebrow">Sequence-of-returns vulnerability</div>
         <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 260 }}>
-          Calculating… engine needs portfolio and drawdown data to model sequence risk.
+          Add portfolio and drawdown data to model sequence risk — none captured yet.
         </div>
       </div>
     )

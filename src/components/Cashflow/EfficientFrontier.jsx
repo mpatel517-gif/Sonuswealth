@@ -51,7 +51,7 @@ export default function EfficientFrontier({
       }}>
         <div className="sw-eyebrow">Efficient frontier</div>
         <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 240 }}>
-          Calculating… engine needs your portfolio allocation to plot your risk-return position.
+          Add your portfolio allocation to plot your risk-return position — none captured yet.
         </div>
       </div>
     )

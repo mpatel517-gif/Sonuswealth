@@ -79,7 +79,7 @@ export default function PoSChart({
       }}>
         <div className="sw-eyebrow">Probability of Success</div>
         <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 220 }}>
-          Calculating… add income and drawdown targets to generate your Monte Carlo projection.
+          Add income and a drawdown target to generate your Monte Carlo projection — not enough data yet.
         </div>
       </div>
     )

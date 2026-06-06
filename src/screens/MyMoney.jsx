@@ -2298,8 +2298,8 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           const lsdbaUsed = +(entity?.pension?.lsdbaUsed
             || entity?.pension?.lump_sum_death_benefit_allowance_used
             || 0)
-          const lsaCap = 268275
-          const lsdbaCap = 1073100
+          const lsaCap = TAX.lsa
+          const lsdbaCap = TAX.lsdba
           const lsaPct = Math.min(100, Math.round((lsaUsed / lsaCap) * 100))
           const lsdbaPct = Math.min(100, Math.round((lsdbaUsed / lsdbaCap) * 100))
           return (
@@ -2332,7 +2332,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                 </>
               )}
               <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.4 }}>
-                Lump Sum Allowance (LSA) £268,275 and Lump Sum &amp; Death Benefit Allowance (LSDBA) £1,073,100. Pensions Schemes Act 2023.
+                Lump Sum Allowance (LSA) £{lsaCap.toLocaleString()} and Lump Sum &amp; Death Benefit Allowance (LSDBA) £{lsdbaCap.toLocaleString()}. Pensions Schemes Act 2023.
               </div>
             </div>
           )
@@ -2426,7 +2426,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
 
         {/* SIPP-IHT countdown — Finance Act 2026 enacted; pensions enter estate 6 April 2027 */}
         {(() => {
-          const daysToSippIht = Math.max(0, Math.floor((new Date('2027-04-06') - new Date()) / 86400000))
+          const daysToSippIht = Math.max(0, Math.floor((TAX.deadline - new Date()) / 86400000))
           return (
             <button
               type="button"
@@ -2586,8 +2586,8 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.4,
           display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
         }}>
-          A <strong>lifetime cap</strong> <ExplainerChip id="MM-LSA" size={13} /> limits how much tax-free cash you can take across all your pensions in your lifetime — currently £268,275.
-          A <strong>combined cap</strong> <ExplainerChip id="MM-LSDBA" size={13} /> limits both your tax-free cash AND any lump sums paid to your family when you die — currently £1,073,100.
+          A <strong>lifetime cap</strong> <ExplainerChip id="MM-LSA" size={13} /> limits how much tax-free cash you can take across all your pensions in your lifetime — currently £{TAX.lsa.toLocaleString()}.
+          A <strong>combined cap</strong> <ExplainerChip id="MM-LSDBA" size={13} /> limits both your tax-free cash AND any lump sums paid to your family when you die — currently £{TAX.lsdba.toLocaleString()}.
           When you first access a pension, you can normally take up to <strong>25% tax-free</strong> <ExplainerChip id="MM-PCLS" size={13} />.
         </div>
         <div style={{
@@ -2943,7 +2943,7 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
       sub: ebr.ihtDue > 0 ? `${fmt(ebr.ihtDue)} IHT due (current estate composition)` : 'No IHT liability at current estate composition',
       band: benBand, pct: benPct,
       action: ebr.ihtDue > 0
-        ? `Common UK IHT mitigation mechanics: pension beneficiary nominations · life cover written into trust · annual £3,000 gift exemption · 7-year clock on PETs · regular gifts from surplus income. Each has eligibility rules — see Tax & Estate.`
+        ? `Common UK IHT mitigation mechanics: pension beneficiary nominations · life cover written into trust · annual £${TAX.giftExemption.toLocaleString()} gift exemption · 7-year clock on PETs · regular gifts from surplus income. Each has eligibility rules — see Tax & Estate.`
         : `Estate-planning levers are most effective when reviewed alongside life events (marriage, divorce, new child, sale of business).`,
     },
     {
@@ -3136,7 +3136,7 @@ function DecumulationPanel({ entity, setActiveDrill }) {
   // shown is illustrative (header copy above clarifies "not a recommendation").
   const sequences = [
     { order: 1, pot: 'GIA (taxable account)', value: giaValue, color: '#C58CFF',
-      taxNote: 'CGT applies on disposal gains: 18% basic-rate / 24% higher-rate. Annual exempt amount £3,000. Holdings remain inside the estate for IHT.' },
+      taxNote: `CGT applies on disposal gains: 18% basic-rate / 24% higher-rate. Annual exempt amount £${TAX.cgaAllowance.toLocaleString()}. Holdings remain inside the estate for IHT.` },
     { order: 2, pot: 'ISA (tax-free)', value: isaValue, color: '#2DF2C3',
       taxNote: 'No income tax or CGT on withdrawal at any age. Holdings sit inside the estate for IHT.' },
     { order: 3, pot: 'SIPP / Pension', value: pensionValue, color: '#7AA7FF',
@@ -3681,7 +3681,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
            Replaces the main content when the user selects the "What if" mode
            pill in X28TopBar. All other modes fall through to the normal view. */}
       {showDecisions && (
-        <DecisionDrawers screen="money" variant="chips" onOpen={onOpenDecision} heading="Decisions you can make from My Money" />
+        <DecisionDrawers screen="money" variant="chips" onOpen={onOpenDecision} heading="Choices you can make from My Money" />
       )}
       {!showDecisions && viewMode === 'scenario' && (
         <WhatIfLibrary entity={entity} onScenarioSelect={setScenarioEntity} />
@@ -3929,7 +3929,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             // the scan-friendly tile (founder 2026-05-31: pill too long).
             empty: 'No pensions yet. Add a SIPP or workplace scheme — the contributions get back up to 47% in tax relief.' },
           { id: 'investments',  label: 'Savings & Investments',domainCodes: 'C · D · E · F', rows: catRows.investments,
-            empty: 'Nothing invested yet. Add an ISA first — £20k a year, no tax on growth, no tax on withdrawal.' },
+            empty: `Nothing invested yet. Add an ISA first — £${TAX.isaAllowance.toLocaleString()} a year, no tax on growth, no tax on withdrawal.` },
           { id: 'property',     label: 'Property',             domainCodes: 'G',         rows: catRows.property,
             empty: 'No property added. Your main home is exempt from capital gains tax when you sell. Let property is taxed fully — and since 2020 you only get a small slice of mortgage interest back against rental income.' },
           { id: 'business',     label: 'Business Assets',      domainCodes: isDirector ? 'H · I · X' : 'H · I',  rows: catRows.business,
@@ -4053,7 +4053,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             const hasBtl = (entity?.assets?.property || []).some(p => /buy-to-let|btl/i.test(p.use || p.type || ''))
             tile.contextLine = hasBtl
               ? 'Includes a let property — only a small slice of the mortgage interest counts against the rent'
-              : 'Your home — passing it to children adds up to £175,000 of extra inheritance allowance'
+              : `Your home — passing it to children adds up to £${TAX.rnrb.toLocaleString()} of extra inheritance allowance`
             if (!hasBtl) tile.status = { label: 'Extra estate allowance', tone: 'good', explainerId: 'MM-RNRB' }
           }
           if (c.id === 'business' && (entity?.business_assets || []).some(b => b.qualifies_for_bpr)) {

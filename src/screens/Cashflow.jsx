@@ -1678,7 +1678,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
         </div>
 
         {showDecisions ? (
-          <DecisionDrawers screen="flow" variant="chips" onOpen={onOpenDecision} heading="Decisions you can make from Cashflow" />
+          <DecisionDrawers screen="flow" variant="chips" onOpen={onOpenDecision} heading="Choices you can make from Cashflow" />
         ) : (<>
 
         {/* §0 — STATEMENT STRIP (MoneyXDrawer) REMOVED from Cashflow (founder
@@ -4865,11 +4865,11 @@ const COI_DOMAIN_PLAIN = {
   drawdown:           { label: 'Pension & IHT timing', why: 'pulling pension into your estate before the 2027 rule, or drawing in the wrong order', urgency: 'deadline', action: 'Review your draw order & timing before the April 2027 rule' },
   wrapperSequencing:  { label: 'Un-sheltered investments', why: 'tax drag on holdings sitting outside an ISA or pension', urgency: 'annual', action: 'Move holdings into an ISA/pension over time ("Bed & ISA")' },
   contributions:      { label: 'Unused pension relief', why: 'higher-rate relief left unclaimed on pension headroom', urgency: 'annual', action: 'Top up your pension to claim the higher-rate relief' },
-  taxAllowances:      { label: 'Unused ISA allowance', why: 'cash that could be sheltered from tax each April', urgency: 'annual', action: "Use this year's £20k ISA before 5 April" },
+  taxAllowances:      { label: 'Unused ISA allowance', why: 'cash that could be sheltered from tax each April', urgency: 'annual', action: `Use this year's £${TAX.isaAllowance.toLocaleString()} ISA before 5 April` },
   estatePlanning:     { label: 'Estate & will gaps', why: 'lost residence nil-rate band or no current will', urgency: 'anytime', action: 'Make or update your will; check the residence nil-rate band' },
   protection:         { label: 'Protection gaps', why: 'cover missing against death or illness', urgency: 'anytime', action: 'Review life and income-protection cover' },
   debt:               { label: 'Expensive debt', why: 'interest you could refinance or clear', urgency: 'anytime', action: 'Refinance or clear the most expensive debt first' },
-  gifting:            { label: 'Gifting allowances', why: 'annual gift exemptions left unused', urgency: 'annual', action: 'Use your £3k annual gift exemption before 5 April' },
+  gifting:            { label: 'Gifting allowances', why: 'annual gift exemptions left unused', urgency: 'annual', action: `Use your £${TAX.giftExemption.toLocaleString()} annual gift exemption before 5 April` },
   propertyDecisions:  { label: 'Property decisions', why: 'tax or cost tied up in property choices', urgency: 'anytime', action: 'Review how your property is held' },
   investmentStrategy: { label: 'Investment efficiency', why: 'return given up versus an efficient mix', urgency: 'anytime', action: 'Review your fund mix against a lower-cost efficient blend' },
 }

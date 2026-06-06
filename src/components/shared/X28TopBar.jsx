@@ -165,7 +165,7 @@ export default function X28TopBar({
   // Tab list for Row 2 — view modes, plus an optional Decisions tab. Decisions
   // is tracked separately (decisionsActive), so when it's on, none of the
   // view-mode tabs read as active.
-  const tabs = showDecisions ? [...VIEW_MODES, { id: '__decisions', label: 'Decisions' }] : VIEW_MODES
+  const tabs = showDecisions ? [...VIEW_MODES, { id: '__decisions', label: 'Choices' }] : VIEW_MODES
   const activeIdx = decisionsActive ? VIEW_MODES.length : VIEW_MODES.findIndex(m => m.id === modeState)
 
   return (

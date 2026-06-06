@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import { categoriesForScreen, titleOf } from '../../engine/decision-catalogue.js'
 
-export default function DecisionDrawers({ screen, onOpen, heading = 'Decisions you can make here', variant = 'drawers' }) {
+export default function DecisionDrawers({ screen, onOpen, heading = 'Choices you can make here', variant = 'drawers' }) {
   const cats = categoriesForScreen(screen)
   const [open, setOpen] = useState(() => new Set())
   const [sel, setSel] = useState(cats[0]?.id || null)

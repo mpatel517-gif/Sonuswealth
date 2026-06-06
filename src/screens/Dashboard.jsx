@@ -1095,7 +1095,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         </OverlayShell>
       )}
       {moreScreen === 'decision' && (
-        <OverlayShell title="Decision Engine" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
+        <OverlayShell title="Choices" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngine
             entity={wireEntity}
             initialDecisionId={decisionSeed}
@@ -1112,7 +1112,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       )}
       {showMagic && <MagicShowcase entity={wireEntity} onClose={() => setShowMagic(false)} />}
       {dePayload !== null && (
-        <OverlayShell title="Decision Engine" onBack={() => setDePayload(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
+        <OverlayShell title="Choices" onBack={() => setDePayload(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngineV2
             entity={wireEntity}
             initialQuery={dePayload.query}

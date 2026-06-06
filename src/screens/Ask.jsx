@@ -465,12 +465,12 @@ function DecisionEnginePanel({ topic, onCommit, onClose }) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span className="sw-eyebrow" style={{ color: 'var(--c-mint-text, var(--c-acc))' }}>
-          Decision Engine
+          Choices
         </span>
         <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>· {topic}</span>
         <button
           onClick={onClose}
-          aria-label="Close decision engine"
+          aria-label="Close choices"
           className="sw-press"
           style={{
             marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',

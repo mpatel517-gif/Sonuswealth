@@ -333,7 +333,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       date: commitEvent.timestamp.substring(0, 10),
       committed_at: commitEvent.timestamp,
       impact: { fqDelta: engineRec?.impact?.fqGain ?? null },
-      source: 'Decision Engine',
+      source: 'Choices',
     }
     onCommit?.(commitEvent)
     setCommitted(true)
@@ -351,9 +351,9 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
         alignItems: 'center', justifyContent: 'center', gap: 16, textAlign: 'center',
       }}>
         <div style={{ fontSize: 40 }}>✓</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-acc)' }}>Decision committed</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-acc)' }}>Choice committed</div>
         <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6 }}>
-          Saved to your decisions. Taking you to your Timeline…
+          Saved to your choices. Taking you to your Timeline…
         </div>
       </div>
     )
@@ -370,7 +370,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
           }}>← Home</button>
         )}
         <div style={{ flex: 1 }}>
-          <div className="sw-eyebrow">Decision Engine</div>
+          <div className="sw-eyebrow">Choices</div>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)', marginTop: 2 }}>
             Step {step + 1} of {STEPS.length} · {STEPS[step]}
           </div>

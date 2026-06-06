@@ -344,7 +344,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI }) {
       </div>
 
       {step === 0 && (
-        <StepIdentify decision={decision} onPick={(d) => { setDecision(d); setChosen(null) }} onAskAI={onAskAI} />
+        <StepIdentify decision={decision} onPick={(d) => { setDecision(d); setChosen(null); setStep(1) }} onAskAI={onAskAI} />
       )}
       {step === 1 && decision && (
         <StepContext context={context} onChange={setContext} />
@@ -470,7 +470,7 @@ function StepIdentify({ decision, onPick, onAskAI }) {
                 minWidth: 44, textAlign: 'center', flexShrink: 0,
               }}>{d.id}</span>
               <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)', textAlign: 'left' }}>{d.title}</span>
-              {active && <span style={{ fontSize: 11, color: 'var(--c-acc)', fontWeight: 800 }}>✓</span>}
+              <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
             </button>
           )
         })}

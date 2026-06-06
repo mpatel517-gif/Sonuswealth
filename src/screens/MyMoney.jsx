@@ -2855,7 +2855,7 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
   const a    = entity.assets || {}
   const liab = entity.liabilities || {}
   const target = +entity.targetIncome || 0
-  const cash   = +(a.cash?.total || a.cash?.value || 0)
+  const cash   = rowsForCash(entity).reduce((s, r) => s + (+r.value || 0), 0) // bank[] array + legacy object (sweep #49)
   const monthlySpend = target / 12
 
   // Emergency cover
@@ -2864,13 +2864,13 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
   const safetyBand = months == null ? null : months >= 6 ? 'good' : months >= 3 ? 'warn' : 'bad'
   const safetyPct  = months != null ? Math.min((months / 6) * 100, 100) : 0
 
-  // Debt
-  const mortgage   = liab.mortgage || {}
-  const otherLoans = liab.otherLoans || []
-  const totalDebt  = (mortgage.outstanding || 0)
-    + otherLoans.reduce((s, l) => s + +(l.outstanding || l.outstanding_balance || 0), 0)
-  const monthlyDebt = (mortgage.monthlyPayment || 0)
-    + otherLoans.reduce((s, l) => s + +(l.monthlyPayment || 0), 0)
+  // Debt — read through the canonical reader so array-shape personas (director/
+  // landlord) aren't wrongly shown 'Clear' (sweep #49).
+  const liabRows    = rowsForLiabilities(entity)
+  const totalDebt   = liabRows.reduce((s, r) => s + (+r.value || 0), 0)
+  const monthlyDebt = Array.isArray(entity.liabilities)
+    ? entity.liabilities.reduce((s, l) => s + (+(l.monthly_payment || l.monthlyPayment) || 0), 0)
+    : ((liab.mortgage?.monthlyPayment || 0) + (liab.otherLoans || []).reduce((s, l) => s + +(l.monthlyPayment || 0), 0))
   const debtYears  = monthlyDebt > 0 ? totalDebt / (monthlyDebt * 12) : null
   // C-03: no payment data + debt present → 'warn', not 'good'
   const debtBand   = totalDebt === 0 ? 'good'
@@ -3884,6 +3884,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           property:        sumRows(catRows.property),
           business:        sumRows(catRows.business),
           'protection-sv': 0,  // surrender values only — not modelled at line-item level yet
+          protection:      0,  // tile key (id='protection'): cover is a benefit, NOT a balance-sheet asset — was mis-keyed so the tile summed sum-assured as wealth (sweep #50)
           cash:            sumRows(catRows.cash),
           alternatives:    sumRows(catRows.alternatives),
           liabilities:     sumRows(catRows.liabilities),
@@ -4146,6 +4147,12 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // (2026-06-01) flagged as a careless stub. Now each category shows its
           // own honest 12-month estimate from its drift rate, labelled "12-mo est."
           tile.subtotal = subtotals[c.id]
+          // Protection isn't wealth (subtotal 0), but show the cover in place so
+          // the tile isn't a bare £0 — the benefit, clearly labelled (sweep #50).
+          if (c.id === 'protection') {
+            const cover = (catRows.protection || []).reduce((s, r) => s + (+r.value || 0), 0)
+            if (cover > 0) tile.contextLine = `${fmt(cover)} cover in place — a benefit, not counted as wealth`
+          }
 
           // 12-month sparkline series — back-cast from current subtotal using a
           // category-typical monthly growth rate. Not real history (Mr T doesn't

@@ -342,7 +342,13 @@ export default function X28TopBar({
               key={m.id}
               role="tab"
               aria-selected={active}
-              onClick={() => isDecisions ? onDecisions?.() : pickMode(m)}
+              onClick={() => {
+                if (isDecisions) return onDecisions?.()
+                if (m.id !== modeState) return pickMode(m)
+                // Same view-mode tapped while Decisions is active → exit Decisions
+                // (pickMode early-returns on unchanged mode, so signal directly).
+                if (decisionsActive) onViewModeChange?.(m.id)
+              }}
               className={`sw-tab-ghost${active ? ' is-active' : ''}`}
               style={{
                 position: 'relative',

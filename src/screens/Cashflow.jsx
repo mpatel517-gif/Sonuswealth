@@ -1444,6 +1444,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // unwired (standalone snap, deep-link entry, etc.).
   const goBackOrHome = onBack || onHome
   const [windowId, setWindowId] = useState('current-period')
+  // Decisions tab (founder 2026-06-06): minimal view-bar hosts a Decisions tab
+  // that swaps the body for the decision categories (chip style).
+  const [showDecisions, setShowDecisions] = useState(false)
   // F4 (2026-06-02): viewMode now reads the SHARED temporal store (useTemporalMode)
   // instead of a local useState, so the global tax-year/mode chip and the other
   // tabs stay in sync — previously Cashflow's Today/Future/Plan was an island.
@@ -1653,7 +1656,25 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
 
-        <DecisionDrawers screen="flow" onOpen={onOpenDecision} />
+        {/* Minimal view-bar — view modes + Decisions tab (founder 2026-06-06) */}
+        <div style={{ margin: '0 -16px' }}>
+          <X28TopBar
+            window={windowId}
+            viewMode={viewMode}
+            onWindowChange={setWindowId}
+            onViewModeChange={(m) => { setShowDecisions(false); setViewMode(m) }}
+            rulesVersion={BRAND.rulesVersion}
+            dataDate={BRAND.dataDate}
+            showWindowRow={false}
+            showDecisions
+            decisionsActive={showDecisions}
+            onDecisions={() => setShowDecisions(s => !s)}
+          />
+        </div>
+
+        {showDecisions ? (
+          <DecisionDrawers screen="flow" variant="chips" onOpen={onOpenDecision} heading="Decisions you can make from Cashflow" />
+        ) : (<>
 
         {/* §0 — STATEMENT STRIP (MoneyXDrawer) REMOVED from Cashflow (founder
              decision 2026-06-04, locking a 3×-oscillating call). The Balance
@@ -1782,6 +1803,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
 
           {/* §C engine internals moved into the 'costs' question-tile (extraTiles). */}
         </div>
+
+        </>)}
 
         {/* Disclaimer footer */}
         <div style={S.disclaimer}>

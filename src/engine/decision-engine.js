@@ -28,6 +28,72 @@ function _annualIncome(entity) {
          (inc.dividends || 0) + (inc.other || 0)
 }
 
+// ── Per-path factors ──────────────────────────────────────────────────────────
+// simulateAction computes ONE headline impact per decision (the main action vs the
+// status quo). Each enumerated path is a *variant* of that action — so without a
+// per-path factor every candidate echoed the identical net-worth / IHT / certainty
+// (founder 2026-06-06: "on my money tab the decisions all the values are the same").
+// This table scales the headline by path: status-quo paths → ~0 change, the fuller
+// action → full impact, partials in between, and certainty tracks the path's risk.
+// Factors are RELATIVE first-pass directional modelling; bespoke absolute per-path
+// tax math (APS, MPAA/LSA phasing, 2027 IHT flip) is Phase B.
+const _PATH_FACTORS = {
+  'DE-01': { lump: { nw: 0.15, conf: 'MED' }, phased: { nw: 1, conf: 'MED' }, defer: { nw: 1.3, iht: 1, conf: 'LOW' } },
+  'DE-02': { buy_now: { nw: 0.1, conf: 'MED' }, defer_5: { nw: 1, conf: 'MED' }, drawdown: { nw: 0.7, conf: 'LOW' } },
+  'DE-03': { no_change: { nw: 0, iht: 0, fq: 0, conf: 'HIGH' }, top_up: { nw: 1, iht: 1, conf: 'MED' }, carryback: { nw: 1.5, iht: 1.4, conf: 'LOW' } },
+  'DE-04': { workplace_only: { nw: 0.8, iht: 0.6, conf: 'MED' }, split: { nw: 1, iht: 1, conf: 'MED' }, sipp_only: { nw: 0.5, iht: 1, conf: 'HIGH' } },
+  'DE-05': { no_sacrifice: { nw: 0, iht: 0, fq: 0, conf: 'HIGH' }, partial: { nw: 1, iht: 1, conf: 'MED' }, maximum: { nw: 1.8, iht: 1.6, conf: 'MED' } },
+  'DE-06': { cash_isa: { nw: 0.1, conf: 'HIGH' }, ss_isa: { nw: 1, conf: 'MED' }, lisa: { nw: 1.15, conf: 'MED' }, split_blend: { nw: 0.7, conf: 'MED' } },
+  'DE-07': { hold_gia: { nw: 0, fq: 0, conf: 'HIGH' }, bed_isa: { nw: 1, conf: 'HIGH' }, phased_bed: { nw: 0.9, conf: 'MED' } },
+  'DE-08': { overpay: { nw: 0.5, conf: 'HIGH' }, offset: { nw: 0.45, conf: 'HIGH' }, invest: { nw: 1, conf: 'LOW' }, split: { nw: 0.75, conf: 'MED' } },
+  'DE-09': { keep_use: { nw: 0, iht: 0, conf: 'MED' }, let: { nw: 0.4, iht: 0, conf: 'MED' }, sell_isa_pension: { nw: 1, iht: 1, conf: 'MED' }, sell_btl_replace: { nw: 0.6, iht: 0.5, conf: 'MED' } },
+  'DE-10': { fix_2yr: { nw: 0.9, conf: 'MED' }, fix_5yr: { nw: 1, conf: 'HIGH' }, tracker: { nw: 0.7, conf: 'LOW' }, offset_re: { nw: 0.8, conf: 'MED' } },
+  'DE-11': { hold_btl: { nw: 1, conf: 'MED' }, incorporate: { nw: 0.3, conf: 'MED' }, sell_btl: { nw: 0, conf: 'HIGH' } },
+  'DE-12': { no_release: { nw: 0, iht: 0, conf: 'HIGH' }, drawdown_er: { nw: 0.5, iht: 0.4, conf: 'MED' }, lump_er: { nw: 1, iht: 1, conf: 'LOW' } },
+  'DE-13': { current_acct: { nw: 0, fq: 0, conf: 'HIGH' }, easy_access: { nw: 1, conf: 'HIGH' }, premium_bond: { nw: 0.95, conf: 'HIGH' } },
+  'DE-14': { instant_only: { nw: 0, conf: 'HIGH' }, ladder_3: { nw: 0.5, conf: 'HIGH' }, ladder_12: { nw: 1, conf: 'HIGH' } },
+  'DE-15': { annual_exempt: { iht: 0.1, conf: 'HIGH' }, pet_gift: { iht: 1, conf: 'MED' }, trust_gift: { iht: 1, conf: 'LOW' } },
+  'DE-16': { bare_trust: { iht: 0.3, conf: 'HIGH' }, disc_trust: { iht: 1, conf: 'MED' }, iip_trust: { iht: 0.7, conf: 'MED' } },
+  'DE-17': { simple_will: { nw: 0.9, conf: 'MED' }, mirror_will: { nw: 0.95, conf: 'MED' }, li_trust_will: { nw: 1, iht: 1, conf: 'HIGH' } },
+  'DE-18': { no_lpa: { nw: 0, conf: 'HIGH' }, fin_lpa: { nw: 0.7, conf: 'MED' }, both_lpas: { nw: 1, conf: 'HIGH' } },
+  'DE-19': { term: { nw: 0.8, conf: 'MED' }, fib: { nw: 0.9, conf: 'MED' }, wol_trust: { nw: 1, iht: 1, conf: 'LOW' } },
+  'DE-20': { no_ci: { nw: 0, conf: 'HIGH' }, top_up_ci: { nw: 0.6, conf: 'MED' }, full_ci: { nw: 1, conf: 'LOW' } },
+  'DE-21': { any_occ: { nw: 0.5, conf: 'MED' }, own_occ: { nw: 1, conf: 'HIGH' }, budget_ip: { nw: 0.7, conf: 'MED' } },
+  'DE-22': { no_harvest: { nw: 0, conf: 'HIGH' }, harvest_now: { nw: 1, conf: 'HIGH' }, harvest_isa: { nw: 1.1, conf: 'HIGH' } },
+  'DE-23': { hold_loss: { nw: 0, conf: 'MED' }, realise_loss: { nw: 1, conf: 'HIGH' }, rebuy_isa: { nw: 1.1, conf: 'HIGH' } },
+  'DE-24': { no_transfer: { nw: 0, conf: 'HIGH' }, asset_xfer: { nw: 1, conf: 'HIGH' }, isa_max: { nw: 0.8, conf: 'HIGH' } },
+  'DE-25': { salary_only: { nw: 0, conf: 'MED' }, optimal_mix: { nw: 1, conf: 'HIGH' }, pension_route: { nw: 1.1, iht: 1, conf: 'MED' } },
+  'DE-26': { no_eis: { nw: 0, conf: 'HIGH' }, seis: { nw: 1.1, conf: 'LOW' }, eis: { nw: 1, conf: 'LOW' } },
+  'DE-27': { no_vct: { nw: 0, conf: 'HIGH' }, vct_5k: { nw: 0.3, conf: 'MED' }, vct_max: { nw: 1, conf: 'LOW' } },
+  'DE-28': { no_bpr: { nw: 0, iht: 0, conf: 'MED' }, bpr_aim: { nw: 1, iht: 1, conf: 'LOW' }, bpr_unlisted: { nw: 0.9, iht: 1, conf: 'MED' } },
+  'DE-29': { no_give: { nw: 0, iht: 0, conf: 'MED' }, gift_aid: { nw: 0.5, conf: 'HIGH' }, legacy: { iht: 1, conf: 'HIGH' } },
+  'DE-30': { no_plan: { nw: 0, conf: 'MED' }, jisa: { nw: 1, conf: 'MED' }, bare_trust_edu: { nw: 0.8, conf: 'MED' } },
+  'DE-31': { work_through: { nw: 0, conf: 'HIGH' }, short_break: { nw: 0.5, conf: 'MED' }, full_sabbat: { nw: 1, conf: 'LOW' } },
+  'DE-32': { cash_hold: { nw: 0, iht: 0, conf: 'HIGH' }, pension_wrap: { nw: 1, iht: 1, conf: 'MED' }, diversified: { nw: 0.9, iht: 0.7, conf: 'MED' } },
+  'DE-33': { bank_hold: { nw: 0, iht: 0, conf: 'HIGH' }, wrap_max: { nw: 1, iht: 1, conf: 'MED' }, property: { nw: 0.9, iht: 0, conf: 'LOW' } },
+  'DE-34': { clean_break: { nw: 1, conf: 'HIGH' }, maintenance: { nw: 0.7, conf: 'MED' }, deferred: { nw: 0.5, conf: 'LOW' } },
+  'DE-35': { no_badr: { nw: 0, conf: 'MED' }, badr_claim: { nw: 1, conf: 'HIGH' }, earnout: { nw: 0.8, conf: 'MED' } },
+  'DE-36': { repay_loan: { nw: 1, conf: 'HIGH' }, div_clear: { nw: 0.7, conf: 'MED' }, write_off: { nw: 0.2, conf: 'LOW' } },
+  'DE-37': { keep_db: { nw: 0, iht: 0, conf: 'HIGH' }, transfer_dc: { nw: 1, iht: 1, conf: 'LOW' }, partial_xfer: { nw: 0.5, iht: 0.5, conf: 'MED' } },
+  'DE-38': { full_drawdown: { nw: 1, conf: 'LOW' }, partial_annuity: { nw: 0.6, conf: 'MED' }, full_annuity: { nw: 0.2, conf: 'HIGH' } },
+  'DE-39': { stay_uk: { nw: 0, conf: 'HIGH' }, plan_exit: { nw: 0.7, conf: 'MED' }, immediate_exit: { nw: 1, conf: 'LOW' } },
+  'DE-40': { self_fund: { nw: 1, conf: 'MED' }, deferred_payment: { nw: 0.8, conf: 'MED' }, ltc_insurance: { nw: 0.6, conf: 'HIGH' } },
+}
+
+// Resolve a path's {nw, iht, fq, conf} factor. Falls back to a status-quo/risk
+// model for the generic 2-path default and any unmapped path id.
+function _pathFactor(decisionType, pathId, riskLevel) {
+  const ov = _PATH_FACTORS[decisionType]?.[pathId]
+  if (ov) return { nw: ov.nw ?? 1, iht: ov.iht ?? (ov.nw === 0 ? 0 : 1), fq: ov.fq ?? (ov.nw === 0 ? 0 : 1), conf: ov.conf }
+  if (/^(no_|none$|hold_|keep)/.test(pathId || '')) return { nw: 0, iht: 0, fq: 0, conf: 'HIGH' }
+  const byRisk = {
+    low:    { nw: 0.7, iht: 0.7, fq: 0.8, conf: 'HIGH' },
+    medium: { nw: 0.9, iht: 0.9, fq: 0.9, conf: 'MED' },
+    high:   { nw: 1,   iht: 1,   fq: 1,   conf: 'LOW' },
+  }
+  return byRisk[riskLevel] || { nw: 1, iht: 1, fq: 1 }
+}
+
 // ── simulateAction ────────────────────────────────────────────────────────────
 
 /**
@@ -76,7 +142,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const headroom    = Math.max(0, Math.min(aa, income) - currentContrib)
       nwDelta    = headroom * 1.45   // 45% tax relief (HR taxpayer) rough compound
       fqDelta    = headroom > 10000 ? 5 : headroom > 2000 ? 2 : 0
-      ihtDelta   = -(headroom * (Math.max(0, 80 - age))) // SIPP outside estate
+      ihtDelta   = -(headroom * TAX.ihtRate) // SIPP contribution out of estate (pre-2027). £×rate, not £×years.
       horizon    = Math.max(1, 57 - age)
       confidence = 'MED'
       break
@@ -88,7 +154,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const employerGain = salary * workplacePct
       nwDelta    = employerGain * Math.min(20, Math.max(0, 60 - age))
       fqDelta    = employerGain > 2000 ? 4 : 1
-      ihtDelta   = -(employerGain * Math.max(0, 80 - age))
+      ihtDelta   = -(employerGain * Math.min(20, Math.max(0, 60 - age)) * TAX.ihtRate) // cumulative pension out of estate
       horizon    = Math.max(1, 60 - age)
       confidence = 'MED'
       break
@@ -101,7 +167,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const niSaved    = sacrificed * (TAX.employerNICRate ?? 0.15)
       nwDelta    = niSaved * Math.min(20, Math.max(0, 65 - age))
       fqDelta    = niSaved > 500 ? 3 : 1
-      ihtDelta   = -(sacrificed * Math.max(0, 80 - age))
+      ihtDelta   = -(sacrificed * Math.min(20, Math.max(0, 65 - age)) * TAX.ihtRate) // cumulative sacrifice out of estate
       horizon    = Math.max(1, 65 - age)
       confidence = 'MED'
       break
@@ -195,7 +261,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const released      = propertyValue * releaseRate * 0.25 // typical drawdown
       nwDelta    = released // immediate liquidity gain
       fqDelta    = 2
-      ihtDelta   = -(released * (Math.max(0, 80 - age) * 0.04)) // roll-up erodes estate
+      ihtDelta   = -(released * TAX.ihtRate) // released principal leaves the estate
       horizon    = 15
       confidence = 'LOW'
       break
@@ -441,7 +507,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       // Optimal: pension + ISA wrap of post-tax balance
       nwDelta    = taxFree * 0.07 * 10 + (taxable * 0.55) * 0.07 * 10
       fqDelta    = 4
-      ihtDelta   = -(Math.min(lumpSum, TAX.pensionAA || 60000) * (Math.max(0, 80 - age)))
+      ihtDelta   = -(Math.min(lumpSum, TAX.pensionAA || 60000) * TAX.ihtRate)
       horizon    = 10
       confidence = 'MED'
       break
@@ -454,7 +520,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const toSIPP    = Math.min(pensionAA, received - toISA)
       nwDelta    = toSIPP * 0.45 + toISA * 0.05 * 10
       fqDelta    = 5
-      ihtDelta   = -(toSIPP * (Math.max(0, 80 - age)))
+      ihtDelta   = -(toSIPP * TAX.ihtRate)
       horizon    = 10
       confidence = 'MED'
       break
@@ -510,7 +576,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const transferFactor = dbAnnual > 0 ? dbCETV / dbAnnual : 0
       nwDelta    = transferFactor > 30 ? dbCETV * 0.10 : -(dbCETV * 0.05)
       fqDelta    = transferFactor > 30 ? 2 : -2
-      ihtDelta   = transferFactor > 30 ? -(dbCETV * (Math.max(0, 80 - age))) : 0
+      ihtDelta   = transferFactor > 30 ? -(dbCETV * TAX.ihtRate) : 0
       horizon    = Math.max(1, 65 - age)
       confidence = 'LOW'
       break
@@ -558,6 +624,17 @@ export function simulateAction(entity, decisionType, params = {}) {
     default: {
       nwDelta = 0; fqDelta = 0; riskDelta = 0; horizon = 10; confidence = 'LOW'
     }
+  }
+
+  // ── Per-path modulation (founder 2026-06-06) ─────────────────────────────────
+  // enumeratePaths passes pathId + riskLevel so each candidate diverges instead of
+  // echoing one identical simulation. See _PATH_FACTORS above.
+  if (params.pathId) {
+    const f = _pathFactor(decisionType, params.pathId, params.riskLevel)
+    nwDelta  = Math.round(nwDelta  * f.nw)
+    ihtDelta = Math.round(ihtDelta * f.iht)
+    fqDelta  = Math.round(fqDelta  * f.fq)
+    if (f.conf) confidence = f.conf
   }
 
   return {
@@ -801,7 +878,7 @@ export function enumeratePaths(entity, decisionType) {
     { id: 'action', label: 'Implement this change', riskLevel: 'medium', detail: 'Impact depends on current position.' },
   ]).map(p => ({
     ...p,
-    simulation: simulateAction(entity, decisionType),
+    simulation: simulateAction(entity, decisionType, { pathId: p.id, riskLevel: p.riskLevel }),
   }))
 
   return paths
@@ -814,7 +891,7 @@ export function enumeratePaths(entity, decisionType) {
  * Returns { summary, steps, sources, fcaBoundary, confidence, impact }
  */
 export function generateRecommendation(entity, decisionType, chosenPath) {
-  const sim     = simulateAction(entity, decisionType)
+  const sim     = simulateAction(entity, decisionType, chosenPath ? { pathId: chosenPath.id, riskLevel: chosenPath.riskLevel } : {})
   const nwGain  = sim.delta.nw
   const fqGain  = sim.delta.fq
   const ihtSave = Math.abs(sim.delta.iht)

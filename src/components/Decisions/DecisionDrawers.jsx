@@ -10,14 +10,63 @@
 import { useState } from 'react'
 import { categoriesForScreen, titleOf } from '../../engine/decision-catalogue.js'
 
-export default function DecisionDrawers({ screen, onOpen, heading = 'Decisions you can make here' }) {
+export default function DecisionDrawers({ screen, onOpen, heading = 'Decisions you can make here', variant = 'drawers' }) {
   const cats = categoriesForScreen(screen)
   const [open, setOpen] = useState(() => new Set())
+  const [sel, setSel] = useState(cats[0]?.id || null)
   if (!cats.length) return null
 
   const toggle = (id) => setOpen(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n
   })
+
+  const DecisionRow = (id) => (
+    <button key={id}
+      onClick={() => onOpen?.(id)}
+      className="sw-tile sw-tile-interactive sw-press"
+      style={{
+        textAlign: 'left', cursor: 'pointer', padding: '10px 12px', width: '100%',
+        display: 'flex', alignItems: 'center', gap: 10,
+        border: '1px solid var(--c-border)', marginBottom: 4,
+      }}>
+      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
+        background: 'var(--c-acc-bg)', color: 'var(--c-acc)', minWidth: 44, textAlign: 'center', flexShrink: 0 }}>{id}</span>
+      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{titleOf(id)}</span>
+      <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
+    </button>
+  )
+
+  // ── Chip variant — category pills (like the Balance Sheet / Income Statement
+  //    nav) + the selected category's decisions below. Founder 2026-06-06. ──
+  if (variant === 'chips') {
+    const active = cats.find(c => c.id === sel) || cats[0]
+    return (
+      <div style={{ marginTop: 4 }}>
+        {heading && <div className="sw-eyebrow" style={{ marginBottom: 10 }}>{heading}</div>}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+          {cats.map(c => {
+            const on = c.id === active.id
+            return (
+              <button key={c.id} onClick={() => setSel(c.id)} className="sw-press"
+                style={{
+                  padding: '7px 13px', borderRadius: 999, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700,
+                  border: `1px solid ${on ? 'var(--c-acc)' : 'var(--c-border)'}`,
+                  background: on ? 'var(--c-acc-bg)' : 'var(--c-surface2)',
+                  color: on ? 'var(--c-acc)' : 'var(--c-text2)',
+                }}>
+                <span style={{ fontSize: 13 }}>{c.icon}</span>{c.label}
+                <span style={{ fontSize: 11, opacity: 0.7 }}>{c.ids.length}</span>
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {active.ids.map(id => DecisionRow(id))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ marginTop: 16 }}>

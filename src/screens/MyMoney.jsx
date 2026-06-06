@@ -3320,6 +3320,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // PivotView uses activeEntity = scenarioEntity ?? entity so pivot views
   // reflect scenario numbers while a card is expanded.
   const [scenarioEntity, setScenarioEntity] = useState(null)
+  // Decisions tab (founder 2026-06-06): a 5th tab beside What-if that swaps the
+  // content for the decision categories. Separate from viewMode (engine state).
+  const [showDecisions, setShowDecisions] = useState(false)
   const [filterWrapper, setFilterWrapper] = useState(null)
   // Phase 2 follow-up — bucket-style add flow + category opened for it.
   const [bucketOpen, setBucketOpen] = useState(false)
@@ -3580,18 +3583,19 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
 
   return (
     <div className="screen">
-      <DecisionDrawers screen="money" onOpen={onOpenDecision} />
-
-      {/* ── X28 top-bar: 7 windows + 4 view modes + rules chip ───────────── */}
+      {/* ── X28 top-bar: view modes + Decisions tab ──────────────────────── */}
       <div style={{ margin: '0 -16px' }}>
         <X28TopBar
           window={windowId}
           viewMode={viewMode}
           onWindowChange={setWindowId}
-          onViewModeChange={(m) => { setViewMode(m); if (m !== 'scenario') setScenarioEntity(null) }}
+          onViewModeChange={(m) => { setShowDecisions(false); setViewMode(m); if (m !== 'scenario') setScenarioEntity(null) }}
           rulesVersion={BRAND.rulesVersion}
           dataDate={BRAND.dataDate}
           showWindowRow={false}
+          showDecisions
+          decisionsActive={showDecisions}
+          onDecisions={() => setShowDecisions(s => !s)}
         />
       </div>
 
@@ -3676,10 +3680,13 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
       {/* ── What-If scenario library (viewMode === 'scenario') ───────────────
            Replaces the main content when the user selects the "What if" mode
            pill in X28TopBar. All other modes fall through to the normal view. */}
-      {viewMode === 'scenario' && (
+      {showDecisions && (
+        <DecisionDrawers screen="money" variant="chips" onOpen={onOpenDecision} heading="Decisions you can make from My Money" />
+      )}
+      {!showDecisions && viewMode === 'scenario' && (
         <WhatIfLibrary entity={entity} onScenarioSelect={setScenarioEntity} />
       )}
-      {viewMode === 'scenario' ? null : <>
+      {(showDecisions || viewMode === 'scenario') ? null : <>
 
       {/* SECTION NAV — extracted 2026-05-28 to MoneyXDrawer.jsx so the same
          8-chip drawer renders consistently on every MoneyX-family screen

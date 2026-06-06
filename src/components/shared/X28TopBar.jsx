@@ -106,6 +106,13 @@ export default function X28TopBar({
   showNowPill = true,
   showWindowRow = true,
   onNowTap,
+  // Optional 5th tab next to the view modes (founder 2026-06-06): a "Decisions"
+  // entry that, like "What if", swaps the screen content for the decision
+  // categories. It is NOT a viewMode (doesn't touch the engine time-state) —
+  // the screen owns a separate `decisionsActive` toggle via onDecisions.
+  showDecisions = false,
+  decisionsActive = false,
+  onDecisions,
 }) {
   // hydrate from storage if uncontrolled on first render
   const stored = useRef(readStore())
@@ -154,6 +161,12 @@ export default function X28TopBar({
   }
 
   const nowDimmed = modeState === 'plan' || modeState === 'scenario'
+
+  // Tab list for Row 2 — view modes, plus an optional Decisions tab. Decisions
+  // is tracked separately (decisionsActive), so when it's on, none of the
+  // view-mode tabs read as active.
+  const tabs = showDecisions ? [...VIEW_MODES, { id: '__decisions', label: 'Decisions' }] : VIEW_MODES
+  const activeIdx = decisionsActive ? VIEW_MODES.length : VIEW_MODES.findIndex(m => m.id === modeState)
 
   return (
     <div style={{
@@ -301,7 +314,7 @@ export default function X28TopBar({
         style={{
           position: 'relative',
           display: 'grid',
-          gridTemplateColumns: `repeat(${VIEW_MODES.length}, 1fr)`,
+          gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
           gap: 2,
         }}
       >
@@ -312,10 +325,8 @@ export default function X28TopBar({
             position: 'absolute',
             top: 0, bottom: 0,
             left: 0,
-            width: `calc(100% / ${VIEW_MODES.length})`,
-            transform: `translateX(${
-              VIEW_MODES.findIndex(m => m.id === modeState) * 100
-            }%)`,
+            width: `calc(100% / ${tabs.length})`,
+            transform: `translateX(${Math.max(0, activeIdx) * 100}%)`,
             background: 'var(--c-tint-neutral-2)',
             borderRadius: 'var(--r-md)',
             transition: 'transform var(--dur-normal, 350ms) var(--ease-out-cubic, cubic-bezier(0.33,1,0.68,1))',
@@ -323,14 +334,15 @@ export default function X28TopBar({
             zIndex: 0,
           }}
         />
-        {VIEW_MODES.map(m => {
-          const active = m.id === modeState
+        {tabs.map(m => {
+          const isDecisions = m.id === '__decisions'
+          const active = isDecisions ? decisionsActive : (!decisionsActive && m.id === modeState)
           return (
             <button
               key={m.id}
               role="tab"
               aria-selected={active}
-              onClick={() => pickMode(m)}
+              onClick={() => isDecisions ? onDecisions?.() : pickMode(m)}
               className={`sw-tab-ghost${active ? ' is-active' : ''}`}
               style={{
                 position: 'relative',
@@ -338,6 +350,8 @@ export default function X28TopBar({
                 background: 'transparent',
                 padding: '7px 8px',
                 fontSize: 13,
+                fontWeight: isDecisions ? 700 : undefined,
+                color: isDecisions && !active ? 'var(--c-acc)' : undefined,
               }}
             >
               {m.label}

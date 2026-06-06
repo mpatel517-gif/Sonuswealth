@@ -116,9 +116,12 @@ const TABS = [
   { id:'flow',  label:'Cashflow', icon:'≋' },
   { id:'tax',   label:'Tax',      icon:'⚖' },
   { id:'risk',  label:'Risk',     icon:'◉' },
-  { id:'decisions', label:'Decisions', icon:'◆' },
   { id:'timeline',  label:'Timeline', icon:'◷' },
 ]
+// Decisions intentionally NOT a nav tab (founder 2026-06-06: too much clutter).
+// They live as categorised "Decisions you can make here" drawers on the screen
+// that owns each topic (My Money / Cashflow / Tax & Estate / Risk). The full
+// catalogue (grouped) remains reachable via More (⋯) → All decisions (40).
 
 // ─── Global Tax Year chip ───────────────────────────────────────────────
 // Founder feedback 2026-05-28: TY selector must be visible on every page.

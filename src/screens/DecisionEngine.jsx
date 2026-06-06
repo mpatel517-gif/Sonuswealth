@@ -415,18 +415,53 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI }) {
   )
 }
 
+// Founder 2026-06-06: "I don't like one big list — I don't know how to find
+// what I want." The 40 decisions are grouped into topic drawers. The same
+// grouping maps each decision to the screen that owns it (see DECISION_HOME),
+// so the per-screen "Decisions you can make here" drawers reuse this taxonomy.
+const DECISION_CATEGORIES = [
+  { id: 'pensions',   label: 'Pensions & retirement',   icon: '◷', home: 'money',  ids: ['DE-01','DE-02','DE-03','DE-04','DE-05','DE-37','DE-38'] },
+  { id: 'investing',  label: 'Investing & tax wrappers', icon: '≋', home: 'money',  ids: ['DE-06','DE-07','DE-22','DE-23','DE-24','DE-26','DE-27','DE-28'] },
+  { id: 'property',   label: 'Property & mortgage',      icon: '⌂', home: 'money',  ids: ['DE-08','DE-09','DE-10','DE-11','DE-12'] },
+  { id: 'cash',       label: 'Cash & emergency fund',    icon: '£', home: 'flow',   ids: ['DE-13','DE-14'] },
+  { id: 'protection', label: 'Protection',              icon: '◉', home: 'risk',   ids: ['DE-19','DE-20','DE-21'] },
+  { id: 'estate',     label: 'Estate, gifts & IHT',     icon: '⚖', home: 'tax',    ids: ['DE-15','DE-16','DE-17','DE-18','DE-29'] },
+  { id: 'business',   label: 'Business & director',     icon: '◆', home: 'money',  ids: ['DE-25','DE-35','DE-36'] },
+  { id: 'life',       label: 'Income & life events',    icon: '✦', home: 'flow',   ids: ['DE-30','DE-31','DE-32','DE-33','DE-34','DE-39','DE-40'] },
+]
+
 // ── Step 1: Identify ────────────────────────────────────────────────────────
 function StepIdentify({ decision, onPick, onAskAI }) {
   const liveTypes = DECISION_TYPES_ALL.filter(d => d.status === 'live')
   const phase2Types = DECISION_TYPES_ALL.filter(d => d.status !== 'live')
+  const titleOf = (id) => (DECISION_TYPES_ALL.find(x => x.id === id) || {}).title || id
+  const [openCats, setOpenCats] = useState(() => new Set())
+  const toggleCat = (id) => setOpenCats(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n
+  })
+
+  const Row = (id) => (
+    <button key={id}
+      onClick={() => onPick({ id: id.toLowerCase().replace(/-/g, '_'), code: id, title: titleOf(id), icon: '◆' })}
+      className="sw-tile sw-tile-interactive sw-press"
+      style={{
+        textAlign: 'left', cursor: 'pointer', padding: '10px 12px', width: '100%',
+        display: 'flex', alignItems: 'center', gap: 10,
+        border: '1px solid var(--c-border)', marginBottom: 4,
+      }}>
+      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
+        background: 'var(--c-acc-bg)', color: 'var(--c-acc)', minWidth: 44, textAlign: 'center', flexShrink: 0 }}>{id}</span>
+      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)', textAlign: 'left' }}>{titleOf(id)}</span>
+      <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
+    </button>
+  )
 
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Pick a decision to work through. The 9-step engine surfaces options,
-        scores them against your priorities, surfaces unconsidered baselines,
-        rewrites the recommendation inside FCA boundaries, stress-tests, and
-        commits to the audit trail.
+        Pick a topic, then a decision to work through. The engine scores the
+        options against your priorities and rewrites the recommendation inside
+        FCA boundaries.
       </div>
 
       {/* Optional LLM path — describe a decision in plain English (V2). */}
@@ -447,34 +482,36 @@ function StepIdentify({ decision, onPick, onAskAI }) {
         </button>
       )}
 
-      {/* Live catalogue — all live types are selectable */}
-      <DecisionCategory title={`Live decisions (${liveTypes.length})`}>
-        {liveTypes.map(d => {
-          const active = (decision?.code || decision?.id) === d.id
+      {/* Categorised drawers — tap a topic to expand its decisions. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {DECISION_CATEGORIES.map(cat => {
+          const ids = cat.ids.filter(id => liveTypes.some(d => d.id === id))
+          if (!ids.length) return null
+          const open = openCats.has(cat.id)
           return (
-            <button key={d.id}
-              onClick={() => onPick({ id: d.id.toLowerCase().replace(/-/g, '_'), code: d.id, title: d.title, icon: '◆' })}
-              className="sw-tile sw-tile-interactive sw-press"
-              style={{
-                textAlign: 'left', cursor: 'pointer',
-                padding: '10px 12px', width: '100%',
-                display: 'flex', alignItems: 'center', gap: 10,
-                border: active ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)',
-                background: active ? 'var(--c-acc-bg)' : undefined,
-                marginBottom: 4,
-              }}>
-              <span style={{
-                fontSize: 10, fontWeight: 800,
-                padding: '2px 6px', borderRadius: 6,
-                background: 'var(--c-acc-bg)', color: 'var(--c-acc)',
-                minWidth: 44, textAlign: 'center', flexShrink: 0,
-              }}>{d.id}</span>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)', textAlign: 'left' }}>{d.title}</span>
-              <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
-            </button>
+            <div key={cat.id} className="sw-tile" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--c-border)' }}>
+              <button
+                onClick={() => toggleCat(cat.id)}
+                aria-expanded={open}
+                className="sw-press"
+                style={{
+                  width: '100%', cursor: 'pointer', background: open ? 'var(--c-acc-bg)' : 'var(--c-surface2)',
+                  border: 'none', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                <span style={{ fontSize: 16, color: 'var(--c-acc)', width: 22, textAlign: 'center', flexShrink: 0 }}>{cat.icon}</span>
+                <span style={{ flex: 1, textAlign: 'left', fontSize: 14, fontWeight: 800, color: 'var(--c-text)' }}>{cat.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text3)' }}>{ids.length}</span>
+                <span style={{ fontSize: 14, color: 'var(--c-text3)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s', width: 14, textAlign: 'center' }}>›</span>
+              </button>
+              {open && (
+                <div style={{ padding: '8px 10px 4px' }}>
+                  {ids.map(id => Row(id))}
+                </div>
+              )}
+            </div>
           )
         })}
-      </DecisionCategory>
+      </div>
 
       {/* Phase 2 catalogue — only shown if any stubs remain (all 40 now live). */}
       {phase2Types.length > 0 && (

@@ -681,8 +681,34 @@ function leverFor(decId) {
     'DE-27': { param: 'vctAmount',      label: 'How much you invest in VCTs',         max: 200000, step: 5000,  def: 20000 },
     'DE-28': { param: 'bprAmount',      label: 'How much you hold in BPR assets',     max: 500000, step: 10000, def: 100000 },
     'DE-29': { param: 'donationAmount', label: 'How much you donate',                 max: 50000,  step: 1000,  def: 5000 },
+    'DE-32': { param: 'redundancyAmount', label: 'Redundancy lump sum',               max: 200000, step: 5000,  def: 50000 },
+    'DE-33': { param: 'inheritanceAmount', label: 'Inheritance received',             max: 500000, step: 10000, def: 100000 },
+    'DE-35': { param: 'saleProceeds',   label: 'Business sale proceeds',              max: 2000000,step: 50000, def: 500000 },
+    'DE-37': { param: 'cetvAmount',     label: 'Transfer value (CETV)',               max: 1000000,step: 25000, def: 400000 },
+    // Property is keep/let/sell (discrete), but its INPUT — the property's value —
+    // is the lever: it drives rent, sale proceeds, CGT and estate. custom:'property'
+    // recomputes the option impacts locally (DE-09 uses PROPERTY_PATHS, not the
+    // engine), which also de-hardcodes the old fixed £450k example.
+    'DE-09': { param: 'propertyValue', label: "Your property's value", min: 50000, max: 2000000, step: 25000, def: 450000, custom: 'property' },
   }
   return M[decId] || null
+}
+
+// Recompute a property option's impact from a property value (DE-09 lever). Net
+// rental yield ~3.7%, wrapper income ~4.5%, BTL ~5%; CGT on the gain over a base
+// proxy at the higher rate. Model figures on your value, not a forecast.
+function propertyImpact(id, value) {
+  const v = Math.max(0, +value || 0)
+  const gain = Math.max(0, v - 125000)
+  const cgt = Math.round(gain * (TAX.cgtHigher || 0.24))
+  const netSale = Math.max(0, v - cgt)
+  switch (id) {
+    case 'keep_use':         return { yield_p_a: 0,                        cgt_today: 0,   iht_in_estate: v,                  liquidity: 0,       complexity: 1 }
+    case 'let':              return { yield_p_a: Math.round(v * 0.037),    cgt_today: 0,   iht_in_estate: v,                  liquidity: 0,       complexity: 3 }
+    case 'sell_isa':         return { yield_p_a: Math.round(netSale*0.045),cgt_today: cgt, iht_in_estate: Math.round(v*0.55),liquidity: netSale, complexity: 2 }
+    case 'sell_btl_replace': return { yield_p_a: Math.round(v * 0.05),     cgt_today: cgt, iht_in_estate: v,                  liquidity: 0,       complexity: 4 }
+    default:                 return { yield_p_a: 0,                        cgt_today: 0,   iht_in_estate: v,                  liquidity: 0,       complexity: 1 }
+  }
 }
 
 function OptionLever({ lever, value, onChange }) {
@@ -693,10 +719,10 @@ function OptionLever({ lever, value, onChange }) {
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', minWidth: 0 }}>{lever.label}</span>
         <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-acc)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{f(value)}</span>
       </div>
-      <input type="range" min={0} max={lever.max} step={lever.step} value={value}
+      <input type="range" min={lever.min ?? 0} max={lever.max} step={lever.step} value={value}
         onChange={(e) => onChange(Number(e.target.value))} style={{ width: '100%' }} aria-label={lever.label} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 2 }}>
-        <span>{f(0)}</span><span>max {f(lever.max)}</span>
+        <span>{f(lever.min ?? 0)}</span><span>max {f(lever.max)}</span>
       </div>
       <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.5 }}>
         Drag to model the amount — the comparison below updates with your number.
@@ -713,7 +739,14 @@ function StepOptions({ paths, decId, entity }) {
   const lever = leverFor(decId)
   const [leverVal, setLeverVal] = useState(lever?.def ?? 0)
   const view = useMemo(() => {
-    if (!lever || !entity) return paths
+    if (!lever) return paths
+    if (lever.custom === 'property') {
+      return paths.map(p => {
+        const impact = propertyImpact(p.id, leverVal)
+        return { ...p, impact, simulation: { ...(p.simulation || {}), delta: { nw: impact.liquidity, iht: impact.iht_in_estate - leverVal, income: impact.yield_p_a } } }
+      })
+    }
+    if (!entity) return paths
     return paths.map(p => {
       try {
         const sim = simulateAction(entity, decId, { [lever.param]: leverVal, pathId: p.id, riskLevel: p.riskLevel })

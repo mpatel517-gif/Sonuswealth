@@ -429,6 +429,9 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   // the Decision Engine seeded straight into one decision (skips the catalogue).
   const [decisionSeed, setDecisionSeed] = useState(null)
   const openDecision = useCallback((id) => { setDecisionSeed(id); setMoreScreen('decision') }, [])
+  // Decisions committed this session — merged into the entity Timeline reads so a
+  // committed decision actually SHOWS in the decision log (founder 2026-06-06).
+  const [sessionDecisions, setSessionDecisions] = useState([])
 
   // §13.8 Drill Memory — surface a resume-Whisper on first mount if a drill
   // session exists within TTL. The whisper carries an onTap that hydrates the
@@ -490,6 +493,10 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   const handleCommit = useCallback((event) => {
     if (!event || !event.type) return
     commit(persona, event)
+    // Surface committed Decision-Engine decisions on Timeline immediately.
+    if (event.record && /^DE-/.test(event.type)) {
+      setSessionDecisions(d => [event.record, ...d])
+    }
     if (event.type === 'SCENARIO_SAVED' && event.payload?.back_flow === 'iht') {
       setIHTForceKey(k => k + 1)
     }
@@ -868,7 +875,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             R7 SCENARIO_SAVED back_flow bumps ihtForceKey for live recompute. */}
         {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} onOpenDecision={openDecision} />}
         {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} onOpenDecision={openDecision} />}
-        {tab === 'timeline'  && <Timeline     entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
+        {tab === 'timeline'  && <Timeline     entity={sessionDecisions.length ? { ...entity, decisions: [...sessionDecisions, ...(entity?.decisions || [])] } : entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
         </ErrorBoundary>
         {/* P12-1 (2026-05-28) — canonical FCA disclaimer footer per AppShell
             slot contract. Rendered at Dashboard scope so every screen inherits

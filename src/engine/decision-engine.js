@@ -1194,9 +1194,85 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
   return {
     summary:     summaries[decisionType] || `Taking action on ${decisionType} has a projected net-worth impact of ${_fmt(nwGain)} over ${sim.horizon} years.`,
     steps:       stepSets[decisionType] || ['Review your current position', 'Quantify the headroom available', 'Take the first action', 'Set a review reminder'],
-    sources:     ['From your data', 'UK-2026.1 tax rules', 'Sonuswealth engine'],
+    sources:     ['From your data', 'UK 2026/27 tax rules', 'Sonuswealth engine'],
     fcaBoundary: FCA_BOUNDARY,
     confidence:  sim.confidence,
     impact:      { nwGain, fqGain, ihtSave, horizon: sim.horizon },
+    // Methodology receipt (founder 2026-06-06) — how this was worked out, traceable
+    // to bedrock: your data + named, dated tax rules + the assumptions used.
+    methodology: {
+      basis: 'Worked out from your own assets and income, run against the current UK tax rules.',
+      assumptions: [
+        `Investment growth assumed at ${_pc(TAX.growthDefault ?? 0.05)} a year, before charges and inflation.`,
+        'Figures are shown in today’s money.',
+        `Projected over ${sim.horizon} years.`,
+        chosenPath ? `Based on the option: ${(chosenPath.plainLabel || chosenPath.title || chosenPath.label || '').replace(/\.$/, '')}.` : null,
+      ].filter(Boolean),
+      rules: [
+        { name: 'Inheritance tax rate', value: _pc(TAX.ihtRate), status: 'In force' },
+        { name: 'Pensions counted in your estate', value: 'from April 2027', status: 'Enacted (Royal Assent, March 2026)' },
+        { name: 'Pension annual allowance', value: _gbp(TAX.pensionAA || 60000), status: 'In force' },
+      ],
+      rulesVersion: 'UK 2026/27',
+    },
   }
+}
+
+// ── stressTest ───────────────────────────────────────────────────────────────
+
+/**
+ * Re-run the chosen option against three setbacks, using the user's OWN assets,
+ * so "what is it testing against?" has a real answer. Deterministic worst-case
+ * (a fuller scenario simulation is Phase 2). Returns per-shock £ impacts on the
+ * user's actual position + a resilience verdict for the chosen option.
+ */
+export function stressTest(entity, decisionType, path) {
+  const sim     = path?.simulation
+    || simulateAction(entity, decisionType, path ? { pathId: path.id, riskLevel: path.riskLevel } : {})
+  const nwGain  = sim?.delta?.nw || 0
+  const horizon = sim?.horizon || 10
+  const nw      = _nw(entity)
+  const num     = (v) => +v || 0
+  const r       = (n) => Math.round(n)
+  const a       = entity?.assets || {}
+
+  // Market-exposed assets (equities held in ISA / GIA / SIPP / pensions / investments).
+  const equityExposure =
+      num(a.isa?.value) + num(a.gia?.value) + num(a.sipp?.total)
+    + (Array.isArray(a.pensions)    ? a.pensions.reduce((s, p) => s + num(p.balance_gbp || p.value || p.total), 0) : 0)
+    + (Array.isArray(a.investments) ? a.investments.reduce((s, p) => s + num(p.value || p.balance_gbp || p.balance), 0) : 0)
+  const mortgage =
+      num(entity?.liabilities?.mortgage?.balance)
+    + (Array.isArray(entity?.liabilities)
+        ? entity.liabilities.filter(l => /mortgage/i.test(l.type || '')).reduce((s, l) => s + num(l.balance || l.balance_gbp), 0)
+        : 0)
+
+  const shocks = [
+    {
+      id: 'market', label: 'Markets fall 30%',
+      plain: 'A sharp stock-market drop, like 2008 or 2020.',
+      affects: equityExposure > 0 ? 'Your investments and pensions' : 'You hold little in the markets',
+      impact: -(r(equityExposure * 0.30)),
+    },
+    {
+      id: 'rates', label: 'Interest rates rise 2%',
+      plain: 'Borrowing costs more; some savings pay a little more.',
+      affects: mortgage > 0 ? 'Your mortgage and other borrowing (per year)' : 'You have little borrowing to be hit',
+      impact: -(r(mortgage * 0.02)),
+    },
+    {
+      id: 'inflation', label: 'Inflation runs at 6%',
+      plain: 'Prices rise faster than planned, so your money buys less.',
+      affects: 'The real value of your whole position (per year)',
+      impact: -(r(Math.max(nw, 0) * (0.06 - 0.025))),
+    },
+  ]
+
+  // Resilience of the CHOSEN option (not the whole portfolio): guaranteed / cash /
+  // status-quo options ride these out; growth-reliant options are more exposed.
+  const resilience = path?.riskLevel === 'high'
+    ? 'sensitive'
+    : path?.riskLevel === 'low' ? 'resilient' : 'moderate'
+
+  return { shocks, nwGain, horizon, resilience, exposure: { equityExposure: r(equityExposure), mortgage: r(mortgage) } }
 }

@@ -25,8 +25,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState, useEffect } from 'react'
-import { simulateAction, enumeratePaths, generateRecommendation } from '../engine/decision-engine.js'
+import { simulateAction, enumeratePaths, generateRecommendation, stressTest } from '../engine/decision-engine.js'
 import { objectiveFor, optionGloss } from '../engine/decision-content.js'
+import { PathComparisonChart, BeforeAfterBar } from '../components/Decisions/DecisionCharts.jsx'
+import { checklistFor, reviewHintFor } from '../engine/decision-commit-content.js'
 import { DECISION_TYPES_ALL, DECISION_CATEGORIES } from '../engine/decision-catalogue.js'
 
 // FCA boundary constant — mirrored from FIX-11 Ask. Single source of truth
@@ -208,7 +210,12 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       const g = optionGloss(decId, p.id)
       return { ...p, plainLabel: g?.plain || null, goodIf: g?.goodIf || null }
     })
-    if (decId === 'DE-09') return withGloss(PROPERTY_PATHS)
+    if (decId === 'DE-09') return withGloss(PROPERTY_PATHS.map(p => ({
+      // Keep impact (drives the 4 property chips); add a comparable simulation so
+      // the comparison chart renders. nw proxy = cash freed up by the option.
+      ...p,
+      simulation: p.simulation || { delta: { nw: p.impact?.liquidity || 0, iht: (p.impact?.iht_in_estate ?? 0) - 450000 } },
+    })))
     try {
       // Engine paths use {id,label,riskLevel,detail,simulation}; the wizard's
       // step components were built for the property-path shape {title,sub,impact}.
@@ -307,6 +314,17 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       },
       timestamp: new Date().toISOString(),
     }
+    // Timeline-ready record (founder 2026-06-06: committed decisions must SHOW on
+    // Timeline, not just hit the event log). Matches Timeline's decision-log shape.
+    commitEvent.record = {
+      id: `${commitEvent.type}-${Date.now()}`,
+      title: decision?.title || commitEvent.type,
+      detail: `Chose: ${final?.plainLabel || final?.title || '—'}${engineRec?.impact?.nwGain ? ` · net worth ${fmtSigned(engineRec.impact.nwGain)} over ${engineRec.impact.horizon}y` : ''}`,
+      date: commitEvent.timestamp.substring(0, 10),
+      committed_at: commitEvent.timestamp,
+      impact: { fqDelta: engineRec?.impact?.fqGain ?? null },
+      source: 'Decision Engine',
+    }
     onCommit?.(commitEvent)
     setCommitted(true)
     // Show confirmation for 1.5s then close and navigate to Timeline
@@ -371,7 +389,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
         <StepContext context={context} onChange={setContext} />
       )}
       {step === 2 && decision && (
-        <StepOptions paths={computedPaths} />
+        <StepOptions paths={computedPaths} decId={decision.code || decision.id} />
       )}
       {step === 3 && decision && (
         <StepWeights weights={weights} onChange={setWeights} />
@@ -395,6 +413,8 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       )}
       {step === 7 && decision && (
         <StepStressTest
+          entity={entity}
+          decId={decision.code || decision.id}
           path={ranked.find(p => p.id === chosen) || ranked[0]}
           tested={stressTested}
           onTested={() => setStressTested(true)}
@@ -403,7 +423,8 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       {step === 8 && decision && (
         <StepCommit
           path={ranked.find(p => p.id === chosen) || ranked[0]}
-          weights={weights}
+          decId={decision.code || decision.id}
+          engineRec={engineRec}
         />
       )}
 
@@ -610,12 +631,20 @@ function StepContext({ context, onChange }) {
 }
 
 // ── Step 3: Options ─────────────────────────────────────────────────────────
-function StepOptions({ paths }) {
+function StepOptions({ paths, decId }) {
+  const isProperty = decId === 'DE-09'
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
         Here are <strong>{paths.length}</strong> ways to go, each worked out with your own
         numbers. You don't choose yet — the next step lets you set what matters most.
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <PathComparisonChart
+          paths={paths}
+          valueKey="nw"
+          axisLabel={isProperty ? 'Cash freed up vs today' : undefined}
+        />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {paths.map(p => {
@@ -932,32 +961,62 @@ function StepRecommendation({ path, weights, engineRec }) {
           {fca}
         </div>
       </div>
+      {/* Before/after net-worth chart — engine decisions carry a before/after */}
+      {path.simulation?.before?.nw != null && (
+        <div style={{ marginTop: 12 }}>
+          <BeforeAfterBar label="Net worth" before={path.simulation.before.nw} after={path.simulation.after.nw} />
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Step 7 (was 6): Stress-test ────────────────────────────────────────────
-function StepStressTest({ path, tested, onTested }) {
+function StepStressTest({ entity, decId, path, tested, onTested }) {
+  const res = useMemo(() => {
+    if (!path) return null
+    try { return stressTest(entity, decId, path) } catch { return null }
+  }, [entity, decId, path])
   if (!path) return null
+  const shocks = res?.shocks || []
+  const verdict = {
+    resilient: { text: 'This option holds up well — it doesn’t rely on markets rising.', color: 'var(--c-acc)' },
+    moderate:  { text: 'This option is moderately exposed — a downturn would dent it, not break it.', color: 'var(--c-gold, #E8B84B)' },
+    sensitive: { text: 'This option leans on investment growth, so a market fall would reduce its benefit most.', color: 'var(--c-coral, #FF6F7D)' },
+  }[res?.resilience || 'moderate']
+
   return (
     <div>
-      <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Stress-testing <strong>{path.title}</strong> against 3 shocks.
+      <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 6 }}>
+        We re-run your choice — <strong>{path.plainLabel || path.title}</strong> — against three
+        setbacks, using your own assets, to see if it still holds up.
       </div>
-      <div style={{
-        fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5,
-        padding: '8px 10px', borderRadius: 8,
-        background: 'var(--c-surface2)', border: '1px dashed var(--c-border)',
-        marginBottom: 12,
-      }}>
-        This is a simple worst-case check against three setbacks. A fuller
-        scenario simulation is coming next.
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 12 }}>
+        Illustrative worst-case, not a forecast.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-        <StressRow shock="Rate +2%"    delta={tested ? '-£2,100/yr' : '—'} ok={tested} />
-        <StressRow shock="Market −30%" delta={tested ? '-£135,000 NW' : '—'} ok={!tested ? null : true} />
-        <StressRow shock="Inflation 6%" delta={tested ? '-1.8% real return' : '—'} ok={tested} />
+        {shocks.map(s => (
+          <div key={s.id} className="sw-tile" style={{ padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', flex: 1 }}>{s.label}</span>
+              <span style={{
+                fontSize: 13, fontWeight: 800,
+                color: !tested ? 'var(--c-text3)' : s.impact < 0 ? 'var(--c-coral, #FF6F7D)' : 'var(--c-text3)',
+              }}>{!tested ? '—' : s.impact === 0 ? 'No real impact' : fmtSigned(s.impact)}</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.45 }}>{s.plain}</div>
+            {tested && <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 3 }}>Hits: {s.affects}</div>}
+          </div>
+        ))}
       </div>
+      {tested && verdict && (
+        <div className="sw-tile" style={{
+          padding: '10px 12px', marginBottom: 14,
+          border: `1px solid ${verdict.color}`, background: 'var(--c-surface2)',
+        }}>
+          <span style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.5 }}>{verdict.text}</span>
+        </div>
+      )}
       <button onClick={onTested}
         className="sw-press"
         style={{
@@ -988,29 +1047,68 @@ function StressRow({ shock, delta, ok }) {
 }
 
 // ── Step 9 (was 7): Commit ─────────────────────────────────────────────────
-function StepCommit({ path }) {
+// Collapsible-free section wrapper for the commit step's four parts.
+function CommitSection({ eyebrow, title, children }) {
+  return (
+    <div className="sw-tile" style={{ padding: 14, marginTop: 10, border: '1px solid var(--c-border)' }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 8 }}>{eyebrow}</div>
+      {title && <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', marginBottom: 8 }}>{title}</div>}
+      {children}
+    </div>
+  )
+}
+
+// Plain-text adviser-ready summary (founder 2026-06-06) — shareable so a user can
+// hand it to an FCA-authorised adviser to action. Information, not advice.
+function buildAdviserSummary({ decId, path, steps, reviewHint, engineRec }) {
+  const obj = objectiveFor(decId)
+  const L = []
+  L.push('SONUSWEALTH — DECISION SUMMARY')
+  L.push('')
+  if (obj?.decision) L.push(`Decision: ${obj.decision}`)
+  L.push(`Chosen option: ${path?.plainLabel || path?.title || '—'}`)
+  if (engineRec?.impact) {
+    const i = engineRec.impact
+    L.push(`Projected impact (illustrative, over ${i.horizon}y): net worth ${fmtSigned(i.nwGain)}${i.ihtSave ? `, inheritance tax saved ~£${Math.round(i.ihtSave / 1000)}k` : ''}.`)
+  }
+  if (engineRec?.summary) { L.push(''); L.push(`Why: ${engineRec.summary}`) }
+  if (steps?.length) { L.push(''); L.push('Action checklist:'); steps.forEach((s, i) => L.push(`  ${i + 1}. ${s}`)) }
+  if (engineRec?.methodology?.assumptions?.length) { L.push(''); L.push('Assumptions:'); engineRec.methodology.assumptions.forEach(a => L.push(`  - ${a}`)) }
+  if (reviewHint) { L.push(''); L.push(`When to revisit: ${reviewHint}`) }
+  L.push('')
+  L.push('Basis: UK 2026/27 tax rules. Information and guidance only — NOT regulated financial advice. Verify with an FCA-authorised adviser before acting.')
+  return L.join('\n')
+}
+
+function StepCommit({ path, decId, engineRec }) {
+  const [copied, setCopied] = useState(false)
   if (!path) return null
+  const checklist  = checklistFor(decId, path.id)
+  const steps      = checklist.length ? checklist : (engineRec?.steps || [])
+  const reviewHint = reviewHintFor(decId)
+  const methodology = engineRec?.methodology
+  const summaryText = buildAdviserSummary({ decId, path, steps, reviewHint, engineRec })
+  const copy = () => {
+    try { navigator.clipboard?.writeText(summaryText); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* clipboard blocked */ }
+  }
+
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Ready to save. This records your decision and its action plan to your
-        Timeline, so you can follow the steps and review it later.
+        Ready to save. This records your decision and its action plan to your Timeline —
+        it doesn’t action anything with any provider. It’s your record and plan.
       </div>
-      <div className="sw-tile" style={{
-        padding: 14, border: '1.5px solid var(--c-acc)',
-        background: 'var(--c-acc-bg)',
-      }}>
+
+      {/* Your choice */}
+      <div className="sw-tile" style={{ padding: 14, border: '1.5px solid var(--c-acc)', background: 'var(--c-acc-bg)' }}>
         <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Your choice</div>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-text)' }}>
-          {path.title}
+          {path.plainLabel || path.title}
         </div>
         <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 6, lineHeight: 1.5 }}>
-          {path.explanation}
+          {path.explanation || path.detail}
         </div>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 6, marginTop: 10,
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginTop: 10 }}>
           {path.impact ? (
             <>
               <ImpactChip label="Income / yr"  value={fmt(path.impact.yield_p_a)} good />
@@ -1026,6 +1124,66 @@ function StepCommit({ path }) {
           )}
         </div>
       </div>
+
+      {/* 1 — Action checklist */}
+      {steps.length > 0 && (
+        <CommitSection eyebrow="Your action checklist" title="How to put this into action">
+          <ol style={{ margin: 0, paddingLeft: 18 }}>
+            {steps.map((s, i) => (
+              <li key={i} style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 4 }}>{s}</li>
+            ))}
+          </ol>
+        </CommitSection>
+      )}
+
+      {/* 2 — When to revisit */}
+      {reviewHint && (
+        <CommitSection eyebrow="When to revisit">
+          <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>{reviewHint}</div>
+        </CommitSection>
+      )}
+
+      {/* 3 — Adviser-ready summary */}
+      <CommitSection eyebrow="Adviser-ready summary">
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
+          A plain summary of this decision — your choice, the options weighed, the assumptions,
+          and the rule sources — to hand to an FCA-authorised adviser to action.
+        </div>
+        <button onClick={copy} className="sw-press" style={{
+          padding: '8px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer',
+          background: copied ? 'var(--c-surface2)' : 'var(--c-acc)',
+          color: copied ? 'var(--c-text2)' : 'var(--c-on-accent, #0B1F3A)',
+          border: 'none', borderRadius: 100,
+        }}>{copied ? '✓ Copied to clipboard' : 'Copy summary'}</button>
+      </CommitSection>
+
+      {/* 4 — Methodology receipt */}
+      {methodology && (
+        <CommitSection eyebrow="How this was worked out">
+          <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 8 }}>{methodology.basis}</div>
+          {methodology.assumptions?.length > 0 && (
+            <ul style={{ margin: '0 0 10px', paddingLeft: 18 }}>
+              {methodology.assumptions.map((a, i) => (
+                <li key={i} style={{ fontSize: 11.5, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 2 }}>{a}</li>
+              ))}
+            </ul>
+          )}
+          {methodology.rules?.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {methodology.rules.map((r, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11.5, alignItems: 'baseline' }}>
+                  <span style={{ color: 'var(--c-text2)', flex: 1 }}>{r.name}</span>
+                  <span style={{ color: 'var(--c-text)', fontWeight: 700 }}>{r.value}</span>
+                  <span style={{ color: 'var(--c-text3)', fontSize: 10 }}>{r.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8 }}>
+            Rule set: {methodology.rulesVersion}
+          </div>
+        </CommitSection>
+      )}
     </div>
   )
 }

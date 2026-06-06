@@ -191,7 +191,7 @@ export function simulateAction(entity, decisionType, params = {}) {
 
     case 'DE-05': { // Salary sacrifice: increase / decrease
       const salary     = entity?.income?.salary || income
-      const sacrificed = Math.min(salary * 0.05, 5000)
+      const sacrificed = params.sacrifice != null ? Math.max(0, +params.sacrifice) : Math.min(salary * 0.05, 5000)
       // NI saved on sacrificed amount: 8% employee + 15% employer on portion (2026/27)
       const niSaved    = sacrificed * (TAX.employerNICRate ?? 0.15)
       nwDelta    = niSaved * Math.min(20, Math.max(0, 65 - age))
@@ -220,7 +220,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-07': { // GIA → ISA bed-and-ISA execution
       const gia = entity?.assets?.gia?.value || 50000
       const cap = TAX.isaAllowance || 20000
-      const wrapped = Math.min(gia, cap)
+      const wrapped = params.bedIsaAmount != null ? Math.min(+params.bedIsaAmount, cap) : Math.min(gia, cap)
       // CGT exempt on future gains once wrapped; cgt on gains above annual exempt on bed
       const cgtOnBed = Math.max(0, wrapped * 0.15 - TAX.cgaAllowance) * TAX.cgtHigher // 0.15 = embedded-gain proxy
       nwDelta    = wrapped * 0.05 * 10 - cgtOnBed  // 5%/yr sheltered minus bed cost
@@ -290,7 +290,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-12': { // Equity release: lifetime mortgage assessment
       const propertyValue = entity?.assets?.property?.total || 450000
       const releaseRate   = 0.55 // max LTV for equity release
-      const released      = propertyValue * releaseRate * 0.25 // typical drawdown
+      const released      = params.releaseAmount != null ? Math.max(0, +params.releaseAmount) : propertyValue * releaseRate * 0.25 // slidable; else typical drawdown
       // A lifetime mortgage is a LOAN, not wealth: ~neutral today, then net worth
       // erodes as interest rolls up. The debt does reduce the taxable estate.
       const rolledInterest = released * (Math.pow(1.07, 15) - 1) // ~7%/yr rolled up over the horizon
@@ -411,7 +411,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-22': { // CGT crystallisation: harvest allowance now
       const cgtExempt = TAX.cgaAllowance || 3000
       const gains     = entity?.assets?.gia?.unrealisedGain || 20000
-      const harvested = Math.min(gains, cgtExempt)
+      const harvested = params.harvestAmount != null ? Math.min(+params.harvestAmount, gains) : Math.min(gains, cgtExempt)
       // Future CGT saved by crystallising within the exempt amount now
       nwDelta    = harvested * TAX.cgtHigher  // higher-rate CGT avoided on this tranche
       fqDelta    = 2
@@ -424,7 +424,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     case 'DE-23': { // Loss harvesting: realise losses against gains
       const losses = entity?.assets?.gia?.unrealisedLoss || 10000
       const gains  = entity?.assets?.gia?.unrealisedGain || 20000
-      const offset = Math.min(losses, gains)
+      const offset = params.lossAmount != null ? Math.min(+params.lossAmount, gains) : Math.min(losses, gains)
       nwDelta    = offset * TAX.cgtHigher  // CGT saved at higher rate
       fqDelta    = 2
       ihtDelta   = 0
@@ -597,7 +597,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-36': { // Director loan: extract or repay
-      const dlBalance = entity?.liabilities?.directorLoan?.balance || 50000
+      const dlBalance = params.loanAmount != null ? Math.max(0, +params.loanAmount) : (entity?.liabilities?.directorLoan?.balance || 50000)
       // Section 455 tax if not repaid within 9 months of year end (CTA 2010 s455)
       const s455 = dlBalance * TAX.s455Rate
       // Repay vs declare dividend to clear

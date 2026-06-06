@@ -685,6 +685,12 @@ function leverFor(decId) {
     'DE-33': { param: 'inheritanceAmount', label: 'Inheritance received',             max: 500000, step: 10000, def: 100000 },
     'DE-35': { param: 'saleProceeds',   label: 'Business sale proceeds',              max: 2000000,step: 50000, def: 500000 },
     'DE-37': { param: 'cetvAmount',     label: 'Transfer value (CETV)',               max: 1000000,step: 25000, def: 400000 },
+    'DE-05': { param: 'sacrifice',      label: 'How much salary you sacrifice',       max: 30000,  step: 1000,  def: 5000 },
+    'DE-07': { param: 'bedIsaAmount',   label: 'How much you move into an ISA',       max: isa,    step: 500,   def: isa },
+    'DE-12': { param: 'releaseAmount',  label: 'How much you release',                max: 300000, step: 10000, def: 60000 },
+    'DE-22': { param: 'harvestAmount',  label: 'How much gain you crystallise',       max: 50000,  step: 1000,  def: TAX.cgaAllowance || 3000 },
+    'DE-23': { param: 'lossAmount',     label: 'How much loss you realise',           max: 50000,  step: 1000,  def: 10000 },
+    'DE-36': { param: 'loanAmount',     label: 'Director loan balance',               max: 200000, step: 5000,  def: 50000 },
     // Property is keep/let/sell (discrete), but its INPUT — the property's value —
     // is the lever: it drives rent, sale proceeds, CGT and estate. custom:'property'
     // recomputes the option impacts locally (DE-09 uses PROPERTY_PATHS, not the

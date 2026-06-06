@@ -16,13 +16,15 @@
 // Pure presentational: no data fetching, no hardcoded amounts.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Compact £ formatter — ≥1m → £1.2m, ≥1000 → £55k, else whole pounds.
+// Compact £ formatter — ≥1m → £1.2m, ≥10k → £55k, below that exact with commas
+// (£930, £2,030) so small values aren't lossily rounded to "£2k" or shown in a
+// different style next to large ones (founder 2026-06-06: "+£930" beside "+£2k").
 function fmtCompact(v) {
   const n = Number(v) || 0
   const abs = Math.abs(n)
   if (abs >= 1_000_000) return `£${(abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}m`
-  if (abs >= 1_000)     return `£${Math.round(abs / 1_000)}k`
-  return `£${Math.round(abs)}`
+  if (abs >= 10_000)    return `£${Math.round(abs / 1_000)}k`
+  return `£${Math.round(abs).toLocaleString('en-GB')}`
 }
 
 // Signed compact £ — +£55k, −£21k, £0. Uses a true minus sign for negatives.
@@ -85,6 +87,16 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
 
   const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.value)))
   const anyNeg = rows.some(r => r.value < 0)
+  // One unit for the WHOLE chart so bars never mix "£2,030" with "£15k" (founder
+  // 2026-06-06). If the biggest bar is ≥£10k, everything shows in £k; else exact.
+  const useK = maxAbs >= 10_000
+  const fmtBar = (n) => {
+    const a = Math.abs(n), s = n > 0 ? '+' : n < 0 ? '−' : ''
+    if (a === 0) return '£0'
+    if (a >= 1_000_000) return `${s}£${(a / 1e6).toFixed(1)}m`
+    if (useK) return `${s}£${Math.round(a / 1000)}k`
+    return `${s}£${Math.round(a).toLocaleString('en-GB')}`
+  }
 
   // Layout — viewBox in abstract units so it scales to any container width.
   const W = 360
@@ -114,7 +126,7 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
         role="img"
-        aria-label={`Bar chart comparing ${rows.length} options by ${axisCaption}. ${rows.map(r => `${r.label}: ${fmtSigned(r.raw)}`).join('. ')}.`}
+        aria-label={`Bar chart comparing ${rows.length} options by ${axisCaption}. ${rows.map(r => `${r.label}: ${fmtBar(r.raw)}`).join('. ')}.`}
         style={{ display: 'block', marginTop: 8, overflow: 'visible' }}
       >
         <defs>
@@ -191,7 +203,7 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
                 textAnchor={labelAnchor} fontSize="11.5" fontWeight="800"
                 fill={labelFill} fontFamily="Inter,sans-serif"
                 style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {fmtSigned(r.raw)}
+                {fmtBar(r.raw)}
               </text>
             </g>
           )

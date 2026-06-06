@@ -899,7 +899,13 @@ export function generateRecommendation(entity, decisionType, chosenPath) {
   const income  = _annualIncome(entity)
   const aa      = TAX.pensionAA || 60000
 
-  const _fmt = (n) => n >= 1000 ? `£${Math.round(n / 1000)}k` : `£${Math.round(n)}`
+  // Match the UI formatter: exact with commas below £10k, £k to £999k, £m above.
+  const _fmt = (n) => {
+    const a = Math.abs(n), s = n < 0 ? '−' : ''
+    if (a >= 1_000_000) return `${s}£${(a / 1e6).toFixed(a >= 1e7 ? 0 : 1)}m`
+    if (a >= 10_000)    return `${s}£${Math.round(a / 1000)}k`
+    return `${s}£${Math.round(a).toLocaleString('en-GB')}`
+  }
   // Exact comma-formatted £ + trailing-zero-stripped % — for interpolating live
   // TAX thresholds/rates into copy (no hardcoded figures in user-facing strings).
   const _gbp = (n) => `£${Math.round(n).toLocaleString('en-GB')}`

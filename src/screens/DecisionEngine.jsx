@@ -68,7 +68,7 @@ const PROPERTY_PATHS = [
       complexity:   1,
     },
     scores: { tax: 0.6, risk: 0.7, liquidity: 0.2, legacy: 0.5 },
-    explanation: 'No income generated. No CGT today. Stays in estate at full value — IHT exposure of £450k unless residence allowance applies.',
+    explanation: 'No income, and no capital gains tax to pay. Stays in your estate at full value, so it could be taxed when you die unless the main-home allowance applies.',
   },
   {
     id: 'let',
@@ -82,7 +82,7 @@ const PROPERTY_PATHS = [
       complexity:   3,
     },
     scores: { tax: 0.3, risk: 0.4, liquidity: 0.5, legacy: 0.5 },
-    explanation: 'Net rental ~£16,700/yr after costs. Section 24 caps mortgage relief at basic rate. Still in estate. Tenancy risk + management overhead.',
+    explanation: 'Earns rent after costs, but the landlord rules limit how much mortgage interest you can offset against tax. Still counts toward your estate, with tenants and upkeep to manage.',
   },
   {
     id: 'sell_isa',
@@ -96,7 +96,7 @@ const PROPERTY_PATHS = [
       complexity:   2,
     },
     scores: { tax: 0.7, risk: 0.6, liquidity: 0.95, legacy: 0.7 },
-    explanation: 'Crystallises CGT (~£35k) but releases £415k of liquid capital. Wrapping into ISA + SIPP shelters future growth and reduces IHT exposure.',
+    explanation: 'You pay capital gains tax now, but free up a large lump of cash. Moving it into an ISA and a pension shelters future growth from tax and trims your estate.',
   },
   {
     id: 'sell_btl_replace',
@@ -110,7 +110,7 @@ const PROPERTY_PATHS = [
       complexity:   4,
     },
     scores: { tax: 0.4, risk: 0.5, liquidity: 0.2, legacy: 0.5 },
-    explanation: 'Yields more (~£22k/yr) but locks capital again. CGT triggered on sale. Concentration risk in property unchanged.',
+    explanation: 'Earns more rent, but ties your money up in property again. Capital gains tax is due on the sale, and your money stays concentrated in one type of asset.',
   },
 ]
 
@@ -121,10 +121,18 @@ const WEIGHTS_LABEL = {
   legacy:    'Inheritance',
 }
 
+// Plain Title-case for the engine's HIGH/MED/LOW confidence enum (consistent with
+// the chart's wording; never show raw "HIGH" to the user).
+const CONF_LABEL = { HIGH: 'High', MED: 'Medium', MEDIUM: 'Medium', LOW: 'Low' }
+
+// Single £ format rule across the engine UI (founder 2026-06-06): exact with
+// commas below £10k (so £2,030 isn't lossily shown as "£2k"), £k to £999k, £m above.
 function fmt(n) {
   if (n == null) return '—'
-  if (Math.abs(n) >= 1000) return `£${Math.round(n / 1000)}k`
-  return `£${n}`
+  const a = Math.abs(n)
+  if (a >= 1_000_000) return `£${(a / 1e6).toFixed(a >= 1e7 ? 0 : 1)}m`
+  if (a >= 10_000)    return `£${Math.round(a / 1000)}k`
+  return `£${Math.round(a).toLocaleString('en-GB')}`
 }
 
 // Signed £ for engine deltas (e.g. net-worth / IHT change per path).
@@ -132,7 +140,9 @@ function fmtSigned(n) {
   if (n == null) return '—'
   const sign = n > 0 ? '+' : n < 0 ? '−' : ''
   const a = Math.abs(n)
-  return `${sign}${a >= 1000 ? `£${Math.round(a / 1000)}k` : `£${Math.round(a)}`}`
+  if (a >= 1_000_000) return `${sign}£${(a / 1e6).toFixed(a >= 1e7 ? 0 : 1)}m`
+  if (a >= 10_000)    return `${sign}£${Math.round(a / 1000)}k`
+  return `${sign}£${Math.round(a).toLocaleString('en-GB')}`
 }
 
 // Objective banner — frames every decision in plain English (founder 2026-06-06:
@@ -431,7 +441,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
       {/* Nav */}
       <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
         <button onClick={back} disabled={step === 0} className="sw-press" style={{
-          padding: '10px 16px', fontSize: 13, fontWeight: 700,
+          padding: '10px 16px', fontSize: 13, minHeight: 44, fontWeight: 700,
           background: 'transparent', color: 'var(--c-text3)',
           border: '1px solid var(--c-border)', borderRadius: 100,
           cursor: step === 0 ? 'not-allowed' : 'pointer',
@@ -633,19 +643,26 @@ function StepContext({ context, onChange }) {
 // ── Step 3: Options ─────────────────────────────────────────────────────────
 function StepOptions({ paths, decId }) {
   const isProperty = decId === 'DE-09'
+  // Chart the metric that actually differs between options. Net worth if it
+  // varies; else inheritance tax; else no chart (e.g. wills/trusts don't change
+  // net worth — three identical £0 bars would be noise). Founder 2026-06-06.
+  const varies = (key) => new Set(paths.map(p => Math.round((p.simulation?.delta?.[key]) || 0))).size > 1
+  const chartKey = varies('nw') ? 'nw' : varies('iht') ? 'iht' : null
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
         Here are <strong>{paths.length}</strong> ways to go, each worked out with your own
         numbers. You don't choose yet — the next step lets you set what matters most.
       </div>
-      <div style={{ marginBottom: 14 }}>
-        <PathComparisonChart
-          paths={paths}
-          valueKey="nw"
-          axisLabel={isProperty ? 'Cash freed up vs today' : undefined}
-        />
-      </div>
+      {chartKey && (
+        <div style={{ marginBottom: 14 }}>
+          <PathComparisonChart
+            paths={paths}
+            valueKey={chartKey}
+            axisLabel={isProperty && chartKey === 'nw' ? 'Cash freed up vs today' : undefined}
+          />
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {paths.map(p => {
           const d = p.simulation?.delta
@@ -658,7 +675,7 @@ function StepOptions({ paths, decId }) {
                 </div>
               )}
               <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.45 }}>{p.sub || p.detail}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 4, marginTop: 8 }}>
                 {p.impact ? (
                   <>
                     <ImpactChip label="Income / yr"  value={fmt(p.impact.yield_p_a)} good={p.impact.yield_p_a > 0} />
@@ -671,7 +688,7 @@ function StepOptions({ paths, decId }) {
                     <ImpactChip label="Net worth" value={fmtSigned(d?.nw)}  good={(d?.nw ?? 0) >= 0} />
                     <ImpactChip label="Inheritance tax"       value={fmtSigned(d?.iht)} good={(d?.iht ?? 0) <= 0} />
                     <ImpactChip label="Time frame"   value={p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—'} good />
-                    <ImpactChip label="Confidence" value={p.simulation?.confidence || '—'} good={p.simulation?.confidence === 'HIGH'} />
+                    <ImpactChip label="Confidence" value={CONF_LABEL[p.simulation?.confidence] || p.simulation?.confidence || '—'} good={p.simulation?.confidence === 'HIGH'} />
                   </>
                 )}
               </div>
@@ -726,7 +743,7 @@ function DecisionWheel({ weights }) {
   const colours = { tax: 'var(--c-acc)', risk: 'var(--c-gold)', liquidity: 'var(--c-acc2, #4D8EFF)', legacy: 'var(--c-violet, #BA8CFF)' }
   // Wheel axis labels match slider labels exactly — fixes MED-axis-mismatch
   // (was "Legacy" here vs "Legacy / IHT" on slider).
-  const labelOf  = { tax: 'Tax', risk: 'Risk', liquidity: 'Cash', legacy: 'Inheritance' }
+  const labelOf  = { tax: 'Tax', risk: 'Risk', liquidity: 'Cash', legacy: 'Estate' }
 
   const pts = axes.map(a => {
     const ang = angles[a], w = weights[a]
@@ -850,7 +867,7 @@ function StepUnconsidered({ path, ranked, chosen }) {
   if (!path) return null
   // Most-different = lowest ranked path the user didn't choose
   const unconsidered = ranked.filter(p => p.id !== chosen).slice(-1)[0] || ranked[ranked.length - 1]
-  const label = unconsidered?.title || 'the lowest-ranked path'
+  const label = unconsidered?.plainLabel || unconsidered?.title || 'the lowest-ranked path'
   const detail = unconsidered?.explanation || unconsidered?.detail || 'Lower weighted-sum score than your choice.'
 
   return (
@@ -869,7 +886,7 @@ function StepUnconsidered({ path, ranked, chosen }) {
           {label}
         </div>
         <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.6 }}>
-          {detail} Compared to <strong>{path.title}</strong>: this path scores lower
+          {detail} Compared to <strong>{path.plainLabel || path.title}</strong>: this path scores lower
           against your weights but may suit a different priority mix.
         </div>
       </div>
@@ -885,7 +902,7 @@ function StepRecommendation({ path, weights, engineRec }) {
   const topLabel = WEIGHTS_LABEL[topWeight[0]] || topWeight[0]
 
   const summary = engineRec?.summary ||
-    `Based on your priorities — ${topLabel.toLowerCase()} weighted highest — the engine ranks ${path.title} as the strongest path.`
+    `Based on your priorities — ${topLabel.toLowerCase()} weighted highest — the engine ranks ${path.plainLabel || path.title} as the strongest path.`
   const steps   = engineRec?.steps || []
   const fca     = engineRec?.fcaBoundary || FCA_BOUNDARY
   const impact  = engineRec?.impact
@@ -903,7 +920,7 @@ function StepRecommendation({ path, weights, engineRec }) {
       }}>
         <div className="sw-eyebrow" style={{ marginBottom: 6 }}>Recommendation</div>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-text)', lineHeight: 1.4 }}>
-          {path.title}
+          {path.plainLabel || path.title}
         </div>
         <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 8, lineHeight: 1.6 }}>
           {summary}
@@ -911,12 +928,12 @@ function StepRecommendation({ path, weights, engineRec }) {
 
         {/* Impact chips — engine delta */}
         {impact && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 6, marginTop: 10 }}>
             {impact.nwGain !== 0 && (
-              <ImpactChip label="Net-worth gain" value={impact.nwGain >= 1000 ? `£${Math.round(impact.nwGain/1000)}k` : `£${Math.round(impact.nwGain)}`} good={impact.nwGain > 0} />
+              <ImpactChip label="Net worth" value={fmtSigned(impact.nwGain)} good={impact.nwGain > 0} />
             )}
             {impact.ihtSave > 0 && (
-              <ImpactChip label="Inheritance tax saved" value={`£${Math.round(impact.ihtSave/1000)}k`} good />
+              <ImpactChip label="Inheritance tax saved" value={fmt(impact.ihtSave)} good />
             )}
             {impact.fqGain > 0 && (
               <ImpactChip label="Wealth Score boost" value={`+${impact.fqGain} pts`} good />
@@ -1069,7 +1086,7 @@ function buildAdviserSummary({ decId, path, steps, reviewHint, engineRec }) {
   L.push(`Chosen option: ${path?.plainLabel || path?.title || '—'}`)
   if (engineRec?.impact) {
     const i = engineRec.impact
-    L.push(`Projected impact (illustrative, over ${i.horizon}y): net worth ${fmtSigned(i.nwGain)}${i.ihtSave ? `, inheritance tax saved ~£${Math.round(i.ihtSave / 1000)}k` : ''}.`)
+    L.push(`Projected impact (illustrative, over ${i.horizon}y): net worth ${fmtSigned(i.nwGain)}${i.ihtSave ? `, inheritance tax saved ~${fmt(i.ihtSave)}` : ''}.`)
   }
   if (engineRec?.summary) { L.push(''); L.push(`Why: ${engineRec.summary}`) }
   if (steps?.length) { L.push(''); L.push('Action checklist:'); steps.forEach((s, i) => L.push(`  ${i + 1}. ${s}`)) }
@@ -1207,16 +1224,16 @@ function Field({ label, sub, children }) {
 function ImpactChip({ label, value, good }) {
   return (
     <div style={{
-      padding: '6px 8px', borderRadius: 8,
+      padding: '6px 8px', borderRadius: 8, minWidth: 0,
       background: 'var(--c-surface2)',
       border: '1px solid var(--c-sep)',
     }}>
       <div style={{
         fontSize: 9, fontWeight: 700, color: 'var(--c-text3)',
-        textTransform: 'uppercase', letterSpacing: 0.4,
+        textTransform: 'uppercase', letterSpacing: 0.4, overflowWrap: 'anywhere',
       }}>{label}</div>
       <div style={{
-        fontSize: 12, fontWeight: 800, marginTop: 2,
+        fontSize: 12, fontWeight: 800, marginTop: 2, overflowWrap: 'anywhere',
         color: good === true ? 'var(--c-acc)'
              : good === false ? 'var(--c-coral, #FF6F7D)'
              : 'var(--c-text)',

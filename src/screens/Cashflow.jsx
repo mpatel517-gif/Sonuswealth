@@ -1656,6 +1656,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
 
+        {/* Compact cross-screen nav (founder 2026-06-06) — restores reach to the
+            money sub-sections from Cashflow without the full chip strip the
+            founder removed 2026-06-04 (kept the clean top, fixed the dead-end). */}
+        <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} variant="compact" />
+
         {/* Minimal view-bar — view modes + Decisions tab (founder 2026-06-06) */}
         <div style={{ margin: '0 -16px' }}>
           <X28TopBar

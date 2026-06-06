@@ -19,9 +19,18 @@
 // tab id: 'money' | 'money/income' | 'flow' | 'tax' | 'money/protection' |
 // 'money/business' | 'trusts' | 'decisions'). Inactive chips call onNav(route).
 // Tapping the active chip scrolls to top instead of re-navigating.
+//
+// variant='compact' (founder 2026-06-06): a single "Money sections ▾" overflow
+// button + popover, for Cashflow — which keeps the always-clean top the founder
+// locked 2026-06-04 while restoring reach to the money sub-sections (Income
+// Statement / Protection / Business / Trusts / Cost-of-inaction) that were
+// otherwise only reachable by bouncing back through My Money.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function MoneyXDrawer({ entity, activeRoute, onNav }) {
+import { useState } from 'react'
+
+export default function MoneyXDrawer({ entity, activeRoute, onNav, variant = 'full' }) {
+  const [open, setOpen] = useState(false)
   const entityData = entity || {}
   const hasBusiness = !!(entityData.hasBusiness
     || (entityData.assets?.business_assets || []).length > 0
@@ -41,6 +50,76 @@ export default function MoneyXDrawer({ entity, activeRoute, onNav }) {
     { id: 'mm-trusts',     label: 'Trusts & Estate',        always: hasTrustOrEstate, route: 'trusts'           },
     { id: 'mm-decisions',  label: 'Cost of inaction',       always: true,             route: 'decisions'        },
   ].filter(s => s.always)
+
+  // ── Compact variant — single overflow button + popover (founder 2026-06-06) ──
+  if (variant === 'compact') {
+    return (
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          aria-label="Money sections"
+          className="sw-press"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', minHeight: 32,
+            fontSize: 11, fontWeight: 600,
+            background: 'var(--c-surface2)',
+            border: '1px solid var(--c-border)', borderRadius: 999,
+            color: 'var(--c-text2)', cursor: 'pointer',
+          }}
+        >
+          <span>Money sections</span>
+          <span style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s', fontSize: 10 }}>▾</span>
+        </button>
+        {open && (
+          <>
+            {/* click-away scrim */}
+            <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
+            <div
+              role="menu"
+              style={{
+                position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 50,
+                minWidth: 210, padding: 6,
+                background: 'var(--c-surface)',
+                border: '1px solid var(--c-border)', borderRadius: 12,
+                boxShadow: '0 10px 30px rgba(0,0,0,.30)',
+                display: 'flex', flexDirection: 'column', gap: 2,
+              }}
+            >
+              {sections.map(s => {
+                const isActive = s.route === activeRoute
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="menuitem"
+                    aria-current={isActive ? 'page' : undefined}
+                    onClick={() => {
+                      setOpen(false)
+                      if (!isActive && typeof onNav === 'function') onNav(s.route)
+                    }}
+                    className="sw-press"
+                    style={{
+                      textAlign: 'left', padding: '8px 10px',
+                      fontSize: 12, fontWeight: isActive ? 700 : 600,
+                      background: isActive ? 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface2))' : 'transparent',
+                      color: isActive ? 'var(--c-acc)' : 'var(--c-text)',
+                      border: 'none', borderRadius: 8,
+                      cursor: isActive ? 'default' : 'pointer',
+                    }}
+                  >
+                    {s.label}{isActive ? '  ·  you are here' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
 
   return (
     <nav

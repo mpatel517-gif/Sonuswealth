@@ -24,8 +24,20 @@ function _age(entity)  { return entity?.individual?.age || entity?.age || 0 }
 function _annualIncome(entity) {
   const inc = entity?.income
   if (!inc) return entity?.targetIncome || 50000
-  return (inc.salary || 0) + (inc.selfEmployed || 0) + (inc.rental || 0) +
-         (inc.dividends || 0) + (inc.other || 0)
+  // Handle both legacy and canonical key shapes — directors/landlords store
+  // salary under employment.gross_salary, rent as rentalIncome, plus interest,
+  // and `other` may be an array. Missing these undercounted income → wrong
+  // marginal-rate band (Mr T read as basic-rate on £38k, not higher on ~£67k).
+  const n = (v) => (Number.isFinite(+v) ? +v : 0)
+  const salary    = n(inc.salary ?? inc.gross_salary ?? entity?.employment?.gross_salary)
+  const selfEmp   = n(inc.selfEmployed ?? inc.self_employed)
+  const rental    = n(inc.rental ?? inc.rentalIncome)
+  const dividends = n(inc.dividends ?? inc.directorDividends)
+  const interest  = n(inc.interest ?? inc.savingsInterest)
+  const other     = Array.isArray(inc.other)
+    ? inc.other.reduce((s, o) => s + n(o?.amount ?? o), 0)
+    : n(inc.other)
+  return salary + selfEmp + rental + dividends + interest + other
 }
 
 // ── Per-path factors ──────────────────────────────────────────────────────────

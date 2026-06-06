@@ -116,6 +116,7 @@ const TABS = [
   { id:'flow',  label:'Cashflow', icon:'≋' },
   { id:'tax',   label:'Tax',      icon:'⚖' },
   { id:'risk',  label:'Risk',     icon:'◉' },
+  { id:'decisions', label:'Decisions', icon:'◆' },
   { id:'timeline',  label:'Timeline', icon:'◷' },
 ]
 
@@ -880,7 +881,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           // keep the "My Money" lane active so the user doesn't feel orphaned.
           const active = t.id === 'money' ? isMoneyTab(tab) : tab === t.id
           return (
-            <button key={t.id} type="button" onClick={() => setTab(t.id)} aria-current={active ? 'page' : undefined} aria-label={`Navigate to ${t.label}`} style={{
+            <button key={t.id} type="button" onClick={() => setTabSafe(t.id)} aria-current={active ? 'page' : undefined} aria-label={`Navigate to ${t.label}`} style={{
               flex:1, display:'flex', flexDirection:'column',
               alignItems:'center', justifyContent:'center', gap:3,
               border:'none', cursor:'pointer', background:'none',

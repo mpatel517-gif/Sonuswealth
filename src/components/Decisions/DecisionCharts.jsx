@@ -128,12 +128,7 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
           </linearGradient>
         </defs>
 
-        {/* Axis caption above the plot */}
-        <text x={PAD.left} y={16} fontSize="9.5" fontWeight="700"
-          fill="var(--c-text3)" fontFamily="Inter,sans-serif"
-          style={{ letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-          {AXIS_LABEL[valueKey] || 'Change vs today'}
-        </text>
+        {/* Axis caption lives once, in the card header above (no SVG duplicate). */}
 
         {/* Zero reference line */}
         <line x1={zeroX} y1={PAD.top - 4} x2={zeroX} y2={H - PAD.bottom + 4}
@@ -152,9 +147,19 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
           const barX = isNeg ? zeroX - len : zeroX
           const fill = isNeg ? 'url(#dc-neg-grad)' : 'url(#dc-pos-grad)'
           const valueColor = (r.raw < 0) ? NEG_COLOR : (r.raw > 0 ? POS_COLOR : 'var(--c-text3)')
-          // Value label sits at the far end of the bar, outside it.
-          const labelX = isNeg ? barX - 6 : barX + len + 6
-          const labelAnchor = isNeg ? 'end' : 'start'
+          // Value label: outside the bar end by default, but if it would clip the
+          // chart edge (long bar), draw it INSIDE the bar in white so it's never
+          // cut off (founder 2026-06-06: "+£8" / "+£4" were clipped).
+          const NEAR = 54
+          const endX = isNeg ? barX : barX + len
+          const fitsOutside = Math.abs(r.value) === 0
+            || (isNeg ? (endX - NEAR > PAD.left) : (endX + NEAR < W - 2))
+          const labelInside = !fitsOutside
+          const labelX = labelInside
+            ? (isNeg ? endX + 6 : endX - 6)
+            : (isNeg ? barX - 6 : barX + len + 6)
+          const labelAnchor = labelInside ? (isNeg ? 'start' : 'end') : (isNeg ? 'end' : 'start')
+          const labelFill = labelInside ? 'rgba(255,255,255,0.97)' : valueColor
           // Track behind each bar so empty rows still read as a lane.
           const trackX = anyNeg ? PAD.left : zeroX
           const trackW = anyNeg ? plotW : halfW
@@ -181,10 +186,10 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
                   style={{ filter: 'drop-shadow(0 0 8px var(--c-radar-glow))' }} />
               )}
 
-              {/* Value label (£) at the bar end */}
+              {/* Value label (£) — outside the bar, or inside it when near the edge */}
               <text x={labelX} y={barY + barH / 2 + 4}
                 textAnchor={labelAnchor} fontSize="11.5" fontWeight="800"
-                fill={valueColor} fontFamily="Inter,sans-serif"
+                fill={labelFill} fontFamily="Inter,sans-serif"
                 style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {fmtSigned(r.raw)}
               </text>

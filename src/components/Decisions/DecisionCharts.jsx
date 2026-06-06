@@ -98,124 +98,46 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
     return `${s}£${Math.round(a).toLocaleString('en-GB')}`
   }
 
-  // Layout — viewBox in abstract units so it scales to any container width.
-  const W = 360
-  const ROW_H = 46
-  const PAD = { top: 30, right: 14, bottom: 22, left: 14 }
-  const plotW = W - PAD.left - PAD.right
-  const H = PAD.top + rows.length * ROW_H + PAD.bottom
-
-  // A fixed value column on the right keeps EVERY value label in the same place
-  // (right-aligned, same colour) — never a mix of inside/outside labels (founder
-  // 2026-06-06). Bars scale within the area to the left of that column.
-  const VALUE_COL = 66
-  const barArea = plotW - VALUE_COL
-  const valueX = W - PAD.right
-  const zeroX = anyNeg ? PAD.left + barArea / 2 : PAD.left
-  const halfW = anyNeg ? barArea / 2 : barArea
-  const barH = 16
-
   return (
     <div className="sw-card sw-card-elevated" style={cardStyle}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
-        <div>
-          <div className="sw-eyebrow">Compare your options</div>
-          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4 }}>
-            {axisCaption}
-          </div>
-        </div>
-      </div>
+      <div className="sw-eyebrow">Compare your options</div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 3, marginBottom: 12 }}>{axisCaption}</div>
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        role="img"
-        aria-label={`Bar chart comparing ${rows.length} options by ${axisCaption}. ${rows.map(r => `${r.label}: ${fmtBar(r.raw)}`).join('. ')}.`}
-        style={{ display: 'block', marginTop: 8, overflow: 'visible' }}
-      >
-        <defs>
-          <linearGradient id="dc-pos-grad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor={POS_COLOR} stopOpacity="0.65" />
-            <stop offset="1" stopColor={POS_COLOR} stopOpacity="1" />
-          </linearGradient>
-          <linearGradient id="dc-neg-grad" x1="1" y1="0" x2="0" y2="0">
-            <stop offset="0" stopColor={NEG_COLOR} stopOpacity="0.65" />
-            <stop offset="1" stopColor={NEG_COLOR} stopOpacity="1" />
-          </linearGradient>
-        </defs>
-
-        {/* Axis caption lives once, in the card header above (no SVG duplicate). */}
-
-        {/* Zero reference line */}
-        <line x1={zeroX} y1={PAD.top - 4} x2={zeroX} y2={H - PAD.bottom + 4}
-          stroke="var(--c-text3)" strokeWidth="1" strokeDasharray="2 3" opacity="0.7" />
-        <text x={zeroX} y={H - PAD.bottom + 16}
-          textAnchor="middle" fontSize="8.5" fontWeight="700"
-          fill="var(--c-text3)" fontFamily="Inter,sans-serif">
-          today
-        </text>
-
-        {rows.map((r, i) => {
-          const rowTop = PAD.top + i * ROW_H
-          const barY = rowTop + 18
-          const len = (Math.abs(r.value) / maxAbs) * halfW
-          const isNeg = r.value < 0
-          const barX = isNeg ? zeroX - len : zeroX
-          const fill = isNeg ? 'url(#dc-neg-grad)' : 'url(#dc-pos-grad)'
-          const valueColor = (r.raw < 0) ? NEG_COLOR : (r.raw > 0 ? POS_COLOR : 'var(--c-text3)')
-
+      {/* HTML rows (not a width-scaled SVG) so the type sizes MATCH the option
+          cards below — an SVG at width:100% blew labels up to ~20px against the
+          13px cards (founder 2026-06-06: "the format is too big, it doesn't
+          match the rest of the analysis"). */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map(r => {
+          const pct = Math.min(100, (Math.abs(r.value) / maxAbs) * 100)
+          const barColor = r.value < 0 ? NEG_COLOR : POS_COLOR
+          const valueColor = r.raw < 0 ? NEG_COLOR : (r.raw > 0 ? POS_COLOR : 'var(--c-text3)')
           return (
-            <g key={r.id}>
-              {/* Option name above its bar */}
-              <text x={PAD.left} y={rowTop + 10}
-                fontSize="11" fontWeight="700"
-                fill="var(--c-text)" fontFamily="Inter,sans-serif">
-                {r.label}
-              </text>
-
-              {/* Lane track (bar area only — the value sits in its own right column) */}
-              <rect x={PAD.left} y={barY} width={barArea} height={barH} rx={barH / 2}
-                fill="var(--c-surface2)" stroke="var(--c-border)" strokeWidth="0.75" opacity="0.7" />
-
-              {/* The bar */}
-              {Math.abs(r.value) > 0 && (
-                <rect
-                  className="sw-stroke-draw"
-                  x={barX} y={barY} width={Math.max(2, len)} height={barH} rx={barH / 2}
-                  fill={fill}
-                  style={{ filter: 'drop-shadow(0 0 8px var(--c-radar-glow))' }} />
+            <div key={r.id}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{r.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: valueColor, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtBar(r.raw)}</span>
+              </div>
+              {anyNeg ? (
+                <div style={{ position: 'relative', height: 7, borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+                  <div style={{ position: 'absolute', top: -2, bottom: -2, left: '50%', width: 1, background: 'var(--c-text3)', opacity: 0.6 }} />
+                  {Math.abs(r.value) > 0 && (
+                    <div style={{ position: 'absolute', top: 0, bottom: 0, borderRadius: 100, background: barColor, width: `${pct / 2}%`, left: r.value >= 0 ? '50%' : `${50 - pct / 2}%` }} />
+                  )}
+                </div>
+              ) : (
+                <div style={{ height: 7, borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 100, background: barColor }} />
+                </div>
               )}
-
-              {/* Value — fixed right column, every row aligned the same way */}
-              <text x={valueX} y={barY + barH / 2 + 4}
-                textAnchor="end" fontSize="11.5" fontWeight="800"
-                fill={valueColor} fontFamily="Inter,sans-serif"
-                style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {fmtBar(r.raw)}
-              </text>
-            </g>
+            </div>
           )
         })}
-      </svg>
-
-      {/* Plain-English legend + per-option confidence (text, no jargon) */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 10, fontSize: 11, color: 'var(--c-text3)' }}>
-        <span style={legendItem}>
-          <span style={{ ...swatch, background: POS_COLOR }} /> Better than today
-        </span>
-        <span style={legendItem}>
-          <span style={{ ...swatch, background: NEG_COLOR }} /> Worse than today
-        </span>
       </div>
 
-      {rows.some(r => r.confidence != null) && (
-        <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-          {rows.filter(r => r.confidence != null).map(r => (
-            <div key={`conf-${r.id}`}>
-              <strong style={{ color: 'var(--c-text2)' }}>{r.label}</strong>
-              {' — '}how sure we are: {fmtConfidence(r.confidence)}.
-            </div>
-          ))}
+      {anyNeg && (
+        <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 10 }}>
+          The line marks today — bars to the right are better than today, to the left are worse.
         </div>
       )}
 
@@ -239,30 +161,22 @@ export function BeforeAfterBar({ label = 'Net worth', before, after }) {
   const improves = delta >= 0
   const deltaColor = delta === 0 ? 'var(--c-text3)' : (improves ? POS_COLOR : NEG_COLOR)
 
-  const W = 360
-  const PAD = { top: 26, right: 14, bottom: 26, left: 14 }
-  const plotW = W - PAD.left - PAD.right
-  const barH = 22
-  const gap = 14
-  const H = PAD.top + barH * 2 + gap + PAD.bottom
-
-  // Scale both bars to the larger of the two (or 1 to avoid /0). Negative values
-  // are shown as zero-length bars but still labelled honestly.
+  // HTML rows (not a width-scaled SVG) so the type matches the surrounding cards
+  // — same reasoning as PathComparisonChart (founder 2026-06-06).
   const maxVal = Math.max(1, Math.abs(b), Math.abs(a))
-  const lenOf = (v) => (Math.max(0, v) / maxVal) * plotW
-
+  const pctOf = (v) => Math.min(100, (Math.max(0, v) / maxVal) * 100)
   const bars = [
-    { key: 'before', name: 'Today', value: b, y: PAD.top },
-    { key: 'after',  name: 'After this choice', value: a, y: PAD.top + barH + gap },
+    { key: 'before', name: 'Today', value: b, after: false },
+    { key: 'after',  name: 'After this choice', value: a, after: true },
   ]
 
   return (
     <div className="sw-card sw-card-elevated" style={cardStyle}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
         <div className="sw-eyebrow">{label}: before and after</div>
         <div style={{ textAlign: 'right' }}>
           <div style={{
-            fontSize: 18, fontWeight: 880, color: deltaColor,
+            fontSize: 16, fontWeight: 880, color: deltaColor,
             letterSpacing: -0.3, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
           }}>
             {fmtSigned(delta)}
@@ -273,61 +187,22 @@ export function BeforeAfterBar({ label = 'Net worth', before, after }) {
         </div>
       </div>
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        role="img"
-        aria-label={`${label}: today ${fmtCompact(b)}, after this choice ${fmtCompact(a)}. Change ${fmtSigned(delta)}.`}
-        style={{ display: 'block', marginTop: 6, overflow: 'visible' }}
-      >
-        <defs>
-          <linearGradient id="dc-ba-after" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor={improves ? POS_COLOR : NEG_COLOR} stopOpacity="0.6" />
-            <stop offset="1" stopColor={improves ? POS_COLOR : NEG_COLOR} stopOpacity="1" />
-          </linearGradient>
-        </defs>
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {bars.map(bar => {
-          const len = lenOf(bar.value)
-          const isAfter = bar.key === 'after'
-          const fill = isAfter ? 'url(#dc-ba-after)' : 'var(--c-text3)'
           const valColor = bar.value < 0 ? NEG_COLOR : 'var(--c-text)'
           return (
-            <g key={bar.key}>
-              <text x={PAD.left} y={bar.y - 4}
-                fontSize="10" fontWeight="700"
-                fill="var(--c-text2)" fontFamily="Inter,sans-serif">
-                {bar.name}
-              </text>
-
-              {/* Track */}
-              <rect x={PAD.left} y={bar.y} width={plotW} height={barH} rx={barH / 2}
-                fill="var(--c-surface2)" stroke="var(--c-border)" strokeWidth="0.75" opacity="0.7" />
-
-              {/* Value bar */}
-              {bar.value > 0 && (
-                <rect
-                  className={isAfter ? 'sw-stroke-draw' : undefined}
-                  x={PAD.left} y={bar.y} width={Math.max(2, len)} height={barH} rx={barH / 2}
-                  fill={fill}
-                  opacity={isAfter ? 1 : 0.55}
-                  style={isAfter ? { filter: 'drop-shadow(0 0 8px var(--c-radar-glow))' } : undefined} />
-              )}
-
-              {/* £ value label at the bar end */}
-              <text
-                x={Math.min(W - PAD.right, PAD.left + Math.max(len, 0) + 8)}
-                y={bar.y + barH / 2 + 4}
-                textAnchor={len > plotW - 70 ? 'end' : 'start'}
-                fontSize="12" fontWeight="800"
-                fill={valColor} fontFamily="Inter,sans-serif"
-                style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {fmtCompact(bar.value)}
-              </text>
-            </g>
+            <div key={bar.key}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)' }}>{bar.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: valColor, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtCompact(bar.value)}</span>
+              </div>
+              <div style={{ height: 9, borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', overflow: 'hidden' }}>
+                <div style={{ width: `${pctOf(bar.value)}%`, height: '100%', borderRadius: 100, background: bar.after ? (improves ? POS_COLOR : NEG_COLOR) : 'var(--c-text3)', opacity: bar.after ? 1 : 0.5 }} />
+              </div>
+            </div>
           )
         })}
-      </svg>
+      </div>
 
       <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
         {delta === 0

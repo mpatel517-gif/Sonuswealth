@@ -21,6 +21,7 @@ This sits **above** taking a screenshot and **below** CLAUDE.md §9.5 (which cov
 - [ ] Net rate (after charges/inflation) stated where it's a money projection.
 - [ ] Two charts of the same quantity tie out to the same number.
 - [ ] Legible in light AND dark (theme tokens only; no hard-coded colours that vanish in one theme).
+- [ ] **Type scale MATCHES the surrounding section.** A chart should not look bigger/heavier than the cards beside it. TRAP: an `<svg width="100%">` with a small `viewBox` scales its text UP to the container width (11px viewBox units → ~20px on desktop), dwarfing sibling 13px cards. Prefer HTML/CSS rows with real `px` fonts (matching the section's tokens) over a width-scaled SVG. Spot-check: the chart's label font-size should equal the adjacent card title's.
 
 ## C. Layout & overflow
 - [ ] Nothing overflows its container — no horizontal scrollbar, no content under the card edge — at 375, 768, 1280.

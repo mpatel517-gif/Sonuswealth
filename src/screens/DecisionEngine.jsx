@@ -26,6 +26,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { simulateAction, enumeratePaths, generateRecommendation } from '../engine/decision-engine.js'
+import { objectiveFor, optionGloss } from '../engine/decision-content.js'
 import { DECISION_TYPES_ALL, DECISION_CATEGORIES } from '../engine/decision-catalogue.js'
 
 // FCA boundary constant — mirrored from FIX-11 Ask. Single source of truth
@@ -55,8 +56,8 @@ const DECISIONS = [
 const PROPERTY_PATHS = [
   {
     id: 'keep_use',
-    title: 'Keep & use as PPR',
-    sub:   'Live in it. PPR shelters future CGT.',
+    title: 'Keep it and live in it',
+    sub:   'Your main home — no capital gains tax when you sell.',
     impact: {
       yield_p_a:    0,
       cgt_today:    0,
@@ -69,8 +70,8 @@ const PROPERTY_PATHS = [
   },
   {
     id: 'let',
-    title: 'Let on AST',
-    sub:   '£1,800/mo gross. BTL tax position via §24.',
+    title: 'Rent it out',
+    sub:   'Earn rent — but landlord rules limit your mortgage tax relief.',
     impact: {
       yield_p_a:    16_700,
       cgt_today:    0,
@@ -83,8 +84,8 @@ const PROPERTY_PATHS = [
   },
   {
     id: 'sell_isa',
-    title: 'Sell & wrap into ISA + pension',
-    sub:   'CGT due, then deploy across tax wrappers.',
+    title: 'Sell and move into tax-free wrappers',
+    sub:   'Pay capital gains tax now; shelter the rest from future tax.',
     impact: {
       yield_p_a:    18_500,
       cgt_today:    35_000, // CGT on gain
@@ -97,8 +98,8 @@ const PROPERTY_PATHS = [
   },
   {
     id: 'sell_btl_replace',
-    title: 'Sell & buy a yielding BTL',
-    sub:   'Swap into a higher-yield, smaller property.',
+    title: 'Sell and buy a higher-income rental',
+    sub:   'More rental income, but your money stays tied up in property.',
     impact: {
       yield_p_a:    22_400,
       cgt_today:    35_000,
@@ -114,8 +115,8 @@ const PROPERTY_PATHS = [
 const WEIGHTS_LABEL = {
   tax:       'Tax efficiency',
   risk:      'Risk level',
-  liquidity: 'Liquidity',
-  legacy:    'Legacy / IHT',
+  liquidity: 'Access to cash',
+  legacy:    'Inheritance',
 }
 
 function fmt(n) {
@@ -130,6 +131,43 @@ function fmtSigned(n) {
   const sign = n > 0 ? '+' : n < 0 ? '−' : ''
   const a = Math.abs(n)
   return `${sign}${a >= 1000 ? `£${Math.round(a / 1000)}k` : `£${Math.round(a)}`}`
+}
+
+// Objective banner — frames every decision in plain English (founder 2026-06-06:
+// "I don't understand the options … what are the goals and objectives"). Reads
+// decision-content.js. Renders across all steps once a decision is chosen.
+function ObjectiveBanner({ code }) {
+  const obj = objectiveFor(code)
+  if (!obj) return null
+  const Row = ({ label, text, accent }) => (
+    <div style={{ display: 'flex', gap: 10 }}>
+      <span style={{
+        fontSize: 10, fontWeight: 800, minWidth: 82, flexShrink: 0,
+        color: accent ? 'var(--c-acc)' : 'var(--c-text3)',
+        textTransform: 'uppercase', letterSpacing: 0.4, paddingTop: 1,
+      }}>{label}</span>
+      <span style={{
+        fontSize: 12.5, lineHeight: 1.5, flex: 1,
+        color: accent ? 'var(--c-text)' : 'var(--c-text2)',
+        fontWeight: accent ? 600 : 400,
+      }}>{text}</span>
+    </div>
+  )
+  return (
+    <div className="sw-tile" style={{
+      padding: 14, marginBottom: 16,
+      border: '1px solid var(--c-border)', background: 'var(--c-surface2)',
+    }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 6 }}>The decision</div>
+      <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-text)', lineHeight: 1.4, marginBottom: 10 }}>
+        {obj.decision}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Row label="Why it matters" text={obj.why} />
+        <Row label="Your goal" text={obj.goal} accent />
+      </div>
+    </div>
+  )
 }
 
 export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, initialDecisionId }) {
@@ -164,17 +202,23 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
   const computedPaths = useMemo(() => {
     if (!decision) return []
     const decId = decision.code || decision.id
-    if (decId === 'DE-09') return PROPERTY_PATHS
+    // Attach the plain-English option gloss (founder 2026-06-06) to every path so
+    // each step can show "what this option means" + "good if…" in plain words.
+    const withGloss = (arr) => (arr || []).map(p => {
+      const g = optionGloss(decId, p.id)
+      return { ...p, plainLabel: g?.plain || null, goodIf: g?.goodIf || null }
+    })
+    if (decId === 'DE-09') return withGloss(PROPERTY_PATHS)
     try {
       // Engine paths use {id,label,riskLevel,detail,simulation}; the wizard's
       // step components were built for the property-path shape {title,sub,impact}.
       // Normalise so every step renders for all 40 cases (not just DE-09).
       const raw = enumeratePaths(entity, decId)
-      return (raw || []).map(p => ({
+      return withGloss((raw || []).map(p => ({
         ...p,
         title: p.title || p.label,
         sub:   p.sub || (p.riskLevel ? `${p.riskLevel[0].toUpperCase()}${p.riskLevel.slice(1)} risk` : ''),
-      }))
+      })))
     } catch { return [] }
   }, [decision, entity])
 
@@ -281,7 +325,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
         <div style={{ fontSize: 40 }}>✓</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-acc)' }}>Decision committed</div>
         <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6 }}>
-          Your decision is recorded in the event log. Taking you to Timeline…
+          Saved to your decisions. Taking you to your Timeline…
         </div>
       </div>
     )
@@ -315,6 +359,10 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
           }} />
         ))}
       </div>
+
+      {/* Objective banner — frames the decision in plain English on every step
+          after the catalogue (founder 2026-06-06). */}
+      {decision && step > 0 && <ObjectiveBanner code={decision.code || decision.id} />}
 
       {step === 0 && (
         <StepIdentify decision={decision} onPick={(d) => { setDecision(d); setChosen(null); setStep(1) }} onAskAI={onAskAI} />
@@ -534,19 +582,19 @@ function StepContext({ context, onChange }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Set the situation. These adjust how the engine evaluates the options.
+        A few details about your situation, so the options are weighed against what matters to you.
       </div>
-      <Field label="Hold horizon" sub={`${context.holdYears} years`}>
+      <Field label="How long you're planning for" sub={`${context.holdYears} years`}>
         <input type="range" min="0" max="30" value={context.holdYears}
           onChange={(e) => onChange({ ...context, holdYears: Number(e.target.value) })}
           style={{ width: '100%' }} />
       </Field>
-      <Field label="Target annual income" sub={fmt(context.targetIncome)}>
+      <Field label="Income you'd like each year" sub={fmt(context.targetIncome)}>
         <input type="range" min="0" max="60000" step="500" value={context.targetIncome}
           onChange={(e) => onChange({ ...context, targetIncome: Number(e.target.value) })}
           style={{ width: '100%' }} />
       </Field>
-      <Field label="Risk appetite">
+      <Field label="How much risk you're comfortable with">
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {['cautious', 'balanced', 'growth'].map(a => (
             <button key={a} onClick={() => onChange({ ...context, appetite: a })}
@@ -566,30 +614,35 @@ function StepOptions({ paths }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        The engine surfaced <strong>{paths.length}</strong> candidate paths, each
-        costed against your finances. You don't pick yet — the weighting step does that.
+        Here are <strong>{paths.length}</strong> ways to go, each worked out with your own
+        numbers. You don't choose yet — the next step lets you set what matters most.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {paths.map(p => {
           const d = p.simulation?.delta
           return (
             <div key={p.id} className="sw-tile" style={{ padding: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.title || p.label}</div>
-              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>{p.sub || p.detail}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.plainLabel || p.title || p.label}</div>
+              {p.goodIf && (
+                <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 3, lineHeight: 1.45 }}>
+                  <span style={{ fontWeight: 700, color: 'var(--c-acc)' }}>Good if</span> {p.goodIf}
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 3, lineHeight: 1.45 }}>{p.sub || p.detail}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 8 }}>
                 {p.impact ? (
                   <>
-                    <ImpactChip label="Yield/yr"  value={fmt(p.impact.yield_p_a)} good={p.impact.yield_p_a > 0} />
-                    <ImpactChip label="CGT today" value={fmt(p.impact.cgt_today)} good={p.impact.cgt_today === 0} />
-                    <ImpactChip label="In estate" value={fmt(p.impact.iht_in_estate)} good={p.impact.iht_in_estate < 300_000} />
-                    <ImpactChip label="Liquidity" value={fmt(p.impact.liquidity)} good={p.impact.liquidity > 0} />
+                    <ImpactChip label="Income / yr"  value={fmt(p.impact.yield_p_a)} good={p.impact.yield_p_a > 0} />
+                    <ImpactChip label="Tax to pay now" value={fmt(p.impact.cgt_today)} good={p.impact.cgt_today === 0} />
+                    <ImpactChip label="Left in your estate" value={fmt(p.impact.iht_in_estate)} good={p.impact.iht_in_estate < 300_000} />
+                    <ImpactChip label="Cash freed up" value={fmt(p.impact.liquidity)} good={p.impact.liquidity > 0} />
                   </>
                 ) : (
                   <>
                     <ImpactChip label="Net worth" value={fmtSigned(d?.nw)}  good={(d?.nw ?? 0) >= 0} />
-                    <ImpactChip label="IHT"       value={fmtSigned(d?.iht)} good={(d?.iht ?? 0) <= 0} />
-                    <ImpactChip label="Horizon"   value={p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—'} good />
-                    <ImpactChip label="Certainty" value={p.simulation?.confidence || '—'} good={p.simulation?.confidence === 'HIGH'} />
+                    <ImpactChip label="Inheritance tax"       value={fmtSigned(d?.iht)} good={(d?.iht ?? 0) <= 0} />
+                    <ImpactChip label="Time frame"   value={p.simulation?.horizon != null ? `${p.simulation.horizon}y` : '—'} good />
+                    <ImpactChip label="Confidence" value={p.simulation?.confidence || '—'} good={p.simulation?.confidence === 'HIGH'} />
                   </>
                 )}
               </div>
@@ -644,7 +697,7 @@ function DecisionWheel({ weights }) {
   const colours = { tax: 'var(--c-acc)', risk: 'var(--c-gold)', liquidity: 'var(--c-acc2, #4D8EFF)', legacy: 'var(--c-violet, #BA8CFF)' }
   // Wheel axis labels match slider labels exactly — fixes MED-axis-mismatch
   // (was "Legacy" here vs "Legacy / IHT" on slider).
-  const labelOf  = { tax: 'Tax', risk: 'Risk', liquidity: 'Liquidity', legacy: 'Legacy / IHT' }
+  const labelOf  = { tax: 'Tax', risk: 'Risk', liquidity: 'Cash', legacy: 'Inheritance' }
 
   const pts = axes.map(a => {
     const ang = angles[a], w = weights[a]
@@ -717,8 +770,8 @@ function StepRanked({ ranked, chosen, onPick }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Paths re-ranked against your weights. The top option is the strongest
-        match.
+        Your options, re-ordered by what you said matters most. The one at the
+        top fits your priorities best.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {ranked.map((p, i) => {
@@ -743,7 +796,7 @@ function StepRanked({ ranked, chosen, onPick }) {
                   #{i + 1}
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', flex: 1 }}>
-                  {p.title}
+                  {p.plainLabel || p.title}
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-acc)' }}>
                   {Math.round(p.score * 100)}
@@ -774,9 +827,8 @@ function StepUnconsidered({ path, ranked, chosen }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Before you commit, the engine surfaces an option you didn't pick — a
-        deliberate counter-frame (spec §4 Step 5, CRIT DE-NAR-01) so the choice
-        survives a contrarian read.
+        Before you decide, here's an option you didn't pick — shown on purpose,
+        so your choice holds up even against the opposite view.
       </div>
       <div className="sw-tile" style={{
         padding: 14,
@@ -808,12 +860,12 @@ function StepRecommendation({ path, weights, engineRec }) {
   const steps   = engineRec?.steps || []
   const fca     = engineRec?.fcaBoundary || FCA_BOUNDARY
   const impact  = engineRec?.impact
-  const sources = engineRec?.sources || ['Decision Engine v1.0', 'spec §4 Step 6', 'weighted-sum rank']
+  const sources = engineRec?.sources || ['Your data', 'UK tax rules 2026/27', 'Ranked by your priorities']
 
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        The engine's recommendation, rewritten inside FCA boundaries.
+        What stands out for your priorities — information to weigh up, not advice.
       </div>
       <div className="sw-tile" style={{
         padding: 14,
@@ -832,10 +884,10 @@ function StepRecommendation({ path, weights, engineRec }) {
         {impact && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 10 }}>
             {impact.nwGain !== 0 && (
-              <ImpactChip label="NW gain" value={impact.nwGain >= 1000 ? `£${Math.round(impact.nwGain/1000)}k` : `£${Math.round(impact.nwGain)}`} good={impact.nwGain > 0} />
+              <ImpactChip label="Net-worth gain" value={impact.nwGain >= 1000 ? `£${Math.round(impact.nwGain/1000)}k` : `£${Math.round(impact.nwGain)}`} good={impact.nwGain > 0} />
             )}
             {impact.ihtSave > 0 && (
-              <ImpactChip label="IHT saved" value={`£${Math.round(impact.ihtSave/1000)}k`} good />
+              <ImpactChip label="Inheritance tax saved" value={`£${Math.round(impact.ihtSave/1000)}k`} good />
             )}
             {impact.fqGain > 0 && (
               <ImpactChip label="Wealth Score boost" value={`+${impact.fqGain} pts`} good />
@@ -898,8 +950,8 @@ function StepStressTest({ path, tested, onTested }) {
         background: 'var(--c-surface2)', border: '1px dashed var(--c-border)',
         marginBottom: 12,
       }}>
-        Phase 2 — Monte Carlo simulation comes with engine wiring (D-DE-MC-1).
-        Current stress test: deterministic worst-case projection.
+        This is a simple worst-case check against three setbacks. A fuller
+        scenario simulation is coming next.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
         <StressRow shock="Rate +2%"    delta={tested ? '-£2,100/yr' : '—'} ok={tested} />
@@ -941,8 +993,8 @@ function StepCommit({ path }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: 'var(--c-text2)', lineHeight: 1.6, marginBottom: 14 }}>
-        Ready to commit. The engine will record your decision, fire downstream
-        events, and surface the action plan in your Timeline.
+        Ready to save. This records your decision and its action plan to your
+        Timeline, so you can follow the steps and review it later.
       </div>
       <div className="sw-tile" style={{
         padding: 14, border: '1.5px solid var(--c-acc)',
@@ -961,15 +1013,15 @@ function StepCommit({ path }) {
         }}>
           {path.impact ? (
             <>
-              <ImpactChip label="Yield/yr"  value={fmt(path.impact.yield_p_a)} good />
-              <ImpactChip label="CGT today" value={fmt(path.impact.cgt_today)} good={path.impact.cgt_today === 0} />
-              <ImpactChip label="In estate" value={fmt(path.impact.iht_in_estate)} />
-              <ImpactChip label="Liquidity" value={fmt(path.impact.liquidity)} good={path.impact.liquidity >= 0} />
+              <ImpactChip label="Income / yr"  value={fmt(path.impact.yield_p_a)} good />
+              <ImpactChip label="Tax to pay now" value={fmt(path.impact.cgt_today)} good={path.impact.cgt_today === 0} />
+              <ImpactChip label="Left in your estate" value={fmt(path.impact.iht_in_estate)} />
+              <ImpactChip label="Cash freed up" value={fmt(path.impact.liquidity)} good={path.impact.liquidity >= 0} />
             </>
           ) : (
             <>
               <ImpactChip label="Net worth" value={fmtSigned(path.simulation?.delta?.nw)}  good={(path.simulation?.delta?.nw ?? 0) >= 0} />
-              <ImpactChip label="IHT"       value={fmtSigned(path.simulation?.delta?.iht)} good={(path.simulation?.delta?.iht ?? 0) <= 0} />
+              <ImpactChip label="Inheritance tax"       value={fmtSigned(path.simulation?.delta?.iht)} good={(path.simulation?.delta?.iht ?? 0) <= 0} />
             </>
           )}
         </div>

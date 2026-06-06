@@ -16,7 +16,7 @@
     const card = t.closest('.sw-card, svg');
     if (!card) return;
     const cb = card.getBoundingClientRect();
-    if (box.right > cb.right + 1 || box.left < cb.left - 1) {
+    if (box.right > cb.right + 1 || box.left < cb.left - 1 || box.bottom > cb.bottom + 1 || box.top < cb.top - 1) {
       issues.push({ kind: 'svg-text-clip', text: (t.textContent || '').slice(0, 30), right: Math.round(box.right), edge: Math.round(cb.right) });
     }
   });

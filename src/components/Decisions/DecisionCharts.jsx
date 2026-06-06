@@ -105,10 +105,14 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
   const plotW = W - PAD.left - PAD.right
   const H = PAD.top + rows.length * ROW_H + PAD.bottom
 
-  // Zero baseline: centred if any negatives, else hard-left (all-positive looks
-  // wrong diverging from the middle when nothing goes left).
-  const zeroX = anyNeg ? PAD.left + plotW / 2 : PAD.left
-  const halfW = anyNeg ? plotW / 2 : plotW
+  // A fixed value column on the right keeps EVERY value label in the same place
+  // (right-aligned, same colour) — never a mix of inside/outside labels (founder
+  // 2026-06-06). Bars scale within the area to the left of that column.
+  const VALUE_COL = 66
+  const barArea = plotW - VALUE_COL
+  const valueX = W - PAD.right
+  const zeroX = anyNeg ? PAD.left + barArea / 2 : PAD.left
+  const halfW = anyNeg ? barArea / 2 : barArea
   const barH = 16
 
   return (
@@ -159,34 +163,18 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
           const barX = isNeg ? zeroX - len : zeroX
           const fill = isNeg ? 'url(#dc-neg-grad)' : 'url(#dc-pos-grad)'
           const valueColor = (r.raw < 0) ? NEG_COLOR : (r.raw > 0 ? POS_COLOR : 'var(--c-text3)')
-          // Value label: outside the bar end by default, but if it would clip the
-          // chart edge (long bar), draw it INSIDE the bar in white so it's never
-          // cut off (founder 2026-06-06: "+£8" / "+£4" were clipped).
-          const NEAR = 54
-          const endX = isNeg ? barX : barX + len
-          const fitsOutside = Math.abs(r.value) === 0
-            || (isNeg ? (endX - NEAR > PAD.left) : (endX + NEAR < W - 2))
-          const labelInside = !fitsOutside
-          const labelX = labelInside
-            ? (isNeg ? endX + 6 : endX - 6)
-            : (isNeg ? barX - 6 : barX + len + 6)
-          const labelAnchor = labelInside ? (isNeg ? 'start' : 'end') : (isNeg ? 'end' : 'start')
-          const labelFill = labelInside ? 'rgba(255,255,255,0.97)' : valueColor
-          // Track behind each bar so empty rows still read as a lane.
-          const trackX = anyNeg ? PAD.left : zeroX
-          const trackW = anyNeg ? plotW : halfW
 
           return (
             <g key={r.id}>
               {/* Option name above its bar */}
-              <text x={anyNeg ? PAD.left : zeroX} y={rowTop + 10}
+              <text x={PAD.left} y={rowTop + 10}
                 fontSize="11" fontWeight="700"
                 fill="var(--c-text)" fontFamily="Inter,sans-serif">
                 {r.label}
               </text>
 
-              {/* Lane track */}
-              <rect x={trackX} y={barY} width={trackW} height={barH} rx={barH / 2}
+              {/* Lane track (bar area only — the value sits in its own right column) */}
+              <rect x={PAD.left} y={barY} width={barArea} height={barH} rx={barH / 2}
                 fill="var(--c-surface2)" stroke="var(--c-border)" strokeWidth="0.75" opacity="0.7" />
 
               {/* The bar */}
@@ -198,10 +186,10 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
                   style={{ filter: 'drop-shadow(0 0 8px var(--c-radar-glow))' }} />
               )}
 
-              {/* Value label (£) — outside the bar, or inside it when near the edge */}
-              <text x={labelX} y={barY + barH / 2 + 4}
-                textAnchor={labelAnchor} fontSize="11.5" fontWeight="800"
-                fill={labelFill} fontFamily="Inter,sans-serif"
+              {/* Value — fixed right column, every row aligned the same way */}
+              <text x={valueX} y={barY + barH / 2 + 4}
+                textAnchor="end" fontSize="11.5" fontWeight="800"
+                fill={valueColor} fontFamily="Inter,sans-serif"
                 style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {fmtBar(r.raw)}
               </text>

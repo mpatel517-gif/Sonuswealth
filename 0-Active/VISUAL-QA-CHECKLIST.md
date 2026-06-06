@@ -6,6 +6,7 @@ This sits **above** taking a screenshot and **below** CLAUDE.md §9.5 (which cov
 
 ## A. Text & labels
 - [ ] No text clipped or cut off — including SVG/chart labels and **value labels** (a "+£8" where the number is +£83k is a FAIL).
+- [ ] **Labels placed UNIFORMLY** — within one chart/list, value labels share one position + style (e.g. all in a right column, or all outside the bars) — never some inside-the-bar and some outside. The §G detector checks clipping, NOT placement consistency; this needs a critical eye on the rendered result.
 - [ ] No label/heading duplicated (the same caption shown twice in one card).
 - [ ] No two labels for the same thing that disagree (e.g. card subtitle "Cash freed up" but chart caption "Net-worth change").
 - [ ] Consistent casing for the same concept (don't mix Title Case and UPPERCASE for one label).

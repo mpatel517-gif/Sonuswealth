@@ -20,6 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useMemo, useEffect } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 // S1 selector migration (Phase 2): canonical reads via facade.
 import {
   netWorth, investable,
@@ -3203,7 +3204,7 @@ function DecumulationPanel({ entity, setActiveDrill }) {
 // §13 MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
-export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, onOpenRisk, onDrillMetric, onNav }) {
+export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, onOpenRisk, onDrillMetric, onNav, onOpenDecision }) {
   // Back-routing (2026-05-28): if the user came from another screen, return
   // them there. Fallback to onHome when not threaded.
   const goBackOrHome = onBack || onHome
@@ -4585,6 +4586,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
 
       </>
       )}{/* ── /G13 empty-state ternary (heroTotals == 0 ? empty : <>...</>) ── */}
+
+      <DecisionDrawers screen="money" onOpen={onOpenDecision} />
 
       {/* ── Disclaimer + rules ──────────────────────────────────────────── */}
       <p className="disclaimer">{BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}</p>

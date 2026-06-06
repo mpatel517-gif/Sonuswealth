@@ -35,6 +35,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 // S1 selector migration (Phase 2): canonical netWorth via facade. Other
 // risk-specific helpers stay in fq-calculator (their re-export through
 // selectors would force every screen to take the selector module on as
@@ -1908,7 +1909,7 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap, tieout, tie
 // ─────────────────────────────────────────────────────────────────────────────
 // Default export — full-page Risk surface.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
+export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav, onOpenDecision }) {
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)
@@ -1948,6 +1949,8 @@ export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onD
         onNav={onNav}
         suppressPrimaryRing
       />
+
+      <DecisionDrawers screen="risk" onOpen={onOpenDecision} />
 
       <p className="disclaimer">
         {BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}

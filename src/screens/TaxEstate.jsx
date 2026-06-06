@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useState, useRef } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 // S1 selector migration (Phase 2)
 import {
   netWorth,
@@ -2513,7 +2514,7 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
 
-export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey }) {
+export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey, onOpenDecision }) {
   // Back-routing (2026-05-28): respect previous screen rather than jumping home.
   const goBackOrHome = onBack || onHome
   // ── Viewport detection (for mobile reordering — F-CAT-03 / F-VIS-01) ──────
@@ -2958,6 +2959,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
           )}
         </div>
       )}
+
+      <DecisionDrawers screen="tax" onOpen={onOpenDecision} />
 
       <p className="disclaimer">
         {BRAND.disclaimer}<br />

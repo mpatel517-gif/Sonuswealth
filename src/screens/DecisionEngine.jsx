@@ -24,8 +24,9 @@
 // (decision-engine.js to be created in next wave — see CRIT DE-MATH-02.)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { simulateAction, enumeratePaths, generateRecommendation } from '../engine/decision-engine.js'
+import { DECISION_TYPES_ALL, DECISION_CATEGORIES } from '../engine/decision-catalogue.js'
 
 // FCA boundary constant — mirrored from FIX-11 Ask. Single source of truth
 // for regulated-advice disclaimer text on engine recommendations.
@@ -45,48 +46,8 @@ const DECISIONS = [
 // Full 40-decision catalogue (spec §0.1 D-DE-3 priority list).
 // Phase 1: 1 live (DE-09 property). The other 39 surface as disabled stubs so
 // the engine's scope is visible. Phase 2 wires each via simulateAction().
-const DECISION_TYPES_ALL = [
-  { id: 'DE-01', title: 'Drawdown: lump sum vs phased', status: 'live' },
-  { id: 'DE-02', title: 'Annuity: buy or defer?', status: 'live' },
-  { id: 'DE-03', title: 'Pension contribution: top up vs MPAA risk', status: 'live' },
-  { id: 'DE-04', title: 'SIPP vs workplace pension routing', status: 'live' },
-  { id: 'DE-05', title: 'Salary sacrifice: increase / decrease', status: 'live' },
-  { id: 'DE-06', title: 'ISA: stocks & shares vs cash vs LISA split', status: 'live' },
-  { id: 'DE-07', title: 'GIA → ISA bed-and-ISA execution', status: 'live' },
-  { id: 'DE-08', title: 'Mortgage: overpay, offset, or invest?', status: 'live' },
-  { id: 'DE-09', title: 'Property: keep, sell, or let?', status: 'live' },
-  { id: 'DE-10', title: 'Remortgage: fix vs tracker vs offset', status: 'live' },
-  { id: 'DE-11', title: 'BTL: §24 exposure review', status: 'live' },
-  { id: 'DE-12', title: 'Equity release: lifetime mortgage assessment', status: 'live' },
-  { id: 'DE-13', title: 'Emergency fund: size and location', status: 'live' },
-  { id: 'DE-14', title: 'Cash ladder: build a 12-month bond ladder', status: 'live' },
-  { id: 'DE-15', title: 'Gifting: structure £X to children (7-year PET)', status: 'live' },
-  { id: 'DE-16', title: 'Trust: bare, discretionary, or interest-in-possession', status: 'live' },
-  { id: 'DE-17', title: 'Will: simple, mirror, or life-interest', status: 'live' },
-  { id: 'DE-18', title: 'LPA: financial and health setup', status: 'live' },
-  { id: 'DE-19', title: 'Life cover: term, FIB, or whole-of-life in trust', status: 'live' },
-  { id: 'DE-20', title: 'Critical illness: add or top up', status: 'live' },
-  { id: 'DE-21', title: 'Income protection: own-occ vs any-occ', status: 'live' },
-  { id: 'DE-22', title: 'CGT crystallisation: harvest allowance now', status: 'live' },
-  { id: 'DE-23', title: 'Loss harvesting: realise losses against gains', status: 'live' },
-  { id: 'DE-24', title: 'Spousal transfer: equalise allowances', status: 'live' },
-  { id: 'DE-25', title: 'Dividend vs salary mix (Ltd Co director)', status: 'live' },
-  { id: 'DE-26', title: 'EIS / SEIS: invest for relief', status: 'live' },
-  { id: 'DE-27', title: 'VCT: build a tax-relief ladder', status: 'live' },
-  { id: 'DE-28', title: 'BPR portfolio: 2-year IHT planning', status: 'live' },
-  { id: 'DE-29', title: 'Charitable giving: payroll, gift aid, legacy', status: 'live' },
-  { id: 'DE-30', title: 'School fees / education funding plan', status: 'live' },
-  { id: 'DE-31', title: 'Career break / sabbatical affordability', status: 'live' },
-  { id: 'DE-32', title: 'Redundancy: lump-sum deployment', status: 'live' },
-  { id: 'DE-33', title: 'Inheritance receipt: deploy £X received', status: 'live' },
-  { id: 'DE-34', title: 'Divorce: financial settlement structuring', status: 'live' },
-  { id: 'DE-35', title: 'Business sale: exit + BADR planning', status: 'live' },
-  { id: 'DE-36', title: 'Director loan: extract or repay', status: 'live' },
-  { id: 'DE-37', title: 'Pension transfer: DB → DC suitability', status: 'live' },
-  { id: 'DE-38', title: 'Annuity reshape after partial drawdown', status: 'live' },
-  { id: 'DE-39', title: 'Emigration: UK tax residency exit planning', status: 'live' },
-  { id: 'DE-40', title: 'Long-term care funding: self-fund vs deferred payment', status: 'live' },
-]
+// DECISION_TYPES_ALL + DECISION_CATEGORIES now live in
+// ../engine/decision-catalogue.js (shared with the per-screen DecisionDrawers).
 
 // Phase 1: hardcoded scores. Phase 2 will route through simulateAction() →
 // enumeratePaths() → readAssetPicture() per spec §5. Real implementation calls
@@ -171,7 +132,7 @@ function fmtSigned(n) {
   return `${sign}${a >= 1000 ? `£${Math.round(a / 1000)}k` : `£${Math.round(a)}`}`
 }
 
-export default function DecisionEngine({ onBack, onCommit, entity, onAskAI }) {
+export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, initialDecisionId }) {
   const [step, setStep] = useState(0)
   const [decision, setDecision] = useState(null)
   const [context, setContext] = useState({
@@ -185,6 +146,18 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI }) {
   const [chosen, setChosen] = useState(null)
   const [stressTested, setStressTested] = useState(false)
   const [committed, setCommitted] = useState(false)
+
+  // Deep-link: opened from a per-screen "Decisions you can make here" drawer
+  // with a specific decision → skip the catalogue and start inside it.
+  useEffect(() => {
+    if (!initialDecisionId) return
+    const d = DECISION_TYPES_ALL.find(x => x.id === initialDecisionId)
+    if (d) {
+      setDecision({ id: d.id.toLowerCase().replace(/-/g, '_'), code: d.id, title: d.title, icon: '◆' })
+      setChosen(null)
+      setStep(1)
+    }
+  }, [initialDecisionId])
 
   // Computed paths: for DE-09 (property canonical example) use hardcoded
   // PROPERTY_PATHS; for all other live types use enumeratePaths() from engine.
@@ -414,21 +387,6 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI }) {
     </div>
   )
 }
-
-// Founder 2026-06-06: "I don't like one big list — I don't know how to find
-// what I want." The 40 decisions are grouped into topic drawers. The same
-// grouping maps each decision to the screen that owns it (see DECISION_HOME),
-// so the per-screen "Decisions you can make here" drawers reuse this taxonomy.
-const DECISION_CATEGORIES = [
-  { id: 'pensions',   label: 'Pensions & retirement',   icon: '◷', home: 'money',  ids: ['DE-01','DE-02','DE-03','DE-04','DE-05','DE-37','DE-38'] },
-  { id: 'investing',  label: 'Investing & tax wrappers', icon: '≋', home: 'money',  ids: ['DE-06','DE-07','DE-22','DE-23','DE-24','DE-26','DE-27','DE-28'] },
-  { id: 'property',   label: 'Property & mortgage',      icon: '⌂', home: 'money',  ids: ['DE-08','DE-09','DE-10','DE-11','DE-12'] },
-  { id: 'cash',       label: 'Cash & emergency fund',    icon: '£', home: 'flow',   ids: ['DE-13','DE-14'] },
-  { id: 'protection', label: 'Protection',              icon: '◉', home: 'risk',   ids: ['DE-19','DE-20','DE-21'] },
-  { id: 'estate',     label: 'Estate, gifts & IHT',     icon: '⚖', home: 'tax',    ids: ['DE-15','DE-16','DE-17','DE-18','DE-29'] },
-  { id: 'business',   label: 'Business & director',     icon: '◆', home: 'money',  ids: ['DE-25','DE-35','DE-36'] },
-  { id: 'life',       label: 'Income & life events',    icon: '✦', home: 'flow',   ids: ['DE-30','DE-31','DE-32','DE-33','DE-34','DE-39','DE-40'] },
-]
 
 // ── Step 1: Identify ────────────────────────────────────────────────────────
 function StepIdentify({ decision, onPick, onAskAI }) {

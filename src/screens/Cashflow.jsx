@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useMemo, useEffect } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 
 // Canonical facade engine (Wave 1A): imports cashflow-engine via cf_* re-exports.
 // S1 selector migration (Phase 2): canonical readers pulled via selector facade.
@@ -1435,7 +1436,7 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
   )
 }
 
-export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed }) {
+export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed, onOpenDecision }) {
   // Back-routing (2026-05-28): if the user came from another screen (e.g.
   // MyMoney → Cashflow via section-nav chip), the back chevron should return
   // there, not jump to Home. Dashboard threads `onBack=goBack` which reads
@@ -1779,6 +1780,8 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
 
           {/* §C engine internals moved into the 'costs' question-tile (extraTiles). */}
         </div>
+
+        <DecisionDrawers screen="flow" onOpen={onOpenDecision} />
 
         {/* Disclaimer footer */}
         <div style={S.disclaimer}>

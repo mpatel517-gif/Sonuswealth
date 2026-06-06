@@ -1,0 +1,68 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// DecisionDrawers — "Decisions you can make here", surfaced on the screen that
+// owns each topic (My Money / Cashflow / Tax & Estate / Risk). Founder 2026-06-06:
+// no standalone Decisions tab; decisions live in context as categorised drawers.
+//
+// Tapping a decision calls onOpen(id) → Dashboard opens the Decision Engine
+// seeded straight into that decision (DecisionEngine initialDecisionId).
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { useState } from 'react'
+import { categoriesForScreen, titleOf } from '../../engine/decision-catalogue.js'
+
+export default function DecisionDrawers({ screen, onOpen, heading = 'Decisions you can make here' }) {
+  const cats = categoriesForScreen(screen)
+  const [open, setOpen] = useState(() => new Set())
+  if (!cats.length) return null
+
+  const toggle = (id) => setOpen(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n
+  })
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 8 }}>{heading}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {cats.map(cat => {
+          const isOpen = open.has(cat.id)
+          return (
+            <div key={cat.id} className="sw-tile" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--c-border)' }}>
+              <button
+                onClick={() => toggle(cat.id)}
+                aria-expanded={isOpen}
+                className="sw-press"
+                style={{
+                  width: '100%', cursor: 'pointer', background: isOpen ? 'var(--c-acc-bg)' : 'var(--c-surface2)',
+                  border: 'none', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                <span style={{ fontSize: 16, color: 'var(--c-acc)', width: 22, textAlign: 'center', flexShrink: 0 }}>{cat.icon}</span>
+                <span style={{ flex: 1, textAlign: 'left', fontSize: 14, fontWeight: 800, color: 'var(--c-text)' }}>{cat.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text3)' }}>{cat.ids.length}</span>
+                <span style={{ fontSize: 14, color: 'var(--c-text3)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s', width: 14, textAlign: 'center' }}>›</span>
+              </button>
+              {isOpen && (
+                <div style={{ padding: '8px 10px 4px' }}>
+                  {cat.ids.map(id => (
+                    <button key={id}
+                      onClick={() => onOpen?.(id)}
+                      className="sw-tile sw-tile-interactive sw-press"
+                      style={{
+                        textAlign: 'left', cursor: 'pointer', padding: '10px 12px', width: '100%',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        border: '1px solid var(--c-border)', marginBottom: 4,
+                      }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
+                        background: 'var(--c-acc-bg)', color: 'var(--c-acc)', minWidth: 44, textAlign: 'center', flexShrink: 0 }}>{id}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{titleOf(id)}</span>
+                      <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

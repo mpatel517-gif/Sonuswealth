@@ -75,10 +75,12 @@ const PROPERTY_PATHS = [
     title: 'Rent it out',
     sub:   'Earn rent — but landlord rules limit your mortgage tax relief.',
     impact: {
-      yield_p_a:    16_700,
+      yield_p_a:    16_700,  // net rent, after mortgage/management overhead
       cgt_today:    0,
       iht_in_estate: 450_000,
-      liquidity:    -8_000, // mortgage/management overhead estimate
+      liquidity:    0,        // renting frees up NO lump sum — you keep the asset.
+                              // (overhead is a cost, already netted in yield_p_a —
+                              // it is not a change in cash freed up. Founder 2026-06-06.)
       complexity:   3,
     },
     scores: { tax: 0.3, risk: 0.4, liquidity: 0.5, legacy: 0.5 },

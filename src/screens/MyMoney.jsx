@@ -2615,7 +2615,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           You can leave the pot invested and take income as you need it, year by year.
           The four presets below model different approaches:
           <br /><strong>Take nothing</strong> keeps the pot fully invested.
-          <br /><strong>Stay in basic-rate band</strong> caps each year's income at £37,700 so nothing tips into higher-rate tax.
+          <br /><strong>Stay in basic-rate band</strong> caps each year's income at £{TAX.brl.toLocaleString()} so nothing tips into higher-rate tax.
           <br /><strong>Safe withdrawal rate</strong> uses the engine's "how much can I take without running out" calculation.
           <br /><strong>Smooth withdrawals</strong> takes more in good market years and trims in bad ones — your pot is more likely to last 10–20 years longer than a fixed amount, but some years your income will drop. <ExplainerChip id="MM-GUYTON-KLINGER" size={13} />
         </div>
@@ -3942,7 +3942,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // "What you own" grid — liabilities aren't assets and have their
           // own Act 3 section directly below. Subtotal still computed above
           // so the Balance-sheet net-worth math is unchanged.
-          { id: 'income',       label: 'Income (flow)',        domainCodes: 'O · W',     rows: [] /* income shown in flow-context below NW + on Cashflow */ },
+          { id: 'income',       label: 'Income (flow)',        domainCodes: 'O · W',     rows: [], /* income is flow, not a balance-sheet asset — it lives on Cashflow */
+            empty: 'Your income — salary, dividends, rent, interest — lives on the Cashflow tab, with the tax on each. Tap to open it.' },
           { id: 'alternatives', label: 'Alternatives',         domainCodes: 'U',         rows: catRows.alternatives,
             empty: 'Crypto, wine, art, gold, P2P, private equity — anything that doesn\'t fit the standard wrappers lives here. Chattels under £6k disposal: no CGT.' },
           // IFA pass 2 BLOCK: Obligations (Domain V) is a CASHFLOW commitment
@@ -4346,8 +4347,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                 // AIM 50%, valuation freshness, liquidity ladder.
                 setActiveDrill('alternatives')
               } else if (id === 'income') {
-                // Income streams — pivot to income view
-                setPivot('income')
+                // Income lives on the Cashflow tab (balance-sheet vs flow
+                // separation) — route there, not to an unrendered pivot view.
+                onNav?.('flow')
               } else if (id === 'obligations') {
                 // Annual obligations (family support, alimony) — route to Cashflow
                 onNav?.('flow')
@@ -4701,7 +4703,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                   setMetricDrill(null)
                   if (a.target === 'networth') setActiveDrill('networth')
                   else if (a.target === 'liabilities') setActiveDrill('liabilities')
-                  else if (a.target === 'income') setPivot('income')
+                  else if (a.target === 'income') onNav?.('flow') // income lives on the Cashflow tab
                 },
               })),
               ...(metricDrill.askQuestion ? [{

@@ -105,6 +105,10 @@ export default function X28TopBar({
   dataDate = BRAND.dataDate,
   showNowPill = true,
   showWindowRow = true,
+  // Hide the Today/Future/Plan/What-if view-mode tabs (keep only the optional
+  // Choices toggle). Cashflow uses this: those modes are no-ops there, so showing
+  // them was a dead control (sweep #54). Default keeps them for My Money etc.
+  showViewModes = true,
   onNowTap,
   // Optional 5th tab next to the view modes (founder 2026-06-06): a "Decisions"
   // entry that, like "What if", swaps the screen content for the decision
@@ -165,8 +169,9 @@ export default function X28TopBar({
   // Tab list for Row 2 — view modes, plus an optional Decisions tab. Decisions
   // is tracked separately (decisionsActive), so when it's on, none of the
   // view-mode tabs read as active.
-  const tabs = showDecisions ? [...VIEW_MODES, { id: '__decisions', label: 'Choices' }] : VIEW_MODES
-  const activeIdx = decisionsActive ? VIEW_MODES.length : VIEW_MODES.findIndex(m => m.id === modeState)
+  const baseModes = showViewModes ? VIEW_MODES : []
+  const tabs = showDecisions ? [...baseModes, { id: '__decisions', label: 'Choices' }] : baseModes
+  const activeIdx = decisionsActive ? baseModes.length : baseModes.findIndex(m => m.id === modeState)
 
   return (
     <div style={{
@@ -325,8 +330,9 @@ export default function X28TopBar({
             position: 'absolute',
             top: 0, bottom: 0,
             left: 0,
-            width: `calc(100% / ${tabs.length})`,
+            width: `calc(100% / ${Math.max(1, tabs.length)})`,
             transform: `translateX(${Math.max(0, activeIdx) * 100}%)`,
+            opacity: activeIdx < 0 ? 0 : 1, // no highlight when nothing is active (e.g. Choices-only bar, not toggled)
             background: 'var(--c-tint-neutral-2)',
             borderRadius: 'var(--r-md)',
             transition: 'transform var(--dur-normal, 350ms) var(--ease-out-cubic, cubic-bezier(0.33,1,0.68,1))',

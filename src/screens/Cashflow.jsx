@@ -1579,7 +1579,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   )
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
-  const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv, cv])
+  const coi = useMemo(() => { try { return totalCoI(entity, CMA_BUNDLE) || { total: 0, byDomain: {}, confidence: 'LOW' } } catch { return { total: 0, byDomain: {}, confidence: 'LOW' } } }, [entity, bv, cv])
   const coiVar = useMemo(() => coiCashflowVariants(entity), [entity, bv, cv])
   const prcPcc = useMemo(() => cf_prcPccSpread(entity), [entity, bv, cv])
   const reality = useMemo(
@@ -1661,7 +1661,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             founder removed 2026-06-04 (kept the clean top, fixed the dead-end). */}
         <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} variant="compact" />
 
-        {/* Minimal view-bar — view modes + Decisions tab (founder 2026-06-06) */}
+        {/* Minimal view-bar — Choices toggle only (founder 2026-06-06). The
+            Today/Future/Plan/What-if view modes are no-ops on Cashflow (the time +
+            scenario functions live inside the drawers), so they're hidden via
+            showViewModes={false} rather than shown as dead tabs (sweep #54). The
+            window row was already hidden (showWindowRow={false}, #55). */}
         <div style={{ margin: '0 -16px' }}>
           <X28TopBar
             window={windowId}
@@ -1671,6 +1675,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             rulesVersion={BRAND.rulesVersion}
             dataDate={BRAND.dataDate}
             showWindowRow={false}
+            showViewModes={false}
             showDecisions
             decisionsActive={showDecisions}
             onDecisions={() => setShowDecisions(s => !s)}
@@ -2044,7 +2049,7 @@ function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
   const stage = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
   const isDecum = stage === 'decumulator' && !!decSolve?.rankedPaths?.length
 
-  const fundedRatioVal = +(fr?.funded_ratio ?? fr?.ratio ?? 0)
+  const fundedRatioVal = +(fr?.ratio ?? 0) // canonical key is fr.ratio (funded_ratio never existed — wrong-key fallback removed)
   const fundedPct = fundedRatioVal > 0 ? Math.round(fundedRatioVal * 100) : null
   const swrPct = fr?.swr ? Math.round(fr.swr * 1000) / 10 : null
   const posPct = pos != null ? Math.round((+pos) * 100) : null
@@ -5897,7 +5902,9 @@ function LeversAccum({ entity, fi }) {
 
 // ── CoIOdometer wrapper — adds cascade-halo on totalCoI change ─────────
 function CoIOdometerWithHalo({ coi }) {
-  const total = coi?.total ?? coi?.byDomain?.estatePlanning ?? 0
+  // Always the AGGREGATE across domains (totalCoI returns .total = sum of
+  // byDomain). Fallback re-sums byDomain rather than collapsing to one domain.
+  const total = coi?.total ?? Object.values(coi?.byDomain || {}).reduce((s, v) => s + (+v || 0), 0)
   const halo = useCascadeTrigger(Math.round(total))
   return (
     <div className={halo ? 'sw-cascade-halo' : ''} style={{ borderRadius: 'var(--r-lg)' }}>

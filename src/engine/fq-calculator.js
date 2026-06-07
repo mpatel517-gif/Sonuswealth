@@ -64,11 +64,28 @@ export function fmt(n) {
 }
 
 /**
- * Days remaining until the SIPP-enters-estate deadline (TAX.deadline).
+ * CANONICAL countdown — whole calendar days remaining until SIPPs enter the
+ * estate for IHT (6 Apr 2027 00:00 UTC). This is the SINGLE source every visible
+ * "days until the rule change" surface must use so two visuals of one quantity
+ * always reconcile (T&E tile, IHTDeltaCard, sub-anchor strip, CoI daily-rate).
+ * Floor — the rule has not bitten until the day actually arrives; matches the
+ * IHTDeltaCard renderer. Today-relative, UTC-pivot to dodge DST/local drift.
+ * @param {number} [nowMs=Date.now()]
+ * @returns {number} integer ≥ 0
+ */
+export function sippIhtCountdownDays(nowMs = Date.now()) {
+  const pivot = Date.UTC(2027, 3, 6, 0, 0, 0, 0); // 2027-04-06 00:00 UTC
+  return Math.max(0, Math.floor((pivot - nowMs) / 86400000));
+}
+
+/**
+ * Days remaining until the SIPP-enters-estate deadline.
+ * Delegates to {@link sippIhtCountdownDays} so the CoI daily-rate denominator
+ * uses the same single countdown the UI shows.
  * @returns {number} integer ≥ 0
  */
 export function daysLeft() {
-  return Math.max(0, Math.round((TAX.deadline - new Date()) / 86400000));
+  return sippIhtCountdownDays();
 }
 
 // ── LIFE STAGE ────────────────────────────────────────────────────────────────

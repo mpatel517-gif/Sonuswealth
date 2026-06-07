@@ -49,6 +49,10 @@ export default function CoIOdometer({
   byAction = null,
   showNowPill = true,
   onTap,
+  // Override the eyebrow + add a one-line scope sub so the user can tell an
+  // all-domains figure from a single-domain slice (founder ruling 2026-06-07).
+  label = 'Cost of inaction',
+  scopeSub = null,
 }) {
   // Live tick: dailyRate / 86400 seconds, 1Hz interval, gated by !deadline & rate > 0.
   const tickedValue = useTicker(
@@ -103,10 +107,18 @@ export default function CoIOdometer({
           fontSize: 'var(--fs-label)', fontWeight: 700,
           color: 'var(--c-text3)',
           textTransform: 'uppercase', letterSpacing: 0.8,
-          marginBottom: 6,
+          marginBottom: scopeSub ? 2 : 6,
         }}>
-          Cost of inaction
+          {label}
         </div>
+        {scopeSub && (
+          <div style={{
+            fontSize: 'var(--fs-small)', color: 'var(--c-text3)',
+            marginBottom: 6, lineHeight: 1.3,
+          }}>
+            {scopeSub}
+          </div>
+        )}
 
         <div style={{
           fontSize: 'var(--fs-hero-lg, 36px)',

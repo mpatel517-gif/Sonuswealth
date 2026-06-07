@@ -75,7 +75,7 @@ function reasonFor(h, wrapper, post2027) {
     return `High annual charge (${pct(charge)}) drags this legacy pot — drawing or consolidating it first stops fees eating your return.`
   if (wrapper === 'gia' || cls === DRAW_CLASS.CGT_MANAGED) {
     const g = h.embeddedGainPct != null ? ` (about ${pct(h.embeddedGainPct)} of it is gain)` : ''
-    return `Held outside a tax wrapper${g} — realise gradually to use your ${gbp(TAX.cgaAllowance ?? TAX.cgtAllowance ?? 3000)} CGT allowance; lower-gain holdings first.`
+    return `Held outside a tax wrapper${g} — realise gradually to use your ${gbp(TAX.cgaAllowance ?? 3000)} CGT allowance; lower-gain holdings first.`
   }
   if (cls === DRAW_CLASS.DRAW_LAST_TAX_FREE || wrapper === 'isa')
     return `Tax-free wrapper — keep it growing and draw it last (or for tax-free top-ups in higher-rate years).`

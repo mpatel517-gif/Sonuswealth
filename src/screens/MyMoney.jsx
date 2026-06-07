@@ -132,6 +132,7 @@ import {
 } from '../engine/_helpers.js'
 import DebtLeaf from '../components/MyMoney/DebtLeaf.jsx'
 import { amortise } from '../components/MyMoney/debtMath.js'
+import { netWorthAtHorizon } from '../engine/projection.js'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
 import AlternativesDrillDown from '../components/MyMoney/AlternativesDrillDown.jsx'
 import AssetDetailOverlay    from '../components/MyMoney/AssetDetailOverlay.jsx'
@@ -3494,52 +3495,35 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // Now: assets grow (forecast 1.04^y aggregate; plan/historical NW-derived
   // factor), liabilities amortise through amortise(), and hero NW is DERIVED as
   // Assets − Liabilities so the strip ties out by construction at every horizon.
+  // P1 model-unification (2026-06-07): the hero forecast now goes through the
+  // ONE canonical projector — netWorthAtHorizon() in engine/projection.js — the
+  // same fn Timeline's forecast and the Decision Engine read, so all three
+  // AGREE for the same horizon. Assets grow at the aggregate 4%; liabilities
+  // amortise through the canonical debt model (debt → £0, interest-only held
+  // flat, nothing grown); NW is DERIVED = Assets − Liabilities. The prior
+  // inlined amortisation lived here and drifted from Timeline; deleted.
+  // Plan/historical (target) modes keep the NW-derived factor so a committed
+  // target / historical snapshot preserves the balance-sheet identity.
   const _heroProjYears = projection?.years ?? 0
   const _heroIsTargetMode = projection?.source === 'historical'
     || projection?.source === 'plan' || projection?.source === 'plan-25x'
-  // Asset growth factor.
-  const _heroAssetFactor = (() => {
-    if (_heroProjYears === 0) return 1
+  let heroTotalAssets, heroTotalLiabilities
+  if (_heroProjYears <= 0) {
+    heroTotalAssets = Math.round(_heroBaseAssets)
+    heroTotalLiabilities = Math.round(_heroBaseLiabilities)
+  } else if (_heroIsTargetMode) {
+    // Target/historical: scale both sides by the NW-derived factor so the
+    // committed-target balance sheet stays internally consistent.
     const baseNW = _heroBaseAssets - _heroBaseLiabilities
-    if (baseNW !== 0 && _heroIsTargetMode) return (projection?.value ?? baseNW) / baseNW
-    return Math.pow(1.04, _heroProjYears)   // forecast: aggregate compound
-  })()
-  const heroTotalAssets = Math.round(_heroBaseAssets * _heroAssetFactor)
-  // Liability projection: amortise each captured debt to the horizon (same maths
-  // as the tiles). Plan/historical keep the NW-derived factor so the target /
-  // historical balance-sheet identity is preserved. Today (years≤0) = base.
-  const heroTotalLiabilities = (() => {
-    if (_heroProjYears <= 0) return Math.round(_heroBaseLiabilities)
-    if (_heroIsTargetMode) return Math.round(_heroBaseLiabilities * _heroAssetFactor)
-    const months = Math.round(_heroProjYears * 12)
-    const liab = entity?.liabilities || {}
-    const debts = []
-    const m = liab.mortgage
-    if (m && +m.outstanding > 0) debts.push({
-      balance: +m.outstanding,
-      apr: m.rate != null ? +m.rate * 100 : 0,
-      monthly: +(m.monthlyPayment ?? m.monthly_payment ?? 0) || 0,
-    })
-    ;(liab.otherLoans || []).forEach(l => {
-      const bal = +(l.outstanding || l.outstanding_balance || 0)
-      if (!bal) return
-      const aprRaw = +(l.apr || l.interest_rate || l.rate || 0)
-      debts.push({
-        balance: bal,
-        apr: aprRaw > 0 ? aprRaw * 100 : 0,
-        monthly: +(l.monthlyPayment ?? l.monthly_payment ?? l.repayment_from_salary_monthly ?? 0) || 0,
-      })
-    })
-    const projected = debts.reduce((s, d) => {
-      const series = amortise(d.balance, d.apr, d.monthly).forward(months + 1)
-      return s + (series[months] ?? d.balance)
-    }, 0)
-    // Any selector-only residual we can't enumerate (e.g. property[].mortgage_-
-    // outstanding) is held FLAT — never grown — so we don't understate debt.
-    const enumeratedNow = debts.reduce((s, d) => s + d.balance, 0)
-    const residual = Math.max(0, _heroBaseLiabilities - enumeratedNow)
-    return Math.round(projected + residual)
-  })()
+    const f = baseNW !== 0 ? (projection?.value ?? baseNW) / baseNW : 1
+    heroTotalAssets = Math.round(_heroBaseAssets * f)
+    heroTotalLiabilities = Math.round(_heroBaseLiabilities * f)
+  } else {
+    // Forecast (drift): canonical projector. Tied to Timeline + DE by construction.
+    const proj = netWorthAtHorizon(entity, _heroProjYears, 0.04)
+    heroTotalAssets = proj.assets
+    heroTotalLiabilities = proj.liabilities
+  }
   // Hero NW derived from the (correctly projected) parts — Gate-2 ties by build.
   const heroNetWorth = heroTotalAssets - heroTotalLiabilities
 

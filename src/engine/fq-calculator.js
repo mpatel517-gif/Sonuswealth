@@ -7,6 +7,7 @@
 
 import { TAX, onBundleChange } from './_bundle.js';
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
+import { netWorthAtHorizon as _netWorthAtHorizon } from './projection.js';
 import {
   pensionTotal      as _pensionTotal,
   investmentsTotal  as _investmentsTotal,
@@ -2554,12 +2555,14 @@ export function netWorthAtYears(entity, years) {
       if (point) return { value: Math.round(point.value), confidence: 'HIGH', source: 'trajectory' };
     }
   }
-  // Forward — compound at 4%; reduce confidence as horizon extends.
-  const factor = Math.pow(1.04, years);
-  const confidence = Math.abs(years) <= 1 ? 'HIGH'
-                   : Math.abs(years) <= 5 ? 'MEDIUM'
-                   : 'LOW';
-  return { value: Math.round(cur * factor), confidence, source: 'projection' };
+  // Forward — delegate to the ONE canonical projector (projection.js) so this
+  // agrees with MyMoney's hero strip, Timeline's forecast, and the Decision
+  // Engine. P1 model-unification (2026-06-07): the prior flat `cur × 1.04^years`
+  // grew the NET at a portfolio rate — it could not amortise debt (a debt with
+  // payments must trend to ZERO). netWorthAtHorizon() grows assets and amortises
+  // liabilities separately, then derives NW = assets − liabilities.
+  const proj = _netWorthAtHorizon(entity, years, 0.04);
+  return { value: proj.value, confidence: proj.confidence, source: 'projection' };
 }
 
 /**

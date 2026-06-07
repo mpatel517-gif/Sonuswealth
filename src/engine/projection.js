@@ -14,6 +14,11 @@
 
 import { getActiveCMA } from './cma.js'
 import { fv, fvAnnuity } from './modules/financial-math.js'
+import { liabilitiesAtHorizon, enumerateDebts } from './modules/debt-amortise.js'
+import {
+  pensionTotal, investmentsTotal, propertyTotal,
+  cashTotal, alternativesTotal, businessTotal, liabilitiesTotal,
+} from './_helpers.js'
 
 // Taxonomy node type (taxonomy.js keys) → CMA asset class driving its growth.
 // Unknown → blended portfolio growth (cma.growth) so nothing silently reads 0.
@@ -83,6 +88,58 @@ export function projectNode(node, opts = {}) {
   const rate = growthRateFor(node.type, cma)
   const contrib = (+node.monthlyContribution || 0) * 12
   return Math.round(projectValue(now, rate, years, contrib))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CANONICAL forward net-worth — the SINGLE source for "your net worth in N years"
+// across Timeline's forecast, MyMoney's hero strip, and the Decision Engine.
+//
+// Replaces the flat `netWorthAtYears` model (cur × 1.04^years) which grew the NET
+// at a portfolio rate and could not amortise debt. Here the two sides are modelled
+// on their OWN dynamics and NW is DERIVED so the balance-sheet identity holds
+// because the parts are right (not by scaling both sides):
+//   · Assets     grow at the aggregate forecast rate (default 4% / yr).
+//   · Liabilities amortise through the canonical debt model (debt-amortise.js):
+//     a debt with payments trends to ZERO; interest-only / no-payment debt is
+//     held FLAT; nothing grows. Selector-only debt we can't enumerate is held flat.
+//   · netWorth   = projected assets − projected liabilities.
+//
+// years<=0 ⇒ today's figures (baseline-safe). Confidence decays with horizon.
+//
+// @param {object} entity
+// @param {number} years            positive = future
+// @param {number} [assetRate=0.04] aggregate annual asset growth
+// @returns {{ assets:number, liabilities:number, value:number,
+//             years:number, confidence:'HIGH'|'MEDIUM'|'LOW', source:string }}
+export function netWorthAtHorizon(entity, years, assetRate = 0.04) {
+  const baseAssets =
+    pensionTotal(entity) + investmentsTotal(entity) + propertyTotal(entity) +
+    cashTotal(entity) + alternativesTotal(entity) + businessTotal(entity)
+  const baseLiab = liabilitiesTotal(entity)
+
+  const y = +years || 0
+  if (y <= 0) {
+    return {
+      assets: Math.round(baseAssets),
+      liabilities: Math.round(baseLiab),
+      value: Math.round(baseAssets - baseLiab),
+      years: 0, confidence: 'HIGH', source: 'current',
+    }
+  }
+
+  const assets = Math.round(baseAssets * Math.pow(1 + assetRate, y))
+  // Residual = selector debt we can't enumerate (held flat, never grown).
+  const enumeratedNow = enumerateDebts(entity).reduce((s, d) => s + d.balance, 0)
+  const residual = Math.max(0, baseLiab - enumeratedNow)
+  const liabilities = liabilitiesAtHorizon(entity, y, residual)
+
+  const confidence = y <= 1 ? 'HIGH' : y <= 5 ? 'MEDIUM' : 'LOW'
+  return {
+    assets,
+    liabilities,
+    value: assets - liabilities,
+    years: y, confidence, source: 'projection',
+  }
 }
 
 // Collect the projectable nodes of an entity (investable + property + liabilities).

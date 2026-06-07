@@ -54,19 +54,54 @@ const METRIC = {
   nw:     { caption: 'Net-worth change vs today',          unit: '£',   betterUp: true,  signed: true },
   iht:    { caption: 'Inheritance-tax change vs today',    unit: '£',   betterUp: false, signed: true },
   fq:     { caption: 'Financial-health score change',      unit: 'pts', betterUp: true,  signed: true },
-  // A LEVEL (income each year), not a change-vs-today — signed:false so bars read
-  // "£17k" not "+£17k", and the footer doesn't say "change versus today".
-  income: { caption: 'Income each year',                   unit: '£',   betterUp: true,  signed: false },
+  // A LEVEL (income you keep AFTER tax, each year), not a change-vs-today —
+  // signed:false so bars read "£10k" not "+£10k". This is the NET figure, so the
+  // bar ties out exactly with the "Income you keep / yr" factor on the cards
+  // (founder 2026-06-06: the bar showed net while the card led with gross rent —
+  // two numbers for one quantity).
+  income: { caption: 'Income you keep each year (after tax)', unit: '£', betterUp: true,  signed: false },
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. PathComparisonChart — the single headline comparison
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
+// `scrub` (optional) makes the bars draggable: the options share ONE input (the
+// amount lever), so grabbing any bar and dragging left/right scrubs that shared
+// amount and ALL bars rescale together (founder 2026-06-07: "these bars should
+// be sliders too"). Relative drag (delta from grab point), so a bar never snaps
+// to the cursor — the fill still encodes the OUTCOME, not the input, so the
+// comparison is preserved. The labelled OptionLever above stays the precise /
+// keyboard-accessible control and moves in lockstep.
+export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel, scrub }) {
   const list = Array.isArray(paths) ? paths.filter(Boolean).slice(0, 4) : []
   const meta = METRIC[valueKey] || METRIC.nw
   const axisCaption = axisLabel || meta.caption
+  const canScrub = !!(scrub && scrub.lever && scrub.lever.max != null && typeof scrub.onChange === 'function')
+
+  // Relative pointer-drag → adjust the shared amount by the horizontal delta from
+  // the grab point. No jump-to-cursor (which would be wrong here, since the fill
+  // is the outcome, not the amount). Keyboard users use the OptionLever above.
+  const startScrub = (e) => {
+    if (!canScrub) return
+    e.preventDefault()
+    const L = scrub.lever, min = L.min ?? 0, max = L.max, step = L.step || 1
+    const el = e.currentTarget
+    const trackW = el.getBoundingClientRect().width || 1
+    const x0 = e.clientX, v0 = Number(scrub.value)
+    try { el.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+    const move = (ev) => {
+      const dx = (ev.clientX ?? x0) - x0
+      let v = v0 + (dx / trackW) * (max - min)
+      v = Math.round(v / step) * step
+      scrub.onChange(Math.max(min, Math.min(max, v)))
+    }
+    const end = () => {
+      try { el.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+      el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', end); el.removeEventListener('pointercancel', end)
+    }
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end)
+  }
 
   if (list.length < 2) {
     return (
@@ -124,23 +159,43 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
           // direction-normalised bar (a smaller IHT bill is shown as a negative
           // figure but a rightward/green bar).
           const goodChange = meta.betterUp ? r.raw > 0 : r.raw < 0
-          const valueColor = r.raw === 0 ? 'var(--c-text3)' : (goodChange ? POS_COLOR : NEG_COLOR)
+          // A £0 income option (you keep it / sell for cash) earns no rent — that's
+          // a real choice, not a disabled one. Show "None", keep the row readable
+          // (text2, not the muted text3 that reads as greyed-out), and render an
+          // empty-state nub so the track isn't mistaken for a switched-off control
+          // (G-3, audit BM-9 — founder 2026-06-06: "why are Keep / Sell greyed out").
+          const isZeroIncome = valueKey === 'income' && r.raw === 0
+          const valueColor = isZeroIncome ? 'var(--c-text2)'
+            : r.raw === 0 ? 'var(--c-text3)' : (goodChange ? POS_COLOR : NEG_COLOR)
+          // Income is a LEVEL — display it with the exact same £ formatter the
+          // option cards use (fmtCompact ≡ the cards' fmt), so the bar string and
+          // the "Income you keep / yr" card string are identical, never "£10k vs
+          // £9,990" (founder 2026-06-06). nw/iht/fq keep the signed chart formatter.
+          const valueText = isZeroIncome ? 'None'
+            : valueKey === 'income' ? fmtCompact(r.raw) : fmtBar(r.raw)
+          const scrubProps = canScrub
+            ? { onPointerDown: startScrub, style: { cursor: 'ew-resize', touchAction: 'none' }, title: 'Drag to change the amount — all options update together' }
+            : {}
           return (
             <div key={r.id}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', minWidth: 0, overflowWrap: 'anywhere' }}>{r.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: valueColor, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtBar(r.raw)}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: valueColor, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{valueText}</span>
               </div>
               {anyNeg ? (
-                <div style={{ position: 'relative', height: BAR_H, borderRadius: 7, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+                <div {...scrubProps} style={{ position: 'relative', height: BAR_H, borderRadius: 7, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', ...(scrubProps.style || {}) }}>
                   <div style={{ position: 'absolute', top: -3, bottom: -3, left: '50%', width: 2, background: 'var(--c-text3)', opacity: 0.5, borderRadius: 2 }} />
                   {Math.abs(r.dirValue) > 0 && (
                     <div style={{ position: 'absolute', top: 2, bottom: 2, borderRadius: 5, background: barColor, width: `calc(${pct / 2}% - 1px)`, left: r.dirValue >= 0 ? '50%' : `calc(${50 - pct / 2}% + 1px)` }} />
                   )}
+                  {canScrub && <BarGrip />}
                 </div>
               ) : (
-                <div style={{ height: BAR_H, borderRadius: 7, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: barColor, minWidth: pct > 0 ? 4 : 0 }} />
+                <div {...scrubProps} style={{ position: 'relative', height: BAR_H, borderRadius: 7, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', overflow: 'hidden', display: 'flex', alignItems: 'center', paddingLeft: isZeroIncome ? 10 : 0, ...(scrubProps.style || {}) }}>
+                  {isZeroIncome
+                    ? <span style={{ fontSize: 10, color: 'var(--c-text3)', fontStyle: 'italic' }}>earns no rent — see cash &amp; estate below</span>
+                    : <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: barColor, minWidth: pct > 0 ? 4 : 0 }} />}
+                  {canScrub && !isZeroIncome && <BarGrip />}
                 </div>
               )}
             </div>
@@ -149,13 +204,25 @@ export function PathComparisonChart({ paths, valueKey = 'nw', axisLabel }) {
       </div>
 
       <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
+        {canScrub && <><strong style={{ color: 'var(--c-text2)' }}>Drag any bar</strong> (or the slider above) to change the amount — all options share it and update together.{' '}</>}
         {!signed
-          ? 'Longer bars mean more income each year. Rental income is taxable; income from an ISA or pension is not.'
+          ? 'Longer bars mean more income kept after tax. Options earning no rent show "None" — their value is the cash or estate change on the cards below. Rental income is taxed at your rate; ISA and pension income is not.'
           : anyNeg
             ? 'The line marks today — longer bars to the right are better, to the left are worse.'
             : 'Longer bars are better. All figures are the change versus where you are today.'}
         {valueKey === 'iht' && ' A bar to the right means a smaller inheritance-tax bill.'}
       </div>
+    </div>
+  )
+}
+
+// Drag affordance shown on the right of an interactive comparison bar — two faint
+// vertical rails that read as "grab here" without competing with the fill.
+function BarGrip() {
+  return (
+    <div aria-hidden style={{ position: 'absolute', right: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 2, pointerEvents: 'none', opacity: 0.55 }}>
+      <span style={{ width: 2, height: 10, borderRadius: 2, background: 'var(--c-text3)' }} />
+      <span style={{ width: 2, height: 10, borderRadius: 2, background: 'var(--c-text3)' }} />
     </div>
   )
 }

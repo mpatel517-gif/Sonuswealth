@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:tax-guards": "node tests/tax-guards.mjs",
+    "test:decision-smoke": "node tests/decision-engine-smoke.mjs",
     "test:r08": "node tests/r08-validate.js",
     "test:home": "node tests/home-engine-smoke.js",
     "test:qa": "node tests/visual-qa.js",

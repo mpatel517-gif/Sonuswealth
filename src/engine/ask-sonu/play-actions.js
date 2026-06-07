@@ -47,7 +47,7 @@ export const ACTION_STEPS = {
   ],
   aim_bpr: [
     'Confirm your risk tolerance — AIM is materially more volatile than mainstream equities',
-    'Allocate 5-15% of estate via a managed AIM BPR portfolio (Octopus, Puma, etc.)',
+    'Consider a managed AIM BPR portfolio for part of the estate (typically 5–15%)',
     'Hold for minimum 2 years for BPR to apply; review annually',
   ],
   charity_10pct_iht: [

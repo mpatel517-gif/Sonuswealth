@@ -41,6 +41,16 @@
   --c-violet:   #ba8cff;       /* data-vis only */
   --c-mint:     #7cf7de;       /* lighter teal variant */
 
+  /* ── Semantic status aliases ─────────────────────────────────────
+     Risk.jsx (and other screens) reference --c-danger/--c-success/
+     --c-warning but these were never defined anywhere → resolved to
+     transparent/inherited, silently breaking dim-bar, shock-card,
+     setback-chip and Shock-Lab colour semantics. Aliased to the real
+     functional tokens here (purely additive). */
+  --c-success:  var(--c-acc);   /* mint = resilient/good */
+  --c-danger:   var(--c-coral); /* coral = exposed/loss */
+  --c-warning:  var(--c-gold);  /* gold = caution */
+
   --c-acc-bg:   rgba(93,219,194,.10);
   --c-acc2-bg:  rgba(122,167,255,.10);
   --c-acc3-bg:  rgba(255,111,125,.10);
@@ -139,6 +149,12 @@
      (indigo) so success-state visual carries the same semantic across
      both themes. Dark mode keeps mint as the success color. */
   --c-mint:     #1c3fe7;       /* indigo — success-state alias (light) */
+
+  /* Semantic status aliases (see dark block). Light theme: success =
+     indigo (no green per Digital Sterling), danger = deep red, warn = gold. */
+  --c-success:  var(--c-acc);   /* indigo = success-state */
+  --c-danger:   var(--c-coral); /* deep red = exposed/loss */
+  --c-warning:  var(--c-gold);  /* gold = caution */
 
   --c-acc-bg:   rgba(28,63,231,.08);
   --c-acc2-bg:  rgba(61,90,254,.10);

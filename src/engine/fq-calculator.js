@@ -3844,4 +3844,5 @@ export {
   whatWouldHelpMost,
   projectBTR,
   shockTrajectory,
+  SHOCK_PARAM_DEFAULTS,
 } from './risk-engine.js';

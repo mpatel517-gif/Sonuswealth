@@ -95,7 +95,7 @@ const RISK_DIM_DESCRIPTIONS = {
   protCov:          'How well protected you are against loss of income, death, or serious illness.',
   debtVuln:         'Whether your debt level amplifies your financial risks — leverage, debt service, and rate exposure.',
   concRisk:         'Whether your wealth and income are over-concentrated in a single asset, employer, or asset class.',
-  depExp:           'Whether people who depend on you would be provided for — will, nominations, LPA, guardian.',
+  depExp:           'Whether people who depend on you would be provided for — will, nominations, power of attorney, and a named guardian.',
   behaviouralTrack: 'Your demonstrated financial behaviour on the platform over time. Starts at zero — earns through action.',
 }
 
@@ -664,7 +664,7 @@ function D6Questionnaire({ entity, onClose, onCommit }) {
         </div>
 
         <div className="sw-eyebrow" style={{ marginBottom:6 }}>
-          Step {step + 1} of {total} · D6 questionnaire
+          Step {step + 1} of {total} · Dependency questionnaire
         </div>
         <div style={{
           fontSize:17, fontWeight:800, color:'var(--c-text)', marginBottom:8,
@@ -766,7 +766,7 @@ function D6SubChips({ entity, onCommit }) {
   return (
     <div style={{ marginBottom:14 }}>
       <div className="sw-eyebrow" style={{ marginBottom:8 }}>
-        Sub-score breakdown · D-RISK-D6-SUBSCORING
+        Sub-score breakdown
       </div>
       <RevealStagger interval={50} style={{
         display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:6,
@@ -1565,7 +1565,7 @@ function ProtectionPlanCard({ entity }) {
       <div style={{ fontSize:13, color:'var(--c-text2)', lineHeight:1.55,
         marginBottom:10 }}>
         No protection plan committed yet. Building one anchors your future
-        gap-tracking and X28 plan-vs-actual variance views.
+        gap-tracking and lets you compare your plan against what actually happens.
       </div>
       <button
         onClick={() => {
@@ -1639,7 +1639,7 @@ function UniversalAdd({ open, onClose, onPick }) {
 
         {/* D3 — Protection coverage */}
         <div className="sw-eyebrow" style={{ marginBottom:8 }}>
-          Protection coverage · D3
+          Protection coverage
         </div>
         <div style={{ fontSize:11, color:'var(--c-text3)', marginBottom:10,
           lineHeight:1.45 }}>
@@ -1652,7 +1652,7 @@ function UniversalAdd({ open, onClose, onPick }) {
 
         {/* D6 — Estate readiness */}
         <div className="sw-eyebrow" style={{ marginBottom:8 }}>
-          Estate readiness · D6
+          Estate readiness
         </div>
         <div style={{ fontSize:11, color:'var(--c-text3)', marginBottom:10,
           lineHeight:1.45 }}>

@@ -66,8 +66,8 @@ export default function ProtectionGap({ entity, onAction }) {
         fontSize: 'var(--fs-small)', color: 'var(--c-text2)', lineHeight: 1.5,
       }}>
         {lifeGap + ipGap > 0
-          ? <>Combined gap of <strong style={{ color:'var(--c-acc3)' }}>{fmt(lifeGap + ipGap)}</strong>{' '}
-              cover. Quotes pull in via the protection adapter at s02a.</>
+          ? <>Combined cover gap of <strong style={{ color:'var(--c-acc3)' }}>{fmt(lifeGap + ipGap)}</strong>{' '}
+              between what you hold and the suggested level. This is an estimate, not a recommendation to buy.</>
           : <span style={{ color: 'var(--c-acc)' }}>Both cover lines meet the suggested need.</span>}
       </div>
     </div>

@@ -422,7 +422,7 @@ export default function DecisionEngine({ onBack, onCommit, entity, onAskAI, init
             padding: '4px 10px', borderRadius: 8,
             background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
             color: 'var(--c-text2)', fontSize: 13, cursor: 'pointer',
-          }}>← Home</button>
+          }}>← Back</button>
         )}
         <div style={{ flex: 1 }}>
           <div className="sw-eyebrow">Choices</div>

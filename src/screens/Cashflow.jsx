@@ -82,7 +82,6 @@ import TripleAnchor from '../components/shared/TripleAnchor.jsx'
 // v0.3 R3 SIGNATURE — calendar heatmap of monthly surplus/deficit.
 import { CalendarHeatmap } from '../components/charts'
 import {
-  X28TopBar,
   CoIOdometer,
   ExplainerChip,
   Num,
@@ -743,19 +742,21 @@ const SRC_LABELS = {
 // 2026-06-05: "you haven't made this diagram drillable"). Drills to SOURCE: the
 // real components behind each box, from the engine where available, with a plain
 // meaning and a pointer to the surface that owns the detail. Info, not advice.
-function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose }) {
+function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose, onNav }) {
   if (!drill) return null
   const id = drill.target || drill.node || ''
   const val = +drill.value || 0
   let rows = []      // { label, value }
   let note = ''
   let owns = null    // deep-link hint to the owning surface
+  let ownsRoute = null // C-3: real route when another tab owns the detail
   try {
     if (id.startsWith('src:')) {
       const items = (incomeAll?.items || []).filter(it => (SRC_LABELS[it.type] || 'Other') === drill.label)
       rows = items.map(it => ({ label: it.name || it.label || SRC_LABELS[it.type] || it.type, value: +it.amount || 0 }))
       note = 'Gross income before tax — tax and NI are taken at the next stage.'
       owns = drill.label === 'Rental' ? 'Property on My Money' : 'Income on My Money'
+      ownsRoute = 'money'
     } else if (id === 'stage:tax') {
       let it = null, ni = null
       try { it = incomeTaxDetail(entity) } catch { /* */ }
@@ -767,10 +768,12 @@ function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose }) {
       if (!rows.length) rows.push({ label: 'Income tax & NI', value: val })
       note = it?.marginal_rate != null ? `Your marginal rate is ${Math.round(it.marginal_rate * 100)}% — the tax on your next £1 of income.` : 'Income tax and National Insurance on your earnings.'
       owns = 'Tax & Estate'
+      ownsRoute = 'tax'
     } else if (id === 'stage:pension') {
       rows = [{ label: 'Pension & ISA contributions', value: val }]
       note = 'Money you set aside into pensions/ISAs — it leaves your cashflow but builds your wealth (it is not "spent").'
       owns = 'My Money'
+      ownsRoute = 'money'
     } else if (id === 'stage:essentials') {
       const ex = entity?.expenses || {}
       const cats = ex.categories || ex.breakdown || null
@@ -785,10 +788,12 @@ function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose }) {
       if (!rows.length) rows = [{ label: 'Loan & card repayments', value: val }]
       note = 'Annual repayments across your loans and cards. Clearing higher-rate debt first frees the most cashflow.'
       owns = 'Liabilities on My Money'
+      ownsRoute = 'money'
     } else if (id === 'stage:protection') {
       rows = [{ label: 'Insurance premiums (Life · CI · IP · PMI)', value: val }]
       note = 'Protection premiums that keep your plan intact if income stops.'
       owns = 'Protection on Tax & Estate'
+      ownsRoute = 'tax'
     } else if (id === 'sink:net') {
       const gross = f.gross || 0
       rows = [
@@ -823,11 +828,14 @@ function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose }) {
         ))}
       </div>
       {note && <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.5 }}>{note}</div>}
-      {owns && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-acc)', fontWeight: 600 }}>Full detail: {owns} →</div>}
+      {owns && (ownsRoute && typeof onNav === 'function'
+        ? <button onClick={() => onNav(ownsRoute)} className="sw-press" style={{ marginTop: 6, background: 'none', border: 'none', padding: 0, fontSize: 10, color: 'var(--c-acc)', fontWeight: 700, cursor: 'pointer' }}>Full detail: {owns} →</button>
+        : <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-acc)', fontWeight: 600 }}>Full detail: {owns} →</div>
+      )}
     </div>
   )
 }
-function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
+function CashflowMoneySankey({ entity, incomeAll, ms, flow, onNav }) {
   // Single source of truth: cashflowFlow (net-of-tax). All aggregates below come
   // from it so the Sankey ties out to the reconciliation strip and to Home's
   // surplus by construction (2026-06-02 correctness gate).
@@ -946,7 +954,7 @@ function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
       <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, textAlign: 'center' }}>
         Tap any box to break it down →
       </div>
-      {drill && <MoneyFlowDrill drill={drill} entity={entity} f={f} incomeAll={incomeAll} onClose={() => setDrill(null)} />}
+      {drill && <MoneyFlowDrill drill={drill} entity={entity} f={f} incomeAll={incomeAll} onClose={() => setDrill(null)} onNav={onNav} />}
       {/* V-3 fix (2026-05-28): explicit reconciliation strip so the headline
           ("Net deficit −£86k") ties out visibly to the receipt items. Before
           this strip the user could read Rental + Dividends + State pension on
@@ -1297,14 +1305,26 @@ function SurplusAllocationEngine({ ms, msNet, entity }) {
 const _Trk = ({ children, h = 7 }) => <div style={{ flex: 1, height: h, borderRadius: 5, background: 'var(--c-surface2)', overflow: 'hidden', display: 'flex' }}>{children}</div>
 const _SegBar = ({ pct, color }) => <div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, height: '100%', background: color }} />
 const _SRC_COLORS = ['var(--c-acc)', 'var(--c-mint-text)', 'var(--c-amber-text)', 'var(--c-coral-text)', 'var(--c-text3)']
-function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, surplusAlloc, onSurplusBreakdown, onIncomeBreakdown }) {
+function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, surplusAlloc, onSurplusBreakdown, onIncomeBreakdown, onNav }) {
   const [openRow, setOpenRow] = useState(null)
   const [trim, setTrim] = useState(0)     // £/mo spending cut (delta on engine baseline)
   const [extra, setExtra] = useState(0)   // £/mo extra income (delta)
   const income = Math.round(ms.income || 0)
-  const out = Math.round((ms.essential || 0) + (ms.committed || 0) + (ms.debtService || 0) + (ms.tax || 0))
+  // OUT derives from the canonical net so it can NEVER diverge from cashflowFlow
+  // (C-5). The old hand-sum omitted protection premiums (£134/mo for Mr T), so
+  // out came out £810/mo under canonical −£944 → two different deficits on one
+  // screen. msNet = income − out by construction, so out = income − msNet always
+  // ties out, protection included.
+  const out = income - msNet
+  // Two NAMED lenses, derived ONCE from the canonical figures (C-5):
+  //   grossGap      = spend − income (= the headline monthly gap), ONE value.
+  //   committedMo   = deliberate pension/ISA saving inside that gap.
+  //   trueShortfall = grossGap after setting deliberate saving aside.
+  const committedMo = Math.round((flow?.committed || 0) / 12)
+  const grossGap = Math.max(0, -msNet)
+  const trueShortfall = Math.max(0, grossGap - committedMo)
   const newNet = msNet + trim + extra
-  const deficit = Math.max(0, -msNet)
+  const deficit = grossGap
   const maxTrim = Math.max(100, Math.round((ms.essential || 0) + (ms.committed || 0)))
   const maxExtra = Math.max(500, income)
   const essPct = income > 0 ? Math.round(((ms.essential || 0) / income) * 100) : null
@@ -1317,7 +1337,7 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
   const bm = lb?.months || 0
   const bufColor = bm >= 6 ? 'var(--c-mint-text)' : bm >= 3 ? 'var(--c-amber-text)' : 'var(--c-coral-text)'
   const rows = [
-    { key: 'flow', label: 'Where your money flows', stat: `${_gk(income)} in · ${_gk(out)} out`,
+    { key: 'flow', label: 'Where your money flows', stat: `${_gx(income)} in · ${_gx(out)} out · ${msNet < 0 ? '−' : msNet > 0 ? '+' : ''}${_gx(Math.abs(msNet))} net`,
       face: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 8, width: 20, color: 'var(--c-text3)', fontWeight: 700 }}>IN</span><_Trk><_SegBar pct={income / _max * 100} color="var(--c-mint-text)" /></_Trk></div>
@@ -1325,7 +1345,7 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
         </div>
       ), render: (
       <>
-        <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
+        <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} onNav={onNav} />
         <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
         <button onClick={onSurplusBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full surplus breakdown ›</button>
       </>
@@ -1376,12 +1396,29 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
           {inDeficit ? 'In deficit' : msNet > 0 ? 'In surplus' : 'Breaking even'} {_gk(Math.abs(msNet))}/mo
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginTop: 3 }}>
-          {_gk(income)} comes in and {_gk(out)} goes out each month{inDeficit ? `, so you draw about ${_gk(deficit)}/mo from savings or pots to cover it.` : msNet > 0 ? `, leaving ${_gk(msNet)} spare.` : '.'}
+          {_gx(income)} comes in and {_gx(out)} goes out each month{inDeficit ? `, so you draw about ${_gx(deficit)}/mo from savings or pots to cover it.` : msNet > 0 ? `, leaving ${_gx(msNet)} spare.` : '.'}
         </div>
         <div style={{ marginTop: 10, display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--c-surface2)' }}>
           <div style={{ width: `${Math.min(100, Math.round((income / Math.max(1, income, out)) * 100))}%`, background: 'var(--c-mint-text)' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gk(income)}</span><span>out {_gk(out)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gx(income)}</span><span>out {_gx(out)}</span></div>
+        {/* Two NAMED lenses on one gap (C-5) — the gross monthly gap, and what's
+            left once deliberate pension/ISA saving is set aside. Both derive from
+            the canonical cashflowFlow, so they read identically everywhere. */}
+        {inDeficit && committedMo > 0 && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <div style={{ flex: 1, padding: '7px 9px', borderRadius: 9, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-text3)' }}>Gross monthly gap</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-coral-text)', fontVariantNumeric: 'tabular-nums' }}>−{_gx(grossGap)}/mo</div>
+              <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.4 }}>spend over income</div>
+            </div>
+            <div style={{ flex: 1, padding: '7px 9px', borderRadius: 9, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-text3)' }}>True shortfall</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: trueShortfall > 0 ? 'var(--c-coral-text)' : 'var(--c-mint-text)', fontVariantNumeric: 'tabular-nums' }}>{trueShortfall > 0 ? '−' : ''}{_gx(trueShortfall)}/mo</div>
+              <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.4 }}>after {_gx(committedMo)}/mo deliberate saving</div>
+            </div>
+          </div>
+        )}
         <div style={{ marginTop: 12, borderTop: '1px solid var(--c-sep)', paddingTop: 10 }}>
           {/* Engine-grade gap analysis (deficit) OR surplus-allocation engine
               (surplus) — the symmetric "what do I DO" answer. Fed the LIVE
@@ -1432,6 +1469,125 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
           </div>
         </DrillStackProvider>
       )}
+    </div>
+  )
+}
+
+// ── C-4a: "How fast am I building wealth?" — savings rate / wealth-building
+// velocity. Reframes the deliberate-saving "gap" (C-5): the £875/mo Mr T puts
+// into pensions is a 13% savings rate, NOT a shortfall. Every figure derives
+// from the canonical cashflowFlow, so it ties out with the Now tile. Savings
+// rate = deliberate pension/ISA saving ÷ gross income. FCA-safe (info only).
+// Rendered as a tile's drill CONTENT (the tile overlay supplies Back + title).
+function SavingsRateDrawer({ flow, onNav }) {
+  const gross = +(flow?.gross || 0)
+  const committed = +(flow?.committed || 0)
+  const surplusAnnual = +(flow?.surplusAnnual || 0)
+  // Deliberate saving rate — what you choose to put away, % of gross.
+  const saveRate = gross > 0 ? committed / gross : 0
+  const saveRatePct = Math.round(saveRate * 1000) / 10
+  // Surplus saving — positive free cashflow on top of committed (0 when deficit).
+  const freeSave = Math.max(0, surplusAnnual)
+  const totalToWealth = committed + freeSave
+  const wealthRate = gross > 0 ? totalToWealth / gross : 0
+  const wealthRatePct = Math.round(wealthRate * 1000) / 10
+  // UK benchmark context (info, not a target): commonly-cited "save 15% of gross
+  // for a comfortable retirement" planner rule of thumb.
+  const benchmark = 0.15
+  const band = saveRate >= 0.15 ? { c: 'var(--c-mint-text)', t: 'Strong' } : saveRate >= 0.08 ? { c: 'var(--c-amber-text)', t: 'Building' } : { c: 'var(--c-coral-text)', t: 'Light' }
+  if (!gross) return <div style={{ fontSize: 12, color: 'var(--c-text3)' }}>Add an income stream to see your savings rate.</div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="sw-card" style={{ padding: '14px 16px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Your savings rate</div>
+        <div style={{ fontSize: 30, fontWeight: 800, color: band.c, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{saveRatePct}%<span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text3)', marginLeft: 8 }}>{band.t}</span></div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginTop: 4 }}>
+          You deliberately put <strong>{_gx(Math.round(committed / 12))}/mo</strong> ({_gx(committed)}/yr) into pensions and ISAs — that is <strong>{saveRatePct}%</strong> of your gross income building future wealth. This is the engine of your net worth, not money lost.
+        </div>
+        {/* Benchmark bar — you vs the 15% rule of thumb. */}
+        <div style={{ marginTop: 10, position: 'relative', height: 10, borderRadius: 6, background: 'var(--c-surface2)', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.min(100, saveRate / Math.max(benchmark, saveRate, 0.2) * 100)}%`, height: '100%', background: band.c }} />
+          <div style={{ position: 'absolute', top: -2, bottom: -2, left: `${Math.min(100, benchmark / Math.max(benchmark, saveRate, 0.2) * 100)}%`, width: 2, background: 'var(--c-text)' }} title="15% rule of thumb" />
+        </div>
+        <div style={{ fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}>marker = 15% — a commonly-cited planner rule of thumb for a comfortable retirement (information, not a target set for you).</div>
+      </div>
+      <div className="sw-card" style={{ padding: '12px 14px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 8 }}>What's going to wealth</div>
+        {[
+          { label: 'Deliberate pension / ISA saving', value: _gx(committed) + '/yr' },
+          ...(freeSave > 0 ? [{ label: 'Free surplus (after everything)', value: _gx(freeSave) + '/yr' }] : []),
+          { label: 'Total building wealth', value: _gx(totalToWealth) + '/yr (' + wealthRatePct + '% of gross)' },
+          { label: 'Gross income', value: _gx(gross) + '/yr' },
+        ].map((d, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderTop: i ? '1px solid var(--c-sep)' : 'none' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--c-text2)' }}>{d.label}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{d.value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="sw-card" style={{ padding: '12px 14px', background: 'var(--c-surface2)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>How it's worked out</div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>Savings rate = the money you deliberately put into pensions and ISAs each year, divided by your gross income. We add any free surplus on top to show total wealth-building velocity. A monthly "deficit" caused by this saving is not overspending — it is you building wealth faster than salary alone covers, funded from savings.</div>
+      </div>
+      {typeof onNav === 'function' && (
+        <button onClick={() => onNav('money')} className="sw-chip sw-chip-sm sw-press" style={{ alignSelf: 'flex-start', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: 'var(--c-acc)' }}>Full detail: your pensions & ISAs on My Money →</button>
+      )}
+      <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.5 }}>Based on your own figures — information only, not a personal recommendation. PENDING PROFESSIONAL SIGN-OFF.</div>
+    </div>
+  )
+}
+
+// ── C-4a: "Where my money goes" — spending breakdown (essentials vs the
+// discretionary spending you control). Promotes the mini-bar that was buried in
+// the Now drawer to a full surface. Figures from canonical cashflowFlow.
+function SpendingBreakdownDrawer({ flow, entity }) {
+  const essentials = +(flow?.essentials || 0)
+  const debt = +(flow?.debtService || 0)
+  const protection = +(flow?.protection || 0)
+  const committed = +(flow?.committed || 0)
+  const tax = +(flow?.taxAndNI || 0)
+  const gross = +(flow?.gross || 0)
+  // "Spending" = money that leaves to live on (essentials + debt + protection),
+  // vs saving (committed) vs tax. We split living spend into committed-essential
+  // (housing/bills/debt/protection) and the rest. Honest: we don't have a real
+  // discretionary line per persona, so we frame essentials as the fixed core.
+  const livingSpend = essentials + debt + protection
+  const outflows = [
+    { label: 'Essentials (housing, bills, food, transport)', value: essentials, color: 'var(--c-coral-text)' },
+    { label: 'Debt repayments', value: debt, color: 'var(--c-amber-text)' },
+    { label: 'Protection premiums', value: protection, color: 'var(--c-text3)' },
+    { label: 'Tax & NI', value: tax, color: 'var(--c-amber-text)' },
+    { label: 'Saved (pensions & ISAs)', value: committed, color: 'var(--c-mint-text)' },
+  ].filter(o => o.value > 0)
+  const total = outflows.reduce((s, o) => s + o.value, 0) || 1
+  if (!gross) return <div style={{ fontSize: 12, color: 'var(--c-text3)' }}>Add income and expenses to see where your money goes.</div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="sw-card" style={{ padding: '14px 16px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Where every pound goes</div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, margin: '4px 0 10px' }}>
+          Of {_gx(gross)} gross a year, {_gx(livingSpend)} goes on living costs, {_gx(tax)} on tax & NI, and {_gx(committed)} is saved. The biggest controllable lever is your essentials.
+        </div>
+        {/* Stacked composition bar. */}
+        <div style={{ display: 'flex', height: 16, borderRadius: 8, overflow: 'hidden', background: 'var(--c-surface2)' }}>
+          {outflows.map((o, i) => <div key={i} style={{ width: `${o.value / total * 100}%`, background: o.color }} title={`${o.label}: ${_gx(o.value)}`} />)}
+        </div>
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {outflows.map((o, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderTop: i ? '1px solid var(--c-sep)' : 'none' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: o.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 12.5, color: 'var(--c-text2)' }}>{o.label}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gx(o.value)}</span>
+              <span style={{ fontSize: 11, color: 'var(--c-text3)', width: 38, textAlign: 'right' }}>{Math.round(o.value / total * 100)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <EssentialsDiscretionarySplit ms={null} entity={entity} flow={flow} />
+      <div className="sw-card" style={{ padding: '12px 14px', background: 'var(--c-surface2)' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>How it's worked out</div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>Every figure is your annual cashflow split by destination — living costs, debt, protection, tax and saving — drawn from the same engine as the money map. Category-level detail (e.g. groceries vs eating out) arrives with Open Banking; until then we show the fixed-core split.</div>
+      </div>
     </div>
   )
 }
@@ -1611,6 +1767,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
       surplusAlloc={surplusAlloc}
       onSurplusBreakdown={() => setDrillView('surplus')}
       onIncomeBreakdown={() => setDrillView('income')}
+      onNav={onNav}
     />
   )
 
@@ -1656,30 +1813,32 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
 
-        {/* Compact cross-screen nav (founder 2026-06-06) — restores reach to the
-            money sub-sections from Cashflow without the full chip strip the
-            founder removed 2026-06-04 (kept the clean top, fixed the dead-end). */}
-        <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} variant="compact" />
-
-        {/* Minimal view-bar — Choices toggle only (founder 2026-06-06). The
-            Today/Future/Plan/What-if view modes are no-ops on Cashflow (the time +
-            scenario functions live inside the drawers), so they're hidden via
-            showViewModes={false} rather than shown as dead tabs (sweep #54). The
-            window row was already hidden (showWindowRow={false}, #55). */}
-        <div style={{ margin: '0 -16px' }}>
-          <X28TopBar
-            window={windowId}
-            viewMode={viewMode}
-            onWindowChange={setWindowId}
-            onViewModeChange={(m) => { setShowDecisions(false); setViewMode(m) }}
-            rulesVersion={BRAND.rulesVersion}
-            dataDate={BRAND.dataDate}
-            showWindowRow={false}
-            showViewModes={false}
-            showDecisions
-            decisionsActive={showDecisions}
-            onDecisions={() => setShowDecisions(s => !s)}
-          />
+        {/* Compact cross-screen nav + Choices toggle on ONE header row (C-1,
+            founder review 2026-06-08). The Choices toggle previously floated
+            centred inside X28TopBar, looking bare and misplaced; it now sits
+            inline next to the "Money sections ▾" dropdown so the two top-left
+            controls read as one control group. */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} variant="compact" />
+          <button
+            type="button"
+            onClick={() => setShowDecisions(s => !s)}
+            aria-pressed={showDecisions}
+            aria-label="Choices you can make from Cashflow"
+            className="sw-press"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', minHeight: 32,
+              fontSize: 11, fontWeight: showDecisions ? 700 : 600,
+              background: showDecisions ? 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface2))' : 'var(--c-surface2)',
+              border: '1px solid ' + (showDecisions ? 'color-mix(in srgb, var(--c-acc) 55%, var(--c-border))' : 'var(--c-border)'),
+              borderRadius: 999,
+              color: showDecisions ? 'var(--c-acc)' : 'var(--c-text2)', cursor: 'pointer',
+            }}
+          >
+            <span>Choices</span>
+            <span style={{ fontSize: 10 }}>{showDecisions ? '×' : '▾'}</span>
+          </button>
         </div>
 
         {showDecisions ? (
@@ -1716,6 +1875,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             fi={fi}
             ms={ms}
             decSolve={decSolve}
+            onNav={onNav}
           />
         </FadeInOnMount>
 
@@ -1731,7 +1891,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           <div className="sw-card" style={{ padding: '14px 16px', marginBottom: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 2 }}>Your money map</div>
             <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 8 }}>Where your money comes from, and where it goes — every figure traces to the same engine as the cards above.</div>
-            <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
+            <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} onNav={onNav} />
           </div>
         </FadeInOnMount>
 
@@ -1791,6 +1951,28 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 sub: `${msNet < 0 ? '−' : ''}${fmtSeedNum(Math.abs(msNet))}/mo · spend, buffer & income`,
                 tone: (msNet > 0 ? 'mint' : msNet < 0 ? 'coral' : 'acc'),
                 content: nowSectionContent },
+              // C-4a — "How fast am I building wealth?" (savings rate). Reframes
+              // the deliberate-saving gap: committed ÷ gross is a savings RATE,
+              // not a shortfall. Derived from canonical flow → ties to the Now tile.
+              ...((flow?.gross || 0) > 0 ? [(() => {
+                const rate = flow.committed / flow.gross
+                const pct = Math.round(rate * 1000) / 10
+                return { key: 'savings', position: 'start', q: 'How fast am I building wealth?',
+                  headline: `${pct}% saved`,
+                  sub: `${_gx(Math.round(flow.committed / 12))}/mo into pensions & ISAs`,
+                  tone: rate >= 0.15 ? 'mint' : rate >= 0.08 ? 'acc' : 'coral',
+                  content: (<SavingsRateDrawer flow={flow} onNav={onNav} />) }
+              })()] : []),
+              // C-4a — "Where my money goes" (spending breakdown). Promotes the
+              // buried mini-bar to a full surface; figures from canonical flow.
+              ...((flow?.gross || 0) > 0 ? [(() => {
+                const essPct = flow.gross > 0 ? Math.round((flow.essentials / flow.gross) * 100) : 0
+                return { key: 'spending', position: 'start', q: 'Where does my money go?',
+                  headline: `${essPct}% essentials`,
+                  sub: 'living costs vs the spending you control',
+                  tone: essPct >= 70 ? 'coral' : essPct >= 55 ? 'acc' : 'mint',
+                  content: (<SpendingBreakdownDrawer flow={flow} entity={entity} />) }
+              })()] : []),
               // Methods → its own tile (decumulators with a solved plan only).
               ...(decSolve?.rankedPaths?.length ? [{ key: 'methods', q: 'How fast can I spend?',
                 headline: methodsRange ? `${fmtSeedNum(methodsRange.lo)}–${fmtSeedNum(methodsRange.hi)}/yr` : 'Pace options',
@@ -1999,16 +2181,24 @@ function SubAnchor({ prcPcc }) {
 const HERO_TONE = {
   good: 'var(--c-acc)', warn: '#FF9500', bad: 'var(--c-coral, #FF6F7D)', neutral: 'var(--c-text3)',
 }
-function HeroLens({ label, head, sub, tone = 'neutral', gauge = null, tieout }) {
+function HeroLens({ label, head, sub, tone = 'neutral', gauge = null, tieout, onDrill }) {
   const c = HERO_TONE[tone] || HERO_TONE.neutral
+  const Tag = onDrill ? 'button' : 'div'
   return (
-    <div data-tieout={tieout} style={{
-      flex: '1 1 240px', minWidth: 0,
-      padding: '12px 14px',
-      background: `color-mix(in srgb, ${c} 9%, var(--c-surface))`,
-      border: `1px solid color-mix(in srgb, ${c} 26%, transparent)`,
-      borderRadius: 'var(--r-md, 12px)',
-    }}>
+    <Tag
+      data-tieout={tieout}
+      onClick={onDrill || undefined}
+      className={onDrill ? 'sw-lift sw-pressable' : undefined}
+      style={{
+        flex: '1 1 240px', minWidth: 0,
+        padding: '12px 14px',
+        textAlign: 'left',
+        background: `color-mix(in srgb, ${c} 9%, var(--c-surface))`,
+        border: `1px solid color-mix(in srgb, ${c} 26%, transparent)`,
+        borderRadius: 'var(--r-md, 12px)',
+        cursor: onDrill ? 'pointer' : 'default',
+        width: onDrill ? '100%' : undefined,
+      }}>
       <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: c, marginBottom: 5 }}>
         {label}
       </div>
@@ -2025,11 +2215,65 @@ function HeroLens({ label, head, sub, tone = 'neutral', gauge = null, tieout }) 
           <div style={{ width: `${Math.max(2, Math.min(100, Math.round(gauge * 100)))}%`, height: '100%', background: c, borderRadius: 99 }} />
         </div>
       )}
+      {onDrill && (
+        <div style={{ marginTop: 8, fontSize: 10.5, fontWeight: 700, color: c }}>Dig in ›</div>
+      )}
+    </Tag>
+  )
+}
+
+// C-2 (founder review 2026-06-08): the two hero lenses ("On track / X% to FI"
+// and "Resilience / cash buffer N months") were info-only. This drill gives each
+// the same depth pattern as the tiles: the number → the drivers that produced it
+// → the rule behind it. Every figure is passed in from the canonical engine
+// outputs already computed for the banner, so it ties out by construction.
+function HeroLensDrill({ data, onClose, backToMyMoney }) {
+  if (!data) return null
+  const c = HERO_TONE[data.tone] || HERO_TONE.neutral
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 620, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px 96px' }}>
+        <button onClick={onClose} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: c, margin: '8px 0 4px' }}>{data.label}</div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '0 0 4px' }}>{data.head}</h2>
+        {data.sub && <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 14 }}>{data.sub}</div>}
+        {/* THE NUMBERS — the figures that make up the headline. */}
+        {data.drivers?.length > 0 && (
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 8 }}>What makes up this number</div>
+            {data.drivers.map((d, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderTop: i ? '1px solid var(--c-sep)' : 'none' }}>
+                <span style={{ fontSize: 12.5, color: 'var(--c-text2)' }}>{d.label}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{d.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* THE RULE — the methodology, in plain English. Surfacing the derivation
+            so the user can trust the number (memory: surface methodology to user). */}
+        {data.rule && (
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12, background: 'var(--c-surface2)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>How it's worked out</div>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>{data.rule}</div>
+          </div>
+        )}
+        {/* C-3 back-to-source link — only where another tab owns the underlying
+            detail. FI/buffer read assets that live on My Money. */}
+        {backToMyMoney && (
+          <button onClick={backToMyMoney} className="sw-chip sw-chip-sm sw-press" style={{ cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: 'var(--c-acc)' }}>
+            Full detail: your assets on My Money →
+          </button>
+        )}
+        <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 12 }}>
+          Based on your own figures and standard planning assumptions — information only, not a personal recommendation. PENDING PROFESSIONAL SIGN-OFF.
+        </div>
+      </div>
     </div>
   )
 }
 
-function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
+function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve, onNav }) {
+  const [lensDrill, setLensDrill] = useState(null) // 'A' | 'B' | null
   // Runway months — prefer the liquidityBuffer engine answer; fall back to
   // cash ÷ essentials if needed.
   let runwayMo = +(lb?.months_covered ?? lb?.months ?? 0)
@@ -2095,6 +2339,27 @@ function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
       gauge: fundedPct != null ? fundedRatioVal : null,
       tieout: 'cashflow.hero.resilience',
     }
+    lensA.drill = {
+      label: lensA.label, head: lensA.head, sub: lensA.sub, tone: lensA.tone,
+      drivers: [
+        { label: 'Target income (drawn each year)', value: fmtSeedNum(target) + '/yr' },
+        { label: 'Secure income (state pension + DB)', value: fmtSeedNum(secure) + '/yr' },
+        { label: 'Drawn from your pots', value: fmtSeedNum(residual) + '/yr' },
+        ...(lastsAge ? [{ label: 'Pots last to age', value: String(lastsAge) }] : (horizonAge ? [{ label: 'Plan horizon (pots survive)', value: 'age ' + horizonAge }] : [])),
+      ],
+      rule: 'Your plan draws the target income each year, taking the secure income (state pension and any defined-benefit pension) first, then the remainder from your pots in a tax-smart order. We project the pots forward at your growth and inflation assumptions and track when — if ever — they run out.',
+      backToMyMoney: true,
+    }
+    lensB.drill = {
+      label: lensB.label, head: lensB.head, sub: lensB.sub, tone: lensB.tone,
+      drivers: [
+        ...(fundedPct != null ? [{ label: 'Investments fund', value: fundedPct + '% of target' }] : []),
+        { label: 'Safe-withdrawal rate used', value: (swrPct ?? 4) + '%' },
+        ...(posPct != null ? [{ label: 'Simulated markets sustaining the plan', value: posPct + '%' }] : []),
+      ],
+      rule: 'This lens ignores your secure income and asks: could your investable pots alone fund the target at a ' + (swrPct ?? 4) + '% safe-withdrawal rate? The gap between this and "Your plan" above is exactly the secure income — it is not a contradiction, it is the cushion your guaranteed income provides.',
+      backToMyMoney: true,
+    }
   } else {
     // Accumulator — funded-ratio assumes ZERO future saving, so it's the wrong
     // verdict here (that's why "under-funded 36%" was nonsense for a 35-yo).
@@ -2134,6 +2399,28 @@ function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
           : 'Monthly surplus is about £0 — nothing is being saved right now; that’s the lever to watch.',
       tieout: 'cashflow.hero.resilience',
     }
+    // C-2 drills for the accumulator lenses (image2: "X% to FI" + buffer months).
+    lensA.drill = {
+      label: lensA.label, head: lensA.head, sub: lensA.sub, tone: lensA.tone,
+      drivers: [
+        ...(fiPct != null ? [{ label: 'Progress to financial independence', value: fiPct + '%' }] : []),
+        ...(fiMult != null ? [{ label: 'Your investable wealth', value: fiMult + '× your target annual spend' }] : []),
+        ...(fi?.fiTarget ? [{ label: 'Financial-independence target (25×)', value: fmtSeedNum(fi.fiTarget) }] : []),
+      ],
+      rule: 'Financial independence is reached when your investable wealth is about 25× your annual spend — the inverse of a 4% safe-withdrawal rate. Your progress is today’s investable pots divided by that 25× target. It deliberately ignores future saving, so it understates where you’ll be — it is a current-state snapshot, not a forecast.',
+      backToMyMoney: true,
+    }
+    lensB.drill = {
+      label: lensB.label, head: lensB.head, sub: lensB.sub, tone: lensB.tone,
+      drivers: [
+        { label: 'Cash buffer covers', value: runwayMo + ' month' + (runwayMo === 1 ? '' : 's') + ' of essentials' },
+        ...(lb?.accessibleCash != null ? [{ label: 'Accessible cash', value: fmtSeedNum(lb.accessibleCash) }] : []),
+        ...(lb?.monthlyEssential != null ? [{ label: 'Monthly essential spend', value: fmtSeedNum(lb.monthlyEssential) }] : []),
+        { label: 'Monthly surplus (the saving lever)', value: (surplusM < 0 ? '−' : '') + fmtSeedNum(Math.abs(surplusM)) + '/mo' },
+      ],
+      rule: 'Your buffer is your accessible cash divided by your monthly essential spend — how many months you could cover with no income. 3 months is the building threshold, 6+ months is well-covered. The monthly surplus is the lever that grows both your buffer and your long-term wealth.',
+      backToMyMoney: true,
+    }
   }
 
   const stageChip = stage === 'decumulator' ? 'Drawing income' : 'Building wealth'
@@ -2144,9 +2431,16 @@ function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
           names WHY the two views differ (the secure income), so they read as
           complements, not the old self-contradicting "stretch ... but 48%". */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <HeroLens {...lensA} />
-        <HeroLens {...lensB} />
+        <HeroLens {...lensA} onDrill={lensA.drill ? () => setLensDrill('A') : undefined} />
+        <HeroLens {...lensB} onDrill={lensB.drill ? () => setLensDrill('B') : undefined} />
       </div>
+      {lensDrill && (
+        <HeroLensDrill
+          data={lensDrill === 'A' ? lensA.drill : lensB.drill}
+          onClose={() => setLensDrill(null)}
+          backToMyMoney={(lensDrill === 'A' ? lensA.drill?.backToMyMoney : lensB.drill?.backToMyMoney) && typeof onNav === 'function' ? () => { setLensDrill(null); onNav('money') } : null}
+        />
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <span className="sw-chip sw-chip-sm" data-tieout="cashflow.life-stage" style={{ fontWeight: 600 }}>
           {stageChip}
@@ -2399,13 +2693,15 @@ function QuestionTile({ q, headline, sub, tone, onClick, spark, teaser }) {
           dig deeper to get the answer they're looking for"). Says what's behind
           the tile, so the click is earned, not blind. */}
       {teaser && <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45 }}>{teaser}</div>}
-      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>{teaser ? 'Dig in ›' : 'View ›'}</div>
+      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Dig in ›</div>
     </button>
   )
 }
 // What each tile reveals — the promise that earns the tap. Keyed by tile.key.
 const TILE_TEASER = {
   now: 'Inside: your live surplus or deficit, what’s driving it, and the first move that closes the gap.',
+  savings: 'Inside: how much of your income is building wealth vs being spent — and how you compare.',
+  spending: 'Inside: where every pound goes — essentials vs the spending you control.',
   drawdown: 'Inside: how today’s pots turn into a retirement income — drag your retirement age and growth to test it.',
   lastability: 'Inside: how close you are to never needing to work, and what gets you there sooner.',
   costs: 'Inside: what tax, fees and inaction quietly cost you — ordered by deadline.',
@@ -2414,8 +2710,10 @@ const TILE_TEASER = {
   methods: 'Inside: five ways to turn pots into a paycheck, compared side by side.',
 }
 // Tile priority — problem-first, left→right by decision importance (founder
-// 2026-06-05): what’s wrong now → the income plan → progress → cost → risk → levers.
-const TILE_ORDER = { now: 0, drawdown: 1, lastability: 2, methods: 3, costs: 4, resilience: 5, whatif: 6 }
+// 2026-06-05 + C-4b review 2026-06-08): what’s wrong now → how fast you build
+// wealth (reframes the deliberate-saving "gap") → the income plan → progress →
+// where money goes → cost → risk → levers.
+const TILE_ORDER = { now: 0, savings: 1, drawdown: 2, lastability: 3, spending: 4, methods: 5, costs: 6, resilience: 7, whatif: 8 }
 function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime, setSwrRegime, decSolve, extraTiles = [] }) {
   const [open, setOpen] = useState(null)
   const ratio = +(fr?.ratio || fr?.value || 0)
@@ -2748,9 +3046,13 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, flow, accountantMo
 // not by reviving this dead function.
 
 // ── §A.2 Essentials vs Discretionary (§4.4) ─────────────────────────────
-function EssentialsDiscretionarySplit({ ms, entity }) {
-  const essentialsPct = (ms?.income || 0) > 0
-    ? Math.min(100, Math.round(((ms?.essential || 0) / ms.income) * 100))
+function EssentialsDiscretionarySplit({ ms, entity, flow }) {
+  // Prefer the monthly ms; fall back to annual canonical flow when ms isn't
+  // passed (e.g. the spending-breakdown drawer), so essentials % is real, not 0.
+  const incomeBasis = (ms?.income || 0) > 0 ? (ms.income || 0) : (flow?.gross ? flow.gross / 12 : 0)
+  const essentialBasis = (ms?.essential || 0) > 0 ? (ms.essential || 0) : (flow?.essentials ? flow.essentials / 12 : 0)
+  const essentialsPct = incomeBasis > 0
+    ? Math.min(100, Math.round((essentialBasis / incomeBasis) * 100))
     : 0
   // ONS Living Costs and Food Survey 2022-23, Table A6 — essential spend as % of
   // disposable income for UK households aged 45-54. We only surface it to users in
@@ -3568,6 +3870,10 @@ const _gk = (n) => {
   return '£' + v
 }
 const _gmo = (n) => '£' + Math.round((+n || 0) / 12).toLocaleString()
+// Exact whole-£ formatter — used wherever rounding to the nearest £1k would mask
+// the figure (C-5: the in/out tile rounded £6,593 in and £7,537 out BOTH to "£7k",
+// hiding the deficit). Always shows the real number.
+const _gx = (n) => '£' + Math.round(+n || 0).toLocaleString('en-GB')
 
 // ── Depletion curve — stacked pot balances over the drawdown horizon ───
 // Plots the REAL end-of-year balances (`potsEnd`) the solver computed, so the

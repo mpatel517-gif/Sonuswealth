@@ -364,7 +364,7 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
                   <Tile label="Equity" value={fmt(residenceEquity)} tone="good" />
                 </div>
                 <button type="button" onClick={openResidenceLeaf} className="sw-press" style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  View details <span style={{ color: 'var(--c-text3)' }}>›</span>
+                  Dig in <span style={{ color: 'var(--c-text3)' }}>›</span>
                 </button>
               </div>
             </Section>
@@ -434,7 +434,7 @@ function PropertyDrillDownInner({ entity, personaId, onBack, onHome }) {
                         onClick={() => setSelected({ ...p, type: p.type || activeMeta.use, use: p.use || activeMeta.use, name: p.name || p.address || activeMeta.label, _debt: debt, _costBasis: +p.purchase_price || 0, _isResidence: false, _isHigherRate: isHigherRate })}
                         className="sw-press"
                         style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        View details <span style={{ color: 'var(--c-text3)' }}>›</span>
+                        Dig in <span style={{ color: 'var(--c-text3)' }}>›</span>
                       </button>
                     </div>
                   )

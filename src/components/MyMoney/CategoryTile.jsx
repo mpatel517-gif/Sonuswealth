@@ -471,7 +471,7 @@ export default function CategoryTile({
                 fontSize: 11, fontWeight: 800, letterSpacing: 0.3,
                 cursor: 'pointer', padding: 0,
               }}>
-              View detail →
+              Dig in ›
             </button>
             {/* Per-item What-if (founder 2026-06-01): scoped to THIS topic only —
                 distinct from the tab-level and global what-ifs. */}

@@ -222,7 +222,7 @@ function BusinessDrillDownInner({ entity, personaId, onBack, onHome }) {
                         <Chip>Corp tax 19% to £50k · 25% over £250k</Chip>
                       </div>
                       <button type="button" onClick={() => openCompanyLeaf(c)} className="sw-press" style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        View details <span style={{ color: 'var(--c-text3)' }}>›</span>
+                        Dig in <span style={{ color: 'var(--c-text3)' }}>›</span>
                       </button>
                     </div>
                   )
@@ -269,7 +269,7 @@ function BusinessDrillDownInner({ entity, personaId, onBack, onHome }) {
                       {s.unvested_count > 0 && <Chip tone="warn">{s.unvested_count.toLocaleString()} unvested</Chip>}
                     </div>
                     <button type="button" onClick={() => openSchemeLeaf(s)} className="sw-press" style={{ marginTop: 10, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      View details <span style={{ color: 'var(--c-text3)' }}>›</span>
+                      Dig in <span style={{ color: 'var(--c-text3)' }}>›</span>
                     </button>
                   </div>
                 )
@@ -294,7 +294,7 @@ function BusinessDrillDownInner({ entity, personaId, onBack, onHome }) {
                   : (<><Chip tone="bad">S455 exposure</Chip><Chip tone="warn">{((TAX.s455Rate ?? 0.3375) * 100).toFixed(2)}% over £10k</Chip></>)}
               </div>
               <button type="button" onClick={openDlaLeaf} className="sw-press" style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                View details <span style={{ color: 'var(--c-text3)' }}>›</span>
+                Dig in <span style={{ color: 'var(--c-text3)' }}>›</span>
               </button>
             </div>
           </Section>

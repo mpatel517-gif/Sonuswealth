@@ -1309,6 +1309,8 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
   const [openRow, setOpenRow] = useState(null)
   const [trim, setTrim] = useState(0)     // £/mo spending cut (delta on engine baseline)
   const [extra, setExtra] = useState(0)   // £/mo extra income (delta)
+  const [ease, setEase] = useState(0)     // £/mo redirected from deliberate pension/ISA saving
+  const [buffer, setBuffer] = useState(0) // £/mo drawn from the cash buffer (stop-gap, not a fix)
   const income = Math.round(ms.income || 0)
   // OUT derives from the canonical net so it can NEVER diverge from cashflowFlow
   // (C-5). The old hand-sum omitted protection premiums (£134/mo for Mr T), so
@@ -1323,12 +1325,14 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
   const committedMo = Math.round((flow?.committed || 0) / 12)
   const grossGap = Math.max(0, -msNet)
   const trueShortfall = Math.max(0, grossGap - committedMo)
-  const newNet = msNet + trim + extra
+  const newNet = msNet + trim + extra + ease + buffer
   const deficit = grossGap
   const maxTrim = Math.max(100, Math.round((ms.essential || 0) + (ms.committed || 0)))
   const maxExtra = Math.max(500, income)
+  const maxEase = committedMo                 // can't redirect more than you deliberately save
+  const maxBuffer = grossGap                  // buffer only needs to cover the gap
   const essPct = income > 0 ? Math.round(((ms.essential || 0) / income) * 100) : null
-  const dirty = trim > 0 || extra > 0
+  const dirty = trim > 0 || extra > 0 || ease > 0 || buffer > 0
   const inDeficit = msNet < 0
   // Row-face data (at-a-glance mini-visuals).
   const _max = Math.max(income, out, 1)
@@ -1393,8 +1397,8 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
       {/* LEAD — net position + interactive break-even */}
       <div className="sw-card" style={{ padding: '14px 16px' }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: inDeficit ? 'var(--c-coral-text)' : msNet > 0 ? 'var(--c-mint-text)' : 'var(--c-text)' }}>
-          {inDeficit ? 'In deficit' : msNet > 0 ? 'In surplus' : 'Breaking even'} {_gk(Math.abs(msNet))}/mo
-        </div>
+          {inDeficit ? 'In deficit' : msNet > 0 ? 'In surplus' : 'Breaking even'} {_gk(Math.abs(msNet))}/mo<span style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text3)' }}> · {_gk(Math.abs(msNet) * 12)}/yr</span>
+</div>
         <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginTop: 3 }}>
           {_gx(income)} comes in and {_gx(out)} goes out each month{inDeficit ? `, so you draw about ${_gx(deficit)}/mo from savings or pots to cover it.` : msNet > 0 ? `, leaving ${_gx(msNet)} spare.` : '.'}
         </div>
@@ -1410,7 +1414,7 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
             <div style={{ flex: 1, padding: '7px 9px', borderRadius: 9, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-text3)' }}>Gross monthly gap</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-coral-text)', fontVariantNumeric: 'tabular-nums' }}>−{_gx(grossGap)}/mo</div>
-              <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.4 }}>spend over income</div>
+              <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.4 }}>−{_gk(grossGap * 12)}/yr · spend over income</div>
             </div>
             <div style={{ flex: 1, padding: '7px 9px', borderRadius: 9, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
               <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--c-text3)' }}>True shortfall</div>
@@ -1438,11 +1442,34 @@ function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, sur
           <details style={{ marginTop: inDeficit ? 12 : 0 }}>
             <summary style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', cursor: 'pointer' }}>Or fine-tune it yourself</summary>
             <div style={{ fontSize: 13, color: 'var(--c-text2)', margin: '7px 0 7px' }}>New monthly position: <strong style={{ color: newNet >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>{newNet >= 0 ? '+' : '−'}{_gk(Math.abs(newNet))}/mo</strong>{dirty && <button onClick={() => { setTrim(0); setExtra(0) }} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, fontSize: 11, padding: 0, marginLeft: 8 }}>reset</button>}</div>
+            {/* Four honest levers — the same four ways the recommendation ranks
+                them. Trim + earn are lasting fixes; easing saving closes the gap
+                but slows wealth-building; buffer is a stop-gap (spends savings,
+                doesn't fix the flow). Each adds to the live New monthly position. */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
               <SolverSlider label="Trim spending" value={trim} min={0} max={maxTrim} step={50} fmt={v => `−${_gk(v)}/mo`} onChange={setTrim} dirty={trim > 0} />
-              <SolverSlider label="Extra income" value={extra} min={0} max={maxExtra} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setExtra} dirty={extra > 0} />
+              <SolverSlider label="Earn a bit more" value={extra} min={0} max={maxExtra} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setExtra} dirty={extra > 0} />
+              {maxEase > 0 && <SolverSlider label="Ease pension/ISA saving" value={ease} min={0} max={maxEase} step={25} fmt={v => `+${_gk(v)}/mo`} onChange={setEase} dirty={ease > 0} />}
+              {(lb?.months || 0) > 0 && <SolverSlider label="Cover from buffer" value={buffer} min={0} max={maxBuffer} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setBuffer} dirty={buffer > 0} />}
             </div>
-            {inDeficit && <button onClick={() => { setExtra(Math.min(deficit, maxExtra)); setTrim(0) }} className="sw-chip sw-chip-sm sw-chip-mint sw-press" style={{ marginTop: 8, cursor: 'pointer', fontWeight: 700 }}>↩ Back-solve: close the {_gk(deficit)}/mo gap</button>}
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.4 }}>
+              Trim &amp; earn are lasting · easing saving slows your wealth-building · buffer is a stop-gap{buffer > 0 && lb?.months ? ` (≈${Math.round(lb.months)} months of runway)` : ''}.
+            </div>
+            {inDeficit && newNet < 0 && <button onClick={() => {
+              // Balanced auto-close: split the gap a third each across the lasting
+              // levers (trim / earn / ease), then the buffer covers any remainder —
+              // a realistic mix, not "just earn the whole gap".
+              // Split a third each into trim + earn (£50 steps); ease absorbs the
+              // remainder on its own £25 step; buffer only if the lasting three
+              // can't cover it. Every value lands ON its slider step, so the
+              // displayed sliders always sum to (≈) the gap — no hidden pennies.
+              const each = grossGap / 3
+              const t = Math.min(Math.round(each / 50) * 50, maxTrim)
+              const e = Math.min(Math.round(each / 50) * 50, maxExtra)
+              const es = Math.min(Math.round(Math.max(0, grossGap - t - e) / 25) * 25, maxEase)
+              const bf = Math.min(Math.round(Math.max(0, grossGap - t - e - es) / 50) * 50, maxBuffer)
+              setTrim(t); setExtra(e); setEase(es); setBuffer(bf)
+            }} className="sw-chip sw-chip-sm sw-chip-mint sw-press" style={{ marginTop: 8, cursor: 'pointer', fontWeight: 700 }}>↩ Auto-close the {_gk(grossGap)}/mo gap (balanced)</button>}
           </details>
         </div>
       </div>
@@ -2740,8 +2767,8 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime,
   const sustainTile = isDecum
     ? { key: 'lastability', q: 'Will my money last?', headline: planAge ? `To age ${planAge}` : (ratio ? `${ratio.toFixed(2)}×` : '—'),
         sub: ratio ? `plan + ${Math.round(ratio * 100)}% funded on investments` : 'your plan + market stress', tone: (planAge ? planAge >= 90 : ratio >= 1) ? 'mint' : 'coral' }
-    : { key: 'lastability', q: 'Am I on track? (FI)', headline: fiPct != null ? (fiPct >= 100 ? 'On track' : `${fiPct}% to FI`) : '—',
-        sub: 'progress to financial independence', tone: (fiPct != null && fiPct >= 100) ? 'mint' : 'acc' }
+    : { key: 'lastability', q: 'Could I stop working?', headline: fiPct != null ? (fiPct >= 100 ? 'Yes — work optional' : `${fiPct}% there`) : '—',
+        sub: 'how close you are to never needing to work', tone: (fiPct != null && fiPct >= 100) ? 'mint' : 'acc' }
   // Drawdown tile only for decumulators — for an accumulator it would open an
   // empty ScenarioForwardSummary (decSolve is null → the panel returns null).
   // That empty-drawer bug is why the accumulator face must not show this tile.
@@ -3692,7 +3719,7 @@ function FiProgressTile({ fi }) {
   return (
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
-        <div style={S.cardTitle}>FI progress</div>
+        <div style={S.cardTitle}>Path to financial freedom</div>
         <span className="sw-chip sw-chip-sm">25× target rule</span>
       </div>
       <div style={{
@@ -4840,7 +4867,7 @@ function AccumChart({ path, target }) {
         {target > 0 && target < maxV && (
           <g>
             <line x1={pL} y1={py(target)} x2={W - pR} y2={py(target)} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="4 2" />
-            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">FI target {_gk(target)}</text>
+            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">Freedom target {_gk(target)}</text>
           </g>
         )}
         <path d={area} fill="var(--c-acc)" opacity="0.12" />
@@ -4848,7 +4875,7 @@ function AccumChart({ path, target }) {
         {reachIdx > 0 && (
           <g>
             <line x1={px(reachIdx)} y1={pT} x2={px(reachIdx)} y2={pT + ph} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="3 2" />
-            <text x={px(reachIdx)} y={pT - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="middle">FI at {pts[reachIdx].age}</text>
+            <text x={px(reachIdx)} y={pT - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="middle">Free at {pts[reachIdx].age}</text>
           </g>
         )}
         {xIdx.map((i, k) => (
@@ -5013,7 +5040,7 @@ function LastAccum({ entity, fi }) {
         <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
       </div>
       <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
-        <SolverSlider label="↩ Back-solve — reach FI by" value={Math.min(Math.max(fiAge || (age0 + 20), age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+        <SolverSlider label="↩ Back-solve — financially free by" value={Math.min(Math.max(fiAge || (age0 + 20), age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
         <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want to be independent by — the engine solves how much you'd need to save each year, and the chart follows.</div>
       </div>
     </div>
@@ -5340,7 +5367,7 @@ function AccumStressChart({ baseline, stressed, target, crashAtAge }) {
         {target > 0 && target < maxV && (
           <g>
             <line x1={pL} y1={py(target)} x2={W - pR} y2={py(target)} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="4 2" />
-            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">FI target {_gk(target)}</text>
+            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">Freedom target {_gk(target)}</text>
           </g>
         )}
         {crashIdx > 0 && (
@@ -5430,7 +5457,7 @@ function StressExplorerAccum({ entity, fi }) {
         <SolverSlider label="When it hits" value={crashYr} min={1} max={Math.min(20, years)} step={1} fmt={v => v <= 1 ? 'next yr' : `in ${v}y`} onChange={setCrashYr} dirty={crashYr !== 1} />
       </div>
       <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
-        <SolverSlider label="↩ Back-solve — still reach FI by" value={Math.min(Math.max(stressAge || baseAge || age0 + 10, age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onSurvivable} dirty={false} />
+        <SolverSlider label="↩ Back-solve — still free by" value={Math.min(Math.max(stressAge || baseAge || age0 + 10, age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onSurvivable} dirty={false} />
         <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you'd still want to be independent by — the engine solves the biggest crash you could ride out and still get there.</div>
       </div>
       <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
@@ -5944,7 +5971,7 @@ function FIProgressTile({ entity }) {
       <div style={S.cardHeader}>
         <div style={S.cardTitle}>Financial-independence progress</div>
         {fi.achieved
-          ? <span className="sw-chip sw-chip-sm sw-chip-mint">FI reached</span>
+          ? <span className="sw-chip sw-chip-sm sw-chip-mint">Financially free</span>
           : <span className="sw-chip sw-chip-sm">{fi.multiple}× of {_gk(targetIncome)}/yr</span>}
       </div>
       <div style={{ marginTop: 12, display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -6458,7 +6485,7 @@ function FiProgressDepthCard({ fi }) {
   return (
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
-        <div style={S.cardTitle}>FI progress (depth)</div>
+        <div style={S.cardTitle}>Path to financial freedom (depth)</div>
         <span className="sw-chip sw-chip-sm">target {fmt(fi.fiTarget || 0)}</span>
       </div>
       <div style={{

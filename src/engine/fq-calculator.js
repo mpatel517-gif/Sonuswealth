@@ -644,14 +644,28 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
 
   const gross = propertyVal + sippVal + isaVal + giaVal + cashVal + protEstate;
 
+  // LIABILITIES (2026-06-08): UK IHT is charged on the estate NET of debts —
+  // mortgages, loans, etc. are deducted before nil-rate bands. ihtDynamic
+  // previously taxed the gross asset value, ignoring liabilities entirely, so
+  // for a mortgaged estate it overstated IHT massively (Mr T: £502k on a
+  // £409,690-mortgaged estate vs the £308k that tax-estate-engine's
+  // te_ihtExposure — which does deduct debts — reports). The £166k gap was
+  // exactly liabilities × 40%. Use the same canonical _liabilitiesTotal that
+  // netWorth() uses, so the two stay in step. NOTE: business/alternative assets
+  // + the _isaTotal asset-basis difference vs te remain to be reconciled (BPR
+  // judgement) — tracked separately; this fix addresses the liability omission
+  // only. The SIPP-contribution delta below is unaffected (liabilities cancel).
+  const liabilities = _liabilitiesTotal(e);
+  const netEstate   = Math.max(0, gross - liabilities);
+
   let nrb  = TAX.nrb;  if (_isCouple(e)) nrb  *= 2;
   let rnrb;
   if (_isCouple(e)) {
     // RNRB is per-individual with transferable allowance. Each individual's
-    // £175k RNRB tapers against their own share of the estate at £2M, not
+    // £175k RNRB tapers against their own share of the (net) estate at £2M, not
     // against the combined living assets. 50/50 split assumed absent evidence.
     // Cap each individual's RNRB by their share of the qualifying residence.
-    const shareEach     = gross / 2;
+    const shareEach     = netEstate / 2;
     const resShareEach  = residenceForRnrb / 2;
     const rnrbCapEach   = Math.min(TAX.rnrb, resShareEach);
     const rnrb1 = shareEach > TAX.rnrbTaper ? Math.max(0, rnrbCapEach - (shareEach - TAX.rnrbTaper) / 2) : rnrbCapEach;
@@ -660,14 +674,14 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
   } else {
     const rnrbCap = Math.min(TAX.rnrb, residenceForRnrb);
     rnrb = rnrbCap;
-    if (gross > TAX.rnrbTaper) rnrb = Math.max(0, rnrb - (gross - TAX.rnrbTaper) / 2);
+    if (netEstate > TAX.rnrbTaper) rnrb = Math.max(0, rnrb - (netEstate - TAX.rnrbTaper) / 2);
   }
 
-  const taxable = Math.max(0, gross - nrb - rnrb);
+  const taxable = Math.max(0, netEstate - nrb - rnrb);
   const iht     = Math.round(taxable * TAX.ihtRate);
   return {
-    gross, nrb, rnrb, taxable, iht,
-    beneficiaryRate:   gross > 0 ? (gross - iht) / gross : 1,
+    gross, liabilities, netEstate, nrb, rnrb, taxable, iht,
+    beneficiaryRate:   netEstate > 0 ? (netEstate - iht) / netEstate : 1,
     sippContribution:  includeSipp ? Math.round(sippVal * TAX.ihtRate) : 0,
     rnrbLost:          _isCouple(e) ? Math.max(0, TAX.rnrb * 2 - rnrb) : Math.max(0, TAX.rnrb - rnrb),
     residenceForRnrb,  // exposed for verification + UI debug
@@ -3006,7 +3020,7 @@ export function recommendedSurplusAllocation(entity, surplus) {
   }
   if (rem > 0 && _isaTotal(entity) < TAX.isaAllowance) {
     const a = Math.min(rem, TAX.isaAllowance / 12);
-    out.push({ priority: 4, target: 'isa', amount: Math.round(a), reason: 'Use £20k ISA wrapper' });
+    out.push({ priority: 4, target: 'isa', amount: Math.round(a), reason: `Use £${Math.round(TAX.isaAllowance / 1000)}k ISA wrapper` });
     rem -= a;
   }
   if (rem > 0) {
@@ -3314,7 +3328,6 @@ export function calcAllIncome(entity, bundle) {
   if (inc.selfEmploymentNet) items.push({ type: 'self-employment', amount: +inc.selfEmploymentNet });
   if (inc.dividends)     items.push({ type: 'dividends', amount: +inc.dividends });
   if (inc.rental || inc.rentalIncome) items.push({ type: 'rental', amount: +(inc.rental || inc.rentalIncome) });
-  if (inc.savingsInterest) items.push({ type: 'savings-interest', amount: +inc.savingsInterest });
   if (inc.overseasIncome)  items.push({ type: 'overseas', amount: +inc.overseasIncome });
   // State pension: only include if the person has reached their state pension age.
   // Without this guard Mr T (age 35, SP age 67) shows £12.5k phantom income which
@@ -3326,10 +3339,21 @@ export function calcAllIncome(entity, bundle) {
   }
   if (entity.drawdown)   items.push({ type: 'drawdown', amount: +entity.drawdown });
   if (inc.other)         items.push({ type: 'other', amount: +inc.other });
-  // Bank interest from nested
-  for (const b of (entity?.assets?.bank || [])) {
-    if (b.balance && b.interest_rate) {
-      items.push({ type: 'savings-interest', amount: Math.round((+b.balance || 0) * (+b.interest_rate || 0)) });
+  // Savings interest — ONE source only, so Cashflow ties out with every other
+  // surface. Tax (taxable-income.js), MyMoney (AccountsList / PivotView) and the
+  // decision-engine all read income.interest; calcAllIncome used to ignore it and
+  // derive £992 from bank balances instead, so Mr T showed £1,850 interest on Tax/
+  // MyMoney but £992 on Cashflow. Prefer the declared figure; fall back to bank
+  // balance × rate only when nothing is declared. Adding both would double-count
+  // (£1,850 + £992 = £2,842). 2026-06-08.
+  const _declaredInterest = +(inc.interest || inc.savingsInterest || 0);
+  if (_declaredInterest > 0) {
+    items.push({ type: 'savings-interest', amount: _declaredInterest });
+  } else {
+    for (const b of (entity?.assets?.bank || [])) {
+      if (b.balance && b.interest_rate) {
+        items.push({ type: 'savings-interest', amount: Math.round((+b.balance || 0) * (+b.interest_rate || 0)) });
+      }
     }
   }
   const byType = { non_savings: 0, savings: 0, dividends: 0, cgt: 0 };

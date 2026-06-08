@@ -344,6 +344,48 @@ export function estateExtras(entity) {
 }
 
 /**
+ * CGT-chargeable holdings, shaped for cgtDetail()'s `pending` analysis
+ * ({ name, currentValue, baseCost }). CANONICAL — the ONE place CGT-chargeability
+ * of a wrapper is decided, so cgtDetail/taxThisYear never hand-roll a wrapper list.
+ *
+ * Reads assets.investments[] (the real taxonomy) — NOT the assets.portfolio
+ * summary blob, which for rich personas (mrT-core) is an empty `{ value }` with
+ * no holdings, so CGT, embedded gains and bed-&-ISA were computed against nothing.
+ *
+ * Chargeable = a held asset whose gain on disposal falls under CGT. EXCLUDES:
+ *   · ISAs / pensions  — CGT-exempt wrappers
+ *   · EIS / SEIS / VCT — disposal relief / exempt
+ *   · onshore/offshore bonds — taxed under the chargeable-event (income) regime,
+ *     not CGT, so they must not appear in a CGT exposure list
+ * INCLUDES: GIA, crypto, unlisted/private equity, and any directly-held
+ * shares/funds sitting outside a shelter.
+ *
+ * @param {object} entity
+ * @returns {Array<{ name:string, currentValue:number, baseCost:number }>}
+ */
+export function cgtChargeableHoldings(entity) {
+  const invs = entity?.assets?.investments;
+  // Legacy personas store CGT holdings in assets.portfolio.holdings (already in
+  // { currentValue, baseCost } shape). Fall back to those when there is no
+  // itemized investments[] so we never regress the older fixtures.
+  if (!Array.isArray(invs)) return entity?.assets?.portfolio?.holdings || [];
+  const out = [];
+  for (const inv of invs) {
+    const ty = String(inv.type || '').toLowerCase();
+    const exempt =
+      ty.includes('isa') || ty.includes('pension') || ty.includes('sipp') ||
+      ty === 'eis' || ty === 'seis' || ty === 'vct' ||
+      ty.includes('bond');                       // chargeable-event, not CGT
+    if (exempt) continue;
+    const currentValue = +(inv.estimated_value ?? inv.value ?? inv.balance_gbp ?? inv.balance ?? 0) || 0;
+    const baseCost = +(inv.cost_base ?? inv.cost_basis ?? inv.book_cost ?? inv.value ?? 0) || 0;
+    if (currentValue <= 0) continue;
+    out.push({ name: inv.name || inv.id || ty, currentValue, baseCost });
+  }
+  return out;
+}
+
+/**
  * Total residential / property value.
  * CANONICAL
  * @param {object} entity

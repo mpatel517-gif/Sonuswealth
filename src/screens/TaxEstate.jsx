@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 import { parseDocument } from '../services/parser.js'
+import { cgtChargeableHoldings } from '../engine/_helpers.js'
 // S1 selector migration (Phase 2)
 import {
   netWorth,
@@ -967,7 +968,9 @@ function SalarySacrifice({ entity }) {
 
 // §5.7 — CGT detail + BADR + Bed-and-ISA
 function CGTDetail({ entity }) {
-  const holdings = entity?.assets?.portfolio?.holdings || []
+  // Read the real taxonomy (investments[]: GIA / crypto / PE with cost_base),
+  // not the empty assets.portfolio summary blob. (#18)
+  const holdings = cgtChargeableHoldings(entity)
   const cgt = safe(() => te_cgtDetail(entity, holdings), null)
   if (!cgt) return null
   const exempt = cgt.annual_exemption || { total: 0, used: 0, remaining: 0 }

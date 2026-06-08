@@ -15,7 +15,7 @@ import {
   calcIncomeTax,
 } from './fq-calculator.js';
 import { taxableIncomeBreakdown } from './taxable-income.js';
-import { isCouple as readIsCouple, estateExtras } from './_helpers.js';
+import { isCouple as readIsCouple, estateExtras, cgtChargeableHoldings } from './_helpers.js';
 
 // ── BUNDLE-DERIVED CONSTANTS ─────────────────────────────────────────────────
 // All declared as `let` so onBundleChange() can refresh them in place. Function
@@ -208,7 +208,7 @@ export function taxThisYear(entity, year = 'tax-2026-27', bundle = 'UK-2026.1') 
   // never returned — producing ANI > Gross and £0 income tax on screen.
   const cit  = calcIncomeTax(entity);
   const nics = nicsDetail(entity, 0, bundle);
-  const cgtd = cgtDetail(entity, entity.assets?.portfolio?.holdings || [], bundle);
+  const cgtd = cgtDetail(entity, cgtChargeableHoldings(entity), bundle);
 
   const gross        = cit.base.total;
   const ani          = cit.base.ani;
@@ -1429,7 +1429,7 @@ export function costOfInactionEstate(entity, bundle = 'UK-2026.1') {
   }
 
   // bed-and-isa
-  const cgd = cgtDetail(entity, entity.assets?.portfolio?.holdings || [], bundle);
+  const cgd = cgtDetail(entity, cgtChargeableHoldings(entity), bundle);
   const bedIsaSaving = cgd.pending.filter(p => p.bed_and_isa_opportunity).reduce((s, p) => s + p.if_sold_today_tax * 0, 0);
   if (bedIsaSaving > 0) actions['bed-and-isa'] = { savings: bedIsaSaving, deadline_driven: false };
 

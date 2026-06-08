@@ -240,15 +240,19 @@ const WRAPPER_PALETTE = {
 // `BOND·ON` for IDs and "Onshore bond" / "Offshore bond" as the visible
 // English label. We render the English label by default; pass a custom
 // `label` to override (e.g. composition bar shows "Onshore bond · £20k").
+// Plain-English-first wrapper labels. UK tax acronyms are glossed on this
+// composition legend (the FIRST place a user meets them) as "Plain (ACRONYM)",
+// so the scan surface never shows a bare acronym with no explanation. The
+// drill panels carry the full definition + tax treatment.
 const WRAPPER_LABEL = {
   PENSION:  'Pension',
-  ISA:      'ISA',
-  GIA:      'GIA',
+  ISA:      'Tax-free ISA',
+  GIA:      'General account (GIA)',
   CASH:     'Cash',
   PROPERTY: 'Property',
-  EIS:      'EIS',
-  SEIS:     'SEIS',
-  VCT:      'VCT',
+  EIS:      'Enterprise scheme (EIS)',
+  SEIS:     'Seed scheme (SEIS)',
+  VCT:      'Venture trust (VCT)',
   TRUST:    'Trust',
   BOND_ON:  'Onshore bond',
   BOND_OFF: 'Offshore bond',
@@ -4005,7 +4009,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
               void deltaRounded
               tile.contextLine = null
               tile.status = {
-                label: 'SIPP-IHT 2027 — delta',
+                label: 'Pension inheritance tax · 2027 change',
                 tone: 'warn',
                 explainerId: 'SIPP-IHT-2027',
                 // R1 §5 cross-route contract — chip is a tap target distinct

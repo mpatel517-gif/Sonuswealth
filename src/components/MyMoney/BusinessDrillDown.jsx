@@ -173,7 +173,7 @@ function BusinessDrillDownInner({ entity, personaId, onBack, onHome }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
               <Tile label="Total business" value={fmt(total)} tone="good" />
-              <Tile label="BPR-qualifying" value={fmt(bprQualifying)} tone={bprQualifying > 0 ? 'good' : 'neutral'} sub="100% IHT relief to £2.5m" />
+              <Tile label="Inheritance-tax relief" value={fmt(bprQualifying)} tone={bprQualifying > 0 ? 'good' : 'neutral'} sub="100% Business Relief (BPR) to £2.5m" />
             </div>
             {groups.map(g => (
               <Drawer key={g.key} icon={g.icon} color={g.color} label={g.label} sub={g.sub} value={g.value} line={groupLine(g.value)} onOpen={() => setOpenGroup(g.key)} />

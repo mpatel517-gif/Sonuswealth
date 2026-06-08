@@ -38,6 +38,19 @@ function fmt(v) {
   return `${sign}£${abs.toLocaleString()}`
 }
 
+// Turn a raw taxonomy slug (e.g. 'stocks-and-shares-ISA', 'isa_stocks_and_shares',
+// 'buy-to-let') into a human label. Without this the Details block leaks machine
+// slugs to the user (founder basics rule: no raw codes on the surface).
+function humanizeSlug(raw = '') {
+  if (!raw) return raw
+  let s = String(raw).replace(/[-_]+/g, ' ').trim()
+  // Preserve genuine UK acronyms in upper-case; sentence-case the rest.
+  s = s.replace(/\b(isa|gia|sipp|eis|seis|vct|btl|llp|reit|nsi|ns&i|hmo)\b/gi,
+    (m) => m.toUpperCase())
+  // Capitalise the first letter of the whole label.
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 const WRAPPER_TONE = {
   ISA: 'sw-chip-mint', CASH: 'sw-chip-mint',
   PENSION: 'sw-chip-blue', STATE: 'sw-chip-blue',
@@ -305,8 +318,8 @@ export default function AssetDetailOverlay({
               borderRadius: 12, padding: '12px 14px',
               fontSize: 12, color: 'var(--c-text2)',
             }}>
-              {asset.type && (<><span style={{ color: 'var(--c-text3)' }}>Type</span><span>{asset.type}</span></>)}
-              {asset.use && (<><span style={{ color: 'var(--c-text3)' }}>Use</span><span>{asset.use}</span></>)}
+              {asset.type && (<><span style={{ color: 'var(--c-text3)' }}>Type</span><span>{humanizeSlug(asset.type)}</span></>)}
+              {asset.use && (<><span style={{ color: 'var(--c-text3)' }}>Use</span><span>{humanizeSlug(asset.use)}</span></>)}
               {asset.isin && (<><span style={{ color: 'var(--c-text3)' }}>ISIN</span><span style={{ fontFamily: 'monospace' }}>{asset.isin}</span></>)}
               {asset.account_number && (<><span style={{ color: 'var(--c-text3)' }}>Account</span><span style={{ fontFamily: 'monospace' }}>{asset.account_number}</span></>)}
               {asset.address && (<><span style={{ color: 'var(--c-text3)' }}>Address</span><span>{asset.address}</span></>)}

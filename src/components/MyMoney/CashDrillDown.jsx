@@ -334,7 +334,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
         </Section>
 
         {/* Section 2 — Account-by-account */}
-        <Section title="2 · Accounts" sub={`FSCS protects up to ${FSCS_LIMIT_LABEL} per person, per banking-licence institution. Multiple accounts at the same licence are pooled.`}>
+        <Section title="2 · Accounts" sub={`The Financial Services Compensation Scheme (FSCS) protects up to ${FSCS_LIMIT_LABEL} per person, per banking-licence institution, if a bank fails. Multiple accounts at the same licence are pooled.`}>
           {/* v0.3 FSCS info chip — bundle-driven limit */}
           <div
             style={{

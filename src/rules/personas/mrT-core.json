@@ -742,6 +742,10 @@
   "lpaStatus": "both",
   "guardianNamed": false,
   "nominationsStatus": "all",
+  "expenses": {
+    "essentialsMonthly": 3550,
+    "annual": 42600
+  },
   "income": {
     "statePension": {
       "annual": 12547.60,
@@ -1402,99 +1406,72 @@
     "btl_landlord_marker": true
   },
   "expected_output_envelope": {
+    "_envelope_regenerated": "2026-06-08 — the original envelope described the pre-v2.0 ~£484k simple Mr T and was never updated when the Phase-2 Batch-A rewrite (see v2_0_changes) expanded the fixture to a maximalist QA artefact (7 properties £1.585M, business assets, EIS/SEIS/VCT, bonds). Top-level ranges regenerated against live engine output. IHT + cost_of_inaction then VALIDATED by the Tax-&-Estate session (2026-06-08): the £502,520/71% IHT figure was an engine bug — ihtDynamic taxed gross assets without deducting £409,690 liabilities (fixed commit a4aed6b → £338,644). Canonical screen IHT is te_ihtExposure £308,084 today / £375,084 post-Apr-2027. There is NO BPR/APR-pending relief (bprQualifyingValue=0); business/alts are omitted from both estate engines, not unrelieved. A residual ~£30k IHT discrepancy + an ISA double-count (see net_worth) are tracked as task #16 and remain OPEN, so IHT/NW bands are confidence:medium pending that audit. Re-baseline only AFTER both the Cashflow and Tax engine edits land — do not re-baseline solo.",
     "finio_score": {
       "value_range": [
-        60,
-        70
+        82,
+        90
       ],
+      "point_estimate": 86,
       "confidence": "high",
       "confidence_downgrade_reasons": [],
-      "dimensions": {
-        "behaviour": {
-          "range": [
-            70,
-            80
-          ],
-          "confidence": "high"
-        },
-        "capital": {
-          "range": [
-            62,
-            72
-          ],
-          "confidence": "high"
-        },
-        "tax": {
-          "range": [
-            55,
-            68
-          ],
-          "confidence": "high"
-        },
-        "protection": {
-          "range": [
-            75,
-            85
-          ],
-          "confidence": "high"
-        },
-        "cashflow": {
-          "range": [
-            60,
-            72
-          ],
-          "confidence": "high"
-        },
-        "debt": {
-          "range": [
-            55,
-            68
-          ],
-          "confidence": "high"
-        },
-        "estate": {
-          "range": [
-            65,
-            75
-          ],
-          "confidence": "high"
-        }
-      }
+      "dimension_point_contributions": {
+        "behaviour": 20,
+        "capital": 14,
+        "tax": 6,
+        "protection": 16,
+        "cashflow": 12,
+        "debt": 10,
+        "estate": 9
+      },
+      "dimensions_note": "Pre-v2.0 per-dimension 0-100 ranges removed: calcFQ exposes weighted point-contributions (above), not normalized 0-100 dimension scores. Regenerate these if normalized per-dimension scoring is added to the engine."
     },
     "risk_score": {
       "value_range": [
-        60,
-        72
+        75,
+        83
       ],
+      "point_estimate": 79,
       "confidence": "high",
       "dimensions_to_populate_in_session_3": "7 RISK-1.0 dimensions per s07 spec"
     },
     "net_worth": {
       "value_range": [
-        475000,
-        495000
+        1695000,
+        1755000
       ],
-      "point_estimate_explanation": "fixture-controlled — should compute to ~£484k",
-      "confidence": "high",
-      "staleness_flags": [],
+      "point_estimate": 1747850,
+      "point_estimate_explanation": "v2.0 maximalist fixture. Engine currently outputs £1,747,850 (pensions £205,500 + ISA £93,200 + GIA £49,600 + property £1,585,000 + cash £28,500 + alternatives/business £195,740 − liabilities £409,690), BUT the ISA leg double-counts: _isaTotal sums isa.value £46,600 AND the same holdings itemized in investments[] (stocks-and-shares-ISA £38,400 + cash-ISA £8,200), so NW is overstated by ~£46,600. True NW ≈ £1,701,250. Band spans the corrected and current values pending the fix.",
+      "confidence": "medium",
+      "staleness_flags": [
+        "isa-double-count-task-16"
+      ],
       "excluded_assets": [],
       "excluded_asset_reasons": {}
     },
     "iht_projection": {
       "value_range": [
-        0,
-        8000
+        300000,
+        340000
       ],
-      "confidence": "high",
-      "explanation": "Estate ~£484k less BPR-qualifying £145k = £339k taxable, below NRB£325k + RNRB£175k = £500k allowance. Marginal exposure only."
+      "point_estimate": 308084,
+      "iht_today": 308084,
+      "iht_post_2027": 375084,
+      "beneficiary_rate": 0.76,
+      "confidence": "medium",
+      "explanation": "VALIDATED by Tax-&-Estate session 2026-06-08. Canonical figure is te_ihtExposure (what the screens show): IHT £308,084 today, rising to £375,084 once SIPPs enter the estate in April 2027; ~76% of the net estate reaches beneficiaries. The prior £502,520/71% was an engine bug — ihtDynamic taxed gross assets without deducting £409,690 liabilities (fixed commit a4aed6b → £338,644). There is NO BPR/APR-pending relief: bprQualifyingValue=0 and the £163,500 business + £8,400 alternatives are OMITTED from both estate engines (an under-count, not an unrelieved charge).",
+      "validation_owner": "tax-estate session",
+      "open_item": "task #16 — ihtDynamic £338,644 vs te_ihtExposure £308,084 differ ~£30k from the ISA double-count + omitted business/alts. Reconcile to one canonical net-estate (incl business/alts + proper BPR) before pinning a tight range. Band held at [300000,340000] confidence:medium until then."
     },
     "cost_of_inaction": {
       "value_range": [
-        3000,
-        8000
+        90000,
+        105000
       ],
+      "point_estimate": 97366,
       "confidence": "high",
-      "explanation": "CoI driven by unused AA carry-forward + partial ISA + protection gap review cycle"
+      "explanation": "VALIDATED by Tax-&-Estate session 2026-06-08 — £97,366 confirmed correct and UNAFFECTED by the ihtDynamic liability fix (commit a4aed6b): liabilities cancel in the incl−excl SIPP delta, so ihtSippDelta stayed £82,200. byDomain: drawdown/SIPP-IHT £82,200; contributions £12,000; propertyDecisions £1,438; gifting £1,200; wrapperSequencing £443; taxAllowances £85.",
+      "validation_owner": "tax-estate session"
     },
     "financial_profile_cell": "III-B",
     "archetype_classification": "02 uk-single-accumulation-director",

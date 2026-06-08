@@ -15,7 +15,7 @@ import {
   calcIncomeTax,
 } from './fq-calculator.js';
 import { taxableIncomeBreakdown } from './taxable-income.js';
-import { isCouple as readIsCouple } from './_helpers.js';
+import { isCouple as readIsCouple, estateExtras } from './_helpers.js';
 
 // ── BUNDLE-DERIVED CONSTANTS ─────────────────────────────────────────────────
 // All declared as `let` so onBundleChange() can refresh them in place. Function
@@ -655,6 +655,13 @@ export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
   if (entity.assets?.protection?.lifeInsurance?.exists && !entity.assets.protection.lifeInsurance.inTrust) {
     gross += entity.assets.protection.lifeInsurance.amount || 0;
   }
+  // Business assets + director's-loan receivable + alternatives — counted by
+  // netWorth but previously omitted from the chargeable estate. Added to gross
+  // here; the BPR/APR-qualifying business value is relieved via bpr_total below,
+  // so qualifying trading shares are a wash and only the non-qualifying remainder
+  // (DLA, alternatives) is taxed. (Task #16, 2026-06-08.)
+  const extras = estateExtras(entity);
+  gross += extras.gross;
 
   // Deductions
   const debtTotal   = a.liabilities;
@@ -676,7 +683,8 @@ export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
   const holdings = entity.assets?.portfolio?.holdings || [];
   const bprResult = bprQualifyingValue(entity, bundle);
   const aprRelief = { tier1_100pct: bprResult.tier1_100pct, tier2_50pct_above_allowance: bprResult.tier2_50pct_above_allowance, tier2_50pct_aim_or_not_listed: bprResult.tier2_50pct_aim_or_not_listed, allowance_used: bprResult.allowance_used, allowance_remaining: bprResult.allowance_remaining };
-  const bpr_total = bprResult.tier1_100pct + Math.round(bprResult.tier2_50pct_above_allowance * 0.5) + Math.round(bprResult.tier2_50pct_aim_or_not_listed * 0.5);
+  const bpr_total = bprResult.tier1_100pct + Math.round(bprResult.tier2_50pct_above_allowance * 0.5) + Math.round(bprResult.tier2_50pct_aim_or_not_listed * 0.5)
+    + extras.bprRelieved;  // 100% relief on qualifying business assets added to gross above
 
   // Charity relief
   const charityPct   = entity.estate?.charityPct || 0;

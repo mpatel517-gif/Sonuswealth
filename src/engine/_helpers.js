@@ -279,6 +279,45 @@ export function businessTotal(entity) {
 }
 
 /**
+ * Estate "extras" — business assets + the director's-loan receivable +
+ * alternatives — that netWorth counts but both IHT engines historically omitted
+ * from the chargeable estate. Returns gross, the BPR/APR-relieved portion, and
+ * the net chargeable portion, so te_ihtExposure AND ihtDynamic add the SAME
+ * figures and stay reconciled by construction. (Task #16; founder-approved
+ * standard BPR defaults, 2026-06-08.)
+ *
+ * BPR/APR default: a business_assets[] entry is 100%-relieved when flagged
+ * qualifies_for_bpr / qualifies_for_apr, or (unflagged) when trading_status is
+ * 'trading' — i.e. unquoted trading-company shares. The director's-loan
+ * receivable and alternatives (crypto, wine, etc.) are chargeable, no relief.
+ *
+ * @param {object} entity
+ * @returns {{ gross:number, bprRelieved:number, chargeable:number }}
+ */
+export function estateExtras(entity) {
+  const businessGross = businessTotal(entity);     // qualifying shares + DLA-in-credit
+  const altsGross     = alternativesTotal(entity); // crypto / wine / etc. — chargeable
+  const gross = businessGross + altsGross;
+
+  const list = (Array.isArray(entity?.business_assets) && entity.business_assets.length)
+    ? entity.business_assets
+    : (entity?.assets?.businesses || entity?.assets?.business_assets || []);
+  let bprRelieved = 0;
+  if (Array.isArray(list)) {
+    for (const b of list) {
+      if (b?.status === 'disposed') continue;
+      const val = (+(b.value_gbp ?? b.value ?? b.estimated_value ?? 0) || 0) *
+                  (+(b.beneficial_interest_this_individual ?? b.ownershipShare ?? 1) || 1);
+      const qualifies = b?.qualifies_for_bpr === true || b?.qualifies_for_apr === true ||
+        (b?.qualifies_for_bpr == null && String(b?.trading_status || '').toLowerCase() === 'trading');
+      if (qualifies) bprRelieved += val;
+    }
+  }
+  bprRelieved = Math.min(bprRelieved, businessGross); // never relieve more than the business is worth
+  return { gross, bprRelieved, chargeable: Math.max(0, gross - bprRelieved) };
+}
+
+/**
  * Total residential / property value.
  * CANONICAL
  * @param {object} entity

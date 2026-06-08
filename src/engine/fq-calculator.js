@@ -18,6 +18,7 @@ import {
   cashTotal         as _cashTotal,
   alternativesTotal as _alternativesTotal,
   businessTotal    as _businessTotal,
+  estateExtras     as _estateExtras,
   liabilitiesTotal as _liabilitiesTotal,
   monthlyDebtService as _monthlyDebtService,
   annualIncome     as _annualIncome,
@@ -655,8 +656,16 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
   // + the _isaTotal asset-basis difference vs te remain to be reconciled (BPR
   // judgement) — tracked separately; this fix addresses the liability omission
   // only. The SIPP-contribution delta below is unaffected (liabilities cancel).
+  // Business + DLA + alternatives — same estate extras te_ihtExposure adds, via
+  // the shared estateExtras helper so the two engines stay reconciled. Qualifying
+  // business gets 100% BPR (relieved from taxable below); the rest is chargeable.
+  const extras = _estateExtras(e);
   const liabilities = _liabilitiesTotal(e);
-  const netEstate   = Math.max(0, gross - liabilities);
+  // Funeral expenses are a standard estate deduction (matches te_ihtExposure's
+  // `entity.estate?.funeralExpenses || 5000`) — its omission here was the last
+  // ~£2k of the ihtDynamic↔te_ihtExposure gap.
+  const funeral = +(e.estate?.funeralExpenses) || 5000;
+  const netEstate   = Math.max(0, gross + extras.gross - liabilities - funeral);
 
   let nrb  = TAX.nrb;  if (_isCouple(e)) nrb  *= 2;
   let rnrb;
@@ -677,10 +686,10 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
     if (netEstate > TAX.rnrbTaper) rnrb = Math.max(0, rnrb - (netEstate - TAX.rnrbTaper) / 2);
   }
 
-  const taxable = Math.max(0, netEstate - nrb - rnrb);
+  const taxable = Math.max(0, netEstate - nrb - rnrb - extras.bprRelieved);
   const iht     = Math.round(taxable * TAX.ihtRate);
   return {
-    gross, liabilities, netEstate, nrb, rnrb, taxable, iht,
+    gross: gross + extras.gross, liabilities, netEstate, nrb, rnrb, taxable, iht,
     beneficiaryRate:   netEstate > 0 ? (netEstate - iht) / netEstate : 1,
     sippContribution:  includeSipp ? Math.round(sippVal * TAX.ihtRate) : 0,
     rnrbLost:          _isCouple(e) ? Math.max(0, TAX.rnrb * 2 - rnrb) : Math.max(0, TAX.rnrb - rnrb),

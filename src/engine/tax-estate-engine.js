@@ -12,7 +12,9 @@ import {
   calcAge,
   ihtSippDelta,
   taperBand,
+  calcIncomeTax,
 } from './fq-calculator.js';
+import { taxableIncomeBreakdown } from './taxable-income.js';
 import { isCouple as readIsCouple } from './_helpers.js';
 
 // ── BUNDLE-DERIVED CONSTANTS ─────────────────────────────────────────────────
@@ -199,34 +201,44 @@ function _confidence(e, requiredFields) {
 // ── §8.1 taxThisYear ─────────────────────────────────────────────────────────
 
 export function taxThisYear(entity, year = 'tax-2026-27', bundle = 'UK-2026.1') {
-  const itd  = incomeTaxDetail(entity, 0, bundle);
+  // ONE canonical income-tax computation feeds every component, so gross, ANI,
+  // income tax, savings tax and dividend tax all derive from the same base
+  // (taxableIncomeBreakdown). Previously gross came from _grossIncome (~£0 for
+  // Mr T), savings_tax was added on top of a separately-derived itd, and ANI was
+  // never returned — producing ANI > Gross and £0 income tax on screen.
+  const cit  = calcIncomeTax(entity);
   const nics = nicsDetail(entity, 0, bundle);
   const cgtd = cgtDetail(entity, entity.assets?.portfolio?.holdings || [], bundle);
-  const divd = dividendTaxDetail(entity, entity.assets?.portfolio?.holdings || [], bundle);
 
-  const gross = _grossIncome(entity);
-  const savings_tax = _savingsInterestTax(entity, itd.marginal_rate, bundle);
+  const gross        = cit.base.total;
+  const ani          = cit.base.ani;
+  const income_tax   = cit.nsndTax;             // tax on earnings/rental/pension
+  const savings_tax  = cit.savingsTax;
+  const dividend_tax = cit.dividendTax;
 
-  const total_tax = itd.total_tax + nics.total_nic + cgtd.tax_due + divd.tax_paid + savings_tax;
+  const total_tax = income_tax + savings_tax + dividend_tax + nics.total_nic + cgtd.tax_due;
   const net_after_tax = Math.max(0, gross - total_tax);
 
   return {
     total_tax,
     components: {
-      income_tax:   itd.total_tax,
+      income_tax,
       nics:         nics.total_nic,
       cgt:          cgtd.tax_due,
-      dividend_tax: divd.tax_paid,
+      dividend_tax,
       savings_tax,
     },
     effective_rate:  gross > 0 ? Math.round((total_tax / gross) * 1000) / 1000 : 0,
     drag_pct:        gross > 0 ? Math.round((total_tax / gross) * 1000) / 1000 : 0,
+    marginal_rate:   cit.marginalRate,
     net_after_tax,
     gross,
-    confidence:      itd.confidence,
+    ani,
+    confidence:      _confidence(entity, ['income']),
     bundle,
     provenance: {
-      income:  'entity.income + entity.drawdown',
+      income:  'taxableIncomeBreakdown(entity) — net rental, gated state pension, MAXed salary aliases',
+      tax:     'calcIncomeTax(entity) — stacked non-savings → savings → dividends',
       cgt:     'entity.assets.portfolio.holdings',
       pension: 'entity.assets.sipp',
     },
@@ -245,18 +257,35 @@ function _savingsInterestTax(entity, marginalRate, bundle) {
 // ── §8.2 incomeTaxDetail ─────────────────────────────────────────────────────
 
 export function incomeTaxDetail(entity, deltaIncome = 0, bundle = 'UK-2026.1') {
-  const gross = _grossIncome(entity) + deltaIncome;
-  const effectivePA = _effectivePA(gross);
-  const taperLoss = PA - effectivePA;
-  const taxable = Math.max(0, gross - effectivePA);
-  const bands = _incomeTaxBands(taxable);
-  const total_tax = bands.reduce((s, b) => s + b.tax, 0);
-  const marginal = _marginalRate(gross, effectivePA);
+  // Delegate to the canonical stacked calc (taxableIncomeBreakdown → proper
+  // non-savings → savings → dividends band stacking). `deltaIncome` (used by the
+  // decision engine for "what if income rose by X") is injected as extra earned
+  // income via income.other, which the breakdown counts as non-savings.
+  const e = deltaIncome
+    ? { ...entity, income: { ...(entity.income || {}), other: (+(entity.income?.other || 0)) + deltaIncome } }
+    : entity;
+  const cit  = calcIncomeTax(e);
+  const bd   = cit.base;                       // { nsnd, savings, dividends, total, ani }
+  const gross = bd.total;
+  const effectivePA = _effectivePA(bd.ani);
+  const taperLoss   = PA - effectivePA;
+
+  // total_tax here = income tax on NON-dividend income (earnings + savings).
+  // Dividend tax is reported separately by dividendTaxDetail; taxThisYear sums them.
+  const total_tax = cit.nsndTax + cit.savingsTax;
+  // Map the canonical non-savings bands into the legacy { name, rate, threshold,
+  // used, tax } shape that MyMoney's TaxObligations panel renders.
+  const bands = cit.byBand
+    .filter(b => b.type.startsWith('non_savings'))
+    .map(b => ({ name: b.type.replace('non_savings_', ''), rate: b.rate, threshold: null, used: b.amount, tax: Math.round(b.amount * b.rate) }));
   const scottish = entity.taxResidence === 'SCO';
   const conf = _confidence(entity, ['income']);
 
   return {
     gross_income: gross,
+    nsnd_taxable: bd.nsnd,
+    savings_taxable: bd.savings,
+    savings_tax: cit.savingsTax,
     personal_allowance: {
       available:    PA,
       used:         effectivePA,
@@ -266,8 +295,8 @@ export function incomeTaxDetail(entity, deltaIncome = 0, bundle = 'UK-2026.1') {
     bands,
     total_tax,
     effective_rate:         gross > 0 ? Math.round((total_tax / gross) * 1000) / 1000 : 0,
-    marginal_rate:          marginal,
-    marginal_on_next_pound: marginal,
+    marginal_rate:          cit.marginalRate,
+    marginal_on_next_pound: cit.marginalRate,
     scottish_variant:       scottish,
     confidence:             conf,
     bundle,
@@ -376,16 +405,20 @@ export function cgtDetail(entity, holdings = [], bundle = 'UK-2026.1') {
 
 export function dividendTaxDetail(entity, holdings = [], bundle = 'UK-2026.1') {
   const allowance  = INC.dividendAllowance;  // 500
-  const marginal   = incomeTaxDetail(entity, 0, bundle).marginal_rate;
-  const divRate    = marginal <= BR ? INC.dividendBasicRate :
-                     marginal <= HR ? INC.dividendHigherRate :
-                                      INC.dividendAdditionalRate;
 
-  const totalDiv   = entity.income?.dividends || 0;
+  // Canonical stacked dividend tax: dividends sit ON TOP of non-savings + savings
+  // income, so each slice is taxed at the band it actually lands in (not a single
+  // rate read off the non-savings-only marginal — the bug that taxed Mr T's
+  // £38k dividends entirely at the basic rate). taxableIncomeBreakdown handles
+  // ISA shielding + director-dividend aliases.
+  const cit        = calcIncomeTax(entity);
+  const bd         = taxableIncomeBreakdown(entity);
+  const totalDiv   = Math.max(+(entity.income?.dividends || 0), +(entity.income?.directorDividends || 0));
   const isaShield  = entity.assets?.isa?.dividendIncome || 0;
-  const giaExposed = Math.max(0, totalDiv - isaShield);
-  const taxable    = Math.max(0, giaExposed - allowance);
-  const tax_paid   = Math.round(taxable * divRate);
+  const giaExposed = bd.dividends;            // already net of ISA shielding
+  const tax_paid   = cit.dividendTax;
+  // Effective dividend rate this taxpayer actually pays, for display.
+  const divRate    = giaExposed > allowance ? tax_paid / Math.max(1, giaExposed - allowance) : 0;
 
   const allowanceUsed = Math.min(allowance, giaExposed);
   const isaHeadroom   = Math.max(0, (ISA.annualAllowance) - (entity.assets?.isa?.usedThisYear || 0));

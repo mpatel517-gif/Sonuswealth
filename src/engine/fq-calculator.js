@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { TAX, onBundleChange } from './_bundle.js';
+import { taxableIncomeBreakdown } from './taxable-income.js';
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
 import { netWorthAtHorizon as _netWorthAtHorizon } from './projection.js';
 import {
@@ -3035,12 +3036,15 @@ export function calcANI(entity, bundle) {
   // edge warning to fire late or not at all for the personas it should catch.
   // Pension contribution: both monthly + annual fields accepted (UI sometimes
   // captures only one). Monthly × 12 added to the annual figure.
-  const total = (+ind.gross_salary || 0) + (+inc.salary || 0) + (+inc.employment || 0) +
-                (+inc.directorSalary || 0) +
-                (+inc.dividends || 0) + (+inc.rentalIncome || 0) + (+inc.rental || 0) +
-                (+inc.selfEmployed || 0) + (+inc.selfEmploymentNet || 0) +
-                (+inc.savingsInterest || 0) + (+inc.other || 0) +
-                (+inc.overseasIncome || 0) + (+entity.drawdown || 0);
+  // Income aggregation now flows through the canonical taxableIncomeBreakdown
+  // (net rental, salary aliases MAXed, state pension gated on the explicit age
+  // field, savings de-duplicated) so the £100k-taper ANI shown here matches the
+  // Tax & Estate screen and every other surface. Previously this summed gross
+  // rental + rentalIncome + savingsInterest independently, which made ANI
+  // exceed Gross on the Tax screen (founder 2026-06-08). Relief logic below is
+  // unchanged. Note `inc`/`ind` retained for confidence/debug parity.
+  void inc; void ind;
+  const total = taxableIncomeBreakdown(entity).total;
   const giftAid     = +entity.giftAidAnnual || 0;
   const pensionMonthly = +entity.pensionContribMonthly || 0;
   const pensionRel  = (+entity.pensionContribAnnual || 0) + (pensionMonthly * 12);
@@ -3085,56 +3089,90 @@ export function calcPersonalAllowance(income, bundle) {
  * @returns {{ tax:number, byBand:Array, byType:object, marginalRate:number }}
  */
 export function calcIncomeTax(entity, bundle) {
-  const income = calcAllIncome(entity, bundle);
-  const ani = calcANI(entity, bundle).ani;
-  const pa = calcPersonalAllowance(ani, bundle);
-  let remaining = pa;
+  // SINGLE SOURCE OF TRUTH for the tax base: taxableIncomeBreakdown classifies
+  // every income source once, by tax type (net rental, explicit savings,
+  // state-pension correctly gated, salary aliases MAXed). Previously this read
+  // calcAllIncome.byType (gross rental, wrong savings key) + calcANI (a third
+  // aggregation) — the divergence that produced ANI > Gross and £0 income tax
+  // on the Tax & Estate screen (founder 2026-06-08). See taxable-income.js.
+  const d   = taxableIncomeBreakdown(entity);
+  const ns0 = d.nsnd, sv0 = d.savings, dv0 = d.dividends, ani = d.ani;
+
   const PA  = TAX_JSON.income.personalAllowance;
   const BR  = TAX_JSON.income.basicRate;
   const HR  = TAX_JSON.income.higherRate;
   const AR  = TAX_JSON.income.additionalRate;
-  const BRL = TAX_JSON.income.basicRateBand;
-  const ART = TAX_JSON.income.additionalRateThreshold;
-  // Allocate PA: non-savings first, then savings, then dividends
-  const ns = income.byType.non_savings - Math.min(income.byType.non_savings, remaining);
-  remaining -= Math.min(income.byType.non_savings, remaining);
-  const sv = income.byType.savings - Math.min(income.byType.savings, remaining);
-  remaining -= Math.min(income.byType.savings, remaining);
-  const dv = income.byType.dividends - Math.min(income.byType.dividends, remaining);
-  // Tax non-savings
-  let bandsLeft = BRL;
-  let nsBasic = Math.min(ns, bandsLeft); bandsLeft -= nsBasic;
-  let nsHigher = Math.min(ns - nsBasic, ART - PA - BRL); bandsLeft = ART - PA - BRL - nsHigher;
-  let nsAdd = Math.max(0, ns - nsBasic - nsHigher);
-  let tax = nsBasic * BR + nsHigher * HR + nsAdd * AR;
-  // Tax savings (with PSA)
-  const psa = entity?.isHigherRateTaxpayer ? 500 : (ani >= ART) ? 0 : 1000;
-  const svTaxable = Math.max(0, sv - psa);
-  let svBasic = Math.min(svTaxable, Math.max(0, bandsLeft));
-  let svHigher = Math.max(0, svTaxable - svBasic);
-  tax += svBasic * BR + svHigher * HR;
-  // Tax dividends (with allowance)
-  const da = TAX_JSON.income.dividendAllowance || 500;
-  const dvTaxable = Math.max(0, dv - da);
+  const BRL = TAX_JSON.income.basicRateBand;            // 37700  (basic-rate band width, taxable space)
+  const BRT = TAX_JSON.income.basicRateThreshold;       // 50270
+  const ART = TAX_JSON.income.additionalRateThreshold;  // 125140
+  const ADDL = BRL + (ART - BRT);                       // 112570 — additional-rate start in taxable space
+  const SR  = TAX_JSON.income.startingRateForSavingsBand || 5000;
+  const da  = TAX_JSON.income.dividendAllowance || 500;
   const dbr = TAX_JSON.income.dividendBasicRate || 0.1075;
   const dhr = TAX_JSON.income.dividendHigherRate || 0.3575;
   const dar = TAX_JSON.income.dividendAdditionalRate || 0.3935;
-  const dvBasic = Math.min(dvTaxable, Math.max(0, BRL - nsBasic - svBasic));
-  const dvHigher = Math.max(0, dvTaxable - dvBasic);
-  tax += dvBasic * dbr + dvHigher * dhr;
+
+  // Personal allowance (tapered on ANI), allocated non-savings → savings → dividends.
+  let pa = calcPersonalAllowance(ani, bundle);
+  const nsT = Math.max(0, ns0 - pa); pa = Math.max(0, pa - ns0);
+  const svT = Math.max(0, sv0 - pa); pa = Math.max(0, pa - sv0);
+  const dvT = Math.max(0, dv0 - pa);
+
+  // Walk a slice across the basic / higher / additional bands from `cursor`
+  // (taxable-income space). Each slice consumes band room so the next stacks on top.
+  const walk = (amount, cursor, rates) => {
+    let rem = amount, tax = 0; const parts = [];
+    const bands = [[BRL, rates[0]], [ADDL, rates[1]], [Infinity, rates[2]]];
+    for (const [top, rate] of bands) {
+      if (rem <= 1e-6) break;
+      const used = Math.min(rem, Math.max(0, top - cursor));
+      if (used > 0) { tax += used * rate; parts.push({ amount: used, rate }); cursor += used; rem -= used; }
+    }
+    return { tax, cursor, parts };
+  };
+
+  // Non-savings income.
+  const nsW = walk(nsT, 0, [BR, HR, AR]);
+  // Savings: 0% on (starting-rate band reduced by non-savings) + PSA (band-dependent),
+  // each consuming band space; remainder taxed at the band it lands in.
+  const psa = d.total > ART ? (TAX_JSON.income.savingsAllowanceAdditionalRate ?? 0)
+            : d.total > BRT ? (TAX_JSON.income.savingsAllowanceHigherRate ?? 500)
+            :                 (TAX_JSON.income.savingsAllowanceBasicRate ?? 1000);
+  const savZero = Math.min(svT, Math.max(0, SR - nsT) + psa);
+  const svZ = walk(savZero, nsW.cursor, [0, 0, 0]);
+  const svW = walk(svT - savZero, svZ.cursor, [BR, HR, AR]);
+  // Dividends: £500 allowance at 0% (consumes band space), remainder at dividend rates.
+  const dvZero = Math.min(dvT, da);
+  const dvZ = walk(dvZero, svW.cursor, [0, 0, 0]);
+  const dvW = walk(dvT - dvZero, dvZ.cursor, [dbr, dhr, dar]);
+
+  const nsndTax = nsW.tax, savingsTax = svW.tax, dividendTax = dvW.tax;
+  const tax = nsndTax + savingsTax + dividendTax;
+  // Marginal rate on the next £1 of earned income at this total (60% PA-taper zone included).
+  const taperStart = TAX_JSON.income.personalAllowanceTaperStart || 100000;
+  const marginalRate = (ani > taperStart && ani < ART) ? 0.60
+                     : ani > ART ? AR
+                     : ani > BRT ? HR
+                     : ani > PA  ? BR
+                     : 0;
+
+  const fmtBands = (parts, label) => parts.filter(p => p.amount > 0).map((p, i) => ({
+    type: `${label}_${i === 0 ? 'basic' : i === 1 ? 'higher' : 'add'}`, amount: Math.round(p.amount), rate: p.rate,
+  }));
+
   return {
     tax: Math.round(tax),
+    nsndTax: Math.round(nsndTax),
+    savingsTax: Math.round(savingsTax),
+    dividendTax: Math.round(dividendTax),
     byBand: [
-      { type: 'non_savings_basic',  amount: nsBasic, rate: BR },
-      { type: 'non_savings_higher', amount: nsHigher, rate: HR },
-      { type: 'non_savings_add',    amount: nsAdd, rate: AR },
-      { type: 'savings_basic',      amount: svBasic, rate: BR },
-      { type: 'savings_higher',     amount: svHigher, rate: HR },
-      { type: 'div_basic',          amount: dvBasic, rate: dbr },
-      { type: 'div_higher',         amount: dvHigher, rate: dhr },
+      ...fmtBands(nsW.parts, 'non_savings'),
+      ...fmtBands(svW.parts, 'savings'),
+      ...fmtBands(dvW.parts, 'div'),
     ],
-    byType: income.byType,
-    marginalRate: ani > ART ? AR : ani > (PA + BRL) ? HR : BR,
+    byType: { non_savings: ns0, savings: sv0, dividends: dv0, cgt: 0 },
+    base: { nsnd: ns0, savings: sv0, dividends: dv0, total: d.total, ani },
+    marginalRate,
   };
 }
 
@@ -3278,7 +3316,14 @@ export function calcAllIncome(entity, bundle) {
   if (inc.rental || inc.rentalIncome) items.push({ type: 'rental', amount: +(inc.rental || inc.rentalIncome) });
   if (inc.savingsInterest) items.push({ type: 'savings-interest', amount: +inc.savingsInterest });
   if (inc.overseasIncome)  items.push({ type: 'overseas', amount: +inc.overseasIncome });
-  if (inc.statePension?.annual) items.push({ type: 'state-pension', amount: +inc.statePension.annual });
+  // State pension: only include if the person has reached their state pension age.
+  // Without this guard Mr T (age 35, SP age 67) shows £12.5k phantom income which
+  // inflates gross from £67k→£79k, over-taxes by ~£12k, and shows a SP Sankey node.
+  if (inc.statePension?.annual) {
+    const _spAge = +(inc.statePension?.startAge || TAX.spa || 67);
+    const _age   = calcAge(ind?.dob || entity?.dob);
+    if (_age >= _spAge) items.push({ type: 'state-pension', amount: +inc.statePension.annual });
+  }
   if (entity.drawdown)   items.push({ type: 'drawdown', amount: +entity.drawdown });
   if (inc.other)         items.push({ type: 'other', amount: +inc.other });
   // Bank interest from nested

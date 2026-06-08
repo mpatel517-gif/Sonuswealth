@@ -28,6 +28,13 @@ function birthYear(entity) {
 }
 
 function ageAtTaxYear(entity) {
+  // Prefer an explicit age field (personas carry `age`/`individual.age`); fall
+  // back to dob-derived. calcAllIncome only reads dob — so personas with `age`
+  // but no dob (persona-a/e) had their state pension mis-gated there. Reading
+  // the explicit age makes the state-pension cutoff correct for those.
+  const ind = entity?.individual || {}
+  const explicit = +(entity?.age || ind.age || entity?.currentAge || ind.currentAge || 0)
+  if (explicit > 0) return explicit
   const by = birthYear(entity)
   return by == null ? null : TAX_YEAR_START - by
 }
@@ -51,10 +58,16 @@ export function taxableIncomeBreakdown(entity) {
     +(inc.directorSalary || 0),
   )
 
-  const selfEmp = +(inc.selfEmployed || 0)
+  // selfEmployed / selfEmploymentNet are alias schemas for the same trade
+  // profit — MAX, never SUM (calcAllIncome pushes both as items and would
+  // double-count a persona carrying both).
+  const selfEmp = Math.max(+(inc.selfEmployed || 0), +(inc.selfEmploymentNet || 0))
 
-  // Rental is taxed on NET profit, not gross receipts.
-  const rentalNet = +(inc.rentalIncomeNet ?? inc.rentalNet ?? inc.rental ?? 0)
+  // Rental is taxed on NET profit. Prefer an explicit net figure; fall back to
+  // the gross `rentalIncome`/`rental` keys (best available when no net is
+  // supplied — matches calcAllIncome's coverage so we never UNDER-count rent,
+  // the bug that returned £0 rental for persona-a's £19,200).
+  const rentalNet = +(inc.rentalIncomeNet ?? inc.rentalNet ?? inc.rentalIncome ?? inc.rental ?? 0)
 
   // State pension is income ONLY once it is in payment (age >= start age).
   const age = ageAtTaxYear(entity)
@@ -68,8 +81,19 @@ export function taxableIncomeBreakdown(entity) {
 
   const nsnd = salary + selfEmp + rentalNet + statePension + drawdown + other
 
-  // Savings interest.
-  const savings = +(inc.interest ?? inc.savings ?? 0)
+  // Savings interest. Prefer an explicit summary figure (interest/savings/
+  // savingsInterest are aliases — MAX); fall back to interest computed from
+  // nested bank accounts (balance × rate) only when no explicit figure exists,
+  // so the two sources are never added together.
+  const explicitSavings = Math.max(
+    +(inc.interest || 0),
+    +(inc.savings || 0),
+    +(inc.savingsInterest || 0),
+  )
+  const bankInterest = (entity?.assets?.bank || []).reduce(
+    (s, b) => s + ((+b.balance || 0) * (+b.interest_rate || 0)), 0,
+  )
+  const savings = explicitSavings > 0 ? explicitSavings : Math.round(bankInterest)
 
   // Dividends (aliased like salary), net of ISA-shielded dividend income.
   const isaShield = +(entity?.assets?.isa?.dividendIncome || 0)

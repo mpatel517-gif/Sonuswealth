@@ -2086,8 +2086,11 @@ function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
         zIndex: 60,
         // Frosted backing so content scrolling under it stays legible.
         background: 'color-mix(in srgb, var(--c-bg) 88%, transparent)',
-        backdropFilter: 'blur(10px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(10px) saturate(140%)',
+        // saturate() forces a full-viewport colour-matrix pass on every
+        // composite, which kept this sticky strip from settling to a stable
+        // frame (preview_screenshot wedge). Blur alone keeps the frosted read.
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         borderBottom: '1px solid var(--c-sep)',
         padding: '10px 16px 12px',
         marginBottom: 14,

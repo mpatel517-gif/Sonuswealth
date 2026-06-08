@@ -79,8 +79,10 @@ export default function AskPill({ onTap, hidden = false, tabHint = 'home' }) {
         // light. Mint accent applies via color-mix so it scales to the theme
         // accent in both palettes.
         background: 'var(--card-bg2)',
-        backdropFilter: 'blur(14px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+        // saturate() removed — its per-composite colour-matrix pass contributed
+        // to the Risk-tab screenshot wedge; blur alone keeps the frosted pill.
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
         border: '1px solid color-mix(in srgb, var(--c-acc) 25%, var(--c-border))',
         boxShadow: 'var(--sh2, 0 10px 28px rgba(0,0,0,0.20))',
         color: 'var(--c-text)',

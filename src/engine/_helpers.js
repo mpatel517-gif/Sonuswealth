@@ -3,6 +3,7 @@
 // Schema-agnostic readers that return consistent values from EITHER persona shape:
 
 import { getBundle } from './_bundle.js';
+import { classifyAsset } from './asset-taxonomy.js';
 //
 //   LEGACY FLAT (persona-a..g.json):
 //     entity.assets.sipp.total, .isa.value, .residence.value, .portfolio.value,
@@ -314,7 +315,32 @@ export function estateExtras(entity) {
     }
   }
   bprRelieved = Math.min(bprRelieved, businessGross); // never relieve more than the business is worth
-  return { gross, bprRelieved, chargeable: Math.max(0, gross - bprRelieved) };
+
+  // Alternative investments held inside investments[] (EIS/SEIS/VCT/bonds/crypto/
+  // PE) that are NOT ISA/GIA (those are already in the estate via a.isa/a.gia).
+  // Classify each by the canonical taxonomy estate field: 'in' = chargeable now;
+  // 'from-2027' = in estate only once pension-IHT applies (returned separately so
+  // the engines add it on the post-2027 path only); 'outside' = excluded. (#17)
+  let invChargeable = 0, invFrom2027 = 0;
+  const invs = entity?.assets?.investments;
+  if (Array.isArray(invs)) {
+    for (const inv of invs) {
+      const ty = String(inv.type || '').toLowerCase();
+      if (ty.includes('isa') || ty === 'gia' || ty.includes('general-investment')) continue;
+      const est = classifyAsset(inv.type)?.estate;
+      const v = +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0) || 0;
+      if (est === 'in') invChargeable += v;
+      else if (est === 'from-2027') invFrom2027 += v;
+    }
+  }
+
+  const grossTotal = gross + invChargeable;
+  return {
+    gross: grossTotal,
+    bprRelieved,
+    chargeable: Math.max(0, grossTotal - bprRelieved),
+    from2027: invFrom2027,   // EIS/SEIS etc — added to the estate only post-2027
+  };
 }
 
 /**

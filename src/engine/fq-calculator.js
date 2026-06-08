@@ -665,6 +665,10 @@ export function ihtDynamic(e, includeSipp = true, drawdownOverride = null) {
   // `entity.estate?.funeralExpenses || 5000`) — its omission here was the last
   // ~£2k of the ihtDynamic↔te_ihtExposure gap.
   const funeral = +(e.estate?.funeralExpenses) || 5000;
+  // NB: extras.from2027 (EIS/SEIS post-2027 alts) are deliberately NOT added here.
+  // ihtSippDelta isolates the SIPP via ihtDynamic(incl) − ihtDynamic(excl); gating
+  // these on includeSipp would leak £9k of EIS/SEIS IHT into the SIPP CoI. The
+  // post-2027 alt inclusion is modelled in te_ihtExposure (postPension path) only.
   const netEstate   = Math.max(0, gross + extras.gross - liabilities - funeral);
 
   let nrb  = TAX.nrb;  if (_isCouple(e)) nrb  *= 2;

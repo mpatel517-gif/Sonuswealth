@@ -662,6 +662,9 @@ export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
   // (DLA, alternatives) is taxed. (Task #16, 2026-06-08.)
   const extras = estateExtras(entity);
   gross += extras.gross;
+  // EIS/SEIS-style alts enter the chargeable estate only from April 2027 (same
+  // regime gate as unused pensions). Pre-2027 they sit outside.
+  if (postPensionIHT) gross += extras.from2027;
 
   // Deductions
   const debtTotal   = a.liabilities;

@@ -112,6 +112,95 @@ export function resolveExistingId(e, category, itemType, matchKey) {
   return item.id
 }
 
+// ── Life-event fold (X29 / Timeline §F) ──────────────────────────────────────
+// Plain-English label per subtype — shared by the fold + the "what changed"
+// causality strip so they never drift.
+export const LIFE_EVENT_LABELS = {
+  inheritance:                'Inheritance received',
+  redundancy:                 'Redundancy',
+  business_sale:              'Business sale',
+  property_sale:              'Property sale',
+  property_purchase:          'Property purchase',
+  retirement:                 'Retirement',
+  pension_crystallisation:    'Pension crystallised',
+  serious_illness:            'Serious illness',
+  marriage:                   'Marriage',
+  divorce:                    'Divorce',
+  child_birth:                'New child',
+  dependant_death:            'Loss of a dependant',
+  partner_death:              'Loss of a partner',
+  jurisdiction_move:          'Moved abroad',
+  employment_change_self_emp: 'Became self-employed',
+  employment_change_employed: 'New job',
+}
+
+// Add cash to wherever netWorth actually reads it: bank[] is authoritative when
+// populated (per _helpers.cashTotal), else the legacy cash.total / cash.own
+// scalar. Boosting the wrong slot is why a naive cash.total bump didn't move NW.
+function _addCash(e, amount) {
+  if (!(amount > 0)) return
+  e.assets = e.assets || {}
+  const a = e.assets
+  if (Array.isArray(a.bank) && a.bank.length > 0) {
+    const acct = a.bank[0]
+    if (acct.balance_gbp != null) acct.balance_gbp = (+acct.balance_gbp || 0) + amount
+    else acct.balance = (+acct.balance || 0) + amount
+    return
+  }
+  a.cash = (a.cash && typeof a.cash === 'object') ? a.cash : {}
+  if (a.cash.total != null)    a.cash.total = (+a.cash.total || 0) + amount
+  else if (a.cash.own != null) a.cash.own   = (+a.cash.own   || 0) + amount
+  else                         a.cash.total = amount
+}
+
+function _zeroEmploymentIncome(e) {
+  if (e.income && typeof e.income === 'object') {
+    if (e.income.employment != null) e.income.employment = 0
+    if (e.income.salary != null)     e.income.salary = 0
+  }
+  if (e.individual && e.individual.gross_salary != null) e.individual.gross_salary = 0
+}
+
+// Fold a LIFE_EVENT onto the entity. Mutates in place (like applyFieldCorrection).
+// Asset-moving subtypes change real positions so the engine recomputes and the
+// "what changed" strip lights up; the rest are logged-only for now (they still
+// reopen risk dimensions + appear on the timeline). Returns true if recorded.
+export function applyLifeEvent(e, payload) {
+  if (!payload || !payload.subtype) return false
+  const sub = payload.subtype
+  const amount = +payload.amount || 0
+  switch (sub) {
+    case 'inheritance':
+      // Capital receipt — tax-free to the beneficiary; lands as cash (NW step-up).
+      _addCash(e, amount)
+      break
+    case 'redundancy':
+      // Employment income stops; any redundancy payout lands as cash.
+      _zeroEmploymentIncome(e)
+      _addCash(e, amount)
+      break
+    case 'business_sale':
+    case 'property_sale':
+      // Proceeds land as cash. (Removing the sold asset to avoid double-count is
+      // handled by a paired ASSET_REMOVED in the richer capture flow.)
+      _addCash(e, amount)
+      break
+    default:
+      // marriage / divorce / child_birth / retirement / move / illness / … —
+      // logged-only for v1: reopens risk dimensions + shows on the timeline,
+      // no direct balance-sheet move yet.
+      break
+  }
+  if (!Array.isArray(e._lifeEvents)) e._lifeEvents = []
+  e._lifeEvents.push({
+    subtype: sub,
+    label: LIFE_EVENT_LABELS[sub] || sub,
+    amount: amount || null,
+    date: payload.date || null,
+  })
+  return true
+}
+
 // Apply a single-field correction with provenance + append to audit trail.
 // Returns true if the field was set, false on a broken path (no-op).
 export function applyFieldCorrection(e, payload) {

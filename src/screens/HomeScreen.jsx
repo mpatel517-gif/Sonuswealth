@@ -67,6 +67,7 @@ import {
 } from '../engine/fq-calculator.js'
 import Drillable from '../components/shared/Drillable.jsx'
 import { DiffBadge, CausalityStripe } from '../components/shared/Diff.jsx'
+import { useEvents, EV } from '../state/events.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
 import { DIMENSIONS } from '../config/dimensions.js'
 import { getWealthTarget, gapDims as gapDimsVsTarget } from '../config/wealth-targets.js'
@@ -744,44 +745,145 @@ const MODE_BRIEF = {
     `Drag any radar point to explore what-if. Moving a dimension outward = better. Inward = worse. Watch the score in the centre update live.`,
 }
 
+// Curated life-event options (subset of the 16-subtype matrix). `amount: true`
+// folds a balance-sheet change (NW moves, strip fires); the rest are logged-only
+// for now (still recorded + reopen risk dims).
+const LIFE_EVENT_OPTIONS = [
+  { sub: 'inheritance',       label: 'Inheritance',      amount: true,  hint: 'A lump sum you received — lands as cash, tax-free to you.' },
+  { sub: 'redundancy',        label: 'Redundancy',       amount: true,  hint: 'Employment income stops; any payout lands as cash.' },
+  { sub: 'business_sale',     label: 'Sold a business',  amount: true,  hint: 'Net proceeds after tax.' },
+  { sub: 'property_sale',     label: 'Sold a property',  amount: true,  hint: 'Net proceeds after costs.' },
+  { sub: 'retirement',        label: 'Retired',          amount: false },
+  { sub: 'marriage',          label: 'Got married',      amount: false },
+  { sub: 'divorce',           label: 'Divorce',          amount: false },
+  { sub: 'child_birth',       label: 'New child',        amount: false },
+  { sub: 'jurisdiction_move', label: 'Moved abroad',     amount: false },
+  { sub: 'serious_illness',   label: 'Serious illness',  amount: false },
+]
+
+// Modal: log a real-life change → commits a LIFE_EVENT → the entity refolds and
+// the "what changed" strip updates live. FCA-safe (information, not advice).
+function LifeEventSheet({ entity, onClose }) {
+  const { commit } = useEvents()
+  const pid = entity?.id || entity?.personaId
+  const [sub, setSub] = useState(null)
+  const [amount, setAmount] = useState('')
+  const opt = LIFE_EVENT_OPTIONS.find(o => o.sub === sub)
+  const needsAmount = !!opt?.amount
+  const canLog = !!pid && !!sub && (!needsAmount || +amount > 0)
+  const log = () => {
+    if (!canLog) return
+    commit(pid, {
+      type: EV.LIFE_EVENT, ts: Date.now(),
+      payload: { subtype: sub, amount: needsAmount ? Math.round(+amount) : null, date: new Date().toISOString().slice(0, 10) },
+    })
+    onClose()
+  }
+  return (
+    <div role="dialog" aria-label="Log a life event" onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }}>
+      <div onClick={e => e.stopPropagation()} className="sw-card" style={{
+        width: '100%', maxWidth: 520, margin: 0, borderRadius: '18px 18px 0 0',
+        padding: 18, maxHeight: '82vh', overflowY: 'auto',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>Log a life event</div>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--c-text3)', cursor: 'pointer' }}>×</button>
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 12 }}>
+          Tell Sonu what changed — your picture updates instantly. Information only.
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
+          {LIFE_EVENT_OPTIONS.map(o => (
+            <button key={o.sub} onClick={() => setSub(o.sub)} className="sw-pressable" style={{
+              fontSize: 12, fontWeight: 700, padding: '7px 12px', borderRadius: 100, cursor: 'pointer',
+              border: '1px solid ' + (sub === o.sub ? 'var(--c-acc)' : 'var(--c-border)'),
+              background: sub === o.sub ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+              color: sub === o.sub ? 'var(--c-acc)' : 'var(--c-text2)',
+            }}>{o.label}</button>
+          ))}
+        </div>
+        {needsAmount && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-text3)', fontWeight: 700 }}>£</span>
+              <input type="number" inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value)}
+                placeholder="Amount" aria-label="Amount in pounds" style={{
+                  width: '100%', padding: '10px 12px 10px 24px', fontSize: 15, fontWeight: 700,
+                  borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface2)', color: 'var(--c-text)',
+                }} />
+            </div>
+          </div>
+        )}
+        {opt?.hint && <div style={{ fontSize: 11.5, color: 'var(--c-text3)', lineHeight: 1.45, marginBottom: 12 }}>{opt.hint}</div>}
+        <button onClick={log} disabled={!canLog} className="sw-pressable" style={{
+          width: '100%', padding: '12px', borderRadius: 12, border: 'none', cursor: canLog ? 'pointer' : 'not-allowed',
+          background: canLog ? 'var(--c-acc)' : 'var(--c-surface2)', color: canLog ? '#fff' : 'var(--c-text3)',
+          fontSize: 14, fontWeight: 800,
+        }}>Log it</button>
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'center', marginTop: 8, lineHeight: 1.4 }}>
+          Information only — this updates your figures, not personal advice.
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Zone 2 (HOME-12) — "What changed since you last looked" ──────────────────
 // X29 daily-delta strip. `diffs` is engine diffSet() output: [] when nothing
 // material changed (honest empty state, not a fabricated "0"), else one badge
 // per changed headline metric with a causality stripe naming what moved it.
-function WhatChangedStrip({ diffs }) {
+// The "Log a life event" affordance closes the loop: logging one refolds the
+// entity and this strip updates live.
+function WhatChangedStrip({ diffs, entity }) {
+  const [sheet, setSheet] = useState(false)
   const items = Array.isArray(diffs) ? diffs : []
   const sources = useMemo(
     () => [...new Set(items.flatMap(d => Array.isArray(d.sources) ? d.sources : []))],
     [items]
   )
-  if (!items.length) {
-    return (
-      <div style={{
-        margin: '4px 16px 0', padding: '8px 12px',
-        display: 'flex', alignItems: 'center', gap: 8,
-        fontSize: 12, color: 'var(--c-text3)',
-        background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 12,
-      }}>
-        <span style={{ color: 'var(--c-acc)', fontWeight: 800 }}>✓</span>
-        <span>Up to date — nothing has changed since you last looked.</span>
-      </div>
-    )
-  }
+  const logBtn = (
+    <button onClick={() => setSheet(true)} className="sw-pressable" style={{
+      background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+      fontSize: 11.5, fontWeight: 700, color: 'var(--c-acc)', whiteSpace: 'nowrap',
+    }}>Log a life event ›</button>
+  )
   return (
-    <div className="sw-card" style={{ margin: '4px 16px 0', padding: 0, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 14px 8px' }}>
-        <div className="sw-eyebrow" style={{ marginBottom: 8 }}>What changed since you last looked</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'center' }}>
-          {items.map(d => (
-            <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text2)' }}>{d.label}</span>
-              <DiffBadge value={d.delta} since={d.since} format={d.format === 'currency' ? 'currency' : undefined} />
-            </div>
-          ))}
+    <>
+      {!items.length ? (
+        <div style={{
+          margin: '4px 16px 0', padding: '8px 12px',
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          fontSize: 12, color: 'var(--c-text3)',
+          background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 12,
+        }}>
+          <span style={{ color: 'var(--c-acc)', fontWeight: 800 }}>✓</span>
+          <span style={{ flex: 1, minWidth: 0 }}>Up to date — nothing has changed since you last looked.</span>
+          {logBtn}
         </div>
-      </div>
-      {sources.length > 0 && <CausalityStripe sources={sources} />}
-    </div>
+      ) : (
+        <div className="sw-card" style={{ margin: '4px 16px 0', padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '10px 14px 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <div className="sw-eyebrow">What changed since you last looked</div>
+              {logBtn}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'center' }}>
+              {items.map(d => (
+                <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text2)' }}>{d.label}</span>
+                  <DiffBadge value={d.delta} since={d.since} format={d.format === 'currency' ? 'currency' : undefined} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {sources.length > 0 && <CausalityStripe sources={sources} />}
+        </div>
+      )}
+      {sheet && <LifeEventSheet entity={entity} onClose={() => setSheet(false)} />}
+    </>
   )
 }
 
@@ -2144,7 +2246,7 @@ export default function HomeScreen({
           entity. Shows nothing-fabricated: no changes → an honest "up to date"
           line. Lights up the moment a value is updated or a life event is
           logged (F3), so it answers §Q1.1 Q2 directly. */}
-      <WhatChangedStrip diffs={diffs} />
+      <WhatChangedStrip diffs={diffs} entity={entity} />
 
       {/* ── §Z10 SIPP-IHT countdown (regulatory: Finance Act 2026) ──── */}
       <SippIhtCountdown entity={entity} onNav={onNav} />

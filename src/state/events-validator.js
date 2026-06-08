@@ -19,8 +19,19 @@ export const EV = {
   DOCUMENT_CAPTURED:     'DOCUMENT_CAPTURED',
   SCENARIO_SAVED:        'SCENARIO_SAVED',
   PREFERENCE_SET:        'PREFERENCE_SET', // user preference override (e.g. lifeStageOverride) → folds into entity.preferences
+  LIFE_EVENT:            'LIFE_EVENT', // X29/Timeline §F: a real-life change (inheritance, redundancy, …) → folds into the entity + reopens risk dims
   document_captured:     'document_captured', // legacy lowercase alias from DataCapture
 }
+
+// The 16 recognised life-event subtypes (mirror of the risk engine's
+// _LIFE_EVENT_DIM_MATRIX). A LIFE_EVENT payload carries one of these as
+// `payload.subtype`, plus optional `amount` / `date` / field overrides.
+export const LIFE_EVENT_SUBTYPES = [
+  'marriage', 'divorce', 'child_birth', 'dependant_death', 'partner_death',
+  'employment_change_self_emp', 'employment_change_employed', 'redundancy',
+  'jurisdiction_move', 'property_purchase', 'property_sale', 'inheritance',
+  'serious_illness', 'retirement', 'business_sale', 'pension_crystallisation',
+]
 
 export function validateEvent(event) {
   const errors = []

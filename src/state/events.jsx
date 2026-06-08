@@ -48,7 +48,7 @@ export { EV, validateEvent } from './events-validator.js'
 // committed event throws "EV is not defined". (Latent since the fold path was
 // never exercised end-to-end until the L3-2 leaf-edit shipped.)
 import { EV, validateEvent as _validateEvent } from './events-validator.js'
-import { resolveExistingId, applyFieldCorrection } from './events-fold-helpers.js'
+import { resolveExistingId, applyFieldCorrection, applyLifeEvent, LIFE_EVENT_LABELS } from './events-fold-helpers.js'
 
 // ─── Pure reducer ───────────────────────────────────────────────────────────
 // events[personaId] = [{ type, ts, payload }, ...]
@@ -184,6 +184,15 @@ export function applyEvents(baseEntity, events = []) {
         if (ev.payload && typeof ev.payload === 'object') {
           e.preferences = { ...(e.preferences || {}), ...ev.payload }
         }
+        break
+      }
+
+      case EV.LIFE_EVENT: {
+        // X29 / Timeline §F — a real-life change. Asset-moving subtypes
+        // (inheritance, redundancy, business/property sale) fold a balance-sheet
+        // change so the engine recomputes and the "what changed" strip fires;
+        // the rest are logged-only (still reopen risk dims + show on Timeline).
+        applyLifeEvent(e, ev.payload)
         break
       }
 
@@ -844,9 +853,14 @@ const _DIFF_EVENT_LABELS = {
 }
 
 // Distinct causality labels from a committed event log, applied to every
-// headline metric the strip shows. Empty log → {} (diffSet then returns []).
+// headline metric the strip shows. LIFE_EVENTs use their subtype label
+// ("Inheritance received"). Empty log → {} (diffSet then returns []).
 function diffSourcesFromLog(log = []) {
-  const labels = [...new Set(log.map(ev => _DIFF_EVENT_LABELS[ev.type] || (ev.payload?.label)).filter(Boolean))]
+  const labels = [...new Set(log.map(ev =>
+    ev.type === EV.LIFE_EVENT
+      ? (LIFE_EVENT_LABELS[ev.payload?.subtype] || ev.payload?.label || 'Life event')
+      : (_DIFF_EVENT_LABELS[ev.type] || ev.payload?.label)
+  ).filter(Boolean))]
   if (!labels.length) return {}
   return { netWorth: labels, wealthScore: labels, riskScore: labels }
 }
@@ -862,6 +876,10 @@ export function useEffectiveEntity(baseEntity, personaId) {
   const baseline = useMemo(() => engineSnapshot(baseEntity), [baseEntity])
   return useMemo(() => {
     const eff = applyEvents(baseEntity, log)
-    return { ...eff, _baseline: baseline, _diffSources: diffSourcesFromLog(log) }
+    return {
+      ...eff,
+      _baseline: baseline,
+      _diffSources: diffSourcesFromLog(log),
+    }
   }, [baseEntity, log, baseline])
 }

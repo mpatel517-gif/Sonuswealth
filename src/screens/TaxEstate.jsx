@@ -699,10 +699,40 @@ function HMRCComposition({ components = [], onOpen }) {
     </button>
   )
 }
-function TaxVsHMRC({ incomeGross, incomeTax, incomeComponents, estateGross, iht, family, onDrill }) {
+// Projection banner shown when a non-"Today" viewmode is active (#23). For Future
+// it states the real, dated post-2027 estate change; for Plan / What-if it is
+// honest that those projection layers are the next build slice (no dead read).
+function ProjectionBanner({ viewMode, ihtToday, ihtForecast }) {
+  let tone = 'rgba(94,219,194,.12)', border = 'rgba(94,219,194,.30)', text
+  if (viewMode === 'forecast') {
+    const delta = Math.max(0, (ihtForecast || 0) - (ihtToday || 0))
+    text = <>
+      <strong>Future — projected to April 2027 rules.</strong> Your pension enters the estate, so inheritance
+      tax rises from {fmt(ihtToday)} to {fmt(ihtForecast)} ({delta > 0 ? `+${fmt(delta)}` : 'no change'}).
+      Income tax is unchanged: thresholds are frozen to 2028, so at today’s income your bill is the same —
+      fiscal drag only bites as your income rises.
+    </>
+  } else {
+    tone = 'rgba(255,179,71,.12)'; border = 'rgba(255,179,71,.32)'
+    const which = viewMode === 'plan' ? 'Plan' : 'What-if'
+    const what = viewMode === 'plan'
+      ? 'applying your saved plans to project the post-plan position'
+      : 'Budget what-if toggles that override individual rules'
+    text = <><strong>{which} view.</strong> Showing today’s position — {what} is the next build slice, not yet wired.</>
+  }
+  return (
+    <div style={{
+      marginBottom: 12, padding: '9px 12px', borderRadius: 10,
+      background: tone, border: `1px solid ${border}`,
+      fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5,
+    }}>{text}</div>
+  )
+}
+function TaxVsHMRC({ incomeGross, incomeTax, incomeComponents, estateGross, iht, family, banner, onDrill }) {
   const incKeep = Math.max(0, incomeGross - incomeTax)
   return (
     <div className="card sw-card-elevated">
+      {banner}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
         <div className="sw-eyebrow">You vs the taxman</div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>tap a figure to see how</div>
@@ -3367,6 +3397,16 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   // ── X29 diff layer — last-seen totals ────────────────────────────────────
   const snap = useMemo(() => readSnapshot(entity?.id), [entity?.id])
   const exposureToday = useMemo(() => safe(() => te_ihtExposure(entity), null), [entity, bv])
+  // Phase-2 viewmode projection (#23). 'forecast' (Future) recomputes the estate
+  // against post-April-2027 rules (SIPP enters the estate) — a real, dated change
+  // reusing the verified te_ihtExposure scenario path, no fabricated assumptions.
+  // Income fiscal drag (frozen thresholds) is correctly nil at constant income,
+  // so the Future banner explains it rather than inventing income growth.
+  const forecast = viewMode === 'forecast'
+  const exposureForMode = useMemo(
+    () => forecast ? safe(() => te_ihtExposure(entity, undefined, { postPension: true }), exposureToday) : exposureToday,
+    [forecast, entity, bv, exposureToday],
+  )
   const totalTaxNow   = useMemo(() => safe(() => te_taxThisYear(entity)?.total_tax, 0), [entity, bv])
   useEffect(() => {
     writeSnapshot(entity?.id, {
@@ -3701,9 +3741,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
             { label: 'National Insurance', value: taxTiles.nics },
             { label: 'Capital gains', value: taxTiles.cgt },
           ]}
-          estateGross={exposureToday?.gross_estate || 0}
-          iht={exposureToday?.iht_due || 0}
-          family={exposureToday?.beneficiary_value || 0}
+          estateGross={exposureForMode?.gross_estate || 0}
+          iht={exposureForMode?.iht_due || 0}
+          family={exposureForMode?.beneficiary_value || 0}
+          banner={viewMode !== 'actual' ? <ProjectionBanner viewMode={viewMode}
+            ihtToday={exposureToday?.iht_due || 0} ihtForecast={exposureForMode?.iht_due || 0} /> : null}
           onDrill={(target) => { setSubTab(target.startsWith('est') ? 'estate' : 'tax'); setOpenTile(target) }}
         />
       )}

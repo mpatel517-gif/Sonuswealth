@@ -40,7 +40,7 @@ export default function InheritanceStory({ entity, onDrillMetric }) {
   // Line 1 — gross IHT-relevant estate (engine-derived, not netWorth)
   lines.push({
     icon: '◈',
-    text: `If you died today, your IHT-relevant estate is worth ${fmt(gross)}.`,
+    text: `If you died today, the estate counted for Inheritance Tax (IHT) is worth ${fmt(gross)}.`,
   })
 
   // Line 1b — deductions (F-CAT-05): make the mortgage/funeral/debts visible
@@ -178,8 +178,8 @@ export default function InheritanceStory({ entity, onDrillMetric }) {
         marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--c-border)',
         fontSize: 11, color: 'var(--c-text3)', fontStyle: 'italic',
       }}>
-        Tap any line to see the calculation behind it. Tap below for the IHT
-        waterfall and gift clock.
+        Tap a highlighted line for the breakdown behind it. The cards below show
+        the full Inheritance Tax (IHT) waterfall and the 7-year gift clock.
       </div>
     </div>
   )

@@ -501,7 +501,7 @@ function TaxSummary({ entity }) {
     <div className="card sw-card-elevated">
       <SectionHead
         title="This year — tax position"
-        sub={`Gross ${fmt(grossInc)} · ANI ${fmt(ani.ani)} · Effective rate ${fmtPct(effRate)}`}
+        sub={`Gross ${fmt(grossInc)} · adjusted net income ${fmt(ani.ani)} · Effective rate ${fmtPct(effRate)}`}
         accessory={<ProvenanceChip sources={['HMRC bands UK-2026.1', 'entity.income', 'entity.assets.portfolio']} />}
       />
       <div style={{
@@ -510,7 +510,7 @@ function TaxSummary({ entity }) {
         gap: 8,
       }}>
         <StatTile
-          label="Income tax (YTD)"
+          label="Income tax (this year)"
           value={fmt(components.income_tax || 0)}
           colour="var(--c-warning)"
         />
@@ -520,12 +520,12 @@ function TaxSummary({ entity }) {
           colour="var(--c-warning)"
         />
         <StatTile
-          label="CGT"
+          label="Capital gains tax"
           value={fmt(components.cgt || 0)}
           colour="var(--c-danger)"
         />
         <StatTile
-          label="NIC"
+          label="National Insurance"
           value={fmt(components.nics || 0)}
           colour="var(--c-accent)"
         />
@@ -582,7 +582,7 @@ function IncomeTaxDetail({ entity }) {
           borderRadius: 'var(--r-md)',
           fontSize: 12, color: 'var(--c-amber-text)', lineHeight: 1.4,
         }}>
-          <strong>60% effective rate band</strong> · ANI is in the £100k–£125,140 PA taper.
+          <strong>60% effective rate band</strong> · adjusted net income is in the £{TAX.adjustedNetIncomeCliff.toLocaleString()}–£{TAX.art.toLocaleString()} personal-allowance taper.
           Each £1 of income loses 50p of personal allowance — effective marginal 60%.
         </FadeInOnMount>
       )}
@@ -668,7 +668,7 @@ function ANIStepwise({ entity }) {
     <div className="card sw-card-elevated">
       <SectionHead
         title="Adjusted Net Income (ANI)"
-        sub="6-step stepwise computation — UK-IT-19"
+        sub="The income figure HMRC uses for the £100k allowance taper — worked step by step"
       />
       <RevealStagger interval={50} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {rows.map(r => (
@@ -767,9 +767,9 @@ function CGTDetail({ entity }) {
         <StatTile label="Carry-forward losses" value={fmt(cgt.carry_forward_losses || 0)} />
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {badrFlagged && <Chip tone="warn">BADR 14% → 18% in 2026/27</Chip>}
+        {badrFlagged && <Chip tone="warn">Business sale relief (BADR) 14% → {Math.round((TAX?.badrRate ?? 0.18) * 100)}% in 2026/27</Chip>}
         {(cgt.pending || []).some(p => p.bed_and_isa_opportunity) && (
-          <Chip tone="info">Bed-and-ISA opportunity</Chip>
+          <Chip tone="info">Bed-and-ISA opportunity (sell then re-buy inside an ISA)</Chip>
         )}
         {cgt.spousal_transfer_opportunity && (
           <Chip tone="info">Spousal transfer headroom</Chip>
@@ -788,7 +788,7 @@ function DividendDetail({ entity }) {
   const aPct = allowance.total > 0 ? Math.round((allowance.used / allowance.total) * 100) : 0
   return (
     <div className="card sw-card-elevated">
-      <SectionHead title="Dividend tax" sub={`Effective rate ${fmtPct(div.effective_rate || 0)} on £${(div.gia_exposed || 0).toLocaleString()} GIA`} />
+      <SectionHead title="Dividend tax" sub={`Effective rate ${fmtPct(div.effective_rate || 0)} on £${(div.gia_exposed || 0).toLocaleString()} held in a general investment account (GIA)`} />
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
           <span style={{ color: 'var(--c-text3)' }}>Dividend allowance</span>
@@ -817,7 +817,7 @@ function DividendDetail({ entity }) {
           border: '1px solid rgba(0,229,168,.25)',
           borderRadius: 10, fontSize: 12, color: 'var(--c-success)',
         }}>
-          Held in an ISA, the dividend tax on this amount — about {fmt(div.move_to_isa_opportunity.tax_saving_annual)}/year —
+          Held in an ISA (Individual Savings Account — tax-free), the dividend tax on this amount — about {fmt(div.move_to_isa_opportunity.tax_saving_annual)}/year —
           would not apply (ISA headroom {fmt(div.move_to_isa_opportunity.isa_headroom)}).
         </div>
       )}
@@ -830,15 +830,15 @@ function AllowancesStrip({ entity }) {
   const at = safe(() => allowanceTracker(entity), null)
   if (!at) return null
   const items = [
-    { id: 'isa',       label: 'ISA',       d: at.isa },
-    { id: 'psa',       label: 'PSA',       d: at.psa },
-    { id: 'cgt',       label: 'CGT',       d: at.cgt },
-    { id: 'dividend',  label: 'Dividend',  d: at.dividend },
-    { id: 'pa',        label: 'Pers. Allow', d: at.pa },
+    { id: 'isa',       label: 'ISA (tax-free savings)',          d: at.isa },
+    { id: 'psa',       label: 'Personal savings allowance (PSA)', d: at.psa },
+    { id: 'cgt',       label: 'Capital gains tax-free amount',    d: at.cgt },
+    { id: 'dividend',  label: 'Dividend allowance',              d: at.dividend },
+    { id: 'pa',        label: 'Personal allowance',              d: at.pa },
   ].filter(x => x.d)
   return (
     <div className="card sw-card-elevated">
-      <SectionHead title="Allowance utilisation" sub={`Composite ${at.utilization || 0}%`} />
+      <SectionHead title="Allowance utilisation" sub={`Composite ${at.utilization || 0}% used`} />
       <RevealStagger interval={50} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
         {items.map(({ id, label, d }, i) => {
           const pctv = d.pctUsed ?? (d.limit ? Math.round((d.used || 0) / d.limit * 100) : 0)
@@ -867,9 +867,10 @@ function AllowancesStrip({ entity }) {
         borderRadius: 10,
         fontSize: 12, color: 'var(--c-warning)', lineHeight: 1.5,
       }}>
-        <strong>Cash-ISA £12k cap horizon</strong> · From 6 Apr 2027 the cash-ISA
-        sub-allowance falls to £12,000 for under-65s; the residual £8,000 must go to
-        S&S, IFISA, or LISA.
+        <strong>Cash-ISA £12k cap (announced)</strong> · From 6 Apr 2027 the amount you can hold in a
+        cash ISA is set to fall to £12,000 for under-65s; the remaining £8,000 of your £20,000 ISA
+        allowance would need to go into a stocks-and-shares ISA, an innovative-finance ISA, or a
+        Lifetime ISA instead.
       </div>
     </div>
   )
@@ -962,7 +963,7 @@ function DrawdownMatrix({ entity }) {
         </div>
         {inDepthLive && (
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-danger)' }}>
-            <strong>60% effective rate band</strong> — this drawdown pushes ANI into the £{TAX.adjustedNetIncomeCliff.toLocaleString()}–£{TAX.art.toLocaleString()} taper.
+            <strong>60% effective rate band</strong> — this drawdown pushes your adjusted net income into the £{TAX.adjustedNetIncomeCliff.toLocaleString()}–£{TAX.art.toLocaleString()} taper.
           </div>
         )}
         <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-text3)' }}>
@@ -1304,14 +1305,14 @@ function IHTWaterfall({ entity }) {
         })}
       </RevealStagger>
 
-      <SliderRow label="SIPP drawdown (annual)" value={deltas.sippDraw} max={120000} step={5000}
+      <SliderRow label="Pension (SIPP) drawdown — annual" value={deltas.sippDraw} max={120000} step={5000}
         onChange={v => setDeltas(d => ({ ...d, sippDraw: v }))}
         note="Modelled over 20 years — reduces estate by drawing down pension before death" />
-      <SliderRow label="Gifts / PETs" value={deltas.gift} max={Math.max(500000, declaredGift)} step={5000}
+      <SliderRow label="Gifts (potentially exempt transfers / PETs)" value={deltas.gift} max={Math.max(500000, declaredGift)} step={5000}
         onChange={v => setDeltas(d => ({ ...d, gift: v }))}
         note={declaredGift > 0
-          ? `Seeded from your declared £${(declaredGift/1000).toFixed(0)}k trust gift. IHT taper applies if death within 7 years.`
-          : "One-off gift. IHT taper applies if death within 7 years."} />
+          ? `Seeded from your declared £${(declaredGift/1000).toFixed(0)}k trust gift. A gift leaves your estate fully after 7 years; tax tapers between years 3 and 7.`
+          : "One-off gift. A gift leaves your estate fully after 7 years; tax tapers between years 3 and 7."} />
       <SliderRow label="Business relief positioning (BPR)" value={deltas.bpr} max={500000} step={5000}
         onChange={v => setDeltas(d => ({ ...d, bpr: v }))}
         note="Business + agricultural relief transitional rules apply — pre vs post 30-Oct-2024" />
@@ -1852,7 +1853,7 @@ function RNRBPlanning({ entity }) {
   return (
     <div className="card sw-card-elevated">
       <SectionHead
-        title="RNRB planning"
+        title="Residence nil-rate band (RNRB) planning"
         sub={`£${(effectiveRnrb || 0).toLocaleString()} effective · £${(lost || 0).toLocaleString()} lost to taper`}
         accessory={eligible ? <Chip tone="good">Eligible</Chip> : <Chip tone="bad">{elig?.reason || 'Not eligible'}</Chip>}
       />
@@ -1921,7 +1922,7 @@ function BPRAPRMechanics({ entity }) {
   return (
     <div className="card sw-card-elevated">
       <SectionHead
-        title="BPR & APR"
+        title="Business & agricultural relief (BPR / APR)"
         sub={`${entity?.isCouple ? 'Couples £5m pool' : 'Single £2.5m allowance'} · used ${fmt(bpr.used || 0)}`}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', marginBottom: 'var(--space-md)' }}>
@@ -2386,11 +2387,11 @@ function CGTDrillPanel({ entity, onClose }) {
             {taxable > 0 && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>CGT at 18% (basic rate)</span>
+                  <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>Capital gains tax at {Math.round((TAX?.cgtBasic ?? 0.18) * 100)}% (basic rate)</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums' }}>{fmt(taxBasic)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>CGT at 24% (higher rate)</span>
+                  <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>Capital gains tax at {Math.round((TAX?.cgtHigher ?? 0.24) * 100)}% (higher rate)</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums' }}>{fmt(taxHigher)}</span>
                 </div>
               </>
@@ -2441,7 +2442,7 @@ function IHTDrillPanel({ entity, onClose }) {
     { label: 'Nil-rate band',     value: -nilRate,      colour: 'var(--c-success)', sign: '−' },
     { label: 'Residence NRB',     value: -rnrb,         colour: 'var(--c-success)', sign: '−', hide: rnrb === 0 },
     { label: 'Taxable estate',    value: taxable,       colour: 'var(--c-warning)', sign: '=' },
-    { label: 'IHT @ 40%',        value: -ihtDue,       colour: 'var(--c-danger)',  sign: '−' },
+    { label: `IHT @ ${Math.round(TAX.ihtRate * 100)}%`, value: -ihtDue, colour: 'var(--c-danger)',  sign: '−' },
     { label: 'Family receives',   value: beneficiary,   colour: 'var(--c-acc)',     sign: '=' },
   ].filter(s => !s.hide && Math.abs(s.value) > 0)
 
@@ -2510,7 +2511,7 @@ function IHTDrillPanel({ entity, onClose }) {
               <div key={label} style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 13, color: 'var(--c-text2)' }}>{sign} {label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: colour, fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(Math.abs(value))}
                   </span>
                 </div>
@@ -2573,8 +2574,8 @@ function AllowanceDrillPanel({ entity, onClose }) {
   const at = safe(() => allowanceTracker(entity), null)
 
   const items = at ? [
-    { id: 'isa',       label: 'ISA',                limit: TAX.isaAllowance ?? 20000,  d: at.isa,      colour: 'var(--c-acc)',     desc: `Annual ISA limit: ${fmt(TAX.isaAllowance ?? 20000)}. Contributions don't reduce ANI.` },
-    { id: 'psa',       label: 'Personal Savings',   limit: null,                    d: at.psa,      colour: 'var(--c-success)', desc: 'PSA: £1,000 basic rate · £500 higher rate · £0 additional. Interest below threshold is tax-free.' },
+    { id: 'isa',       label: 'ISA (Individual Savings Account)', limit: TAX.isaAllowance ?? 20000,  d: at.isa,      colour: 'var(--c-acc)',     desc: `Annual ISA limit: ${fmt(TAX.isaAllowance ?? 20000)}. Contributions don't reduce your adjusted net income (ANI).` },
+    { id: 'psa',       label: 'Personal savings allowance (PSA)',   limit: null,                    d: at.psa,      colour: 'var(--c-success)', desc: `Tax-free interest each year: ${fmt(TAX.psaBasic ?? 1000)} basic rate · ${fmt(TAX.psaHigher ?? 500)} higher rate · ${fmt(TAX.psaAdditional ?? 0)} additional rate.` },
     { id: 'cgt',       label: 'CGT exemption',      limit: TAX.cgaAllowance ?? 3000, d: at.cgt,    colour: 'var(--c-warning)', desc: `Annual CGT exemption: ${fmt(TAX.cgaAllowance ?? 3000)}. Unused allowance cannot carry forward.` },
     { id: 'dividend',  label: 'Dividend allowance', limit: TAX.dividendAllowance ?? 500, d: at.dividend, colour: 'var(--c-gold)', desc: `Dividend allowance: ${fmt(TAX.dividendAllowance ?? 500)}/yr. Fully used = higher tax next threshold.` },
     { id: 'pa',        label: 'Personal Allowance', limit: TAX.pa ?? 12570, d: at.pa, colour: 'var(--c-text2)', desc: `Reduces by £1 for every £2 over ${fmt(TAX.adjustedNetIncomeCliff)} ANI. Fully lost at ${fmt(TAX.art)}.` },
@@ -2747,8 +2748,8 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
         </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3 }}>
           {past
-            ? 'From 6 April 2027, unused pensions are inside your estate for IHT (Finance Act 2026).'
-            : `From 6 April 2027 — in ~${monthsLeft} months — unused pensions enter your estate for IHT. Planning options collapse after this date.`}
+            ? 'From 6 April 2027, unused pensions are inside your estate for Inheritance Tax — IHT (Finance Act 2026).'
+            : `From 6 April 2027 — in ~${monthsLeft} months — unused pensions enter your estate for Inheritance Tax (IHT). Planning options collapse after this date.`}
         </div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.4 }}>
           Your current pension exposure: <strong style={{ color: 'var(--c-text)' }}>£{Math.round(pensionPot).toLocaleString('en-GB')}</strong>
@@ -2907,11 +2908,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     const ani = safe(() => calcANI(entity).ani, 0)
     const allow = safe(() => allowanceTracker(entity), null)
     return {
-      a: { label: 'YTD tax', value: fmt(totalTaxNow || 0), colour: 'var(--c-danger)',
+      a: { label: 'Tax this year', value: fmt(totalTaxNow || 0), colour: 'var(--c-danger)',
            accessory: taxSince != null && taxSince !== totalTaxNow
              ? <DiffBadge value={(totalTaxNow || 0) - taxSince} since={null} format="currency" />
              : null },
-      b: { label: 'ANI', value: fmt(ani || 0),
+      b: { label: 'Adj. net income', value: fmt(ani || 0),
            sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band' : '' },
       c: { label: 'Allowances', value: `${allow?.utilization || 0}%`,
            sub: 'composite usage' },
@@ -3170,7 +3171,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
           <div style={{ position: 'relative' }}>
             <RevealCard
               cardId="te-bpr-apr"
-              title="BPR & APR mechanics"
+              title="Business & agricultural relief (BPR / APR) mechanics"
               entity={{ ...(entity || {}), lifeStage }}
               // F-CAT-02: BPR clock starts the day the holding is bought —
               // surface the card whenever the user has EIS/SEIS/VCT/business

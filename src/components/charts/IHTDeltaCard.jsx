@@ -187,7 +187,7 @@ function CompositionBar({ today, post2027 }) {
               marginRight: 4,
             }}
           />
-          NRB {fmt(nrb)}
+          Nil-rate band (NRB) {fmt(nrb)}
         </span>
         <span>
           <span
@@ -201,7 +201,7 @@ function CompositionBar({ today, post2027 }) {
               marginRight: 4,
             }}
           />
-          RNRB {fmt(rnrb)}
+          Residence band (RNRB) {fmt(rnrb)}
         </span>
         <span>
           <span

@@ -139,15 +139,18 @@ const PLAN_TYPES = [
 ]
 
 // ─── Goal templates (spec §9.4) ──────────────────────────────────────────────
+// `metric` MUST be one of the supported goal-seek metrics rendered in
+// GoalSeekSheet's <select> (wealthScore · riskScore · netWorth · iht).
+// Anything else opens the sheet on a blank metric the solver can't handle.
 const GOAL_TEMPLATES = [
-  { id:'retire',    label:'Retire at age N',             icon:'⏱', template_id:'fi'                  },
-  { id:'mortgage',  label:'Pay off mortgage',             icon:'🏠', template_id:'custom'              },
-  { id:'nw_target', label:'Net worth target',             icon:'📈', template_id:'net_worth_target'    },
-  { id:'emergency', label:'Emergency fund',               icon:'🛡', template_id:'savings_rate'        },
-  { id:'income',    label:'Target retirement income',     icon:'💰', template_id:'fi'                  },
-  { id:'iht_free',  label:'IHT-free estate',              icon:'⚖', template_id:'custom'              },
-  { id:'uni_fund',  label:"Children's university fund",   icon:'🎓', template_id:'custom'              },
-  { id:'deposit',   label:'First home deposit',           icon:'🔑', template_id:'net_worth_target'    },
+  { id:'retire',    label:'Retire at a target age',       icon:'⏱', metric:'netWorth'    },
+  { id:'mortgage',  label:'Pay off mortgage',             icon:'🏠', metric:'netWorth'    },
+  { id:'nw_target', label:'Net worth target',             icon:'📈', metric:'netWorth'    },
+  { id:'emergency', label:'Emergency fund',               icon:'🛡', metric:'netWorth'    },
+  { id:'income',    label:'Target retirement income',     icon:'💰', metric:'netWorth'    },
+  { id:'iht_free',  label:'Inheritance-tax-free estate',  icon:'⚖', metric:'iht'         },
+  { id:'uni_fund',  label:"Children's university fund",   icon:'🎓', metric:'netWorth'    },
+  { id:'deposit',   label:'First home deposit',           icon:'🔑', metric:'netWorth'    },
 ]
 
 // Range-picker tokens for §B (ghost pills · sw-press · is-active)
@@ -514,18 +517,18 @@ function SectionA({ entity }) {
             : ' · this year'}
           {NMPA != null && overrideAge < NMPA && (
             <span style={{ color: 'var(--c-warning)', marginLeft: 6 }}>
-              — below NMPA {NMPA}: pensions not yet accessible at this age.
+              — below the minimum pension age (NMPA) of {NMPA}: pensions not yet accessible at this age.
             </span>
           )}
         </div>
         <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
-          Drag to model a different retirement age — a planning input, not advice. PENDING PROFESSIONAL SIGN-OFF.
+          Drag to model a different retirement age — a planning input, not advice.
         </div>
       </div>
 
       {/* §A causality stripe (spec §X29) — sources for life-stage derivation */}
       <div style={{ margin: 'var(--space-sm) calc(-1 * var(--space-xl)) calc(-1 * var(--space-lg))' }}>
-        <CausalityStripe sources={['DOB · entity.individual.dob', `bundle: ${entity?.rulesVersion || 'UK-2026.1'}`]} />
+        <CausalityStripe sources={['Your date of birth', 'UK tax rules 2026/27']} />
       </div>
     </FadeInOnMount>
   )
@@ -744,7 +747,7 @@ function SectionB({ scoreJourneyData, onViewModeChange, rangeId, onRangeChange }
           border: '1px solid color-mix(in srgb, var(--c-success) 20%, transparent)', fontSize: 11,
         }}>
           <span style={{ color:'var(--c-success)', fontWeight: 700 }}>Retirement plan active</span>
-          <span style={{ color: 'var(--c-text2)' }}> — Forecast-vs-Plan tracking enabled (spec §X28.6)</span>
+          <span style={{ color: 'var(--c-text2)' }}> — forecast-vs-plan tracking enabled</span>
         </div>
       )}
       {planAvailable && (
@@ -765,7 +768,7 @@ function SectionB({ scoreJourneyData, onViewModeChange, rangeId, onRangeChange }
           background: 'var(--c-surface2)', borderRadius: 'var(--r-md)',
           fontSize: 11, color: 'var(--c-text3)',
         }}>
-          No retirement plan yet — defaults to Forecast. Set a plan in §E to enable Plan-mode overlay.
+          No retirement plan yet — defaults to Forecast. Set a plan in Scenarios below to enable Plan-mode overlay.
         </div>
       )}
 
@@ -783,9 +786,9 @@ function SectionB({ scoreJourneyData, onViewModeChange, rangeId, onRangeChange }
         margin: 'var(--space-sm) calc(-1 * var(--space-xl)) calc(-1 * var(--space-lg))',
       }}>
         <CausalityStripe sources={[
-          'calcScoreHistory · timeline-engine',
-          'calcRiskHistory · timeline-engine',
-          'D-SCORE-JOURNEY-1 mirror',
+          'Wealth Score history',
+          'Risk Score history',
+          'Mirrors your scores — read-only',
         ]} />
       </div>
     </div>
@@ -876,11 +879,11 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   if (coi > 0 && hasDCPension) {
     entries.push({
       id:'sipp-iht', date: sippDeadlineStr, daysAway:dl, category:'statutory',
-      title:'DC pensions enter estate for IHT',
+      title:'Defined-contribution pensions enter your estate for inheritance tax (IHT)',
       detail: perDay > 0 ? `${fmt(perDay)}/day accruing — ${fmt(coi)} total exposure` : `${fmt(coi)} at stake`,
       coiPerDay: perDay, coiTotal: coi,
       colour: dl < 90 ? 'var(--c-danger)' : dl < 180 ? 'var(--c-warning)' : 'var(--c-warning)',
-      sources: ['ihtSippDelta · fq-calculator', 'TAX.deadline'],
+      sources: ['Your pension exposure', 'HMRC pension-IHT rule (from April 2027)'],
     })
   }
 
@@ -896,7 +899,7 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
       title:`ISA allowance resets — ${fmt(TAX.isaAllowance)} available`,
       detail:'Unused allowance does not carry forward.',
       colour:'var(--c-accent)',
-      sources: ['TAX.isaAllowance · UK-2026.1'],
+      sources: ['ISA allowance · UK tax rules 2026/27'],
     })
   }
 
@@ -921,7 +924,7 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
       title:'Self-assessment submission deadline',
       detail:'File SA100 and pay any balance due.',
       colour:'var(--c-accent)',
-      sources: ['HMRC SA deadline'],
+      sources: ['HMRC Self-Assessment deadline'],
     })
   }
 
@@ -936,7 +939,7 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
         title:'State Pension begins',
         detail:`${fmt(entity?.income?.statePension?.annual ?? TAX.statePensionFull)}/yr — reduces drawdown requirement.`,
         colour:'var(--c-success)',
-        sources: ['entity.income.statePension', 'TAX.spa'],
+        sources: ['Your State Pension', 'State Pension age · UK tax rules 2026/27'],
       })
     }
   }
@@ -950,7 +953,7 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
         entries.push({
           id:`apq-${a.id}`, date:a.deadline, daysAway:dAway,
           category:'action', title:a.title, detail:a.detail, colour:'var(--c-muted)',
-          sources: [`calcAPQ · ${a.id}`],
+          sources: ['Your priority actions'],
         })
       }
     }
@@ -963,7 +966,7 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
       title:`Pension nomination${stale.length > 1 ? 's' : ''} need updating`,
       detail:`${stale.length} pension${stale.length > 1 ? 's' : ''} with stale or missing nominations.`,
       colour:'var(--c-warning)',
-      sources: ['nominationStatus · fq-calculator'],
+      sources: ['Your pension nominations'],
     })
   }
 
@@ -974,11 +977,11 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
     entries.push({
       id:'trust-gift', date:entity.assets.trustGifts.date, daysAway:null,
       category:'action',
-      title:`Gift clock — ${pct}% elapsed towards IHT-free`,
+      title:`Gift clock — ${pct}% through the 7-year inheritance-tax taper`,
       detail:`${taper.label} · ${fmt(entity.assets.trustGifts.total)} gifted.`,
       giftPct: pct,
       colour:'var(--c-warning)',
-      sources: ['giftPct · taperBand'],
+      sources: ['Your recorded gift', '7-year taper rule'],
     })
   }
 
@@ -991,9 +994,9 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
         id:'mortgage-fix', date:entity.liabilities.mortgage.endDate, daysAway:mortDays,
         category:'personal',
         title:'Mortgage fixed rate expires',
-        detail:'Review and remortgage before rate reverts to SVR.',
+        detail:'Review and remortgage before the rate reverts to the lender’s standard variable rate.',
         colour:'var(--c-warning)',
-        sources: ['entity.liabilities.mortgage.endDate'],
+        sources: ['Your mortgage end date'],
       })
     }
   }
@@ -1133,10 +1136,10 @@ function SectionC({ entity, windowId, onNav }) {
     return {
       ...e,
       date: giftOverrideDateISO,
-      title: `Gift clock — ${pct}% elapsed towards IHT-free`,
-      detail: `${taper.label} · ${fmt(giftAmt)} gifted · IHT rate on this gift ${(taper.rate * 100).toFixed(0)}%.`,
+      title: `Gift clock — ${pct}% through the 7-year inheritance-tax taper`,
+      detail: `${taper.label} · ${fmt(giftAmt)} gifted · inheritance-tax rate on this gift ${(taper.rate * 100).toFixed(0)}%.`,
       giftPct: pct,
-      sources: ['giftPct · taperBand', 'user-set gift (adjustable)'],
+      sources: ['Your recorded gift (adjustable)', '7-year taper rule'],
     }
   })
 
@@ -1260,12 +1263,12 @@ function SectionC({ entity, windowId, onNav }) {
             </div>
 
             <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
-              At <strong>{giftYears.toFixed(1)} years</strong> the 7-year taper applies an IHT rate of{' '}
+              At <strong>{giftYears.toFixed(1)} years</strong> the 7-year taper applies an inheritance tax (IHT) rate of{' '}
               <strong style={{ color: 'var(--c-warning)' }}>{(taper.rate * 100).toFixed(0)}%</strong> on this gift
               {taper.rate === 0 ? ' — fully outside the estate.' : '.'}
             </div>
             <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
-              Statutory dates (ISA, SA, SIPP-IHT) are fixed; only user-set values like gifts are adjustable. PENDING PROFESSIONAL SIGN-OFF.
+              Statutory dates — ISA reset, Self-Assessment, pension-IHT — are fixed; only user-set values like gifts are adjustable.
             </div>
           </div>
         )
@@ -1346,9 +1349,9 @@ function SectionD({ entity }) {
                   <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--c-text3)' }}>Wealth Score impact</span>
                 </div>
               )}
-              {isExp && (
+              {isExp && (d.rationale || d.source) && (
                 <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
-                  Source: {d.source || 'n/a'} · Step-up: {d.stepUp || 'L1'} · ID: {d.id || 'n/a'}
+                  {d.rationale ? d.rationale : `Recorded from ${d.source === 'persona' ? 'your profile' : (d.source || 'your activity')}.`}
                 </div>
               )}
             </div>
@@ -1547,7 +1550,7 @@ function buildPlanRows(entity) {
       try { fr = fundedRatio(entity) } catch { fr = null }
       if (fr && typeof fr.ratio === 'number' && !fr.insufficient_data) {
         fundedPct = fr.ratio
-        fundedSource = `engine fundedRatio · ${fr.confidence || 'MEDIUM'} confidence`
+        fundedSource = `the engine · ${(fr.confidence || 'MEDIUM').toLowerCase()} confidence`
       }
     }
     return {
@@ -1697,7 +1700,7 @@ function PlanFundedHeadline({ entity, planRows, onOpenGoalSeek }) {
         marginTop: 'var(--space-md)',
       }}>
         <button
-          onClick={() => onOpenGoalSeek?.(headline.pt.id)}
+          onClick={() => onOpenGoalSeek?.(PLAN_GOALSEEK_METRIC[headline.pt.id] || 'netWorth')}
           className="sw-press"
           style={{
             flex: 1, padding: '9px 14px', borderRadius: 'var(--r-pill)',
@@ -1714,8 +1717,8 @@ function PlanFundedHeadline({ entity, planRows, onOpenGoalSeek }) {
         fontSize: 10, color: 'var(--c-text3)', marginTop: 8, fontStyle: 'italic', lineHeight: 1.5,
       }}>
         {fundedPct != null
-          ? `Funded% from ${headline.fundedSource || 'the engine'} — the engine models, not advice. PENDING PROFESSIONAL SIGN-OFF.`
-          : 'No funded signal for this plan type yet — set a scenario or pick a Retirement/Cashflow plan to see funded %.'}
+          ? `Funded ratio from ${headline.fundedSource || 'the engine'} — the engine models your trajectory, it does not give advice.`
+          : 'No funded signal for this plan type yet — set a scenario or pick a Retirement/Cashflow plan to see the funded ratio.'}
       </div>
     </FadeInOnMount>
   )
@@ -1791,7 +1794,7 @@ function SectionE({ entity, planRows, scenarios, onOpenGoalSeek, onEditGoalSeek 
               }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text)' }}>{sc.name}</div>
                 <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>
-                  {sc.saved_at?.substring(0, 10)} · {sc.source} · {sc.rules_version}
+                  {sc.saved_at?.substring(0, 10) ? `Saved ${sc.saved_at.substring(0, 10)} · ` : ''}UK tax rules 2026/27
                 </div>
                 {sc.deltaResults?.fundedRatio != null && (
                   <div style={{ marginTop: 4 }}>
@@ -1811,15 +1814,20 @@ function SectionE({ entity, planRows, scenarios, onOpenGoalSeek, onEditGoalSeek 
 }
 
 // ─── Goal-seek sheet (lifted from §E so it can be opened from §F.1 headline + PlanRow) ───
+// Only these 4 metrics are solver-backed; any other id coerces to a safe default
+// so a CTA never lands the sheet on a blank/unsolvable metric.
+const SUPPORTED_SEEK_METRICS = ['wealthScore', 'riskScore', 'netWorth', 'iht']
+const normaliseSeekMetric = (m) => (SUPPORTED_SEEK_METRICS.includes(m) ? m : 'netWorth')
+
 function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
-  const [seekTarget, setSeekTarget]     = useState({ metric: initialMetric || 'wealthScore', value: 80 })
+  const [seekTarget, setSeekTarget]     = useState({ metric: normaliseSeekMetric(initialMetric), value: 80 })
   const [seekResults, setSeekResults]   = useState(null)
   const [seekComingSoon, setSeekComingSoon] = useState(false)
 
   // Sync metric when caller changes initialMetric (e.g. PlanRow Edit clicked for a different plan)
   useEffect(() => {
     if (open && initialMetric) {
-      setSeekTarget(s => ({ ...s, metric: initialMetric }))
+      setSeekTarget(s => ({ ...s, metric: normaliseSeekMetric(initialMetric) }))
       setSeekResults(null)
       setSeekComingSoon(false)
     }
@@ -2550,7 +2558,7 @@ function ScoreHistoryDrillPanel({ scoreJourneyData, entity, onClose }) {
         )}
 
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '4px 0 12px' }}>
-          Score history is a read-only mirror · D-SCORE-JOURNEY-1 · Not regulated advice
+          Score history is a read-only mirror of your scores · Not regulated advice
         </div>
       </div>
     </div>
@@ -2799,7 +2807,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
 
   function handleCreateGoal(template) {
     // 'goal-create' is not a valid tab — open GoalSeek with the template's plan type instead
-    openGoalSeek(template?.template_id || 'wealthScore')
+    openGoalSeek(template?.metric || 'netWorth')
   }
 
   function handleRiskTap() {
@@ -2825,13 +2833,16 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
 
   return (
     <>
-      {/* X28 top-bar (spec §X28-TL §X28.1) — wired to §B + §C */}
+      {/* X28 top-bar (spec §X28-TL §X28.1) — wired to §B + §C.
+          rulesVersion: X28TopBar parses ^UK-YYYY.N$ to render a friendly "UK tax
+          YYYY/YY" label. TAX.ver is the 3-part build id (UK-2026.1.1) which fails
+          that regex and leaks the raw code, so normalise to the 2-part form. */}
       <X28TopBar
         window={windowId}
         viewMode={viewMode}
         onWindowChange={setWindowId}
         onViewModeChange={setViewMode}
-        rulesVersion={TAX.ver || 'UK-2026.1'}
+        rulesVersion={`UK-${(TAX.ver?.match(/UK-(\d{4})/)?.[1]) || '2026'}.1`}
         dataDate={entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
         showWindowRow={false}
       />
@@ -2973,7 +2984,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         Information and guidance only. Not personal advice. Sonuswealth models scenarios and
         surfaces statutory dates relevant to your position; final decisions and timing should
         be validated with a qualified FCA-authorised adviser before acting.
-        <br />{TAX.ver} · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        <br />UK tax rules 2026/27 · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       </div>
       <div style={{ height: 78 }} />
     </>

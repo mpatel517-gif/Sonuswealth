@@ -2925,6 +2925,40 @@ export function cashflowFlow(entity, bundle) {
 }
 
 /**
+ * Monthly net cashflow (surplus/deficit) trend — a REAL, reproducible series for
+ * the "Am I OK right now?" tile sparkline, not fabricated seasonality (CX-5).
+ *
+ * We have no transaction history and no wage-growth assumption in the bundle, so
+ * the only honest driver of month-to-month change is inflation on essentials.
+ * Model: nominal income + fixed outgoings (tax/NI, pension+ISA, debt, protection)
+ * held flat over the window — the conservative call absent wage data — while
+ * essentials track the bundle's real inflation rate. The newest point ties out
+ * EXACTLY to cashflowFlow's current monthly net, so the sparkline and the
+ * headline can never disagree. Read inflation from the bundle (never hardcode).
+ *
+ * @param {object} entity
+ * @param {object} [bundle] - CMA / rules bundle (reads .inflation or .growthAssumptions.inflation)
+ * @param {number} [months=12]
+ * @returns {Array<{value:number}>} oldest → newest
+ * CANONICAL
+ */
+export function cashflowSurplusTrend(entity, bundle, months = 12) {
+  const f = cashflowFlow(entity, bundle);
+  const infl = +(bundle?.inflation ?? bundle?.growthAssumptions?.inflation ?? 0);
+  const grossMo = f.gross / 12;
+  const essNowMo = f.essentials / 12;
+  const fixedMo = (f.taxAndNI + f.committed + f.debtService + f.protection) / 12;
+  const out = [];
+  const n = Math.max(2, months | 0);
+  for (let m = n - 1; m >= 0; m--) {
+    // m months ago essentials were lower by the compounded inflation factor.
+    const essThen = infl > 0 ? essNowMo / Math.pow(1 + infl, m / 12) : essNowMo;
+    out.push({ value: Math.round(grossMo - essThen - fixedMo) });
+  }
+  return out;
+}
+
+/**
  * Liquidity buffer in months of essential expenditure.
  * Bands per spec §4.9: Critical <1, Building 1–3, Covered 3+.
  * CANONICAL

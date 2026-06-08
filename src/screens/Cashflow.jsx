@@ -30,7 +30,7 @@ import {
   // Cashflow Health (§3B)
   cashflowHealth,
   // §A NOW
-  calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow, inferLifeStage,
+  calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow, cashflowSurplusTrend, inferLifeStage,
   calcAge,
   liquidityBuffer, recommendedSurplusAllocation,
   debtRatio,
@@ -1695,6 +1695,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // Canonical net-of-tax cashflow — single source for Sankey + waterfall so they
   // cannot diverge and tax & NI are real, never £0 (2026-06-02 correctness gate).
   const flow = useMemo(() => cashflowFlow(entity, CMA_BUNDLE), [entity, bv, cv])
+  // Real monthly-surplus trend for the "Am I OK right now?" tile sparkline —
+  // engine-derived (inflation on essentials), newest point ties to msNet.
+  const surplusTrend = useMemo(() => { try { return cashflowSurplusTrend(entity, CMA_BUNDLE) } catch { return [] } }, [entity, bv, cv])
   const lb = useMemo(() => liquidityBuffer(entity), [entity, bv, cv])
   const surplusAlloc = useMemo(
     () => recommendedSurplusAllocation(entity, ms.surplus),
@@ -1976,6 +1979,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
                 headline: (msNet > 0 ? 'In surplus' : msNet < 0 ? 'In deficit' : 'Breaking even'),
                 sub: `${msNet < 0 ? '−' : ''}${fmtSeedNum(Math.abs(msNet))}/mo · spend, buffer & income`,
                 tone: (msNet > 0 ? 'mint' : msNet < 0 ? 'coral' : 'acc'),
+                spark: surplusTrend,
                 content: nowSectionContent },
               // C-4a — "How fast am I building wealth?" (savings rate). Reframes
               // the deliberate-saving gap: committed ÷ gross is a savings RATE,

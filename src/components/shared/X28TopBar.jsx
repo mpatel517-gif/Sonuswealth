@@ -47,11 +47,16 @@ import { BRAND } from '../../config/brand.js'
 // Each window carries `years` for projection helpers, `direction` for forward
 // vs back, and `defaultMode` so the bar auto-switches view-mode on window
 // change (e.g. "5 years" defaults to Forecast, "10/20/Lifetime" to Plan).
+// Horizon = the projection viewpoint in time (now / back / forward), NOT the tax
+// year — the rule year is owned separately by the global YearStepper. Labels are
+// deliberately relative ("This year", "Last year") with no hardcoded year number,
+// which would otherwise contradict whatever rule year the stepper is on (founder
+// 2026-06-08, year-stepper decoupling).
 export const TIME_WINDOWS = [
-  { id: 'current-period',  label: 'Tax year',   full: 'Current Tax Year (2026/27)',    years: 0,  direction: 'now',     defaultMode: 'actual'   },
-  { id: 'calendar-year',   label: 'Jan–Dec',    full: 'Calendar Year (Jan–Dec 2026)',   years: 0,  direction: 'now',     defaultMode: 'actual'   },
-  { id: 'last-period',     label: 'Last year',  full: 'Last Tax Year (2025/26)',        years: -1, direction: 'back',    defaultMode: 'actual'   },
-  { id: 'next-period',     label: 'Next year',  full: 'Next Tax Year (2027/28)',        years: 1,  direction: 'forward', defaultMode: 'forecast' },
+  { id: 'current-period',  label: 'This year',  full: 'This year',                     years: 0,  direction: 'now',     defaultMode: 'actual'   },
+  { id: 'calendar-year',   label: 'Jan–Dec',    full: 'Calendar year (Jan–Dec)',       years: 0,  direction: 'now',     defaultMode: 'actual'   },
+  { id: 'last-period',     label: 'Last year',  full: 'Last year',                     years: -1, direction: 'back',    defaultMode: 'actual'   },
+  { id: 'next-period',     label: 'Next year',  full: 'Next year',                      years: 1,  direction: 'forward', defaultMode: 'forecast' },
   { id: 'five-year',       label: '5 years',    full: '5-year horizon',                years: 5,  direction: 'forward', defaultMode: 'forecast' },
   { id: 'ten-year',        label: '10 years',   full: '10-year horizon',               years: 10, direction: 'forward', defaultMode: 'plan'     },
   { id: 'twenty-year',     label: '20 years',   full: '20-year horizon',               years: 20, direction: 'forward', defaultMode: 'plan'     },

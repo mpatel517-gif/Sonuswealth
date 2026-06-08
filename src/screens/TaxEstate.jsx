@@ -16,6 +16,7 @@ import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 import { parseDocument } from '../services/parser.js'
 import { cgtChargeableHoldings } from '../engine/_helpers.js'
 import { situationalTaxes } from '../engine/situational-taxes.js'
+import { applyLevers } from '../engine/scenario-engine.js'
 // S1 selector migration (Phase 2)
 import {
   netWorth,
@@ -726,6 +727,39 @@ function ProjectionBanner({ viewMode, ihtToday, ihtForecast }) {
       background: tone, border: `1px solid ${border}`,
       fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5,
     }}>{text}</div>
+  )
+}
+// What-if lever strip (#23 slice 3). Self-contained — does NOT depend on
+// Cashflow's SolverSlider (which was never actually extracted to shared). Only
+// levers that genuinely move the donut: pay change (income) + sell home (estate,
+// engine-flagged estimate). The donut above recomputes live against each.
+function WhatIfLevers({ pay, setPay, sellHome, setSellHome }) {
+  return (
+    <div style={{
+      marginBottom: 12, padding: '10px 12px', borderRadius: 10,
+      background: 'rgba(255,179,71,.10)', border: '1px solid rgba(255,179,71,.30)',
+      display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ fontSize: 11, color: 'var(--c-text2)' }}>
+        <strong>What-if.</strong> Drag or toggle to see your tax & estate move live — illustrative, not advice.
+      </div>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
+          <span style={{ color: 'var(--c-text3)' }}>Pay change</span>
+          <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+            {pay > 0 ? '+' : ''}{pay}%
+          </span>
+        </div>
+        <input type="range" min={-50} max={50} step={1} value={pay}
+          onChange={(e) => setPay(parseInt(e.target.value, 10))}
+          style={{ width: '100%', accentColor: 'var(--c-acc)' }}
+          aria-label="Pay change percent" />
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--c-text2)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={sellHome} onChange={(e) => setSellHome(e.target.checked)} style={{ accentColor: 'var(--c-acc)' }} />
+        Sell my main home <span style={{ color: 'var(--c-text3)', fontSize: 10 }}>(estate — simplified estimate)</span>
+      </label>
+    </div>
   )
 }
 function TaxVsHMRC({ incomeGross, incomeTax, incomeComponents, estateGross, iht, family, banner, onDrill }) {
@@ -3351,6 +3385,14 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   // ── X28 top-bar state (window + view mode) ───────────────────────────────
   const [x28Window, setX28Window] = useState('current-tax-year')
   const [viewMode, setViewMode] = useState('actual')
+  // What-if (scenario) levers — #23 slice 3. Only levers that genuinely move the
+  // donut are exposed: pay change (income, robust) + sell home (estate, engine
+  // flags it an estimate). max_pension is excluded — its relief lives in the
+  // solver, not the snapshot, so it would be a dead lever here.
+  const [wiPay, setWiPay] = useState(0)        // % pay change, -50..+50
+  const [wiSellHome, setWiSellHome] = useState(false)
+  // reset levers whenever What-if is exited so re-entry starts clean
+  useEffect(() => { if (viewMode !== 'scenario') { setWiPay(0); setWiSellHome(false) } }, [viewMode])
 
   // A4 last-mile (2026-05-28): bv invalidates every engine memo below when
   // the user flips the TY chip. Tax-Estate is the most rate-sensitive
@@ -3407,6 +3449,25 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     () => forecast ? safe(() => te_ihtExposure(entity, undefined, { postPension: true }), exposureToday) : exposureToday,
     [forecast, entity, bv, exposureToday],
   )
+  // What-if (scenario): fold the active levers onto a CLONED entity and recompute
+  // the donut against the canonical engines, so every lever shown genuinely moves
+  // a number (pay change → income tax; sell home → IHT). No dead levers.
+  const scenario = viewMode === 'scenario'
+  const whatIf = useMemo(() => {
+    if (!scenario) return null
+    const pins = []
+    if (wiPay !== 0) pins.push({ id: 'pay_change', value: wiPay })
+    if (wiSellHome) pins.push({ id: 'sell_home' })
+    const ent = pins.length ? safe(() => applyLevers(entity, pins).entity, entity) : entity
+    const tax = safe(() => te_taxThisYear(ent), null)
+    return {
+      active: pins.length > 0,
+      incomeGross: tax?.gross || safe(() => calcAllIncome(ent)?.total, 0) || 0,
+      incomeTax: tax?.total_tax || 0,
+      components: tax?.components || null,
+      exp: safe(() => te_ihtExposure(ent), exposureToday),
+    }
+  }, [scenario, wiPay, wiSellHome, entity, bv, exposureToday])
   const totalTaxNow   = useMemo(() => safe(() => te_taxThisYear(entity)?.total_tax, 0), [entity, bv])
   useEffect(() => {
     writeSnapshot(entity?.id, {
@@ -3474,6 +3535,35 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   // Situational taxes (landlord s24 / SDLT / corporation tax) — only the rows
   // that apply to THIS entity. Drives the "Other taxes in your situation" tile.
   const situational = useMemo(() => safe(() => situationalTaxes(entity), []) || [], [entity, bv])
+
+  // Donut inputs, mode-aware. Today/Plan = actual; Future = post-2027 estate;
+  // What-if = recompute against the levered entity. One place so the donut and
+  // the numbers can never disagree across modes.
+  const donut = useMemo(() => {
+    const wi = scenario && whatIf?.active ? whatIf : null
+    const exp = scenario ? (whatIf?.exp || exposureToday) : exposureForMode
+    const comp = wi?.components || null
+    return {
+      incomeGross: wi ? wi.incomeGross : taxTiles.gross,
+      incomeTax:   wi ? wi.incomeTax : taxTiles.totalTax,
+      components: comp ? [
+        { label: 'Income tax', value: comp.income_tax || 0 },
+        { label: 'Dividend tax', value: comp.dividend_tax || 0 },
+        { label: 'Savings tax', value: comp.savings_tax || 0 },
+        { label: 'National Insurance', value: comp.nics || 0 },
+        { label: 'Capital gains', value: comp.cgt || 0 },
+      ] : [
+        { label: 'Income tax', value: taxTiles.incomeTax },
+        { label: 'Dividend tax', value: taxTiles.dividendTax },
+        { label: 'Savings tax', value: taxTiles.savingsTax },
+        { label: 'National Insurance', value: taxTiles.nics },
+        { label: 'Capital gains', value: taxTiles.cgt },
+      ],
+      estateGross: exp?.gross_estate || 0,
+      iht: exp?.iht_due || 0,
+      family: exp?.beneficiary_value || 0,
+    }
+  }, [scenario, whatIf, exposureForMode, exposureToday, taxTiles, entity, bv])
 
   // ── Sub-anchor strip — different for tax vs estate ────────────────────────
   const subAnchorTax = useMemo(() => {
@@ -3732,20 +3822,18 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
             what you keep / pass on. Hidden when Choices is active. ─────────── */}
       {!showChoices && (
         <TaxVsHMRC
-          incomeGross={taxTiles.gross}
-          incomeTax={taxTiles.totalTax}
-          incomeComponents={[
-            { label: 'Income tax', value: taxTiles.incomeTax },
-            { label: 'Dividend tax', value: taxTiles.dividendTax },
-            { label: 'Savings tax', value: taxTiles.savingsTax },
-            { label: 'National Insurance', value: taxTiles.nics },
-            { label: 'Capital gains', value: taxTiles.cgt },
-          ]}
-          estateGross={exposureForMode?.gross_estate || 0}
-          iht={exposureForMode?.iht_due || 0}
-          family={exposureForMode?.beneficiary_value || 0}
-          banner={viewMode !== 'actual' ? <ProjectionBanner viewMode={viewMode}
-            ihtToday={exposureToday?.iht_due || 0} ihtForecast={exposureForMode?.iht_due || 0} /> : null}
+          incomeGross={donut.incomeGross}
+          incomeTax={donut.incomeTax}
+          incomeComponents={donut.components}
+          estateGross={donut.estateGross}
+          iht={donut.iht}
+          family={donut.family}
+          banner={viewMode !== 'actual'
+            ? (scenario
+                ? <WhatIfLevers pay={wiPay} setPay={setWiPay} sellHome={wiSellHome} setSellHome={setWiSellHome} />
+                : <ProjectionBanner viewMode={viewMode}
+                    ihtToday={exposureToday?.iht_due || 0} ihtForecast={exposureForMode?.iht_due || 0} />)
+            : null}
           onDrill={(target) => { setSubTab(target.startsWith('est') ? 'estate' : 'tax'); setOpenTile(target) }}
         />
       )}

@@ -3158,7 +3158,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       {/* ── Sub-tab segmented control (§2.5) ──────────────────────────────── */}
       <SubTabSelector
         value={subTab}
-        onChange={setSubTab}
+        onChange={(v) => { setSubTab(v); setOpenTile(null) }}
         taxBadge={taxBadge}
         estateBadge={estateBadge}
       />
@@ -3334,66 +3334,105 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
             />
           )}
 
-          {/* Will & LPA — primary canonical home (X27) */}
-          <WillLPACard entity={entity} onDrillMetric={onDrillMetric} />
-
-          <IHTWaterfall entity={entity} />
-
-          {/* Year-by-year IHT projection — §8.20 */}
-          <IHTYearByYear entity={entity} />
-
-          <GiftClock entity={entity} />
-
-          {/* Life-stage gated sections (D-CARD-REVEAL-1) */}
-          <RevealCard
-            cardId="te-trust-sim"
-            title="Trust simulator"
-            entity={{ ...(entity || {}), lifeStage }}
-            lifeStageGate={['preretirement', 'decumulation', 'preservation', 'legacy']}
-            defaultOpen={false}
-            headerAccessory={<Chip tone="info">10-year periodic charge</Chip>}
-          >
-            <div style={{ padding: '0 0 12px' }}>
-              <TrustSimulator entity={entity} />
-            </div>
-          </RevealCard>
-
-          <div style={{ position: 'relative' }}>
-            <RevealCard
-              cardId="te-bpr-apr"
-              title="Business & agricultural relief (BPR / APR) mechanics"
-              entity={{ ...(entity || {}), lifeStage }}
-              // F-CAT-02: BPR clock starts the day the holding is bought —
-              // surface the card whenever the user has EIS/SEIS/VCT/business
-              // assets, even in accumulation, so the 2-year qualification
-              // window is visible from day 1 (spec §6.12.1 discovery prompt).
-              lifeStageGate={hasBPREligibleHoldings(entity)
-                ? ['foundation', 'accumulation', 'consolidation', 'preretirement', 'decumulation', 'preservation', 'legacy']
-                : ['consolidation', 'preretirement', 'decumulation', 'preservation', 'legacy']}
-              defaultOpen={false}
-            >
-              <div style={{ padding: '0 0 12px' }}>
-                <BPRAPRMechanics entity={entity} />
-              </div>
-            </RevealCard>
-            {/* L3 drill affordance — opens BPRDrillPanel */}
-            <button
-              onClick={() => setDrillView('bpr')}
-              className="sw-chip sw-chip-sm sw-press"
-              style={{
-                position: 'absolute', top: 14, right: 14,
-                cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                color: 'var(--c-acc)',
-              }}
-            >
-              Asset detail ›
-            </button>
+          {/* ── DEEPER — category tiles → drawers (founder issue 2/5, 1B).
+                Hero above stays always-visible (numbers + narrative + CoI);
+                the long tail is categorised so the user taps in for depth. ── */}
+          <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '14px 2px 10px' }}>
+            Explore the detail — tap a card.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <CatTile
+              title="Inheritance tax — what reduces the bill"
+              value={fmt(exposureToday?.iht_due || 0)}
+              sub="The full waterfall and the year-by-year projection"
+              tone="danger"
+              onClick={() => setOpenTile('est-iht')}
+            />
+            <CatTile
+              title="Gifts & the 7-year clock"
+              sub="What you've given, and when each gift falls outside your estate"
+              onClick={() => setOpenTile('est-gifts')}
+            />
+            {(hasBPREligibleHoldings(entity) || ['consolidation', 'preretirement', 'decumulation', 'preservation', 'legacy'].includes(lifeStage)) && (
+              <CatTile
+                title="Business & agricultural relief"
+                sub="BPR / APR — what qualifies, and the 2-year clock"
+                onClick={() => setOpenTile('est-bpr')}
+              />
+            )}
+            <CatTile
+              title="Your home & the residence band"
+              sub="Residence nil-rate band (RNRB) and downsizing rules"
+              onClick={() => setOpenTile('est-rnrb')}
+            />
+            {(() => {
+              const willCurrent = safe(() => willLpaStatus(entity)?.will?.current, false)
+              return (
+                <CatTile
+                  title="Wills, power of attorney & who inherits"
+                  value={willCurrent ? 'Will current' : 'Check your will'}
+                  sub="Will, power of attorney, nominations and the beneficiary chain"
+                  tone={willCurrent ? 'success' : 'warning'}
+                  onClick={() => setOpenTile('est-wills')}
+                />
+              )
+            })()}
+            {['preretirement', 'decumulation', 'preservation', 'legacy'].includes(lifeStage) && (
+              <CatTile
+                title="Trusts"
+                sub="10-year periodic charge and exit charges"
+                onClick={() => setOpenTile('est-trust')}
+              />
+            )}
           </div>
 
-          <NominationsManager entity={entity} />
-          <BeneficiaryChain entity={entity} />
-          <RNRBPlanning entity={entity} />
+          {openTile === 'est-iht' && (
+            <CategoryDrawer title="Inheritance tax — what reduces the bill" onClose={() => setOpenTile(null)}>
+              <IHTWaterfall entity={entity} />
+              <IHTYearByYear entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'est-gifts' && (
+            <CategoryDrawer title="Gifts & the 7-year clock" onClose={() => setOpenTile(null)}>
+              <GiftClock entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'est-bpr' && (
+            <CategoryDrawer title="Business & agricultural relief (BPR / APR)" onClose={() => setOpenTile(null)}>
+              <div style={{ position: 'relative' }}>
+                <BPRAPRMechanics entity={entity} />
+                <button
+                  onClick={() => setDrillView('bpr')}
+                  className="sw-chip sw-chip-sm sw-press"
+                  style={{
+                    position: 'absolute', top: 14, right: 14,
+                    cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                    color: 'var(--c-acc)',
+                  }}
+                >
+                  Asset detail ›
+                </button>
+              </div>
+            </CategoryDrawer>
+          )}
+          {openTile === 'est-rnrb' && (
+            <CategoryDrawer title="Your home & the residence band" onClose={() => setOpenTile(null)}>
+              <RNRBPlanning entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'est-wills' && (
+            <CategoryDrawer title="Wills, power of attorney & who inherits" onClose={() => setOpenTile(null)}>
+              <WillLPACard entity={entity} onDrillMetric={onDrillMetric} />
+              <NominationsManager entity={entity} />
+              <BeneficiaryChain entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'est-trust' && (
+            <CategoryDrawer title="Trusts" onClose={() => setOpenTile(null)}>
+              <TrustSimulator entity={entity} />
+            </CategoryDrawer>
+          )}
 
           {/* Diff badge: IHT today vs last visit */}
           {ihtSince != null && exposureToday && Math.abs((exposureToday.iht_due || 0) - ihtSince) > 100 && (

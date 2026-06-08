@@ -1279,15 +1279,42 @@ export function bprQualifyingValue(entity, bundle = 'UK-2026.1') {
   const holdings = (entity.assets?.portfolio?.holdings || []).filter(h => h.bprTagged || h.isBPR);
   const today = new Date();
   const allowance = APR_BPR_ALLOWANCE;
+  const a = entity.assets || {};
 
   const clocks = holdings.map(h => bprClock(h, today, bundle));
   const qualified = clocks.filter(c => c.cleared && !c.is_aim);
   const aim       = clocks.filter(c => c.is_aim);
 
-  const tier1Total    = qualified.reduce((s, c) => s + c.current_value, 0);
+  // Real taxonomy: top-level business_assets[] (unlisted trading shares, 100%
+  // relief) — the SAME source estateExtras uses, so this drawer agrees with the
+  // IHT estate. (mrT-core's £145k Synthetic Tech was invisible here before.)
+  // `companies[]` is NOT added separately — the same shareholding is already in
+  // business_assets, so summing both would double-count.
+  const businessList = [
+    ...(Array.isArray(entity.business_assets) ? entity.business_assets : []),
+    ...(Array.isArray(a.business_assets) ? a.business_assets : []),
+    ...(Array.isArray(a.businesses) ? a.businesses : []),
+  ];
+  let realTier1 = 0;
+  for (const b of businessList) {
+    if (b?.status === 'disposed') continue;
+    const val = (+(b.value_gbp ?? b.value ?? b.estimated_value ?? 0) || 0) *
+                (+(b.beneficial_interest_this_individual ?? b.ownershipShare ?? 1) || 1);
+    const q = b?.qualifies_for_bpr === true || b?.qualifies_for_apr === true ||
+      (b?.qualifies_for_bpr == null && /trading/i.test(String(b?.trading_status || '')));
+    if (q) realTier1 += val;
+  }
+  // AIM / VCT held in investments[] → tier 2 (50%).
+  let realAim = 0;
+  for (const inv of (Array.isArray(a.investments) ? a.investments : [])) {
+    const ty = String(inv.type || '').toLowerCase();
+    if (ty === 'vct' || /aim/.test(ty)) realAim += (+(inv.value ?? inv.balance ?? 0) || 0);
+  }
+
+  const tier1Total    = qualified.reduce((s, c) => s + c.current_value, 0) + realTier1;
   const tier1In100    = Math.min(tier1Total, allowance);
   const tier1Above    = Math.max(0, tier1Total - allowance);
-  const aimTotal      = aim.reduce((s, c) => s + c.current_value, 0);
+  const aimTotal      = aim.reduce((s, c) => s + c.current_value, 0) + realAim;
   const allowanceUsed = tier1In100;
   const allowanceLeft = Math.max(0, allowance - allowanceUsed);
 
@@ -1320,7 +1347,11 @@ export function selfAssessment(entity, year = 'tax-2026-27', bundle = 'UK-2026.1
     sa.registered === true
   );
 
-  const deadline   = new Date(`${year.startsWith('tax') ? '20' + year.split('-')[1] : '2027'}-01-31`);
+  // Online SA deadline = 31 Jan AFTER the tax year ends. 'tax-2026-27' → year
+  // ends Apr 2027 → deadline 31 Jan 2028. (Prior code did '20'+'2026' = '202026'.)
+  const _p = String(year).split('-');
+  const _endYear = _p.length >= 3 ? 2000 + parseInt(_p[2], 10) : 2027;
+  const deadline   = new Date(`${_endYear + 1}-01-31`);
   const daysToFile = Math.ceil((deadline - new Date()) / 86400000);
   const prefillPct = _saPreFill(entity);
 

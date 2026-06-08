@@ -3761,6 +3761,27 @@ export function bprQualifyingValue(entity) {
   if (a.portfolio?.bpr && tier1 === 0 && tier2 === 0) {
     tier1 = a.portfolio.value || 0;
   }
+  // Real taxonomy: top-level business_assets[] (unlisted trading shares → 100%
+  // relief) + AIM/VCT in investments[] (tier 2, 50%). Same source estateExtras
+  // uses, so this BPR drawer agrees with the IHT estate. companies[] is NOT added
+  // separately — the same shareholding is already in business_assets. (audit #7)
+  const businessList = [
+    ...(Array.isArray(entity?.business_assets) ? entity.business_assets : []),
+    ...(Array.isArray(a.business_assets) ? a.business_assets : []),
+    ...(Array.isArray(a.businesses) ? a.businesses : []),
+  ];
+  for (const b of businessList) {
+    if (b?.status === 'disposed') continue;
+    const val = (+(b.value_gbp ?? b.value ?? b.estimated_value ?? 0) || 0) *
+                (+(b.beneficial_interest_this_individual ?? b.ownershipShare ?? 1) || 1);
+    const q = b?.qualifies_for_bpr === true || b?.qualifies_for_apr === true ||
+      (b?.qualifies_for_bpr == null && /trading/i.test(String(b?.trading_status || '')));
+    if (q) tier1 += val;
+  }
+  for (const inv of (Array.isArray(a.investments) ? a.investments : [])) {
+    const ty = String(inv.type || '').toLowerCase();
+    if (ty === 'vct' || /aim/.test(ty)) tier2 += (+(inv.value ?? inv.balance ?? 0) || 0);
+  }
   const used = Math.min(allowance, tier1) + Math.min(Math.max(0, allowance - tier1), tier2 * 0.5);
   return {
     tier1Full: tier1,

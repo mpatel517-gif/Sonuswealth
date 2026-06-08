@@ -124,8 +124,17 @@ function isNRI(entity) { return entity?.type === 'nri' }
 function hasBPREligibleHoldings(entity) {
   if (!entity) return false
   const a = entity.assets || {}
-  const ba = Array.isArray(a.business_assets) ? a.business_assets : []
-  if (ba.some(b => (b?.value || 0) > 0)) return true
+  // business_assets live at the TOP LEVEL on rich personas (mrT-core), not under
+  // assets — plus the trading companies and any AIM/EIS/SEIS/VCT in investments[].
+  const ba = [
+    ...(Array.isArray(a.business_assets) ? a.business_assets : []),
+    ...(Array.isArray(entity.business_assets) ? entity.business_assets : []),
+  ]
+  if (ba.some(b => (b?.value_gbp || b?.value || b?.estimated_value || 0) > 0)) return true
+  const companies = Array.isArray(entity.companies) ? entity.companies : (entity.companies ? [entity.companies] : [])
+  if (companies.some(c => (c?.share_value_gbp || c?.value || 0) > 0 && /trading/i.test(String(c?.trading_status || '')))) return true
+  const invs = Array.isArray(a.investments) ? a.investments : []
+  if (invs.some(i => (i?.value || i?.balance || 0) > 0 && (i?.bpr_qualifying === true || /^(eis|seis|vct|aim)/i.test(String(i?.type || ''))))) return true
   const holdings = a.portfolio?.holdings || []
   if (Array.isArray(holdings) && holdings.some(h => {
     const id = String(h?.id || h?.code || h?.scheme || '').toLowerCase()
@@ -1338,7 +1347,7 @@ function AllowancesStrip({ entity }) {
                 <span style={{ color: 'var(--c-text3)' }}>{label}</span>
                 <span style={{ color: 'var(--c-text2)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                   {d.limit != null
-                    ? `${fmt(d.used || 0)} / ${fmt(d.limit || 0)}`
+                    ? `${fmt(Math.min(d.used || 0, d.limit || 0))} / ${fmt(d.limit || 0)}`
                     : `${pctv}%`}
                 </span>
               </div>
@@ -1368,14 +1377,25 @@ function AllowancesStrip({ entity }) {
 function SelfAssessment({ entity }) {
   const sa = safe(() => te_selfAssessment(entity), null)
   if (!sa) return null
-  const deadline = sa.online_filing_deadline || sa.deadline || '2027-01-31'
-  const due = sa.balance_due || sa.amount_due || 0
+  // Engine returns needs_sa / deadline_online — the component previously read the
+  // wrong keys (required / online_filing_deadline), so a landlord-director with
+  // £38k dividends wrongly showed "Filing required? No". (tax-tab audit fix.)
+  const deadline = sa.deadline_online || sa.online_filing_deadline || sa.deadline || '2027-01-31'
+  const required = sa.needs_sa ?? sa.required ?? false
+  // Balance via SA = the tax NOT collected at source (dividends, savings, CGT) —
+  // the engine doesn't return a figure, so derive it from the canonical components.
+  const comp = safe(() => te_taxThisYear(entity)?.components, {}) || {}
+  const due = (comp.dividend_tax || 0) + (comp.savings_tax || 0) + (comp.cgt || 0)
+  const src = sa.income_sources || []
+  const reason = !required ? 'Tax settled at source — no return needed'
+    : src.some(s => /divid/i.test(s)) ? 'Dividends / rental / untaxed income above SA thresholds'
+    : 'Income above a Self-Assessment threshold'
   return (
     <div className="card sw-card-elevated">
       <SectionHead title="Self Assessment" sub={`SA100 deadline: ${deadline}`} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <StatTile label="Balance due" value={fmt(due)} colour={due > 0 ? 'var(--c-danger)' : 'var(--c-text)'} />
-        <StatTile label="Filing required?" value={sa.required ? 'Yes' : 'No'} sub={sa.reason || ''} />
+        <StatTile label="Est. balance via SA" value={fmt(due)} colour={due > 0 ? 'var(--c-danger)' : 'var(--c-text)'} />
+        <StatTile label="Filing required?" value={required ? 'Yes' : 'No'} sub={reason} />
       </div>
     </div>
   )
@@ -2510,13 +2530,19 @@ function BPRAPRMechanics({ entity }) {
   const allow = safe(() => bprAprAllowance(entity), null)
   const apr = safe(() => aprQualification(entity), null)
   if (!bpr) return null
+  // Engine returns allowance_used / tier1_100pct / tier2_50pct_aim_or_not_listed;
+  // the component previously read used / tier1Full / tier2Aim (all undefined → £0
+  // despite £145k qualifying). Read the canonical names. (tax-tab audit fix #7.)
+  const bprUsed = bpr.allowance_used ?? bpr.used ?? 0
+  const tier1Full = bpr.tier1_100pct ?? bpr.tier1Full ?? 0
+  const tier2Aim = bpr.tier2_50pct_aim_or_not_listed ?? bpr.tier2Aim ?? 0
   const cap = (entity?.isCouple ? (allow?.couple || 2 * TAX.bprCombinedCap) : (allow?.individual || TAX.bprCombinedCap))
-  const usedPct = cap > 0 ? Math.round(((bpr.used || 0) / cap) * 100) : 0
+  const usedPct = cap > 0 ? Math.round((bprUsed / cap) * 100) : 0
   return (
     <div className="card sw-card-elevated">
       <SectionHead
         title="Business & agricultural relief (BPR / APR)"
-        sub={`${entity?.isCouple ? 'Couples £5m pool' : 'Single £2.5m allowance'} · used ${fmt(bpr.used || 0)}`}
+        sub={`${entity?.isCouple ? 'Couples £5m pool' : 'Single £2.5m allowance'} · used ${fmt(bprUsed)}`}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-lg)', marginBottom: 'var(--space-md)' }}>
         <HalfCircleGauge pct={usedPct} colour={usedPct >= 100 ? 'var(--c-danger)' : usedPct >= 80 ? 'var(--c-warning)' : 'var(--c-success)'} />
@@ -2531,8 +2557,8 @@ function BPRAPRMechanics({ entity }) {
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-        <StatTile label="Tier 1 (full 100%)" value={fmt(bpr.tier1Full || 0)} />
-        <StatTile label="AIM (Tier 2 50%)"   value={fmt(bpr.tier2Aim || 0)} />
+        <StatTile label="Tier 1 (full 100%)" value={fmt(tier1Full)} />
+        <StatTile label="AIM (Tier 2 50%)"   value={fmt(tier2Aim)} />
       </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         <Chip tone="info">Pre-30-Oct-2024 trusts: 100% relief</Chip>
@@ -3545,8 +3571,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     const allow = safe(() => allowanceTracker(entity), null)
     // Same gross fallback TaxSummary uses — te_taxThisYear may omit `gross`.
     const gross = txY.gross || safe(() => calcAllIncome(entity)?.total, 0) || 0
-    const invGain = +(entity?.assets?.investments?.unrealisedGain || 0)
-    const giaGain = +(entity?.assets?.gia?.unrealisedGain || 0)
+    // Embedded gains from the REAL chargeable holdings (investments[] with
+    // cost_base) — not the stale assets.investments.unrealisedGain (investments
+    // is an array, so that property is always undefined). Mirrors #18.
+    const embeddedGain = safe(() => cgtChargeableHoldings(entity), [])
+      .reduce((s, h) => s + Math.max(0, (h.currentValue || 0) - (h.baseCost || 0)), 0)
     const divDetail = safe(() => te_dividendTaxDetail(entity, entity.assets?.portfolio?.holdings || []), null)
     return {
       totalTax: txY.total_tax || 0,
@@ -3564,7 +3593,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       // Allowance headroom (for the Allowances gauge).
       allowUsedPct: allow?.utilization || 0,
       hasDividend: (comp.dividend_tax || 0) > 0 || (allow?.dividend && (allow.dividend.used || 0) > 0),
-      hasCGT: (invGain + giaGain) > 0 || (comp.cgt || 0) > 0,
+      hasCGT: embeddedGain > 0 || (comp.cgt || 0) > 0,
+      embeddedGain,
     }
   }, [entity, bv])
 
@@ -3947,9 +3977,13 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
             {taxTiles.hasCGT && (
               <CatTile
                 title="Capital gains"
-                value={fmt(taxTiles.cgt)}
-                sub="Realised gains vs your tax-free amount"
-                tone="danger"
+                value={taxTiles.cgt > 0 ? fmt(taxTiles.cgt) : (taxTiles.embeddedGain > 0 ? `${fmt(taxTiles.embeddedGain)} held` : '£0')}
+                sub={taxTiles.cgt > 0
+                  ? 'Tax due on realised gains this year'
+                  : taxTiles.embeddedGain > 0
+                    ? 'Unrealised gains in taxable wrappers · nothing sold yet'
+                    : 'Realised gains vs your tax-free amount'}
+                tone={taxTiles.cgt > 0 ? 'danger' : 'warning'}
                 onClick={() => setOpenTile('cgt-cat')}
               />
             )}
@@ -4032,7 +4066,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
                 />
               )
             })()}
-            {['preretirement', 'decumulation', 'preservation', 'legacy'].includes(lifeStage) && (
+            {(['preretirement', 'decumulation', 'preservation', 'legacy'].includes(lifeStage)
+              || !!entity?.hasTrust || (entity?.assets?.trustGifts?.total || 0) > 0) && (
               <CatTile
                 title="Trusts"
                 sub="10-year periodic charge and exit charges"

@@ -29,8 +29,9 @@ export default function DecisionDrawers({ screen, onOpen, heading = 'Choices you
         display: 'flex', alignItems: 'center', gap: 10,
         border: '1px solid var(--c-border)', marginBottom: 4,
       }}>
-      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
-        background: 'var(--c-acc-bg)', color: 'var(--c-acc)', minWidth: 44, textAlign: 'center', flexShrink: 0 }}>{id}</span>
+      {/* Founder 2026-06-08: internal decision code (DE-NN) is not shown to
+          users — replaced with a neutral marker. */}
+      <span aria-hidden style={{ fontSize: 12, color: 'var(--c-acc)', flexShrink: 0, width: 16, textAlign: 'center' }}>◈</span>
       <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{titleOf(id)}</span>
       <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
     </button>
@@ -100,8 +101,7 @@ export default function DecisionDrawers({ screen, onOpen, heading = 'Choices you
                         display: 'flex', alignItems: 'center', gap: 10,
                         border: '1px solid var(--c-border)', marginBottom: 4,
                       }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 6,
-                        background: 'var(--c-acc-bg)', color: 'var(--c-acc)', minWidth: 44, textAlign: 'center', flexShrink: 0 }}>{id}</span>
+                      <span aria-hidden style={{ fontSize: 12, color: 'var(--c-acc)', width: 16, textAlign: 'center', flexShrink: 0 }}>◈</span>
                       <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{titleOf(id)}</span>
                       <span style={{ fontSize: 16, color: 'var(--c-text3)', fontWeight: 700, flexShrink: 0 }}>›</span>
                     </button>

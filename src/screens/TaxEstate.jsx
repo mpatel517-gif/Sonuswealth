@@ -3030,9 +3030,9 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       a: { label: 'Tax this year', value: fmt(totalTaxNow || 0), colour: 'var(--c-danger)',
            eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
            sub: 'tap for the breakdown', onTap: () => setOpenTile('income') },
-      b: { label: 'Adj. net income', value: fmt(ani || 0),
+      b: { label: 'Income HMRC counts', value: fmt(ani || 0),
            eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
-           sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band · tap to see why' : 'tap for the 6-step working',
+           sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band · tap to see why' : 'sets your £100k allowance taper · tap',
            onTap: () => setOpenTile('income') },
       c: { label: 'Allowances left', value: `${100 - (allow?.utilization || 0)}%`,
            eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
@@ -3264,8 +3264,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         estateBadge={estateBadge}
       />
 
-      {/* ── D-ANCHOR-2 sub-anchor strip ───────────────────────────────────── */}
-      <SubAnchorStrip {...(subTab === 'tax' ? subAnchorTax : subAnchorEstate)} />
+      {/* ── D-ANCHOR-2 sub-anchor strip (hidden when Choices is active) ─────── */}
+      {!showChoices && <SubAnchorStrip {...(subTab === 'tax' ? subAnchorTax : subAnchorEstate)} />}
 
       {/* ── NRI notice ────────────────────────────────────────────────────── */}
       {nri && <NRINotice />}
@@ -3283,7 +3283,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       )}
 
       {/* ── TAX SUB-TAB — 1B category tiles → drawers (founder issue 2/5) ───── */}
-      {subTab === 'tax' && (
+      {!showChoices && subTab === 'tax' && (
         <div key="tax" className="sw-tab-slide">
           <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '2px 2px 10px' }}>
             Tap a card to open its detail.
@@ -3340,7 +3340,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
             above (IHT today · family receives · pension-IHT countdown); every
             former hero card (signature delta, inheritance story, CoI, dual
             number) is now a tile → drawer, matching the Tax sub-tab. ───────── */}
-      {subTab === 'estate' && (
+      {!showChoices && subTab === 'estate' && (
         <div key="estate" className="sw-tab-slide">
           <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '2px 2px 10px' }}>
             Tap a card to open its detail.

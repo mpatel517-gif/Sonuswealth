@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 import { parseDocument } from '../services/parser.js'
 import { cgtChargeableHoldings } from '../engine/_helpers.js'
+import { situationalTaxes } from '../engine/situational-taxes.js'
 // S1 selector migration (Phase 2)
 import {
   netWorth,
@@ -1037,6 +1038,131 @@ function CGTDetail({ entity }) {
           <Chip tone="info">Spousal transfer headroom</Chip>
         )}
       </div>
+    </div>
+  )
+}
+
+// "Other taxes in your situation" — taxes that apply because of WHO you are
+// (landlord, company director, multi-property owner), not your annual income or
+// your estate. Renders only the rows that genuinely apply. (#20 s24 · #21 SDLT
+// · #22 corporation tax). Figures from situational-taxes.js; estimates labelled.
+function SituationalTaxes({ entity }) {
+  const rows = safe(() => situationalTaxes(entity), []) || []
+  const [open, setOpen] = useState(null)
+  if (!rows.length) return null
+
+  const rowHead = {
+    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    gap: 10, padding: '11px 12px', borderRadius: 10, cursor: 'pointer',
+    border: '1px solid var(--c-sep)', background: 'var(--c-surface2, transparent)',
+  }
+  const sub = { fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }
+
+  const render = (r) => {
+    if (r.kind === 's24') {
+      return {
+        head: 'Landlord tax — Section 24', icon: '🏠',
+        headline: `${fmt(r.grossRent)} → ${fmt(r.netAfterS24)} taxable`,
+        body: (
+          <div style={{ padding: '4px 2px 2px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <p style={sub}>{r.note}</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <Chip tone="neutral">Gross rent {fmt(r.grossRent)}</Chip>
+              <Chip tone="warn">Taxable after s24 {fmt(r.netAfterS24)}</Chip>
+              {r.basicRateCredit != null
+                ? <Chip tone="info">20% interest credit {fmt(r.basicRateCredit)}</Chip>
+                : <Chip tone="neutral">Mortgage-interest figure pending</Chip>}
+            </div>
+          </div>
+        ),
+      }
+    }
+    if (r.kind === 'sdlt') {
+      return {
+        head: 'Stamp duty on your property portfolio', icon: '📜',
+        headline: `${fmt(r.total)} · estimated`,
+        body: (
+          <div style={{ padding: '4px 2px 2px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {r.rows.map((p, k) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 12 }}>
+                <span style={{ color: 'var(--c-text2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.label} <span style={{ color: 'var(--c-text3)' }}>· {p.use}{p.date ? ` · ${String(p.date).slice(0, 4)}` : ''}</span>
+                </span>
+                <span style={{ fontWeight: 700, color: p.sdlt > 0 ? 'var(--c-text)' : 'var(--c-text3)', fontVariantNumeric: 'tabular-nums' }}>
+                  {p.sdlt > 0 ? fmt(p.sdlt) : '£0'}
+                </span>
+              </div>
+            ))}
+            <p style={{ ...sub, color: 'var(--c-text3)', marginTop: 2 }}>{r.assumptions}</p>
+          </div>
+        ),
+      }
+    }
+    // corp
+    return {
+      head: 'Corporation tax behind your dividends', icon: '🏢',
+      headline: `${fmt(r.totalCT)} · est. (company-level)`,
+      body: (
+        <div style={{ padding: '4px 2px 2px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {r.rows.map((c, k) => (
+            <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: 'var(--c-text)', fontWeight: 700 }}>{c.name}</span>
+                <span style={{ color: 'var(--c-text2)' }}>CT ~{fmt(c.ct)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <Chip tone="neutral">Turnover {fmt(c.turnover)}</Chip>
+                <Chip tone="neutral">Profit after tax {fmt(c.profitAfterTax)}</Chip>
+                <Chip tone="neutral">≈ pre-tax {fmt(c.preTax)}</Chip>
+                {c.vatRegistered && <Chip tone="info">VAT-registered (turnover &gt; £90k)</Chip>}
+              </div>
+              {c.ctBand && <span style={{ ...sub, color: 'var(--c-text3)' }}>{c.ctBand}</span>}
+            </div>
+          ))}
+          {r.doubleTaxNote && (
+            <p style={{ ...sub, padding: '8px 10px', background: 'var(--c-tint-amber, rgba(255,179,71,.12))', borderRadius: 8 }}>
+              ⚠ {r.doubleTaxNote}
+            </p>
+          )}
+          <p style={{ ...sub, color: 'var(--c-text3)' }}>
+            Corporation-tax filing sits with the company; we model its personal impact only. Figure estimated by grossing profit-after-tax up under 2026/27 rates.
+          </p>
+        </div>
+      ),
+    }
+  }
+
+  return (
+    <div className="card sw-card-elevated">
+      <SectionHead
+        title="Other taxes in your situation"
+        sub="Taxes that apply because of what you own and do — landlord, director, property owner"
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map((r, i) => {
+          const v = render(r)
+          const isOpen = open === i
+          return (
+            <div key={i}>
+              <button onClick={() => setOpen(isOpen ? null : i)} className="sw-press" style={rowHead}
+                aria-expanded={isOpen}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <span aria-hidden>{v.icon}</span>
+                  <span style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.head}</span>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{v.headline}</span>
+                  <span style={{ color: 'var(--c-acc)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
+                </span>
+              </button>
+              {isOpen && v.body}
+            </div>
+          )
+        })}
+      </div>
+      <p style={{ fontSize: 10, color: 'var(--c-text3)', margin: '10px 2px 0' }}>
+        Figures marked “estimated” are illustrative, pending review.
+      </p>
     </div>
   )
 }
@@ -3305,6 +3431,10 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     }
   }, [entity, bv])
 
+  // Situational taxes (landlord s24 / SDLT / corporation tax) — only the rows
+  // that apply to THIS entity. Drives the "Other taxes in your situation" tile.
+  const situational = useMemo(() => safe(() => situationalTaxes(entity), []) || [], [entity, bv])
+
   // ── Sub-anchor strip — different for tax vs estate ────────────────────────
   const subAnchorTax = useMemo(() => {
     const ani = safe(() => calcANI(entity).ani, 0)
@@ -3425,6 +3555,10 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       case 'selfassessment':
         return <CategoryDrawer title="Self-assessment & residency" onClose={closeTile}>
           <SelfAssessment entity={entity} /><SelfAssessmentDocs /><NonDomCard entity={entity} />
+        </CategoryDrawer>
+      case 'situational':
+        return <CategoryDrawer title="Other taxes in your situation" onClose={closeTile}>
+          <SituationalTaxes entity={entity} />
         </CategoryDrawer>
       // ── Estate drawers ──
       case 'est-iht':
@@ -3658,6 +3792,15 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
               sub="Filing deadline, balance due and non-domicile status"
               onClick={() => setOpenTile('selfassessment')}
             />
+            {situational.length > 0 && (
+              <CatTile
+                title="Other taxes in your situation"
+                value={`${situational.length} apply`}
+                sub={situational.map(s => s.kind === 's24' ? 'landlord (s24)' : s.kind === 'sdlt' ? 'stamp duty' : 'corporation tax').join(' · ')}
+                tone="warning"
+                onClick={() => setOpenTile('situational')}
+              />
+            )}
           </div>
         </div>
       )}

@@ -538,7 +538,37 @@ function CategoryDrawer({ title, subtitle, onClose, children }) {
 }
 
 // Category tile — compact entry point: title · headline · sub · chevron.
-function CatTile({ title, value, sub, tone = 'neutral', onClick }) {
+// Compact per-matter mini-chart for a tile face (founder 2026-06-08: "charts to
+// explain each taxation matter"). A single proportional bar — segments render
+// left-to-right with their colour; a tiny legend names each. Used for tax-band
+// composition, you-keep-vs-HMRC, gains-vs-exempt, estate-vs-IHT. The full chart
+// lives in the drawer; this is the at-a-glance version.
+function MiniProportionBar({ segments, height = 9 }) {
+  const total = segments.reduce((s, x) => s + Math.max(0, x.value || 0), 0)
+  if (total <= 0) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
+      <div style={{ display: 'flex', width: '100%', height, borderRadius: 999, overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
+        {segments.map((s, i) => {
+          const w = Math.max(0, s.value || 0) / total * 100
+          return w > 0 ? (
+            <div key={i} title={`${s.label}: ${Math.round(w)}%`} style={{ width: `${w}%`, background: s.colour, height: '100%' }} />
+          ) : null
+        })}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
+        {segments.filter(s => (s.value || 0) > 0).map((s, i) => (
+          <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--c-text3)' }}>
+            <span style={{ width: 7, height: 7, borderRadius: 2, background: s.colour, flexShrink: 0 }} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CatTile({ title, value, sub, tone = 'neutral', onClick, chart }) {
   const valColour = tone === 'danger' ? 'var(--c-danger)'
     : tone === 'warning' ? 'var(--c-warning)'
     : tone === 'success' ? 'var(--c-success)' : 'var(--c-text)'
@@ -555,6 +585,7 @@ function CatTile({ title, value, sub, tone = 'neutral', onClick }) {
       {value != null && (
         <div style={{ fontSize: 22, fontWeight: 700, color: valColour, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
       )}
+      {chart}
       {sub && <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.4 }}>{sub}</div>}
     </button>
   )
@@ -3068,13 +3099,22 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     const gross = txY.gross || safe(() => calcAllIncome(entity)?.total, 0) || 0
     const invGain = +(entity?.assets?.investments?.unrealisedGain || 0)
     const giaGain = +(entity?.assets?.gia?.unrealisedGain || 0)
+    const divDetail = safe(() => te_dividendTaxDetail(entity, entity.assets?.portfolio?.holdings || []), null)
     return {
       totalTax: txY.total_tax || 0,
       gross,
       effRate: txY.effective_rate || 0,
       allowLeft: 100 - (allow?.utilization || 0),
+      // Tax composition (for the Income tile mini-chart): where the total tax goes.
+      incomeTax: comp.income_tax || 0,
+      nics: comp.nics || 0,
+      savingsTax: comp.savings_tax || 0,
       dividendTax: comp.dividend_tax || 0,
       cgt: comp.cgt || 0,
+      // Dividend split (for the Dividends tile): kept vs taxed on exposed dividends.
+      dividendGross: divDetail?.gia_exposed || 0,
+      // Allowance headroom (for the Allowances gauge).
+      allowUsedPct: allow?.utilization || 0,
       hasDividend: (comp.dividend_tax || 0) > 0 || (allow?.dividend && (allow.dividend.used || 0) > 0),
       hasCGT: (invGain + giaGain) > 0 || (comp.cgt || 0) > 0,
     }
@@ -3370,6 +3410,12 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
               sub={`Effective rate ${fmtPct(taxTiles.effRate)} · gross ${fmt(taxTiles.gross)}`}
               tone="warning"
               onClick={() => setOpenTile('income')}
+              chart={<MiniProportionBar segments={[
+                { label: 'Income tax', value: taxTiles.incomeTax, colour: 'var(--c-danger)' },
+                { label: 'National Insurance', value: taxTiles.nics, colour: 'var(--c-warning)' },
+                { label: 'Dividend', value: taxTiles.dividendTax, colour: 'var(--c-acc)' },
+                { label: 'Capital gains', value: taxTiles.cgt, colour: 'var(--c-acc3)' },
+              ]} />}
             />
             <CatTile
               title="Allowances — what's left"
@@ -3377,6 +3423,10 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
               sub="ISA, dividend, capital-gains, savings & personal allowance"
               tone="success"
               onClick={() => setOpenTile('allowances')}
+              chart={<MiniProportionBar segments={[
+                { label: 'Used', value: taxTiles.allowUsedPct, colour: 'var(--c-warning)' },
+                { label: 'Still free', value: taxTiles.allowLeft, colour: 'var(--c-success)' },
+              ]} />}
             />
             <CatTile
               title="Pension relief & drawdown"
@@ -3390,6 +3440,10 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
                 sub="Dividend allowance, rates and the ISA shelter"
                 tone="warning"
                 onClick={() => setOpenTile('dividends')}
+                chart={<MiniProportionBar segments={[
+                  { label: 'You keep', value: Math.max(0, taxTiles.dividendGross - taxTiles.dividendTax), colour: 'var(--c-success)' },
+                  { label: 'Tax', value: taxTiles.dividendTax, colour: 'var(--c-danger)' },
+                ]} />}
               />
             )}
             {taxTiles.hasCGT && (
@@ -3427,6 +3481,10 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
               sub="Today vs the April-2027 change, the waterfall & year-by-year"
               tone="danger"
               onClick={() => setOpenTile('est-iht')}
+              chart={<MiniProportionBar segments={[
+                { label: 'To family', value: exposureToday?.beneficiary_value || 0, colour: 'var(--c-success)' },
+                { label: 'To HMRC', value: exposureToday?.iht_due || 0, colour: 'var(--c-danger)' },
+              ]} />}
             />
             <CatTile
               title="Your inheritance story"

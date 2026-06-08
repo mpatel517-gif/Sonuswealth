@@ -322,7 +322,7 @@ function SectionHead({ title, sub, accessory }) {
 // Sub-tab segmented control (§2.5)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SubTabSelector({ value, onChange, taxBadge, estateBadge }) {
+function SubTabSelector({ value, onChange, taxBadge, estateBadge, inline = false }) {
   const tabs = [
     { id: 'tax',    label: 'Tax',    badge: taxBadge },
     { id: 'estate', label: 'Estate', badge: estateBadge },
@@ -337,7 +337,7 @@ function SubTabSelector({ value, onChange, taxBadge, estateBadge }) {
       border: '1px solid var(--c-border)',
       padding: 3,
       gap: 0,
-      margin: '4px 16px 12px',
+      margin: inline ? 0 : '4px 16px 12px',
     }}>
       {/* Sliding indicator */}
       <span aria-hidden="true" style={{
@@ -3392,8 +3392,12 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       {/* ── Header ────────────────────────────────────────────────────────
             Founder finding #4 (2026-06-08): the per-tab tax-year pill duplicated
             the GLOBAL header tax-year chip — removed. Just the Back affordance. */}
+      {/* Consolidated header row (founder 2026-06-08, review #1+#2): the Tax|Estate
+          selector sits beside the year control (X28 below) instead of in a
+          separate row lower down, and shares the Back affordance's row so the
+          old Back-only bar no longer wastes a strip of vertical space. */}
       <div style={{
-        display: 'flex', alignItems: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
         padding: '8px 16px 4px',
       }}>
         <button
@@ -3402,11 +3406,18 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6,
-            color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
+            color: 'var(--c-acc)', fontSize: 13, fontWeight: 600, flexShrink: 0,
           }}
         >
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
+        <SubTabSelector
+          value={subTab}
+          onChange={(v) => { setSubTab(v); setOpenTile(null) }}
+          taxBadge={taxBadge}
+          estateBadge={estateBadge}
+          inline
+        />
       </div>
 
       {/* ── X28 top-bar (per §X28-PATCH-1 / D-X28-OPTION-D) ─────────────── */}
@@ -3471,13 +3482,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         />
       )}
 
-      {/* ── Sub-tab segmented control (§2.5) ──────────────────────────────── */}
-      <SubTabSelector
-        value={subTab}
-        onChange={(v) => { setSubTab(v); setOpenTile(null) }}
-        taxBadge={taxBadge}
-        estateBadge={estateBadge}
-      />
+      {/* Sub-tab selector relocated to the consolidated header row above
+          (founder review #1) — no longer rendered here. */}
 
       {/* ── D-ANCHOR-2 sub-anchor strip (hidden when Choices is active) ─────── */}
       {!showChoices && <SubAnchorStrip {...(subTab === 'tax' ? subAnchorTax : subAnchorEstate)} />}

@@ -42,12 +42,13 @@
 
 import { useEffect, useState } from 'react';
 import { ihtDeltaPrePost2027 } from '../../engine/canonical-metrics.js';
-
-const RULE_CHANGE_DATE = new Date(Date.UTC(2027, 3, 6, 0, 0, 0, 0)); // 2027-04-06 00:00 UTC
+// P2 reconciliation (2026-06-07): single canonical countdown source shared with
+// TaxEstate (banner + sub-anchor tile) so two visuals of one quantity always
+// agree. Was a local floor() here (302) vs a ceil() in TaxEstate (303).
+import { sippIhtCountdownDays } from '../../engine/fq-calculator.js';
 
 function daysToApril2027(nowMs = Date.now()) {
-  const ms = RULE_CHANGE_DATE.getTime() - nowMs;
-  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+  return sippIhtCountdownDays(nowMs);
 }
 
 function msUntilNextUTCMidnight(nowMs = Date.now()) {

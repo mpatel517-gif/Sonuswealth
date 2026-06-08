@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useState, useRef } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 // S1 selector migration (Phase 2)
 import {
   netWorth,
@@ -20,7 +21,7 @@ import {
 } from '../engine/selectors/index.js'
 import {
   // basics
-  fmt, daysLeft, calcAge, lifeStageFor, TAX, guardrail,
+  fmt, daysLeft, sippIhtCountdownDays, costOfInaction, calcAge, lifeStageFor, TAX, guardrail,
   calcRisk, fqBand, riskBand,
   // legacy IHT (still used as a robust fallback for ihtDynamic-shape data)
   ihtDynamic,
@@ -40,6 +41,12 @@ import {
   nominationStatus,
   // plan / staleness / coi
   planFor, planStaleness, totalCoI,
+  // §8.20 year-by-year IHT series (tax-estate-engine — returns an ARRAY of
+  // {year, estateValue, ihtDue, pensionIncluded}). Aliased te_ to avoid the
+  // clash with the single-snapshot ihtProjection on the selector facade, which
+  // is what IHTYearByYear was wrongly calling (returned one object → no .length
+  // → card silently unmounted). Fixed 2026-06-07.
+  ihtProjection as te_ihtProjectionSeries,
 } from '../engine/fq-calculator.js'
 
 import { BRAND } from '../config/brand.js'
@@ -229,6 +236,68 @@ function GaugeBar({ pct, colour = 'var(--c-acc)', height = 8, bg = 'rgba(255,255
         background: colour,
         transition: 'width var(--dur-slow, 600ms) var(--ease-out-expo, cubic-bezier(0.16,1,0.3,1))',
       }} />
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ScrubTrack — shared-input scrub control (FLEXIBILITY 2026-06-07).
+// Pattern lifted from DecisionCharts PathComparisonChart/startScrub/BarGrip:
+// the FILLED bar is the grabbable control (relative drag, no jump-to-cursor),
+// and a keyboard-accessible <input type=range> mirrors it. Dragging or keying
+// either one drives the same `value`, so every dependent figure rescales live.
+// Use for shared-input OUTCOMES (a single driver feeding many numbers), never
+// for a per-row outcome.
+// ─────────────────────────────────────────────────────────────────────────────
+function ScrubTrack({ value, min = 0, max, step = 1, onChange, colour = 'var(--c-acc)', ariaLabel, valueText, height = 22 }) {
+  const pct = max > min ? Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100)) : 0
+  const startScrub = (e) => {
+    e.preventDefault()
+    const el = e.currentTarget
+    const trackW = el.getBoundingClientRect().width || 1
+    const x0 = e.clientX, v0 = Number(value)
+    try { el.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+    const move = (ev) => {
+      const dx = (ev.clientX ?? x0) - x0
+      let v = v0 + (dx / trackW) * (max - min)
+      v = Math.round(v / step) * step
+      onChange(Math.max(min, Math.min(max, v)))
+    }
+    const end = () => {
+      try { el.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
+  }
+  return (
+    <div>
+      <div
+        onPointerDown={startScrub}
+        title="Drag to change the amount — every figure below updates together"
+        style={{
+          position: 'relative', height, borderRadius: 7,
+          background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+          overflow: 'hidden', cursor: 'ew-resize', touchAction: 'none',
+        }}
+      >
+        <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: colour, minWidth: pct > 0 ? 4 : 0, transition: 'width .08s linear' }} />
+        <div aria-hidden style={{ position: 'absolute', right: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 2, pointerEvents: 'none', opacity: 0.55 }}>
+          <span style={{ width: 2, height: 10, borderRadius: 2, background: 'var(--c-text3)' }} />
+          <span style={{ width: 2, height: 10, borderRadius: 2, background: 'var(--c-text3)' }} />
+        </div>
+      </div>
+      {/* Keyboard-accessible mirror of the drag control */}
+      <input
+        type="range" min={min} max={max} step={step}
+        value={value} onChange={e => onChange(Number(e.target.value))}
+        aria-label={ariaLabel}
+        aria-valuetext={valueText}
+        style={{ width: '100%', accentColor: colour, marginTop: 6 }}
+      />
     </div>
   )
 }
@@ -832,12 +901,74 @@ function DrawdownMatrix({ entity }) {
   const currentDD = entity?.drawdown || 0
   // Max net for visual bar comparison
   const maxNet = Math.max(1, ...ddm.rows.map(r => r.net || 0))
+
+  // FLEXIBILITY (2026-06-07): drawdown rate is the shared driver. Drag the bar
+  // (or key the slider) and the tax / net / IHT-saved at that drawdown all
+  // rescale live, interpolated off the engine matrix rows (no re-typed maths).
+  const sortedRows = [...ddm.rows].sort((a, b) => a.drawdown - b.drawdown)
+  const ddMin = sortedRows[0].drawdown
+  const ddMax = sortedRows[sortedRows.length - 1].drawdown
+  const ddStep = sortedRows.length > 1 ? Math.max(1000, Math.round((sortedRows[1].drawdown - sortedRows[0].drawdown))) : 5000
+  const [selectedDraw, setSelectedDraw] = useState(() => {
+    const seed = currentDD || ddm.recommended || sortedRows[0].drawdown
+    return Math.max(ddMin, Math.min(ddMax, seed))
+  })
+  // Linear-interpolate a metric at the selected drawdown between bracketing rows.
+  const interp = (key) => {
+    if (selectedDraw <= ddMin) return sortedRows[0][key] || 0
+    if (selectedDraw >= ddMax) return sortedRows[sortedRows.length - 1][key] || 0
+    let lo = sortedRows[0], hi = sortedRows[sortedRows.length - 1]
+    for (let i = 0; i < sortedRows.length - 1; i++) {
+      if (sortedRows[i].drawdown <= selectedDraw && sortedRows[i + 1].drawdown >= selectedDraw) {
+        lo = sortedRows[i]; hi = sortedRows[i + 1]; break
+      }
+    }
+    const span = (hi.drawdown - lo.drawdown) || 1
+    const t = (selectedDraw - lo.drawdown) / span
+    return Math.round((lo[key] || 0) + ((hi[key] || 0) - (lo[key] || 0)) * t)
+  }
+  const liveTax = interp('tax')
+  const liveNet = interp('net')
+  const liveIhtSaved = interp('ihtSaved')
+  const inDepthLive = selectedDraw >= TAX.adjustedNetIncomeCliff && selectedDraw <= TAX.art
+
   return (
     <div className="card sw-card-elevated">
       <SectionHead
         title="Drawdown matrix"
         sub={`Recommended ${fmt(ddm.recommended || 0)}/yr${guard ? ` · Guardrail ${fmt(guard)}` : ''}`}
       />
+
+      {/* Shared-input driver — drag to pick a drawdown; figures below rescale */}
+      <div style={{ marginBottom: 14, padding: 12, background: 'var(--c-surface2)', borderRadius: 'var(--r-md)', border: '1px solid var(--c-sep)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--c-text3)' }}>Model a drawdown</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }} data-tieout="drawdown.selected">{fmt(selectedDraw)}/yr</span>
+        </div>
+        <ScrubTrack
+          value={selectedDraw}
+          min={ddMin}
+          max={ddMax}
+          step={ddStep}
+          onChange={setSelectedDraw}
+          colour={inDepthLive ? 'var(--c-danger)' : 'var(--c-accent)'}
+          ariaLabel={`Annual drawdown — currently ${fmt(selectedDraw)} per year. Drag to model a different drawdown; the tax, net income and IHT saved update live.`}
+          valueText={`${fmt(selectedDraw)} per year`}
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 12 }}>
+          <StatTile label="Tax" value={fmt(liveTax)} />
+          <StatTile label="Net" value={fmt(liveNet)} />
+          <StatTile label="IHT saved" value={fmt(liveIhtSaved)} />
+        </div>
+        {inDepthLive && (
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-danger)' }}>
+            <strong>60% effective rate band</strong> — this drawdown pushes ANI into the £{TAX.adjustedNetIncomeCliff.toLocaleString()}–£{TAX.art.toLocaleString()} taper.
+          </div>
+        )}
+        <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-text3)' }}>
+          Interpolated from the engine matrix below · provisional, pending professional sign-off.
+        </div>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 360, overflowY: 'auto' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr',
@@ -854,10 +985,13 @@ function DrawdownMatrix({ entity }) {
         <RevealStagger interval={40} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {ddm.rows.map((r, i) => {
             const isCurrent = currentDD && Math.abs(r.drawdown - currentDD) < 2500
+            // Selected-via-scrub row — highlight whichever matrix row the driver
+            // is closest to, so the table tracks the control above.
+            const isSelected = Math.abs(r.drawdown - selectedDraw) <= ddStep / 2
             const inDepth = r.drawdown >= TAX.adjustedNetIncomeCliff && r.drawdown <= TAX.art
             const isRecommended = r.drawdown === ddm.recommended
             const netPct = Math.round(((r.net || 0) / maxNet) * 100)
-            const rowCls = isCurrent ? 'sw-pulse-glow' : ''
+            const rowCls = isCurrent || isSelected ? 'sw-pulse-glow' : ''
             return (
               <div key={i} className={rowCls} style={{
                 display: 'grid',
@@ -865,14 +999,16 @@ function DrawdownMatrix({ entity }) {
                 gap: 6, alignItems: 'center',
                 padding: '8px 10px',
                 borderRadius: 'var(--r-md)',
-                border: isCurrent ? '1px solid var(--c-warning)' : '1px solid transparent',
-                background: isRecommended
-                  ? 'var(--c-tint-mint)'
-                  : inDepth
-                    ? 'var(--c-tint-coral)'
-                    : isCurrent
-                      ? 'rgba(255,210,122,.06)'
-                      : 'transparent',
+                border: isSelected ? '1px solid var(--c-accent)' : isCurrent ? '1px solid var(--c-warning)' : '1px solid transparent',
+                background: isSelected
+                  ? 'var(--c-tint-blue)'
+                  : isRecommended
+                    ? 'var(--c-tint-mint)'
+                    : inDepth
+                      ? 'var(--c-tint-coral)'
+                      : isCurrent
+                        ? 'rgba(255,210,122,.06)'
+                        : 'transparent',
                 fontSize: 12,
                 transition: 'background var(--dur-normal,350ms)',
               }}>
@@ -1192,6 +1328,8 @@ function SliderRow({ label, value, max, step, onChange, note }) {
       </div>
       <input type="range" min={0} max={max} step={step}
         value={value} onChange={e => onChange(Number(e.target.value))}
+        aria-label={`${label} — currently ${fmt(value)}. Drag to model a different amount; the estate figures update live.`}
+        aria-valuetext={fmt(value)}
         style={{ width: '100%', accentColor: 'var(--c-acc)' }} />
       {note && <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>{note}</div>}
     </div>
@@ -1199,14 +1337,37 @@ function SliderRow({ label, value, max, step, onChange, note }) {
 }
 
 // §8.20 — Year-by-year IHT projection table
+// FLEXIBILITY (2026-06-07): growth rate + projection horizon are the two hidden
+// drivers behind every figure in this table. The footnote used to STATE the
+// growth assumption ("4.0% p.a.") with no way to change it — a hard-coded
+// number whose driver was invisible. Now both are visible, grabbable sliders;
+// dragging either re-drives the engine series live. We do NOT re-derive the
+// projection inline — we feed a user-set assumption (expectedReturn) into the
+// canonical te_ihtProjectionSeries engine fn, which already reads it.
 function IHTYearByYear({ entity }) {
+  const entityGrowth = Number.isFinite(+entity?.expectedReturn) ? +entity.expectedReturn : 0.04
+  const [growth, setGrowth] = useState(entityGrowth)
+  const [horizon, setHorizon] = useState(5)
+
+  // Override growth by shallow-cloning the entity with the user's chosen rate —
+  // the engine series fn reads entity.expectedReturn, so this is supplying an
+  // input, not re-implementing the maths.
+  const projEntity = useMemo(
+    () => (growth === entityGrowth ? entity : { ...(entity || {}), expectedReturn: growth }),
+    [entity, growth, entityGrowth],
+  )
+
   const rows = useMemo(() => {
-    try { return ihtProjection(entity, 5) } catch { return [] }
-  }, [entity])
+    try {
+      const r = te_ihtProjectionSeries(projEntity, horizon)
+      return Array.isArray(r) ? r : []
+    } catch { return [] }
+  }, [projEntity, horizon])
 
   if (!rows.length) return null
 
   const baseIHT = rows[0]?.ihtDue ?? 0
+  const resetGrowth = () => setGrowth(entityGrowth)
 
   return (
     <RevealCard
@@ -1217,6 +1378,49 @@ function IHTYearByYear({ entity }) {
       headerAccessory={<Chip tone="neutral" size="sm">est · not advice</Chip>}
     >
       <div style={{ padding: '0 0 12px' }}>
+        {/* Grabbable drivers — growth rate + projection horizon */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
+          padding: '4px 0 12px',
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+              <span style={{ color: 'var(--c-text3)' }}>Growth rate</span>
+              <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                {(growth * 100).toFixed(1)}%
+                {growth !== entityGrowth && (
+                  <button onClick={resetGrowth} className="sw-press" style={{
+                    marginLeft: 6, fontSize: 10, color: 'var(--c-acc)', background: 'none',
+                    border: 'none', cursor: 'pointer', fontWeight: 600,
+                  }}>reset</button>
+                )}
+              </span>
+            </div>
+            <input
+              type="range" min={0} max={0.08} step={0.005}
+              value={growth}
+              aria-label="Assumed annual growth rate for the IHT projection"
+              onChange={e => setGrowth(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--c-acc)' }}
+            />
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+              <span style={{ color: 'var(--c-text3)' }}>Project forward</span>
+              <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                {horizon} year{horizon === 1 ? '' : 's'}
+              </span>
+            </div>
+            <input
+              type="range" min={2} max={15} step={1}
+              value={horizon}
+              aria-label="Number of years to project the estate forward"
+              onChange={e => setHorizon(Number(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--c-acc)' }}
+            />
+          </div>
+        </div>
+
         <div style={{ overflowX: 'auto' }}>
           <table style={{
             width: '100%',
@@ -1260,13 +1464,13 @@ function IHTYearByYear({ entity }) {
                       )}
                     </td>
                     <td style={{ padding: '7px 8px', textAlign: 'right', color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
-                      £{fmt(row.estateValue)}
+                      {fmt(row.estateValue)}
                     </td>
                     <td style={{ padding: '7px 8px', textAlign: 'right', color: row.ihtDue > 0 ? 'var(--c-bad, #ef4444)' : 'var(--c-good, #22c55e)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                      {row.ihtDue > 0 ? `£${fmt(row.ihtDue)}` : '—'}
+                      {row.ihtDue > 0 ? fmt(row.ihtDue) : '—'}
                     </td>
                     <td style={{ padding: '7px 8px', textAlign: 'right', color: delta > 0 ? 'var(--c-bad, #ef4444)' : delta < 0 ? 'var(--c-good, #22c55e)' : 'var(--c-text3)', fontVariantNumeric: 'tabular-nums' }}>
-                      {i === 0 ? '—' : delta === 0 ? '=' : `${delta > 0 ? '+' : ''}£${fmt(Math.abs(delta))}`}
+                      {i === 0 ? '—' : delta === 0 ? '=' : `${delta > 0 ? '+' : ''}${fmt(Math.abs(delta))}`}
                     </td>
                   </tr>
                 )
@@ -1275,7 +1479,13 @@ function IHTYearByYear({ entity }) {
           </table>
         </div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
-          Growth assumed at {entity?.expectedReturn != null ? `${((entity.expectedReturn) * 100).toFixed(1)}%` : '4.0%'} p.a. · NRB/RNRB thresholds frozen · Annual gift exemption £3,000/yr deducted · Pension IHT inclusion from Apr 2027.
+          <strong style={{ color: 'var(--c-text2)' }}>How we worked this out:</strong>{' '}
+          Each year your non-pension estate and pension pot grow at {(growth * 100).toFixed(1)}% p.a.
+          (the slider above — {growth === entityGrowth ? 'your assumption' : 'your override'}). We freeze the
+          nil-rate band (£{(TAX.nrb ?? 325000).toLocaleString('en-GB')}) and residence band per current policy,
+          deduct the £{(TAX.annualGiftExemption ?? 3000).toLocaleString('en-GB')}/yr gift exemption, and from
+          6 Apr 2027 add your unused pension into the estate (Finance Act 2026, enacted). IHT is charged at 40%
+          on the taxable balance. Illustrative under your assumptions — not advice.
         </div>
       </div>
     </RevealCard>
@@ -1610,23 +1820,41 @@ function BeneficiaryChain({ entity }) {
   )
 }
 
-// §6.11 — RNRB taper gauge
+// §6.11 — RNRB taper gauge — INTERACTIVE (FLEXIBILITY 2026-06-07).
+// Gross estate is the shared driver: drag the bar (or key the slider) to vary it
+// and the effective RNRB / lost-to-taper / IHT-on-the-lost-band all rescale live
+// off rnrbTaper(grossEstate). Taper threshold + RNRB read from TAX, never typed.
 function RNRBPlanning({ entity }) {
-  const taper = safe(() => rnrbTaper(entity), null)
+  const baseTaper = safe(() => rnrbTaper(entity), null)
   const elig  = safe(() => rnrbEligibility(entity), null)
-  if (!taper) return null
   const grossIht = safe(() => ihtDynamic(entity, true), { gross: 0 })
-  const grossEstate = grossIht.gross || 0
-  const taperStart = TAX.rnrbTaper
-  const taperEnd = TAX.rnrbTaper + 2 * TAX.rnrb   // RNRB fully tapered £1 per £2 over the threshold
+  const baseGross = grossIht.gross || 0
+  const taperStart = TAX.rnrbTaper                 // £2,000,000 taper threshold
+  const rnrbCap = TAX.rnrb
+  const taperEnd = taperStart + 2 * rnrbCap        // RNRB fully tapered £1 per £2 over the threshold
+  // Scrub range: from £0 up to a little past full taper-out so the user can drag
+  // the estate across the cliff and watch the RNRB collapse.
+  const scrubMax = Math.max(taperEnd + 500000, Math.ceil(baseGross / 100000) * 100000 + 500000)
+
+  const [override, setOverride] = useState(null)
+  const grossEstate = override == null ? baseGross : override
+  const taper = useMemo(
+    () => safe(() => rnrbTaper(grossEstate), baseTaper),
+    [grossEstate, baseTaper],
+  )
+  if (!baseTaper) return null
+  const eligible = elig?.eligible !== false
+  const effectiveRnrb = eligible ? (taper?.rnrb || 0) : 0
+  const lost = taper?.lost || 0
+  const ihtOnLost = Math.round(lost * (TAX.ihtRate || 0.40))   // 40% relief lost on the tapered band
   const inTaper = grossEstate >= taperStart
-  const pctv = Math.min(100, ((grossEstate - taperStart) / (taperEnd - taperStart)) * 100)
+  const dirty = override != null && Math.abs(override - baseGross) >= 1
   return (
     <div className="card sw-card-elevated">
       <SectionHead
         title="RNRB planning"
-        sub={`£${(taper.rnrb || 0).toLocaleString()} effective · £${(taper.lost || 0).toLocaleString()} lost to taper`}
-        accessory={elig?.eligible ? <Chip tone="good">Eligible</Chip> : <Chip tone="bad">{elig?.reason || 'Not eligible'}</Chip>}
+        sub={`£${(effectiveRnrb || 0).toLocaleString()} effective · £${(lost || 0).toLocaleString()} lost to taper`}
+        accessory={eligible ? <Chip tone="good">Eligible</Chip> : <Chip tone="bad">{elig?.reason || 'Not eligible'}</Chip>}
       />
       {inTaper && (
         <div style={{
@@ -1636,22 +1864,44 @@ function RNRBPlanning({ entity }) {
           borderRadius: 10,
           fontSize: 12, color: 'var(--c-warning)',
         }}>
-          <strong>£2m taper</strong> · For each £2 gross estate exceeds £2,000,000,
+          <strong>£{(taperStart / 1e6).toFixed(0)}m taper</strong> · For each £2 gross estate exceeds £{taperStart.toLocaleString()},
           RNRB falls by £1. Lost in full at £{(taperEnd).toLocaleString()}.
         </div>
       )}
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-          <span style={{ color: 'var(--c-text3)' }}>Gross estate</span>
-          <span style={{ color: 'var(--c-text)', fontWeight: 700 }}>{fmt(grossEstate)}</span>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+          <span style={{ color: 'var(--c-text3)' }}>
+            Gross estate{dirty && <span style={{ color: 'var(--c-acc)', fontWeight: 700 }}> · modelled</span>}
+          </span>
+          <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} data-tieout="rnrb.gross-estate">{fmt(grossEstate)}</span>
         </div>
-        <GaugeBar
-          pct={Math.min(100, (grossEstate / taperEnd) * 100)}
+        <ScrubTrack
+          value={Math.round(grossEstate)}
+          min={0}
+          max={scrubMax}
+          step={25000}
+          onChange={(v) => setOverride(v)}
           colour={inTaper ? 'var(--c-warning)' : 'var(--c-success)'}
-          height={10}
+          ariaLabel={`Gross estate value — currently ${fmt(grossEstate)}. Drag to model a different estate; the residence nil-rate band and the tax lost to the £${taperStart.toLocaleString()} taper update live.`}
+          valueText={fmt(grossEstate)}
         />
+        {dirty && (
+          <button
+            onClick={() => setOverride(null)}
+            className="sw-chip sw-chip-sm"
+            style={{ marginTop: 8, cursor: 'pointer', background: 'var(--c-surface2)', border: '1px solid var(--c-sep)', color: 'var(--c-text2)' }}
+          >
+            Reset to your estate ({fmt(baseGross)})
+          </button>
+        )}
       </div>
-      {taper.downsizingCredit > 0 && (
+      {/* Live dependent figures — rescale with the driver above */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: taper?.downsizingCredit > 0 ? 10 : 0 }}>
+        <StatTile label="Effective RNRB" value={fmt(effectiveRnrb)} />
+        <StatTile label="Lost to taper" value={fmt(lost)} />
+        <StatTile label="IHT on lost band" value={fmt(ihtOnLost)} />
+      </div>
+      {taper?.downsizingCredit > 0 && (
         <div style={{ fontSize: 12, color: 'var(--c-text2)' }}>
           Downsizing credit: <strong>{fmt(taper.downsizingCredit)}</strong>
         </div>
@@ -1716,13 +1966,24 @@ function BPRAPRMechanics({ entity }) {
 
 // §6.3 — CoI odometer (Estate planning domain) w/ cascade halo on change
 function EstateCoIOdometer({ entity }) {
+  // Founder ruling 2026-06-07: the ESTATE odometer renders the estate-planning
+  // SLICE, not the all-domains total. The all-domains figure stays on Home's
+  // CoI anchor (unchanged). These are intentionally different quantities — the
+  // explicit scope label is what stops the user conflating them.
+  // Spec §Q1.2 canonical: costOfInaction(entity,'estatePlanning') → numeric
+  // estate slice (= totalCoI().byDomain.estatePlanning, ~£70k for Bruce).
+  // NOTE FOR CALC REVIEWER: the prompt named coiForDomain(entity,'estatePlanning')
+  // but the canonical-metrics coiForDomain has NO 'estatePlanning' case and
+  // returns null (string-builder for pensions/investments/property/etc.). The
+  // numeric estate slice is costOfInaction(...,'estatePlanning'). Flagged.
   const coi = safe(() => totalCoI(entity), { total: 0, byDomain: {}, confidence: 'MED' })
-  // Fix 4: show total CoI (all domains), not just the estatePlanning domain slice.
-  const estCoI = coi?.total || 0
+  const estCoI = safe(() => costOfInaction(entity, 'estatePlanning'), 0) || 0
   const days = daysLeft() || 365
   const dailyRate = estCoI > 0 ? estCoI / Math.max(1, days) : 0
+  // byAction sheet shows only the estate-relevant domains that feed this slice.
+  const ESTATE_DOMAINS = new Set(['estatePlanning', 'gifting', 'protection'])
   const byAction = Object.entries(coi.byDomain || {})
-    .filter(([k, v]) => v > 0)
+    .filter(([k, v]) => v > 0 && ESTATE_DOMAINS.has(k))
     .map(([k, v]) => ({ label: k.replace(/([A-Z])/g, ' $1'), amount: v }))
   // Round to nearest 1k so floating-point drift doesn't constantly trigger halo
   const cascadeKey = Math.round(estCoI / 1000)
@@ -1733,6 +1994,8 @@ function EstateCoIOdometer({ entity }) {
         totalCoI={estCoI}
         dailyRate={dailyRate}
         deadline={null}
+        label="Cost of inaction · estate"
+        scopeSub="Estate-planning actions only — see Home for the all-domains figure."
         confidence={coi?.confidence?.toLowerCase?.() || 'medium'}
         provenance={['Estate planning shortfall', 'RNRB taper loss', 'Will/LPA gaps']}
         byAction={byAction}
@@ -2454,10 +2717,9 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
     } catch { return 0 }
   })()
   if (pensionPot <= 0) return null  // banner irrelevant — no pension exposure
-  const today = new Date()
-  const deadline = new Date('2027-04-06')
-  const msDelta = deadline - today
-  const daysLeft = Math.round(msDelta / 86400000)
+  // P2 reconciliation (2026-06-07): single canonical countdown source so this
+  // banner, the sub-anchor tile and IHTDeltaCard all show the same day number.
+  const daysLeft = sippIhtCountdownDays()
   const past = daysLeft <= 0
   const monthsLeft = Math.max(0, Math.round(daysLeft / 30.44))
   const colour =
@@ -2485,7 +2747,7 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
         </div>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.3 }}>
           {past
-            ? 'From 6 April 2027, unused pensions are inside your estate for IHT (Finance Act 2024).'
+            ? 'From 6 April 2027, unused pensions are inside your estate for IHT (Finance Act 2026).'
             : `From 6 April 2027 — in ~${monthsLeft} months — unused pensions enter your estate for IHT. Planning options collapse after this date.`}
         </div>
         <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.4 }}>
@@ -2513,7 +2775,7 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
 
-export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey }) {
+export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey, onOpenDecision }) {
   // Back-routing (2026-05-28): respect previous screen rather than jumping home.
   const goBackOrHome = onBack || onHome
   // ── Viewport detection (for mobile reordering — F-CAT-03 / F-VIS-01) ──────
@@ -2659,10 +2921,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   const subAnchorEstate = useMemo(() => {
     const ihtNow = exposureToday?.iht_due || 0
     const beneficiaryNet = exposureToday?.beneficiary_value || 0
-    // Pension-IHT countdown: live days-until 6 Apr 2027
-    const today = new Date()
-    const msPerDay = 86_400_000
-    const daysToPensionIHT = Math.max(0, Math.ceil((PENSION_IHT_DATE - today) / msPerDay))
+    // Pension-IHT countdown: live days-until 6 Apr 2027.
+    // P2 reconciliation (2026-06-07): single canonical source so this tile and
+    // IHTDeltaCard never disagree (was ceil→303 vs floor→302). Both now read
+    // sippIhtCountdownDays() (floor, UTC pivot).
+    const daysToPensionIHT = sippIhtCountdownDays()
     const countdownColour = daysToPensionIHT < 30 ? 'var(--c-danger)' : 'var(--c-warning)'
     // F-CAT-01: surface ENACTED status next to the countdown so the user can
     // distinguish enacted law from proposal. Sourced from Explainer TE-1 wording.
@@ -2740,6 +3003,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         onViewModeChange={setViewMode}
         rulesVersion={BRAND.rulesVersion}
         dataDate={BRAND.dataDate}
+        showWindowRow={false}
       />
 
       {/* P13-6 (2026-05-28, IFA hardening): SIPP-IHT April 2027 countdown banner.
@@ -2958,6 +3222,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
           )}
         </div>
       )}
+
+      <DecisionDrawers screen="tax" onOpen={onOpenDecision} />
 
       <p className="disclaimer">
         {BRAND.disclaimer}<br />

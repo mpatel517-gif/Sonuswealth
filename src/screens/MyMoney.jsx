@@ -20,6 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useMemo, useEffect } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 // S1 selector migration (Phase 2): canonical reads via facade.
 import {
   netWorth, investable,
@@ -131,6 +132,7 @@ import {
 } from '../engine/_helpers.js'
 import DebtLeaf from '../components/MyMoney/DebtLeaf.jsx'
 import { amortise } from '../components/MyMoney/debtMath.js'
+import { netWorthAtHorizon } from '../engine/projection.js'
 import CashDrillDown         from '../components/MyMoney/CashDrillDown.jsx'
 import AlternativesDrillDown from '../components/MyMoney/AlternativesDrillDown.jsx'
 import AssetDetailOverlay    from '../components/MyMoney/AssetDetailOverlay.jsx'
@@ -2297,8 +2299,8 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           const lsdbaUsed = +(entity?.pension?.lsdbaUsed
             || entity?.pension?.lump_sum_death_benefit_allowance_used
             || 0)
-          const lsaCap = 268275
-          const lsdbaCap = 1073100
+          const lsaCap = TAX.lsa
+          const lsdbaCap = TAX.lsdba
           const lsaPct = Math.min(100, Math.round((lsaUsed / lsaCap) * 100))
           const lsdbaPct = Math.min(100, Math.round((lsdbaUsed / lsdbaCap) * 100))
           return (
@@ -2331,7 +2333,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
                 </>
               )}
               <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.4 }}>
-                Lump Sum Allowance (LSA) £268,275 and Lump Sum &amp; Death Benefit Allowance (LSDBA) £1,073,100. Pensions Schemes Act 2023.
+                Lump Sum Allowance (LSA) £{lsaCap.toLocaleString()} and Lump Sum &amp; Death Benefit Allowance (LSDBA) £{lsdbaCap.toLocaleString()}. Pensions Schemes Act 2023.
               </div>
             </div>
           )
@@ -2425,7 +2427,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
 
         {/* SIPP-IHT countdown — Finance Act 2026 enacted; pensions enter estate 6 April 2027 */}
         {(() => {
-          const daysToSippIht = Math.max(0, Math.floor((new Date('2027-04-06') - new Date()) / 86400000))
+          const daysToSippIht = Math.max(0, Math.floor((TAX.deadline - new Date()) / 86400000))
           return (
             <button
               type="button"
@@ -2585,8 +2587,8 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.4,
           display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
         }}>
-          A <strong>lifetime cap</strong> <ExplainerChip id="MM-LSA" size={13} /> limits how much tax-free cash you can take across all your pensions in your lifetime — currently £268,275.
-          A <strong>combined cap</strong> <ExplainerChip id="MM-LSDBA" size={13} /> limits both your tax-free cash AND any lump sums paid to your family when you die — currently £1,073,100.
+          A <strong>lifetime cap</strong> <ExplainerChip id="MM-LSA" size={13} /> limits how much tax-free cash you can take across all your pensions in your lifetime — currently £{TAX.lsa.toLocaleString()}.
+          A <strong>combined cap</strong> <ExplainerChip id="MM-LSDBA" size={13} /> limits both your tax-free cash AND any lump sums paid to your family when you die — currently £{TAX.lsdba.toLocaleString()}.
           When you first access a pension, you can normally take up to <strong>25% tax-free</strong> <ExplainerChip id="MM-PCLS" size={13} />.
         </div>
         <div style={{
@@ -2614,7 +2616,7 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           You can leave the pot invested and take income as you need it, year by year.
           The four presets below model different approaches:
           <br /><strong>Take nothing</strong> keeps the pot fully invested.
-          <br /><strong>Stay in basic-rate band</strong> caps each year's income at £37,700 so nothing tips into higher-rate tax.
+          <br /><strong>Stay in basic-rate band</strong> caps each year's income at £{TAX.brl.toLocaleString()} so nothing tips into higher-rate tax.
           <br /><strong>Safe withdrawal rate</strong> uses the engine's "how much can I take without running out" calculation.
           <br /><strong>Smooth withdrawals</strong> takes more in good market years and trims in bad ones — your pot is more likely to last 10–20 years longer than a fixed amount, but some years your income will drop. <ExplainerChip id="MM-GUYTON-KLINGER" size={13} />
         </div>
@@ -2854,7 +2856,7 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
   const a    = entity.assets || {}
   const liab = entity.liabilities || {}
   const target = +entity.targetIncome || 0
-  const cash   = +(a.cash?.total || a.cash?.value || 0)
+  const cash   = rowsForCash(entity).reduce((s, r) => s + (+r.value || 0), 0) // bank[] array + legacy object (sweep #49)
   const monthlySpend = target / 12
 
   // Emergency cover
@@ -2863,13 +2865,13 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
   const safetyBand = months == null ? null : months >= 6 ? 'good' : months >= 3 ? 'warn' : 'bad'
   const safetyPct  = months != null ? Math.min((months / 6) * 100, 100) : 0
 
-  // Debt
-  const mortgage   = liab.mortgage || {}
-  const otherLoans = liab.otherLoans || []
-  const totalDebt  = (mortgage.outstanding || 0)
-    + otherLoans.reduce((s, l) => s + +(l.outstanding || l.outstanding_balance || 0), 0)
-  const monthlyDebt = (mortgage.monthlyPayment || 0)
-    + otherLoans.reduce((s, l) => s + +(l.monthlyPayment || 0), 0)
+  // Debt — read through the canonical reader so array-shape personas (director/
+  // landlord) aren't wrongly shown 'Clear' (sweep #49).
+  const liabRows    = rowsForLiabilities(entity)
+  const totalDebt   = liabRows.reduce((s, r) => s + (+r.value || 0), 0)
+  const monthlyDebt = Array.isArray(entity.liabilities)
+    ? entity.liabilities.reduce((s, l) => s + (+(l.monthly_payment || l.monthlyPayment) || 0), 0)
+    : ((liab.mortgage?.monthlyPayment || 0) + (liab.otherLoans || []).reduce((s, l) => s + +(l.monthlyPayment || 0), 0))
   const debtYears  = monthlyDebt > 0 ? totalDebt / (monthlyDebt * 12) : null
   // C-03: no payment data + debt present → 'warn', not 'good'
   const debtBand   = totalDebt === 0 ? 'good'
@@ -2942,7 +2944,7 @@ function PriorityCards({ entity, onNav, setActiveDrill }) {
       sub: ebr.ihtDue > 0 ? `${fmt(ebr.ihtDue)} IHT due (current estate composition)` : 'No IHT liability at current estate composition',
       band: benBand, pct: benPct,
       action: ebr.ihtDue > 0
-        ? `Common UK IHT mitigation mechanics: pension beneficiary nominations · life cover written into trust · annual £3,000 gift exemption · 7-year clock on PETs · regular gifts from surplus income. Each has eligibility rules — see Tax & Estate.`
+        ? `Common UK IHT mitigation mechanics: pension beneficiary nominations · life cover written into trust · annual £${TAX.giftExemption.toLocaleString()} gift exemption · 7-year clock on PETs · regular gifts from surplus income. Each has eligibility rules — see Tax & Estate.`
         : `Estate-planning levers are most effective when reviewed alongside life events (marriage, divorce, new child, sale of business).`,
     },
     {
@@ -3135,7 +3137,7 @@ function DecumulationPanel({ entity, setActiveDrill }) {
   // shown is illustrative (header copy above clarifies "not a recommendation").
   const sequences = [
     { order: 1, pot: 'GIA (taxable account)', value: giaValue, color: '#C58CFF',
-      taxNote: 'CGT applies on disposal gains: 18% basic-rate / 24% higher-rate. Annual exempt amount £3,000. Holdings remain inside the estate for IHT.' },
+      taxNote: `CGT applies on disposal gains: 18% basic-rate / 24% higher-rate. Annual exempt amount £${TAX.cgaAllowance.toLocaleString()}. Holdings remain inside the estate for IHT.` },
     { order: 2, pot: 'ISA (tax-free)', value: isaValue, color: '#2DF2C3',
       taxNote: 'No income tax or CGT on withdrawal at any age. Holdings sit inside the estate for IHT.' },
     { order: 3, pot: 'SIPP / Pension', value: pensionValue, color: '#7AA7FF',
@@ -3203,7 +3205,7 @@ function DecumulationPanel({ entity, setActiveDrill }) {
 // §13 MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
-export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, onOpenRisk, onDrillMetric, onNav }) {
+export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, onOpenRisk, onDrillMetric, onNav, onOpenDecision }) {
   // Back-routing (2026-05-28): if the user came from another screen, return
   // them there. Fallback to onHome when not threaded.
   const goBackOrHome = onBack || onHome
@@ -3319,6 +3321,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // PivotView uses activeEntity = scenarioEntity ?? entity so pivot views
   // reflect scenario numbers while a card is expanded.
   const [scenarioEntity, setScenarioEntity] = useState(null)
+  // Decisions tab (founder 2026-06-06): a 5th tab beside What-if that swaps the
+  // content for the decision categories. Separate from viewMode (engine state).
+  const [showDecisions, setShowDecisions] = useState(false)
   const [filterWrapper, setFilterWrapper] = useState(null)
   // Phase 2 follow-up — bucket-style add flow + category opened for it.
   const [bucketOpen, setBucketOpen] = useState(false)
@@ -3490,52 +3495,35 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
   // Now: assets grow (forecast 1.04^y aggregate; plan/historical NW-derived
   // factor), liabilities amortise through amortise(), and hero NW is DERIVED as
   // Assets − Liabilities so the strip ties out by construction at every horizon.
+  // P1 model-unification (2026-06-07): the hero forecast now goes through the
+  // ONE canonical projector — netWorthAtHorizon() in engine/projection.js — the
+  // same fn Timeline's forecast and the Decision Engine read, so all three
+  // AGREE for the same horizon. Assets grow at the aggregate 4%; liabilities
+  // amortise through the canonical debt model (debt → £0, interest-only held
+  // flat, nothing grown); NW is DERIVED = Assets − Liabilities. The prior
+  // inlined amortisation lived here and drifted from Timeline; deleted.
+  // Plan/historical (target) modes keep the NW-derived factor so a committed
+  // target / historical snapshot preserves the balance-sheet identity.
   const _heroProjYears = projection?.years ?? 0
   const _heroIsTargetMode = projection?.source === 'historical'
     || projection?.source === 'plan' || projection?.source === 'plan-25x'
-  // Asset growth factor.
-  const _heroAssetFactor = (() => {
-    if (_heroProjYears === 0) return 1
+  let heroTotalAssets, heroTotalLiabilities
+  if (_heroProjYears <= 0) {
+    heroTotalAssets = Math.round(_heroBaseAssets)
+    heroTotalLiabilities = Math.round(_heroBaseLiabilities)
+  } else if (_heroIsTargetMode) {
+    // Target/historical: scale both sides by the NW-derived factor so the
+    // committed-target balance sheet stays internally consistent.
     const baseNW = _heroBaseAssets - _heroBaseLiabilities
-    if (baseNW !== 0 && _heroIsTargetMode) return (projection?.value ?? baseNW) / baseNW
-    return Math.pow(1.04, _heroProjYears)   // forecast: aggregate compound
-  })()
-  const heroTotalAssets = Math.round(_heroBaseAssets * _heroAssetFactor)
-  // Liability projection: amortise each captured debt to the horizon (same maths
-  // as the tiles). Plan/historical keep the NW-derived factor so the target /
-  // historical balance-sheet identity is preserved. Today (years≤0) = base.
-  const heroTotalLiabilities = (() => {
-    if (_heroProjYears <= 0) return Math.round(_heroBaseLiabilities)
-    if (_heroIsTargetMode) return Math.round(_heroBaseLiabilities * _heroAssetFactor)
-    const months = Math.round(_heroProjYears * 12)
-    const liab = entity?.liabilities || {}
-    const debts = []
-    const m = liab.mortgage
-    if (m && +m.outstanding > 0) debts.push({
-      balance: +m.outstanding,
-      apr: m.rate != null ? +m.rate * 100 : 0,
-      monthly: +(m.monthlyPayment ?? m.monthly_payment ?? 0) || 0,
-    })
-    ;(liab.otherLoans || []).forEach(l => {
-      const bal = +(l.outstanding || l.outstanding_balance || 0)
-      if (!bal) return
-      const aprRaw = +(l.apr || l.interest_rate || l.rate || 0)
-      debts.push({
-        balance: bal,
-        apr: aprRaw > 0 ? aprRaw * 100 : 0,
-        monthly: +(l.monthlyPayment ?? l.monthly_payment ?? l.repayment_from_salary_monthly ?? 0) || 0,
-      })
-    })
-    const projected = debts.reduce((s, d) => {
-      const series = amortise(d.balance, d.apr, d.monthly).forward(months + 1)
-      return s + (series[months] ?? d.balance)
-    }, 0)
-    // Any selector-only residual we can't enumerate (e.g. property[].mortgage_-
-    // outstanding) is held FLAT — never grown — so we don't understate debt.
-    const enumeratedNow = debts.reduce((s, d) => s + d.balance, 0)
-    const residual = Math.max(0, _heroBaseLiabilities - enumeratedNow)
-    return Math.round(projected + residual)
-  })()
+    const f = baseNW !== 0 ? (projection?.value ?? baseNW) / baseNW : 1
+    heroTotalAssets = Math.round(_heroBaseAssets * f)
+    heroTotalLiabilities = Math.round(_heroBaseLiabilities * f)
+  } else {
+    // Forecast (drift): canonical projector. Tied to Timeline + DE by construction.
+    const proj = netWorthAtHorizon(entity, _heroProjYears, 0.04)
+    heroTotalAssets = proj.assets
+    heroTotalLiabilities = proj.liabilities
+  }
   // Hero NW derived from the (correctly projected) parts — Gate-2 ties by build.
   const heroNetWorth = heroTotalAssets - heroTotalLiabilities
 
@@ -3579,15 +3567,19 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
 
   return (
     <div className="screen">
-      {/* ── X28 top-bar: 7 windows + 4 view modes + rules chip ───────────── */}
+      {/* ── X28 top-bar: view modes + Decisions tab ──────────────────────── */}
       <div style={{ margin: '0 -16px' }}>
         <X28TopBar
           window={windowId}
           viewMode={viewMode}
           onWindowChange={setWindowId}
-          onViewModeChange={(m) => { setViewMode(m); if (m !== 'scenario') setScenarioEntity(null) }}
+          onViewModeChange={(m) => { setShowDecisions(false); setViewMode(m); if (m !== 'scenario') setScenarioEntity(null) }}
           rulesVersion={BRAND.rulesVersion}
           dataDate={BRAND.dataDate}
+          showWindowRow={false}
+          showDecisions
+          decisionsActive={showDecisions}
+          onDecisions={() => setShowDecisions(s => !s)}
         />
       </div>
 
@@ -3672,10 +3664,13 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
       {/* ── What-If scenario library (viewMode === 'scenario') ───────────────
            Replaces the main content when the user selects the "What if" mode
            pill in X28TopBar. All other modes fall through to the normal view. */}
-      {viewMode === 'scenario' && (
+      {showDecisions && (
+        <DecisionDrawers screen="money" variant="chips" onOpen={onOpenDecision} heading="Choices you can make from My Money" />
+      )}
+      {!showDecisions && viewMode === 'scenario' && (
         <WhatIfLibrary entity={entity} onScenarioSelect={setScenarioEntity} />
       )}
-      {viewMode === 'scenario' ? null : <>
+      {(showDecisions || viewMode === 'scenario') ? null : <>
 
       {/* SECTION NAV — extracted 2026-05-28 to MoneyXDrawer.jsx so the same
          8-chip drawer renders consistently on every MoneyX-family screen
@@ -3873,6 +3868,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           property:        sumRows(catRows.property),
           business:        sumRows(catRows.business),
           'protection-sv': 0,  // surrender values only — not modelled at line-item level yet
+          protection:      0,  // tile key (id='protection'): cover is a benefit, NOT a balance-sheet asset — was mis-keyed so the tile summed sum-assured as wealth (sweep #50)
           cash:            sumRows(catRows.cash),
           alternatives:    sumRows(catRows.alternatives),
           liabilities:     sumRows(catRows.liabilities),
@@ -3918,7 +3914,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             // the scan-friendly tile (founder 2026-05-31: pill too long).
             empty: 'No pensions yet. Add a SIPP or workplace scheme — the contributions get back up to 47% in tax relief.' },
           { id: 'investments',  label: 'Savings & Investments',domainCodes: 'C · D · E · F', rows: catRows.investments,
-            empty: 'Nothing invested yet. Add an ISA first — £20k a year, no tax on growth, no tax on withdrawal.' },
+            empty: `Nothing invested yet. Add an ISA first — £${TAX.isaAllowance.toLocaleString()} a year, no tax on growth, no tax on withdrawal.` },
           { id: 'property',     label: 'Property',             domainCodes: 'G',         rows: catRows.property,
             empty: 'No property added. Your main home is exempt from capital gains tax when you sell. Let property is taxed fully — and since 2020 you only get a small slice of mortgage interest back against rental income.' },
           { id: 'business',     label: 'Business Assets',      domainCodes: isDirector ? 'H · I · X' : 'H · I',  rows: catRows.business,
@@ -3931,7 +3927,8 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // "What you own" grid — liabilities aren't assets and have their
           // own Act 3 section directly below. Subtotal still computed above
           // so the Balance-sheet net-worth math is unchanged.
-          { id: 'income',       label: 'Income (flow)',        domainCodes: 'O · W',     rows: [] /* income shown in flow-context below NW + on Cashflow */ },
+          { id: 'income',       label: 'Income (flow)',        domainCodes: 'O · W',     rows: [], /* income is flow, not a balance-sheet asset — it lives on Cashflow */
+            empty: 'Your income — salary, dividends, rent, interest — lives on the Cashflow tab, with the tax on each. Tap to open it.' },
           { id: 'alternatives', label: 'Alternatives',         domainCodes: 'U',         rows: catRows.alternatives,
             empty: 'Crypto, wine, art, gold, P2P, private equity — anything that doesn\'t fit the standard wrappers lives here. Chattels under £6k disposal: no CGT.' },
           // IFA pass 2 BLOCK: Obligations (Domain V) is a CASHFLOW commitment
@@ -4042,7 +4039,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
             const hasBtl = (entity?.assets?.property || []).some(p => /buy-to-let|btl/i.test(p.use || p.type || ''))
             tile.contextLine = hasBtl
               ? 'Includes a let property — only a small slice of the mortgage interest counts against the rent'
-              : 'Your home — passing it to children adds up to £175,000 of extra inheritance allowance'
+              : `Your home — passing it to children adds up to £${TAX.rnrb.toLocaleString()} of extra inheritance allowance`
             if (!hasBtl) tile.status = { label: 'Extra estate allowance', tone: 'good', explainerId: 'MM-RNRB' }
           }
           if (c.id === 'business' && (entity?.business_assets || []).some(b => b.qualifies_for_bpr)) {
@@ -4134,6 +4131,12 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           // (2026-06-01) flagged as a careless stub. Now each category shows its
           // own honest 12-month estimate from its drift rate, labelled "12-mo est."
           tile.subtotal = subtotals[c.id]
+          // Protection isn't wealth (subtotal 0), but show the cover in place so
+          // the tile isn't a bare £0 — the benefit, clearly labelled (sweep #50).
+          if (c.id === 'protection') {
+            const cover = (catRows.protection || []).reduce((s, r) => s + (+r.value || 0), 0)
+            if (cover > 0) tile.contextLine = `${fmt(cover)} cover in place — a benefit, not counted as wealth`
+          }
 
           // 12-month sparkline series — back-cast from current subtotal using a
           // category-typical monthly growth rate. Not real history (Mr T doesn't
@@ -4335,8 +4338,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                 // AIM 50%, valuation freshness, liquidity ladder.
                 setActiveDrill('alternatives')
               } else if (id === 'income') {
-                // Income streams — pivot to income view
-                setPivot('income')
+                // Income lives on the Cashflow tab (balance-sheet vs flow
+                // separation) — route there, not to an unrendered pivot view.
+                onNav?.('flow')
               } else if (id === 'obligations') {
                 // Annual obligations (family support, alimony) — route to Cashflow
                 onNav?.('flow')
@@ -4690,7 +4694,7 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
                   setMetricDrill(null)
                   if (a.target === 'networth') setActiveDrill('networth')
                   else if (a.target === 'liabilities') setActiveDrill('liabilities')
-                  else if (a.target === 'income') setPivot('income')
+                  else if (a.target === 'income') onNav?.('flow') // income lives on the Cashflow tab
                 },
               })),
               ...(metricDrill.askQuestion ? [{

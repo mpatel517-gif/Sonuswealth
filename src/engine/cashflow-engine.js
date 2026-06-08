@@ -414,25 +414,56 @@ export function sequenceOfReturnsVulnerability(entity, cma = null, opts = {}) {
   const sp         = entity?.income?.statePension?.annual   ?? TAX.statePensionFull;
   const growth     = cma?.growth    ?? DEFAULT_GROWTH;
   const worstAnnual = cma?.worstDecile?.annual_equiv ?? -0.082;
-  const MAX_HOR    = 50;
+  // BUGFIX (2026-06-05): horizon was a fixed 50 years FROM the start age, which
+  // (a) let a non-depleting median pot compound to absurd terminal wealth (Bruce:
+  // ~£7m "at risk" in a £1.83m pot) and (b) produced depletion ages of 112 that
+  // the display itself refuses to show (>TERMINAL_CAP). Bound the projection to a
+  // realistic plan horizon: caller-supplied opts.horizonYears (to plan/longevity
+  // age) when present, else longevity (default 100) minus start age. Clamped 5–60.
+  const longevity  = entity?.longevityAge ?? entity?.preferences?.longevityAge ?? 100;
+  const MAX_HOR    = opts.horizonYears != null
+    ? Math.max(5, Math.min(60, Math.round(+opts.horizonYears)))
+    : Math.max(5, Math.min(60, longevity - startAge));
+  // The bad-luck window — both the stressed-return period AND the point at which
+  // we measure "pounds at risk". Kept as one constant so the two can't drift.
+  const BAD_YEARS  = 5;
 
   function _sim(badFirst5) {
     let val = startValue;
+    let stressEndValue = startValue;   // pot value at the end of the bad-luck window
     for (let y = 0; y < MAX_HOR; y++) {
       const curAge = startAge + y;
       const spInc  = curAge >= spAge ? sp : 0;
       const draw   = Math.max(0, targetIncome - spInc);
-      const ret    = (badFirst5 && y < 5) ? worstAnnual : growth;
+      const ret    = (badFirst5 && y < BAD_YEARS) ? worstAnnual : growth;
       val = val * (1 + ret) - draw;
-      if (val <= 0) return { depletionAge: curAge, terminalValue: 0 };
+      if (y === BAD_YEARS - 1) stressEndValue = Math.max(0, val);
+      if (val <= 0) {
+        if (y < BAD_YEARS - 1) stressEndValue = 0;   // depleted inside the window
+        return { depletionAge: curAge, terminalValue: 0, stressEndValue };
+      }
     }
-    return { depletionAge: startAge + MAX_HOR, terminalValue: Math.max(0, val) };
+    return { depletionAge: startAge + MAX_HOR, terminalValue: Math.max(0, val), stressEndValue };
   }
 
   const med  = _sim(false);
   const adv  = _sim(true);
   const vulnYrs = Math.max(0, med.depletionAge - adv.depletionAge);
-  const vulnGbp = Math.max(0, med.terminalValue - adv.terminalValue);
+  // "Pounds at risk" = how much LOWER the pot is at the end of the bad-luck window
+  // under the adverse sequence vs the median sequence. This is the genuine
+  // sequence-of-returns damage and is inherently bounded by the pot — unlike the
+  // old 50-year terminal-wealth delta, which scaled with how long the pot survived
+  // (a LOWER spend produced a LARGER "at risk" figure — the inverse of a risk).
+  let vulnGbp = Math.max(0, med.stressEndValue - adv.stressEndValue);
+  // SANITY ASSERTION (founder reconciliation standard): pounds-at-risk can never
+  // exceed the pot it references. If it does, the metric logic has regressed —
+  // warn loudly and clamp so the UI never shows an impossible figure.
+  if (vulnGbp > startValue) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(`[seqVuln] pounds-at-risk £${Math.round(vulnGbp)} exceeds pot £${Math.round(startValue)} — clamping (metric regression?)`);
+    }
+    vulnGbp = startValue;
+  }
   const severity = vulnYrs > 10 ? 'severe' : vulnYrs > 5 ? 'moderate' : 'mild';
 
   return {

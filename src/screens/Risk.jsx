@@ -34,7 +34,8 @@
 //   Z12 — X28 protection plan anchor (always rendered · D-RISK-20-ALL-USERS)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 // S1 selector migration (Phase 2): canonical netWorth via facade. Other
 // risk-specific helpers stay in fq-calculator (their re-export through
 // selectors would force every screen to take the selector module on as
@@ -49,6 +50,7 @@ import {
   calcAPQ, planFor,
   calcRiskHistory,
   riskShockSuite, whatWouldHelpMost as engineWhatHelpsMost, lifeEventPaths, shockTrajectory,
+  runShock, SHOCK_PARAM_DEFAULTS,
 } from '../engine/fq-calculator.js'
 import { BRAND } from '../config/brand.js'
 // TripleAnchor intentionally NOT used on Risk — spec §2.3 + §2.7 D-ANCHOR-2
@@ -868,6 +870,296 @@ const SHOCK_HANDOFF = {
   illness:     { nav: 'money', label: 'Add protection →' },
   rate_rise:   { nav: 'flow',  label: 'Review cashflow →' },
   death:       { nav: 'tax',   label: 'Review estate plan →' },
+}
+
+// ── Grabbable scrub track (drag the filled bar OR key the range mirror) ───────
+// Ported from TaxEstate ScrubTrack / DecisionCharts startScrub: relative drag
+// (no jump-to-cursor) + keyboard-accessible <input type=range>. Both drive the
+// same value, so every dependent £-figure + trajectory below rescales live.
+function ShockScrub({ value, min, max, step = 1, onChange, colour = 'var(--c-danger)', ariaLabel, valueText }) {
+  const pct = max > min ? Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100)) : 0
+  const startScrub = (e) => {
+    e.preventDefault()
+    const el = e.currentTarget
+    const trackW = el.getBoundingClientRect().width || 1
+    const x0 = e.clientX, v0 = Number(value)
+    try { el.setPointerCapture(e.pointerId) } catch {}
+    const move = (ev) => {
+      const dx = (ev.clientX ?? x0) - x0
+      let v = v0 + (dx / trackW) * (max - min)
+      v = Math.round(v / step) * step
+      onChange(Math.max(min, Math.min(max, v)))
+    }
+    const end = () => {
+      try { el.releasePointerCapture(e.pointerId) } catch {}
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
+  }
+  return (
+    <div>
+      <div onPointerDown={startScrub}
+        title="Drag to change the shock — the £ impact and trajectory below update together"
+        style={{
+          position:'relative', height:20, borderRadius:7,
+          background:'var(--c-surface2)', border:'1px solid var(--c-border)',
+          overflow:'hidden', cursor:'ew-resize', touchAction:'none',
+        }}>
+        <div style={{ width:`${pct}%`, height:'100%', borderRadius:5, background:colour,
+          minWidth: pct > 0 ? 4 : 0, transition:'width .08s linear' }} />
+        <div aria-hidden style={{ position:'absolute', right:6, top:0, bottom:0,
+          display:'flex', alignItems:'center', gap:2, pointerEvents:'none', opacity:0.55 }}>
+          <span style={{ width:2, height:9, borderRadius:2, background:'var(--c-text3)' }} />
+          <span style={{ width:2, height:9, borderRadius:2, background:'var(--c-text3)' }} />
+        </div>
+      </div>
+      <input type="range" min={min} max={max} step={step}
+        value={value} onChange={e => onChange(Number(e.target.value))}
+        aria-label={ariaLabel} aria-valuetext={valueText}
+        style={{ width:'100%', accentColor:colour, marginTop:6 }} />
+    </div>
+  )
+}
+
+// ── Shock Lab (Z5 driver) — grab a shock, watch the £ impact + banded ─────────
+// resilience trajectory re-draw LIVE. Drives runShock() + shockTrajectory()
+// with dragged params (size / horizon / income-loss depth). Every figure is an
+// engine output (PENDING PROFESSIONAL SIGN-OFF) — no hardcoded delta in the UI.
+const SHOCK_LAB_MENU = [
+  { id:'market_fall', label:'Market fall' },
+  { id:'rate_rise',   label:'Rate rise' },
+  { id:'job_loss',    label:'Income loss' },
+  { id:'illness',     label:'Illness' },
+  { id:'death',       label:'Death' },
+]
+function ShockLab({ entity }) {
+  const [shockId, setShockId] = useState('market_fall')
+  const [horizon, setHorizon] = useState(24)        // trajectory window (months)
+  // Per-shock dragged params, seeded from engine defaults. Stored once; we read
+  // the slice for the active shock so switching shocks keeps each one's setting.
+  const [params, setParams] = useState(() => ({
+    market_fall: { dropPct: 0.30 },
+    rate_rise:   { riseBps: 200 },
+    job_loss:    { incomeLossPct: 1.0, durationMonths: 6 },
+    illness:     { incomeLossPct: 1.0, durationMonths: 6 },
+    death:       {},
+  }))
+  const p = params[shockId] || {}
+  const setP = (patch) => setParams(prev => ({ ...prev, [shockId]: { ...prev[shockId], ...patch } }))
+
+  // Derive — never setState in render. useMemo recomputes only when the entity
+  // ref, shock, params or horizon change (no entity-in-effect loop risk).
+  const { result, traj } = useMemo(() => {
+    let result = null, traj = null
+    try { result = runShock(entity, shockId, undefined, p) } catch {}
+    try { traj   = shockTrajectory(entity, shockId, horizon, p) } catch {}
+    return { result, traj }
+  }, [entity, shockId, JSON.stringify(p), horizon])
+
+  // Slider config by shock type
+  const sliders = []
+  if (shockId === 'market_fall') {
+    sliders.push({ key:'dropPct', label:'Drop size', min:5, max:80, step:5,
+      get:() => Math.round((p.dropPct ?? 0.30) * 100),
+      set:(v) => setP({ dropPct: v / 100 }), fmt:(v)=>`−${v}%` })
+  } else if (shockId === 'rate_rise') {
+    sliders.push({ key:'riseBps', label:'Rate rise', min:25, max:500, step:25,
+      get:() => p.riseBps ?? 200,
+      set:(v) => setP({ riseBps: v }), fmt:(v)=>`+${(v/100).toFixed(2)}%` })
+  } else if (shockId === 'job_loss' || shockId === 'illness') {
+    sliders.push({ key:'incomeLossPct', label:'Income lost', min:10, max:100, step:10,
+      get:() => Math.round((p.incomeLossPct ?? 1.0) * 100),
+      set:(v) => setP({ incomeLossPct: v / 100 }), fmt:(v)=>`${v}%` })
+    sliders.push({ key:'durationMonths', label:'For how long', min:1, max:24, step:1,
+      get:() => p.durationMonths ?? 6,
+      set:(v) => setP({ durationMonths: v }), fmt:(v)=>`${v}mo` })
+  }
+
+  const rsDelta = result?.rsDelta ?? 0
+  const nwDelta = result?.nwDelta ?? 0
+  const deltaColour = rsDelta <= -10 ? 'var(--c-danger)' : rsDelta < 0 ? 'var(--c-warning)' : 'var(--c-success)'
+
+  return (
+    <div className="card sw-lift" style={{ marginBottom:12, borderColor:'rgba(255,179,71,0.28)' }}>
+      <div className="sw-eyebrow" style={{ marginBottom:8 }}>Shock Lab · drag to stress-test</div>
+      <div className="card-title" style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <span>Grab a shock — watch it hit live</span>
+        <span style={{
+          fontSize:9, fontWeight:600, letterSpacing:'0.04em', color:'var(--c-text3)',
+          background:'var(--c-surface2)', border:'1px solid var(--c-sep)',
+          borderRadius:4, padding:'1px 5px' }}>est · pending sign-off</span>
+      </div>
+
+      {/* Shock picker */}
+      <div style={{ display:'flex', gap:6, flexWrap:'wrap', margin:'10px 0 12px' }}>
+        {SHOCK_LAB_MENU.map(s => (
+          <button key={s.id} onClick={() => setShockId(s.id)} className="sw-press"
+            style={{
+              fontSize:11, fontWeight:700,
+              background: shockId === s.id ? 'var(--c-acc)' : 'var(--c-surface2)',
+              color:      shockId === s.id ? 'var(--c-bg)'  : 'var(--c-text2)',
+              border:'1px solid var(--c-sep)', borderRadius:100,
+              padding:'5px 12px', cursor:'pointer',
+            }}>{s.label}</button>
+        ))}
+      </div>
+
+      {/* Sliders (size / income-loss / duration) */}
+      {sliders.length > 0 ? (
+        <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:14 }}>
+          {sliders.map(sl => {
+            const cur = sl.get()
+            return (
+              <div key={sl.key}>
+                <div style={{ display:'flex', justifyContent:'space-between',
+                  alignItems:'baseline', marginBottom:5 }}>
+                  <span style={{ fontSize:12, color:'var(--c-text2)', fontWeight:600 }}>{sl.label}</span>
+                  <span style={{ fontSize:14, fontWeight:800, color:'var(--c-text)' }}>{sl.fmt(cur)}</span>
+                </div>
+                <ShockScrub value={cur} min={sl.min} max={sl.max} step={sl.step}
+                  onChange={sl.set} ariaLabel={`${sl.label} for ${shockId}`}
+                  valueText={sl.fmt(cur)} />
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div style={{ fontSize:12, color:'var(--c-text3)', marginBottom:14, lineHeight:1.5 }}>
+          Death is modelled from your estate position under current IHT rules — there's no size to drag.
+          The figures below recompute from your data.
+        </div>
+      )}
+
+      {/* Horizon control (drawdown survival window) */}
+      <div style={{ marginBottom:14 }}>
+        <div style={{ display:'flex', justifyContent:'space-between',
+          alignItems:'baseline', marginBottom:5 }}>
+          <span style={{ fontSize:12, color:'var(--c-text2)', fontWeight:600 }}>Look-ahead window</span>
+          <span style={{ fontSize:14, fontWeight:800, color:'var(--c-text)' }}>{horizon} months</span>
+        </div>
+        <ShockScrub value={horizon} min={6} max={60} step={6}
+          colour="var(--c-acc2)" onChange={setHorizon}
+          ariaLabel="Trajectory look-ahead window in months" valueText={`${horizon} months`} />
+      </div>
+
+      {/* Live £ impact readout */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
+        <div style={{ background:'var(--c-surface2)', borderRadius:12, padding:'10px 12px' }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase',
+            letterSpacing:0.6, color:'var(--c-text3)', marginBottom:4 }}>Risk Score impact</div>
+          <div style={{ fontSize:18, fontWeight:800, color:deltaColour }}>
+            {result ? <>{result.rsBefore} → {result.rsAfter} <span style={{ fontSize:13 }}>({rsDelta >= 0 ? '+' : ''}{rsDelta})</span></> : '—'}
+          </div>
+        </div>
+        <div style={{ background:'var(--c-surface2)', borderRadius:12, padding:'10px 12px' }}>
+          <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase',
+            letterSpacing:0.6, color:'var(--c-text3)', marginBottom:4 }}>Net worth impact</div>
+          <div style={{ fontSize:18, fontWeight:800,
+            color: nwDelta < 0 ? 'var(--c-danger)' : 'var(--c-success)' }}>
+            {result ? <>{nwDelta < 0 ? '−' : '+'}{fmt(Math.abs(Math.round(nwDelta)))}</> : '—'}
+          </div>
+        </div>
+      </div>
+
+      {/* Banded resilience trajectory (history-free; today divider + ±1σ cone) */}
+      <ShockBandChart traj={traj} />
+    </div>
+  )
+}
+
+// ── Banded trajectory chart — shocked median path inside a ±1σ uncertainty ────
+// cone (NOT one deterministic line · brief mandate). Baseline (no-shock) dashed
+// for reference. Both axes labelled; net rate stated; survival/recovery called out.
+function ShockBandChart({ traj }) {
+  if (!traj || !traj.shocked || traj.shocked.length < 2) {
+    return (
+      <div style={{ fontSize:12, color:'var(--c-text3)', textAlign:'center', padding:'14px 0' }}>
+        Not enough portfolio data to draw a trajectory for this shock.
+      </div>
+    )
+  }
+  const { baseline, shocked, shockedLo, shockedHi, survivalMonths, recoveryMonth, netRate } = traj
+  const W = 300, H = 110, pL = 38, pR = 8, pT = 10, pB = 22
+  const pw = W - pL - pR, ph = H - pT - pB
+  const n = shocked.length - 1
+  const allVals = baseline.map(d => d.value)
+    .concat((shockedHi || shocked).map(d => d.value))
+    .concat((shockedLo || shocked).map(d => d.value))
+  const maxV = Math.max(...allVals, 1)
+  const px = i => pL + (i / Math.max(n, 1)) * pw
+  const py = v => pT + ph - (v / maxV) * ph
+  const line = (arr) => arr.map((d, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(d.value).toFixed(1)}`).join(' ')
+  // Band polygon: hi path forward + lo path reversed
+  const band = (() => {
+    if (!shockedLo || !shockedHi) return null
+    const up = shockedHi.map((d, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(d.value).toFixed(1)}`).join(' ')
+    const down = shockedLo.slice().reverse().map((d, ri) => {
+      const i = shockedLo.length - 1 - ri
+      return `L${px(i).toFixed(1)},${py(d.value).toFixed(1)}`
+    }).join(' ')
+    return `${up} ${down} Z`
+  })()
+  const yTicks = [0, 0.5, 1].map(f => ({ v: maxV * f, y: py(maxV * f) }))
+  const xMid = Math.round(n / 2)
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block', overflow:'visible' }}>
+        {/* Y grid + axis labels (£) */}
+        {yTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={pL} y1={t.y} x2={W - pR} y2={t.y} stroke="var(--c-sep)" strokeWidth="0.5" opacity="0.6" />
+            <text x={pL - 4} y={t.y + 3} textAnchor="end" fontSize="8" fill="var(--c-text3)"
+              fontFamily="DM Sans,sans-serif">{fmt(Math.round(t.v))}</text>
+          </g>
+        ))}
+        {/* X axis labels (months) */}
+        {[0, xMid, n].map((i, k) => (
+          <text key={k} x={px(i)} y={H - 6} textAnchor={k === 0 ? 'start' : k === 2 ? 'end' : 'middle'}
+            fontSize="8" fill="var(--c-text3)" fontFamily="DM Sans,sans-serif">{i}mo</text>
+        ))}
+        {/* Uncertainty cone */}
+        {band && <path d={band} fill="rgba(255,111,125,0.14)" stroke="none" />}
+        {/* Baseline (no shock) — dashed reference */}
+        <path d={line(baseline)} fill="none" stroke="var(--c-text3)" strokeWidth="1.2"
+          strokeDasharray="3 3" opacity="0.7" />
+        {/* Shocked median */}
+        <path d={line(shocked)} fill="none" stroke="var(--c-danger)" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round" />
+        {/* "today" divider at month 0 (start of projection) */}
+        <line x1={px(0)} y1={pT} x2={px(0)} y2={pT + ph} stroke="var(--c-acc2)"
+          strokeWidth="1" strokeDasharray="2 2" opacity="0.8" />
+        <text x={px(0) + 2} y={pT + 7} fontSize="7.5" fill="var(--c-acc2)"
+          fontFamily="DM Sans,sans-serif">today</text>
+      </svg>
+      {/* Legend + read-out */}
+      <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginTop:6, fontSize:10, color:'var(--c-text3)' }}>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+          <span style={{ width:14, height:2, background:'var(--c-danger)', display:'inline-block' }} />shocked path
+        </span>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+          <span style={{ width:14, height:8, background:'rgba(255,111,125,0.20)', display:'inline-block', borderRadius:2 }} />±1σ range
+        </span>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+          <span style={{ width:14, height:0, borderTop:'1.5px dashed var(--c-text3)', display:'inline-block' }} />no-shock
+        </span>
+      </div>
+      <div style={{ fontSize:11, marginTop:6, lineHeight:1.5,
+        color: survivalMonths < n ? 'var(--c-danger)' : 'var(--c-text2)' }}>
+        {survivalMonths < n
+          ? `At current spending, the stressed portfolio runs down at about month ${survivalMonths}.`
+          : recoveryMonth
+            ? `Portfolio holds across the window; baseline recovers its pre-shock level by about month ${recoveryMonth}.`
+            : `Portfolio holds across the window at current spending.`}
+        {' '}Net assumed growth {((netRate ?? 0.04) * 100).toFixed(1)}%/yr. Range widens with time (√t).
+      </div>
+    </div>
+  )
 }
 
 // ── Shock card (uses runShock engine output, animated counter-up on expand) ─
@@ -1702,7 +1994,10 @@ export function RiskBody({ entity, onAddProtection, onNav, onDrillMetric, onComm
       {/* Z4: Protection gap card */}
       <ProtectionGap entity={entity} onAction={() => onAddProtection?.('life-cover')} />
 
-      {/* Z5: Shock scenarios — staggered cards */}
+      {/* Z5a: Shock Lab — grabbable shock size/horizon/income-loss, live re-draw */}
+      <ShockLab entity={entity} />
+
+      {/* Z5b: Shock scenarios — staggered cards (at-a-glance summary at defaults) */}
       <div className="card sw-lift">
         <div className="sw-eyebrow" style={{ marginBottom:8 }}>Stress Tests</div>
         <div className="card-title" style={{
@@ -1791,8 +2086,11 @@ function RiskPrimaryAnchor({ entity, risk, fq, nw, onDrillMetric }) {
         zIndex: 60,
         // Frosted backing so content scrolling under it stays legible.
         background: 'color-mix(in srgb, var(--c-bg) 88%, transparent)',
-        backdropFilter: 'blur(10px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(10px) saturate(140%)',
+        // saturate() forces a full-viewport colour-matrix pass on every
+        // composite, which kept this sticky strip from settling to a stable
+        // frame (preview_screenshot wedge). Blur alone keeps the frosted read.
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         borderBottom: '1px solid var(--c-sep)',
         padding: '10px 16px 12px',
         marginBottom: 14,
@@ -1908,7 +2206,7 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap, tieout, tie
 // ─────────────────────────────────────────────────────────────────────────────
 // Default export — full-page Risk surface.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav }) {
+export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav, onOpenDecision }) {
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)
@@ -1948,6 +2246,8 @@ export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onD
         onNav={onNav}
         suppressPrimaryRing
       />
+
+      <DecisionDrawers screen="risk" onOpen={onOpenDecision} />
 
       <p className="disclaimer">
         {BRAND.disclaimer}<br />{BRAND.rulesVersion} · {BRAND.dataDate}

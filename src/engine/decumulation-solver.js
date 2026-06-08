@@ -25,6 +25,8 @@ import { TAX } from './fq-calculator.js'
 import { withdrawalTaxForYear, buildAllowanceLedger } from './withdrawal-tax.js'
 import { recommendMethodForGoal, METHODS } from './withdrawal-methods.js'
 import { stampGuidance } from './financial-snapshot.js'
+import { normaliseHoldings, growthForHolding } from './decumulation-holdings.js'
+import { evaluateHoldings } from './decumulation-classify.js'
 
 const FCA_DISCLAIMER = 'Illustrative under your stated priorities and assumptions — not a forecast or personal recommendation. Verify decisions with a qualified UK adviser.'
 
@@ -87,12 +89,85 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     || +entity.targetIncome
     || 0
 
+  // ── P1: per-holding model + evaluate/exclude pre-pass (additive) ───────────
+  // The scalar `pots` above stays as the compat shim so the legacy sequencer +
+  // its 67 tests are untouched. `holdings` + `evaluation` are the new surface the
+  // P2 per-holding sequencer and P3 network drill-down will consume.
+  const holdings = normaliseHoldings(entity)
+  const evaluation = evaluateHoldings(holdings, {
+    safeguardedThreshold: TAX.safeguardedAdviceThreshold,
+    marginalRate: entity.isHigherRateTaxpayer ? TAX.hr : TAX.br,
+  })
+
+  // Per-pot blended growth (decision B) — value-weighted growthForHolding across
+  // each pot's holdings, so cash grows at ~cash rate and equities at ~equity rate
+  // instead of one flat rate for all four pots. Consumed by simulatePath ONLY
+  // when opts.perPotGrowth is set (keeps the flat-rate baselines stable).
+  const potGrowth = (() => {
+    const potOf = (h) => h.category === 'pensions' ? 'pension'
+      : h.category === 'cash' ? 'cash' : /ISA/.test(h.taxonomyId) ? 'isa' : 'gia'
+    const acc = { pension: { v: 0, g: 0 }, isa: { v: 0, g: 0 }, gia: { v: 0, g: 0 }, cash: { v: 0, g: 0 } }
+    for (const h of holdings) {
+      if (h.isPot !== true || !(+h.currentValue > 0)) continue
+      const k = potOf(h); acc[k].v += +h.currentValue; acc[k].g += +h.currentValue * growthForHolding(h)
+    }
+    const out = {}
+    for (const k of ['pension', 'isa', 'gia', 'cash']) {
+      out[k] = acc[k].v > 0 ? acc[k].g / acc[k].v
+        : (k === 'cash' ? (TAX.growthByCategory?.cash ?? growth) : growth)
+    }
+    return out
+  })()
+
+  // Blended embedded-gain fraction for the GIA pot — value-weighted real gain of
+  // the unwrapped holdings, replacing the flat 0.4 assumption. (True lowest-gain-
+  // first per-line disposal is the per-holding sequencer; this is the accurate
+  // aggregate within the 4-pot model.) Consumed by simulatePath only when opted in.
+  const giaGainBlended = (() => {
+    const gh = holdings.filter(h => h.isPot && h.category === 'investments'
+      && !/ISA/.test(h.taxonomyId) && h.embeddedGainPct != null && +h.currentValue > 0)
+    if (!gh.length) return null
+    const v = gh.reduce((s, h) => s + +h.currentValue, 0)
+    return gh.reduce((s, h) => s + +h.currentValue * Math.min(1, Math.max(0, +h.embeddedGainPct)), 0) / v
+  })()
+
+  // Pot scalars from the holdings, as a FALLBACK only where the object-shape
+  // readers above found nothing — fixes typed-array personas (e.g. Mr T) whose
+  // pots were all 0 because the legacy readers don't see assets.investments[]/
+  // bank[]/pensions[]. Object-shape personas keep their values via `||`.
+  // Sum only the SEQUENCEABLE holdings (+ conditional sequence-risk reserve) so
+  // the drawable pot fallback never includes excluded/relief-locked assets
+  // (e.g. BPR-AIM) — keeping the legacy 4-pot sim aligned with the classifier.
+  const potSum = { pension: 0, isa: 0, gia: 0, cash: 0 }
+  const drawable = [...(evaluation.sequenceable || []), ...((evaluation.reserve?.sequence) || [])]
+  for (const h of drawable) {
+    if (!(+h.currentValue > 0)) continue
+    const k = h.category === 'pensions' ? 'pension' : h.category === 'cash' ? 'cash' : /ISA/.test(h.taxonomyId) ? 'isa' : 'gia'
+    if (k in potSum) potSum[k] += +h.currentValue
+  }
+  // Floor fallback — DB + state from the evaluation where the object readers
+  // found nothing (typed-array personas). Object personas keep their values.
+  const evDbIncome = (evaluation.secureIncome || [])
+    .filter(s => /DB|annuity/i.test(s.streamType)).reduce((a, s) => a + (+s.grossAnnual || 0), 0)
+  const evState = (evaluation.secureIncome || []).find(s => s.streamType === 'state')
+  const effDbIncome = dbIncome || evDbIncome
+  const effStatePension = (+inc.statePension?.annual || +inc.statePension) || evState?.grossAnnual || statePensionAnnual
+
+  // Effective pots — object-shape scalar, else the per-holding fallback. Used for
+  // BOTH the pots view AND the sparse flag, so typed-array personas (whose object
+  // scalars are 0) aren't wrongly flagged "no drawable assets" and denied a plan.
+  const effPots = {
+    pension: pensionDC || potSum.pension, isa: isaVal || potSum.isa,
+    gia: gia || potSum.gia, cash: cash || potSum.cash,
+  }
   return {
     age, horizonAge, spa, growth, inflation, pclsLsaCap, giaGainFraction, giaLossesBf,
     married, estateToSpouseFraction,
-    pots: { pension: pensionDC, isa: isaVal, gia, cash },
-    property, liabilities, dbIncome,
-    secure: { statePensionAnnual, rental, dividends },
+    pots: effPots,
+    potGrowth, giaGainBlended,
+    holdings, evaluation,
+    property, liabilities, dbIncome: effDbIncome,
+    secure: { statePensionAnnual: effStatePension, rental, dividends },
     incomeTargetAnnual,
     isHigherRateTaxpayer: !!entity.isHigherRateTaxpayer,
     // Beneficiary's marginal income-tax rate for the post-75 inherited-pension
@@ -100,7 +175,7 @@ export function extractDecumulationContext(entity = {}, opts = {}) {
     beneficiaryRate: +opts.beneficiaryMarginalRate || +entity.beneficiaryMarginalRate || TAX.hr,
     flags: {
       hasDB: dbPots.length > 0 || dbIncome > 0,
-      sparse: pensionDC + isaVal + gia + cash === 0,
+      sparse: effPots.pension + effPots.isa + effPots.gia + effPots.cash === 0,
     },
   }
 }
@@ -147,10 +222,17 @@ export function simulatePath(ctx, strategy, opts = {}) {
   let depletedAtAge = null
   const startYear = opts.now ? opts.now.getFullYear() : 2026
 
+  // Per-holding accuracy (decision B) is opt-in so the flat-rate baselines stay
+  // stable; when on, each pot grows at its blended rate (cash ~3% vs equity ~6%)
+  // and GIA disposals use the real blended embedded gain instead of the flat 0.4.
+  // perPotGrowth kept as an alias for back-compat with the pot-growth suite.
+  const perHolding = !!(opts.perHolding || opts.perPotGrowth)
+  const usePotGrowth = perHolding && !!ctx.potGrowth
+  const giaGainFrac = (perHolding && ctx.giaGainBlended != null) ? ctx.giaGainBlended : ctx.giaGainFraction
   for (let age = ctx.age; age <= ctx.horizonAge; age++) {
     const yIdx = age - ctx.age
     // Grow pots at start of year (nominal).
-    for (const k of Object.keys(bal)) bal[k] = bal[k] * (1 + ctx.growth)
+    for (const k of Object.keys(bal)) bal[k] = bal[k] * (1 + (usePotGrowth ? (ctx.potGrowth[k] ?? ctx.growth) : ctx.growth))
 
     const sp = age >= ctx.spa ? ctx.secure.statePensionAnnual : 0
     const secureTaxable = sp + ctx.secure.rental + ctx.dbIncome   // taxed as non-savings
@@ -187,7 +269,7 @@ export function simulatePath(ctx, strategy, opts = {}) {
       const d = allocate(totalGross)
       const pclsTaxFree = Math.min(d.pension * 0.25, lsaRemaining)
       const pensionTaxable = d.pension - pclsTaxFree
-      const giaGain = d.gia * ctx.giaGainFraction
+      const giaGain = d.gia * giaGainFrac
       const tx = withdrawalTaxForYear({
         pensionDrawdown: pensionTaxable, statePension: sp,
         otherTaxableIncome: ctx.secure.rental + ctx.dbIncome, dividends: ctx.secure.dividends,
@@ -381,6 +463,11 @@ export function scorePaths(simulated, goalSpec) {
 }
 
 // ─── Network (assets = nodes, draw flows = edges, branches = alternatives) ────
+// P3 additive: a SECURE-INCOME node (state+DB+annuity+rental) flows INTO income
+// as the floor — it is NOT a depletable pot. Excluded/flagged holdings (relief-
+// locked w/ countdown, illiquid, specialist) are shown greyed with a reason, so
+// the user sees the whole balance sheet, not just the drawable slice. This
+// resolves the founder's bug: the old map implied ALL income came from pots.
 function buildNetwork(ctx, rankedPaths) {
   const potNodes = Object.entries(ctx.pots)
     .filter(([, v]) => v > 0)
@@ -391,11 +478,41 @@ function buildNetwork(ctx, rankedPaths) {
     .filter(p => ctx.pots[p] > 0)
     .map((p, i) => ({ from: p, to: 'income', order: i + 1, taxCost: null, kind: i === 0 ? 'draw-first' : 'then' }))
     : []
+
+  // Secure-income floor node — guaranteed inflow that shrinks residualNeed.
+  const ev = ctx.evaluation || {}
+  const secureNodes = []
+  if ((ev.grossFloorIncome || 0) > 0) {
+    secureNodes.push({
+      id: 'secure-income', label: 'Secure income (floor)', kind: 'secure',
+      value: Math.round(ev.grossFloorIncome), netValue: Math.round(ev.netFloorIncome || 0),
+      streams: (ev.secureIncome || []).map(s => ({
+        type: s.streamType, gross: Math.round(s.grossAnnual || 0), source: s.sourceTaxonomyId,
+      })),
+      note: 'Guaranteed lifetime income — not a pot you can deplete.',
+    })
+    edges.push({ from: 'secure-income', to: 'income', order: 0, taxCost: null, kind: 'floor' })
+  }
+
+  // Excluded / flagged holdings — shown, never drawn (reason chip + countdown).
+  const monthsTo = (d) => d ? Math.max(0, Math.round((new Date(d) - Date.now()) / (30 * 864e5))) : null
+  const excludedNodes = (ev.excluded || [])
+    .filter(x => x.holding && (x.holding.currentValue || 0) > 0)
+    .map((x, i) => {
+      const h = x.holding
+      const months = h.drawClassification === 'RELIEF-LOCKED-DONT-SELL-EARLY' ? monthsTo(h.reliefHoldingEndDate) : null
+      return {
+        id: `excluded-${h.id || i}`, label: h.taxonomyId, value: Math.round(h.currentValue || 0),
+        kind: 'excluded', drawClassification: h.drawClassification, reason: x.reason,
+        countdownMonths: months,
+      }
+    })
+
   const alternatives = rankedPaths.slice(1).map(rp => ({
     pathId: rp.path.id, name: rp.path.name, order: rp.path.order,
     successPct: rp.sim.successPct, afterIhtEstate: rp.sim.afterIhtEstate, totalTax: rp.sim.totalTax,
   }))
-  return { nodes: [...potNodes, sink], edges, alternatives }
+  return { nodes: [...potNodes, ...secureNodes, ...excludedNodes, sink], edges, alternatives }
 }
 
 // ─── The public solver ───────────────────────────────────────────────────────
@@ -456,6 +573,19 @@ export function solveDecumulation({ entity, goalSpec, opts = {} } = {}) {
     // "recommended". Present paths as peers to compare, not winner+also-rans.
     rankedPaths: rankedPaths.map(({ path, sim, ...rest }) => rest), // strip internals from public shape
     network: buildNetwork(ctx, rankedPaths),
+    // Secure-income floor (P1/P3): guaranteed income covers part of the target
+    // BEFORE any pot is drawn. residualNeed is what the portfolio must actually
+    // deliver. Surfaced so the UI stops implying every pound comes from pots.
+    floor: {
+      grossAnnual: Math.round(ctx.evaluation?.grossFloorIncome || 0),
+      netAnnual: Math.round(ctx.evaluation?.netFloorIncome || 0),
+      residualNeed: Math.max(0, Math.round(ctx.incomeTargetAnnual - (ctx.evaluation?.netFloorIncome || 0))),
+      streams: (ctx.evaluation?.secureIncome || []).map(s => ({
+        type: s.streamType, source: s.sourceTaxonomyId, grossAnnual: Math.round(s.grossAnnual || 0),
+        taxTreatment: s.taxTreatment, startAge: s.startAge,
+      })),
+      flagged: (ctx.evaluation?.specialist || []).map(h => ({ type: h.taxonomyId, reason: 'needs a qualified adviser to value', value: Math.round(h.currentValue || 0) })),
+    },
     perGoal,
     coverage: coverageSurface(ctx, ledger, []),
     methodology: buildMethodology(ctx, ledger, goalSpec),

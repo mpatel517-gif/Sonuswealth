@@ -51,6 +51,7 @@ import {
   lifeStageFor, calcAge, costOfInaction, nominationStatus,
   planFor, planStaleness, commitPlan, goalSeek,
   giftPct, taperBand, TAX,
+  fundedRatio,
 } from '../engine/fq-calculator.js'
 import {
   calcAPQTimeline, calcMilestones, calcGoalProgress,
@@ -216,6 +217,64 @@ function ProgressBar({ progress, colour, animateOnMount = true }) {
   )
 }
 
+// ─── ScrubTrack — grabbable value control (ported verbatim from TaxEstate.jsx
+//     commit 40e2175). Self-contained: drives only its own `value`/`onChange`.
+//     Never reads `entity` — so it is safe to place inside any section without
+//     reintroducing the entity-ref render loop. Drag the bar OR use the
+//     keyboard range mirror; every figure downstream of `onChange` re-draws. ───
+function ScrubTrack({ value, min = 0, max, step = 1, onChange, colour = 'var(--c-acc)', ariaLabel, valueText, height = 22 }) {
+  const pct = max > min ? Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100)) : 0
+  const startScrub = (e) => {
+    e.preventDefault()
+    const el = e.currentTarget
+    const trackW = el.getBoundingClientRect().width || 1
+    const x0 = e.clientX, v0 = Number(value)
+    try { el.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+    const move = (ev) => {
+      const dx = (ev.clientX ?? x0) - x0
+      let v = v0 + (dx / trackW) * (max - min)
+      v = Math.round(v / step) * step
+      onChange(Math.max(min, Math.min(max, v)))
+    }
+    const end = () => {
+      try { el.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
+  }
+  return (
+    <div>
+      <div
+        onPointerDown={startScrub}
+        title="Drag to change — every figure below updates together"
+        style={{
+          position: 'relative', height, borderRadius: 7,
+          background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+          overflow: 'hidden', cursor: 'ew-resize', touchAction: 'none',
+        }}
+      >
+        <div style={{ width: `${pct}%`, height: '100%', borderRadius: 5, background: colour, minWidth: pct > 0 ? 4 : 0, transition: 'width .08s linear' }} />
+        <div aria-hidden style={{ position: 'absolute', right: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 2, pointerEvents: 'none', opacity: 0.55 }}>
+          <span style={{ width: 2, height: 10, borderRadius: 2, background: 'var(--c-text3)' }} />
+          <span style={{ width: 2, height: 10, borderRadius: 2, background: 'var(--c-text3)' }} />
+        </div>
+      </div>
+      {/* Keyboard-accessible mirror of the drag control */}
+      <input
+        type="range" min={min} max={max} step={step}
+        value={value} onChange={e => onChange(Number(e.target.value))}
+        aria-label={ariaLabel}
+        aria-valuetext={valueText}
+        style={{ width: '100%', accentColor: colour, marginTop: 6 }}
+      />
+    </div>
+  )
+}
+
 // Confetti overlay — radial dots expanding outward, fade out (pure CSS).
 const CONFETTI_COLOURS = ['var(--c-success)', 'var(--c-accent)', 'var(--c-warning)', 'var(--c-danger)', 'var(--c-muted)']
 function ConfettiBurst({ active, colours = CONFETTI_COLOURS }) {
@@ -271,6 +330,28 @@ function SectionA({ entity }) {
   // X29 milestone diff: years to next stage transition
   const yearsToNext = next ? (parseInt(next.range.split('–')[0], 10) - age) : null
 
+  // ── A.5 user-input override (spec §4.7) — grabbable retirement age ──
+  // Seeded ONCE via lazy initialiser from entity (read, not subscribed) so the
+  // entity ref never enters a setState path → no render loop (cf. prior crash).
+  // Dragging recomputes the modelled "enter Decumulation at N" marker + the
+  // strip position live, without mutating the engine entity.
+  const NMPA = (typeof TAX?.nmpa === 'number' ? TAX.nmpa : null)
+  const defaultRetAge = Math.max(
+    age + 1,
+    Math.round(entity?.retirementAge ?? entity?.individual?.retirementAge ?? TAX?.spa ?? 66),
+  )
+  const [overrideAge, setOverrideAge] = useState(() =>
+    Math.min(80, Math.max(Math.max(age, 50), defaultRetAge)),
+  )
+  // Which life stage does the chosen retirement age fall into? (pure derivation)
+  const retStage = STAGES.find(s => {
+    const p = s.range.replace('+', '').split('–')
+    const lo = parseInt(p[0], 10) || 0
+    const hi = s.range.endsWith('+') ? 200 : (parseInt(p[1], 10) || lo + 15)
+    return overrideAge >= lo && overrideAge < hi
+  }) || STAGES[STAGES.length - 1]
+  const yearsToRet = Math.max(0, overrideAge - age)
+
   return (
     <FadeInOnMount
       className="sw-card sw-card-elevated"
@@ -312,7 +393,31 @@ function SectionA({ entity }) {
       </div>
 
       {/* 7-segment life stage strip (spec §4.2) — RevealStagger fan-in.
-          Current stage gets a gentle .sw-pulse-glow halo. */}
+          Current stage gets a gentle .sw-pulse-glow halo. A live marker shows
+          where the chosen retirement age (A.5 override) falls on the arc. */}
+      <div style={{ position: 'relative' }}>
+        {/* Retirement-age marker — position across the 18→105 age arc */}
+        {(() => {
+          const SPAN_LO = 18, SPAN_HI = 105
+          const leftPct = Math.max(0, Math.min(100, ((overrideAge - SPAN_LO) / (SPAN_HI - SPAN_LO)) * 100))
+          return (
+            <div
+              aria-hidden
+              title={`Modelled retirement age ${overrideAge}`}
+              style={{
+                position: 'absolute', top: -7, bottom: -7, left: `${leftPct}%`,
+                width: 2, background: col, zIndex: 2,
+                boxShadow: `0 0 6px ${col}`, transition: 'left .12s var(--ease-out-cubic)',
+                pointerEvents: 'none',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
+                fontSize: 8, fontWeight: 800, color: col, whiteSpace: 'nowrap',
+              }}>↧{overrideAge}</span>
+            </div>
+          )
+        })()}
       <RevealStagger interval={50} startDelay={120} style={{
         display:'flex', gap: 4, marginBottom: 6,
       }}>
@@ -333,6 +438,7 @@ function SectionA({ entity }) {
           )
         })}
       </RevealStagger>
+      </div>{/* /position:relative strip wrapper (retirement-age marker) */}
 
       <div style={{
         display:'flex', justifyContent:'space-between',
@@ -371,6 +477,52 @@ function SectionA({ entity }) {
           : 'Legacy stage — estate, gifts, and legacy planning are the primary financial focus.'}
       </div>
 
+      {/* A.5 user-input override (spec §4.7) — grabbable retirement age.
+          Drag → the modelled "enter Decumulation at N" marker, the stage it
+          lands in, and years-to-retirement all re-draw live. Planning input,
+          not a commitment — does not mutate the engine entity. */}
+      <div style={{
+        borderTop: '1px solid var(--c-sep)', marginTop: 'var(--space-sm)',
+        paddingTop: 'var(--space-sm)',
+      }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+          marginBottom: 6,
+        }}>
+          <span style={{ ...LBL }}>Expected retirement age</span>
+          <span style={{ fontSize: 16, fontWeight: 800, color: col, fontVariantNumeric: 'tabular-nums' }}>
+            {overrideAge}
+          </span>
+        </div>
+        <ScrubTrack
+          value={overrideAge}
+          min={Math.max(age, 50)}
+          max={80}
+          step={1}
+          colour={col}
+          ariaLabel="Expected retirement age"
+          valueText={`Age ${overrideAge}`}
+          onChange={setOverrideAge}
+        />
+        <div style={{
+          fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.6, marginTop: 8,
+        }}>
+          Modelled: you enter <strong style={{ color: col }}>{retStage.name}</strong> at age{' '}
+          <strong style={{ color: col }}>{overrideAge}</strong>
+          {yearsToRet > 0
+            ? <> · <span style={{ fontVariantNumeric: 'tabular-nums' }}>{yearsToRet}</span> year{yearsToRet === 1 ? '' : 's'} away</>
+            : ' · this year'}
+          {NMPA != null && overrideAge < NMPA && (
+            <span style={{ color: 'var(--c-warning)', marginLeft: 6 }}>
+              — below NMPA {NMPA}: pensions not yet accessible at this age.
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
+          Drag to model a different retirement age — a planning input, not advice. PENDING PROFESSIONAL SIGN-OFF.
+        </div>
+      </div>
+
       {/* §A causality stripe (spec §X29) — sources for life-stage derivation */}
       <div style={{ margin: 'var(--space-sm) calc(-1 * var(--space-xl)) calc(-1 * var(--space-lg))' }}>
         <CausalityStripe sources={['DOB · entity.individual.dob', `bundle: ${entity?.rulesVersion || 'UK-2026.1'}`]} />
@@ -395,6 +547,8 @@ function ScoreSparkline({ points, colour, draw = true }) {
   const py     = (s) => H - 4 - ((s - minS) / rng) * (H - 8)
   const d      = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(p.score).toFixed(1)}`).join(' ')
 
+  const lastX = px(points.length - 1)
+  const lastY = py(points[points.length - 1].score)
   const svg = (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block', overflow:'visible' }}>
       <path d={d} fill="none" stroke={colour} strokeWidth={2} strokeLinecap="round" />
@@ -404,6 +558,13 @@ function ScoreSparkline({ points, colour, draw = true }) {
           cy={py(p.score).toFixed(1)}
           r={3} fill="var(--c-warning)" />
       ))}
+      {/* "Today" divider — history ends at now; the latest point is the present.
+          Anchors the read-only mirror temporally per the temporal-axis remit. */}
+      <line x1={lastX.toFixed(1)} y1={0} x2={lastX.toFixed(1)} y2={H}
+        stroke="var(--c-text3)" strokeWidth={1} strokeDasharray="2 3" opacity={0.6} />
+      <circle cx={lastX.toFixed(1)} cy={lastY.toFixed(1)} r={3.5} fill={colour} />
+      <text x={(lastX - 2).toFixed(1)} y={9} textAnchor="end"
+        fontSize="8" fill="var(--c-text3)">today</text>
     </svg>
   )
   return draw ? <DrawSVG duration={1200}>{svg}</DrawSVG> : svg
@@ -929,6 +1090,24 @@ function CalendarEntryRow({ e, isLast, onNav }) {
 
 function SectionC({ entity, windowId, onNav }) {
   const [catFilter, setCatFilter] = useState([...CAT_CHIPS])
+
+  // ── §C gift override (spec §6 · user-set values are adjustable; statutory
+  //    dates stay fixed). Seeded ONCE via lazy initialiser from entity (read,
+  //    not subscribed) → entity never enters a setState path, no render loop.
+  //    Dragging the amount or the years-elapsed re-drives the gift-clock taper
+  //    live, without mutating the engine entity. ──
+  const hasGift = !!entity?.assets?.trustGifts?.date
+  const giftSeedDate = hasGift ? new Date(entity.assets.trustGifts.date) : null
+  const giftSeedYears = giftSeedDate
+    ? Math.max(0, Math.min(10, +(((Date.now() - giftSeedDate) / (365.25 * 86400000)).toFixed(1))))
+    : 0
+  const [giftAmt, setGiftAmt]     = useState(() => hasGift ? Math.round(entity.assets.trustGifts.total || 0) : 0)
+  const [giftYears, setGiftYears] = useState(() => giftSeedYears)
+  // Reconstruct a gift date from the years-elapsed slider (pure derivation).
+  const giftOverrideDateISO = useMemo(() => {
+    const d = new Date(Date.now() - giftYears * 365.25 * 86400000)
+    return d.toISOString().slice(0, 10)
+  }, [giftYears])
   // Window controls horizon: lifetime → 60mo, 12mo → 12, custom → 24, default 12
   const horizonMonths = useMemo(() => {
     switch (windowId) {
@@ -943,7 +1122,23 @@ function SectionC({ entity, windowId, onNav }) {
     }
   }, [windowId])
 
-  const entries = buildCalendarEntries(entity, horizonMonths)
+  const rawEntries = buildCalendarEntries(entity, horizonMonths)
+
+  // Re-drive the gift-clock entry from the live override (amount + date),
+  // leaving every statutory/derived entry untouched.
+  const entries = rawEntries.map(e => {
+    if (e.id !== 'trust-gift' || !hasGift) return e
+    const pct   = giftPct(giftOverrideDateISO)
+    const taper = taperBand(giftOverrideDateISO)
+    return {
+      ...e,
+      date: giftOverrideDateISO,
+      title: `Gift clock — ${pct}% elapsed towards IHT-free`,
+      detail: `${taper.label} · ${fmt(giftAmt)} gifted · IHT rate on this gift ${(taper.rate * 100).toFixed(0)}%.`,
+      giftPct: pct,
+      sources: ['giftPct · taperBand', 'user-set gift (adjustable)'],
+    }
+  })
 
   // Sort: overdue (daysAway < 0 OR null with action category) at TOP, then ascending date
   const sorted = entries
@@ -1006,6 +1201,75 @@ function SectionC({ entity, windowId, onNav }) {
           ))}
         </RevealStagger>
       )}
+
+      {/* Gift-clock model (spec §6 · user-set value adjustable; statutory dates
+          stay fixed). Drag the amount or the years-elapsed and the gift-clock
+          taper entry above re-drives live. */}
+      {hasGift && catFilter.includes('action') && (() => {
+        const taper = taperBand(giftOverrideDateISO)
+        const pct   = giftPct(giftOverrideDateISO)
+        return (
+          <div style={{
+            marginTop: 'var(--space-md)', paddingTop: 'var(--space-md)',
+            borderTop: '1px dashed var(--c-sep)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-sm)' }}>
+              <GiftClockRing pct={pct} colour="var(--c-warning)" />
+              <span style={{ ...LBL }}>Model this gift</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: 'var(--c-warning)' }}>
+                {taper.label}
+              </span>
+            </div>
+
+            <div style={{ marginBottom: 'var(--space-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>Gift amount</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
+                  {fmt(giftAmt)}
+                </span>
+              </div>
+              <ScrubTrack
+                value={giftAmt}
+                min={0}
+                max={Math.max(50_000, Math.ceil(((entity?.assets?.trustGifts?.total || 50_000) * 3) / 10_000) * 10_000)}
+                step={1_000}
+                colour="var(--c-warning)"
+                ariaLabel="Gift amount"
+                valueText={fmt(giftAmt)}
+                onChange={setGiftAmt}
+              />
+            </div>
+
+            <div style={{ marginBottom: 'var(--space-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>Years since gift</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>
+                  {giftYears.toFixed(1)} yr
+                </span>
+              </div>
+              <ScrubTrack
+                value={giftYears}
+                min={0}
+                max={10}
+                step={0.5}
+                colour="var(--c-warning)"
+                ariaLabel="Years since gift"
+                valueText={`${giftYears.toFixed(1)} years`}
+                onChange={setGiftYears}
+              />
+            </div>
+
+            <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+              At <strong>{giftYears.toFixed(1)} years</strong> the 7-year taper applies an IHT rate of{' '}
+              <strong style={{ color: 'var(--c-warning)' }}>{(taper.rate * 100).toFixed(0)}%</strong> on this gift
+              {taper.rate === 0 ? ' — fully outside the estate.' : '.'}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
+              Statutory dates (ISA, SA, SIPP-IHT) are fixed; only user-set values like gifts are adjustable. PENDING PROFESSIONAL SIGN-OFF.
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
@@ -1263,18 +1527,34 @@ function buildPlanRows(entity) {
       : { stale:false, reason:'No plan committed', severity:'none' }
     // CRIT-3: prefer target_display scalar (Batch 1) over object target
     const displayTarget = raw?.target_display ?? (typeof plan?.target === 'number' || typeof plan?.target === 'string' ? plan.target : null)
-    // Funded ratio: surface best deltaResults from persona scenarios if any
+    // Funded ratio: prefer the most-optimistic saved-scenario value; otherwise
+    // fall back to the canonical engine funded ratio for retirement/cashflow
+    // plans (Bruce's saved scenarios don't carry deltaResults.fundedRatio, which
+    // left the headline stuck on "Awaiting data · Funded —"). fundedRatio()
+    // returns { ratio, confidence, insufficient_data } from fq-calculator.
     const scList = Array.isArray(entity?.scenarios) ? entity.scenarios : []
     const fundedFromScenarios = scList
       .map(s => s?.deltaResults?.fundedRatio)
       .filter(v => typeof v === 'number')
-    const fundedPct = fundedFromScenarios.length > 0
-      ? Math.max(...fundedFromScenarios) // most optimistic saved scenario
-      : null
+    let fundedPct = null
+    let fundedSource = null
+    if (fundedFromScenarios.length > 0) {
+      fundedPct = Math.max(...fundedFromScenarios) // most optimistic saved scenario
+      fundedSource = 'saved scenario'
+    } else if (pt.id === 'retirement' || pt.id === 'cashflow') {
+      // Engine funded ratio is the right signal for retirement readiness plans.
+      let fr = null
+      try { fr = fundedRatio(entity) } catch { fr = null }
+      if (fr && typeof fr.ratio === 'number' && !fr.insufficient_data) {
+        fundedPct = fr.ratio
+        fundedSource = `engine fundedRatio · ${fr.confidence || 'MEDIUM'} confidence`
+      }
+    }
     return {
       pt, plan, staleness, exists: !!plan,
       displayTarget,
       fundedPct,
+      fundedSource,
       label: raw?.label || pt.label,
       timeWindow: raw?.target?.date || raw?.target?.age || plan?.targetWindow || null,
     }
@@ -1288,7 +1568,7 @@ function TrackingPill({ fundedPct }) {
       <span className="sw-chip sw-chip-sm" style={{
         color: 'var(--c-text3)', background: 'var(--c-surface2)',
         fontWeight: 700, letterSpacing: 0.3,
-      }}>Awaiting data</span>
+      }} title="No funded signal for this plan type yet — set a scenario or pick a Retirement/Cashflow plan.">No funded signal</span>
     )
   }
   let label, cls
@@ -1433,7 +1713,9 @@ function PlanFundedHeadline({ entity, planRows, onOpenGoalSeek }) {
       <div style={{
         fontSize: 10, color: 'var(--c-text3)', marginTop: 8, fontStyle: 'italic', lineHeight: 1.5,
       }}>
-        Funded% derived from saved scenarios; the engine models — not advice.
+        {fundedPct != null
+          ? `Funded% from ${headline.fundedSource || 'the engine'} — the engine models, not advice. PENDING PROFESSIONAL SIGN-OFF.`
+          : 'No funded signal for this plan type yet — set a scenario or pick a Retirement/Cashflow plan to see funded %.'}
       </div>
     </FadeInOnMount>
   )
@@ -1543,10 +1825,36 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
     }
   }, [open, initialMetric])
 
-  if (!open) return null
-
   // Metrics fully handled by goalSeek engine (all others fall through to scoreDelta — meaningless)
   const SUPPORTED_METRICS = ['wealthScore', 'riskScore', 'netWorth', 'iht']
+
+  // Pure range config for the grabbable target ScrubTrack. useMemo deps are
+  // [metric, entity] — but this is a DERIVED value only (no setState), so the
+  // entity ref does NOT participate in any update loop (cf. the prior agent's
+  // crash, which put entity in a setState-ing effect). Bounds are anchored to
+  // the user's current position so the drag range is meaningful per persona.
+  const seekRange = useMemo(() => {
+    const gbp = (n) => fmt(Math.round(n))
+    switch (seekTarget.metric) {
+      case 'netWorth': {
+        const nw = Math.max(0, netWorth(entity) || 0)
+        const max = Math.max(250_000, Math.ceil((nw * 2) / 50_000) * 50_000)
+        return { min: 0, max, step: 5_000, fmt: gbp }
+      }
+      case 'iht': {
+        // IHT exposure target — lower is better; range 0 → 2× a sensible ceiling
+        const nw = Math.max(0, netWorth(entity) || 0)
+        const max = Math.max(200_000, Math.ceil((nw * 0.4) / 50_000) * 50_000)
+        return { min: 0, max, step: 5_000, fmt: gbp }
+      }
+      case 'wealthScore':
+      case 'riskScore':
+      default:
+        return { min: 0, max: 100, step: 1, fmt: (n) => `${Math.round(n)}` }
+    }
+  }, [seekTarget.metric, entity])
+
+  if (!open) return null
 
   function runGoalSeek() {
     if (!SUPPORTED_METRICS.includes(seekTarget.metric)) {
@@ -1613,7 +1921,15 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
         }}>
           <select
             value={seekTarget.metric}
-            onChange={e => { setSeekTarget(s => ({ ...s, metric: e.target.value })); setSeekComingSoon(false) }}
+            onChange={e => {
+              const metric = e.target.value
+              // Seed an in-range default for the grabbable target so it never
+              // shows a stale value (e.g. "£95") after switching metric.
+              const DEFAULTS = { wealthScore: 80, riskScore: 80, netWorth: Math.round(Math.max(0, netWorth(entity) || 0)), iht: 0 }
+              setSeekTarget(s => ({ ...s, metric, value: DEFAULTS[metric] ?? s.value }))
+              setSeekResults(null)
+              setSeekComingSoon(false)
+            }}
             style={{
               padding: '10px 12px', borderRadius: 'var(--r-md)', fontSize: 13,
               background: 'var(--c-surface2)', color: 'var(--c-text)',
@@ -1639,17 +1955,46 @@ function GoalSeekSheet({ entity, open, initialMetric, onClose, onCommit }) {
               <option value="custom"     disabled>Custom plan</option>
             </optgroup>
           </select>
-          <input
-            type="number"
-            value={seekTarget.value}
-            onChange={e => setSeekTarget(s => ({ ...s, value: e.target.value }))}
-            placeholder="Target value"
-            style={{
-              padding: '10px 12px', borderRadius: 'var(--r-md)', fontSize: 13,
-              background: 'var(--c-surface2)', color: 'var(--c-text)',
-              border: '1px solid var(--c-sep)',
+          {/* Live value read-out for the grabbable target below */}
+          <div style={{
+            padding: '10px 12px', borderRadius: 'var(--r-md)', fontSize: 13,
+            background: 'var(--c-surface2)', color: 'var(--c-text)',
+            border: '1px solid var(--c-sep)', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', gap: 6,
+          }}>
+            <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>Target</span>
+            <span style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+              {seekRange.fmt(Number(seekTarget.value) || 0)}
+            </span>
+          </div>
+        </div>
+
+        {/* Grabbable target — drag (or arrow-key the range mirror) and the
+            ranked action paths below re-solve live via goalSeek(). Replaces
+            the old typed <input>. Stays self-contained — never touches entity. */}
+        <div style={{ marginBottom: 'var(--space-md)' }}>
+          <ScrubTrack
+            value={Number(seekTarget.value) || seekRange.min}
+            min={seekRange.min}
+            max={seekRange.max}
+            step={seekRange.step}
+            colour="var(--c-acc)"
+            ariaLabel={`Goal-seek target for ${seekTarget.metric}`}
+            valueText={seekRange.fmt(Number(seekTarget.value) || 0)}
+            onChange={(v) => {
+              setSeekTarget(s => ({ ...s, value: v }))
+              // Re-solve live as the target is dragged (supported metrics only).
+              if (SUPPORTED_METRICS.includes(seekTarget.metric)) {
+                try {
+                  setSeekResults(goalSeek(entity, seekTarget.metric, +v, '12mo', { maxAction: 200000 }))
+                  setSeekComingSoon(false)
+                } catch { setSeekResults([]) }
+              }
             }}
           />
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, fontStyle: 'italic' }}>
+            Drag the target — the engine re-ranks the paths that move you there fastest.
+          </div>
         </div>
 
         <button
@@ -2488,6 +2833,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         onViewModeChange={setViewMode}
         rulesVersion={TAX.ver || 'UK-2026.1'}
         dataDate={entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        showWindowRow={false}
       />
 
       {/* Z1 — Triple Anchor REMOVED 2026-05-28 (founder direction).
@@ -2501,18 +2847,10 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
           B harness through the top-right NW pill on this route. */}
       <div data-tieout="timeline.nw" data-tieout-raw={String(nw)} style={{ display: 'none' }} aria-hidden="true" />
 
-      {/* Z1.5 — Sub-Anchor Strip (D-ANCHOR-2 · PRC/PCC stub O-FOUNDER-IP-01) */}
-      <FadeInOnMount delay={120} style={{
-        margin: '0 0 var(--space-sm)', padding: '8px 14px',
-        borderTop: '1px solid var(--c-sep)', borderBottom: '1px solid var(--c-sep)',
-        display:'flex', justifyContent:'space-between', alignItems:'center',
-      }}>
-        <span style={{ fontSize: 12, color: 'var(--c-text2)' }}>Capital Efficiency (PRC/PCC)</span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text3)' }}>—</span>
-        <span style={{ fontSize: 11, color: 'var(--c-text3)', fontStyle: 'italic' }}>
-          Coming next
-        </span>
-      </FadeInOnMount>
+      {/* Z1.5 — Sub-Anchor Strip removed (was "Capital Efficiency (PRC/PCC) · Coming next").
+          PRC/PCC is an internal founder-IP code (O-FOUNDER-IP-01) and a dead "—" placeholder;
+          surfacing an internal code at the top layer violates PP-9 (no internal codes on the
+          surface) and §9 (no dead affordances). Re-add only when the metric is real. */}
 
       {/* X25 Purpose Statement (spec §1.9) */}
       <FadeInOnMount delay={180} style={{ padding: '4px 0 var(--space-md)', textAlign: 'center' }}>

@@ -15,6 +15,8 @@
 // without coupling.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useState } from 'react'
+
 const W = 360, H = 200
 const PAD = { top: 10, right: 12, bottom: 28, left: 32 }
 const pw = W - PAD.left - PAD.right
@@ -58,6 +60,7 @@ export default function PoSChart({
   guardrail = null,      // { year, value, label }
   horizonYears = 30,
 }) {
+  const [sel, setSel] = useState(null) // tapped year index → percentile reveal (drill)
   // If no real data from the engine, render an empty state — never show fabricated numbers.
   if (probability == null && median == null) {
     return (
@@ -76,7 +79,7 @@ export default function PoSChart({
       }}>
         <div className="sw-eyebrow">Probability of Success</div>
         <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 220 }}>
-          Calculating… add income and drawdown targets to generate your Monte Carlo projection.
+          Add income and a drawdown target to generate your Monte Carlo projection — not enough data yet.
         </div>
       </div>
     )
@@ -218,7 +221,40 @@ export default function PoSChart({
             {l.label}
           </text>
         ))}
+
+        {/* Selected-year marker (drill) */}
+        {sel != null && medianPts[sel] && (
+          <g pointerEvents="none">
+            <line x1={medianPts[sel].x} y1={PAD.top} x2={medianPts[sel].x} y2={PAD.top + ph}
+              stroke="var(--c-acc)" strokeWidth="1.5" strokeDasharray="2 2" opacity="0.8" />
+            {p90Pts[sel] && <circle cx={p90Pts[sel].x} cy={p90Pts[sel].y} r="3" fill="var(--c-acc)" opacity="0.6" />}
+            <circle cx={medianPts[sel].x} cy={medianPts[sel].y} r="4" fill="var(--c-acc)" />
+            {p10Pts[sel] && <circle cx={p10Pts[sel].x} cy={p10Pts[sel].y} r="3" fill="var(--c-acc)" opacity="0.6" />}
+          </g>
+        )}
+
+        {/* Invisible per-year tap-bands → drill (founder: all charts drillable) */}
+        {series.map((p, i) => {
+          const step = pw / Math.max(1, series.length - 1)
+          return (
+            <rect key={`hit-${i}`} x={medianPts[i].x - step / 2} y={PAD.top} width={step} height={ph}
+              fill="transparent" style={{ cursor: 'pointer' }}
+              onClick={() => setSel(sel === i ? null : i)}>
+              <title>Tap to see {p.year}</title>
+            </rect>
+          )
+        })}
       </svg>
+
+      {/* Drill reveal — the three percentile values at the tapped year. */}
+      {sel != null && series[sel] && (
+        <div style={{ margin: '10px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          <strong style={{ color: 'var(--c-text)' }}>{series[sel].year}</strong> — median pot{' '}
+          <strong style={{ color: 'var(--c-acc)' }}>{fmtCompact(series[sel].value)}</strong>. Likely range{' '}
+          {fmtCompact(p10[Math.min(sel, p10.length - 1)].value)} – {fmtCompact(p90[Math.min(sel, p90.length - 1)].value)}{' '}
+          <span style={{ color: 'var(--c-text3)' }}>(10th–90th percentile across 1,000 simulated market paths — 8 in 10 outcomes land in this band).</span>
+        </div>
+      )}
 
       <div style={{
         display: 'flex', gap: 14, marginTop: 12,

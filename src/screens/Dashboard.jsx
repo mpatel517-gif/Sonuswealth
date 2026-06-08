@@ -118,6 +118,10 @@ const TABS = [
   { id:'risk',  label:'Risk',     icon:'◉' },
   { id:'timeline',  label:'Timeline', icon:'◷' },
 ]
+// Decisions intentionally NOT a nav tab (founder 2026-06-06: too much clutter).
+// They live as categorised "Decisions you can make here" drawers on the screen
+// that owns each topic (My Money / Cashflow / Tax & Estate / Risk). The full
+// catalogue (grouped) remains reachable via More (⋯) → All decisions (40).
 
 // ─── Global Tax Year chip ───────────────────────────────────────────────
 // Founder feedback 2026-05-28: TY selector must be visible on every page.
@@ -386,13 +390,16 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       return setTab('money/trusts')
     }
     if (id === 'decisions') {
-      // v0.3 route-9 §5 — `/decisions#scenario` deep-link (R8 drawdown save).
-      // If opts carries hash 'scenario' + seed, route through DE overlay with
-      // seed; otherwise fall back to existing DE overlay behaviour.
+      // v0.3 route-9 §5 — `/decisions#scenario` deep-link (R8 drawdown save)
+      // still routes to the AI decision-tree (V2) with its seed.
       if (opts && opts.hash === 'scenario') {
         return setDePayload({ ...opts, hash: 'scenario', seed: opts.seed || null })
       }
-      return setDePayload(opts || {})
+      // Plain "Decisions" tap → the deterministic 40-decision catalogue
+      // (DecisionEngine.jsx). Works with no API key and shows all 40 up front;
+      // the LLM "ask in plain English" path is offered from inside it. Fixes
+      // the founder's "I can't see the 40" — the AI front-door hid them.
+      return setMoreScreen('decision')
     }
     // v0.3 route-9 §5 — `/tax#iht-delta` deep-link. Seed carries
     // `{ pension_total, post_2027_delta }` from R1 SIPP-IHT chip.
@@ -417,7 +424,14 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
 
   // Phase 3 module overlay state — Data Capture, Vault, Notifications, Reports
   const [showMoreMenu, setShowMoreMenu] = useState(false)
-  const [moreScreen,   setMoreScreen]   = useState(null) // 'capture' | 'vault' | 'notif' | 'reports' | null
+  const [moreScreen,   setMoreScreen]   = useState(null) // 'capture' | 'vault' | 'notif' | 'reports' | 'decision' | null
+  // Decision deep-link: a per-screen "Decisions you can make here" drawer opens
+  // the Decision Engine seeded straight into one decision (skips the catalogue).
+  const [decisionSeed, setDecisionSeed] = useState(null)
+  const openDecision = useCallback((id) => { setDecisionSeed(id); setMoreScreen('decision') }, [])
+  // Decisions committed this session — merged into the entity Timeline reads so a
+  // committed decision actually SHOWS in the decision log (founder 2026-06-06).
+  const [sessionDecisions, setSessionDecisions] = useState([])
 
   // §13.8 Drill Memory — surface a resume-Whisper on first mount if a drill
   // session exists within TTL. The whisper carries an onTap that hydrates the
@@ -479,6 +493,10 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   const handleCommit = useCallback((event) => {
     if (!event || !event.type) return
     commit(persona, event)
+    // Surface committed Decision-Engine decisions on Timeline immediately.
+    if (event.record && /^DE-/.test(event.type)) {
+      setSessionDecisions(d => [event.record, ...d])
+    }
     if (event.type === 'SCENARIO_SAVED' && event.payload?.back_flow === 'iht') {
       setIHTForceKey(k => k + 1)
     }
@@ -726,6 +744,31 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         </div>
       </div>
 
+      {/* ── Mobile/tablet anchor strip (founder 2026-06-05) ──────────────
+          The top-right pills (NW/Wealth/Risk/CoI) are hidden ≤768px to stop the
+          header overflowing — but that left Cashflow (and any tab without its own
+          in-body anchors) with NO scores on narrow screens. This full-width row
+          restores the same 4 anchors on EVERY tab at ≤768px, so they're
+          consistent for all users. Hidden >768 (the header pills show there). */}
+      {(() => {
+        const sg = (v) => (typeof v === 'number' && isFinite(v)) ? (Math.abs(v) >= 1e6 ? `£${(v / 1e6).toFixed(2)}m` : Math.abs(v) >= 1e3 ? `£${Math.round(v / 1e3)}k` : `£${Math.round(v)}`) : '—'
+        let coi = 0; try { coi = +(totalCoI?.(entity)?.total ?? 0) } catch (_e) { /* */ }
+        const cell = (l, v, c) => (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '5px 4px', minWidth: 0 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase' }}>{l}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: c, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>{v}</span>
+          </div>
+        )
+        return (
+          <div className="sw-mobile-anchors" style={{ display: 'none', gap: 6, padding: '4px 12px 6px', background: 'var(--c-bg)', borderBottom: '1px solid var(--c-border)' }}>
+            {cell('NW', sg(headerNW), 'var(--c-text)')}
+            {cell('Wealth', fq?.total != null ? `${fq.total}` : '—', 'var(--c-acc)')}
+            {cell('Risk', headerRisk?.total != null ? `${headerRisk.total}` : '—', headerRiskBand?.colour || 'var(--c-gold)')}
+            {cell('CoI', sg(coi), 'var(--c-coral, #FF6F7D)')}
+          </div>
+        )
+      })()}
+
       {/* ── Global Tax Year chip ────────────────────────────────────────
           Founder direction 2026-05-28: TY must be visible on every page.
           Rendered here so every routed screen inherits it. */}
@@ -771,6 +814,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             onOpenRisk={() => setShowRiskOverlay(true)}
             onDrillMetric={pushDetail}
             onNav={setTabSafe}
+            onOpenDecision={openDecision}
           />
         )}
         {/* MyMoney sub-routes (founder direction 2026-05-26).
@@ -823,14 +867,15 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             onDrillMetric={pushDetail}
             scenarioSeed={scenarioSeed}
             onScenarioSeedConsumed={() => setScenarioSeed(null)}
+            onOpenDecision={openDecision}
           />
         )}
         {/* v0.3 route-9 §5 deep-link wiring — hash + seed + forceKey for the
             IHT pre/post-2027 delta card. R1 SIPP-IHT chip seeds the hash;
             R7 SCENARIO_SAVED back_flow bumps ihtForceKey for live recompute. */}
-        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} />}
-        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} />}
-        {tab === 'timeline'  && <Timeline     entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
+        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} onOpenDecision={openDecision} />}
+        {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} onOpenDecision={openDecision} />}
+        {tab === 'timeline'  && <Timeline     entity={sessionDecisions.length ? { ...entity, decisions: [...sessionDecisions, ...(entity?.decisions || [])] } : entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
         </ErrorBoundary>
         {/* P12-1 (2026-05-28) — canonical FCA disclaimer footer per AppShell
             slot contract. Rendered at Dashboard scope so every screen inherits
@@ -852,7 +897,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           // keep the "My Money" lane active so the user doesn't feel orphaned.
           const active = t.id === 'money' ? isMoneyTab(tab) : tab === t.id
           return (
-            <button key={t.id} type="button" onClick={() => setTab(t.id)} aria-current={active ? 'page' : undefined} aria-label={`Navigate to ${t.label}`} style={{
+            <button key={t.id} type="button" onClick={() => setTabSafe(t.id)} aria-current={active ? 'page' : undefined} aria-label={`Navigate to ${t.label}`} style={{
               flex:1, display:'flex', flexDirection:'column',
               alignItems:'center', justifyContent:'center', gap:3,
               border:'none', cursor:'pointer', background:'none',
@@ -980,9 +1025,9 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
               { id: 'notif',   icon: '🔔', label: 'Notifications',     body: "What you'll want to know" },
               { id: 'reports', icon: '📊', label: 'Reports',           body: 'On-demand or scheduled exports' },
               { id: 'ifa',     icon: '◊', label: 'IFA Practice',      body: 'Adviser dashboard + client roster' },
-              { id: 'decision', icon: '◆', label: 'Decision Engine',  body: '7-step flow with Decision Wheel weighting' },
+              { id: 'decision', icon: '◆', label: 'All decisions (40)',  body: 'Browse 40 money decisions — scored, no AI needed' },
             ].map(m => (
-              <button key={m.id} onClick={() => { setMoreScreen(m.id); setShowMoreMenu(false) }}
+              <button key={m.id} onClick={() => { if (m.id === 'decision') setDecisionSeed(null); setMoreScreen(m.id); setShowMoreMenu(false) }}
                 className="sw-tile sw-tile-interactive sw-press"
                 style={{ width:'100%', textAlign:'left', marginBottom:10, cursor:'pointer' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
@@ -1050,20 +1095,24 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         </OverlayShell>
       )}
       {moreScreen === 'decision' && (
-        <OverlayShell title="Decision Engine" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
+        <OverlayShell title="Choices" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngine
+            entity={wireEntity}
+            initialDecisionId={decisionSeed}
             onBack={(opts) => {
               setMoreScreen(null)
+              setDecisionSeed(null)
               // Navigate to Timeline after a commit so user sees their plan.
               if (opts?.committed) setTabSafe('timeline')
             }}
             onCommit={handleCommit}
+            onAskAI={() => { setMoreScreen(null); setDecisionSeed(null); setDePayload({}) }}
           />
         </OverlayShell>
       )}
       {showMagic && <MagicShowcase entity={wireEntity} onClose={() => setShowMagic(false)} />}
       {dePayload !== null && (
-        <OverlayShell title="Decision Engine" onBack={() => setDePayload(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
+        <OverlayShell title="Choices" onBack={() => setDePayload(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <DecisionEngineV2
             entity={wireEntity}
             initialQuery={dePayload.query}

@@ -53,6 +53,7 @@ function _buildTAX(b) {
     ihtRate:       b.ihtRate       ?? b.iht?.rate                        ?? b.inheritanceTax?.ihtRate ?? 0.40,
     cgaAllowance:  b.cgaAllowance  ?? b.cgt?.annualExemption             ?? b.capitalGains?.annualExemptAmount ?? 3000,
     isaAllowance:  b.isaAllowance  ?? b.pension?.isaAllowance            ?? b.isa?.annualAllowance ?? 20000,
+    jisaAllowance: b.jisaAllowance ?? b.isa?.juniorAnnualAllowance        ?? 9000,            // Junior ISA annual subscription limit
     pensionAA:     b.pensionAA     ?? b.pension?.annualAllowance         ?? 60000,
     // Pension audit P2 (2026-05-26): MPAA + tapered-AA keys were missing
     // from the bundle, so the MyMoney pension drill's "Reduced cap" tile
@@ -90,6 +91,7 @@ function _buildTAX(b) {
     employerNICRate:        b.nationalInsurance?.employerRate   ?? 0.15,         // Budget 2024 — effective April 2025
     employerNICThreshold:   b.nationalInsurance?.employerThreshold ?? 5000,      // Budget 2024 — effective April 2025
     employmentAllowance:    b.nationalInsurance?.employmentAllowance ?? 10500,   // April 2025 — employer NIC relief (was £5,000)
+    redundancyTaxFree:      b.income?.redundancyTaxFreeLimit ?? b.employment?.redundancyTaxFreeLimit ?? 30000, // ITEPA 2003 s403 — £30k termination exemption
     hicbcFloor:             b.income?.hicbcFloor               ?? 60000,         // Spring Budget 2024
     hicbcCeiling:           b.income?.hicbcCeiling             ?? 80000,         // Spring Budget 2024 (taper width 20k)
 
@@ -127,6 +129,7 @@ function _buildTAX(b) {
     cgtBasic:               b.cgt?.basicRate                   ?? 0.18,          // Post-Autumn Budget 2024
     cgtHigher:              b.cgt?.higherRate                  ?? 0.24,          // Post-Autumn Budget 2024
     badrRate:               b.cgt?.badrRate                    ?? 0.18,          // FA 2026 — Business Asset Disposal Relief (was 14% pre-2026)
+    badrLifetimeLimit:      b.cgt?.badrLifetimeLimit           ?? 1000000,       // TCGA 1992 s169N — BADR £1m lifetime gains cap
     sdltAdditionalProperty: b.sdlt?.additionalPropertySurcharge ?? 0.05,         // FA 2024 — from 31 Oct 2024 (+5%, was +3%)
     vctITRate:              b.vct?.incomeTaxReliefRate ?? b.taxEfficientInvestments?.vct?.incomeTaxRelief ?? 0.20,  // FA 2026 — VCT IT relief (was 30% pre-April 2026)
     eisITRate:              b.taxEfficientInvestments?.eis?.incomeTaxRelief  ?? 0.30,  // ITA 2007 — EIS IT relief (unchanged by FA 2026)
@@ -141,6 +144,22 @@ function _buildTAX(b) {
 
     // Allowance freeze -----------------------------------------------------
     paFreezeUntil:          b.income?.paFreezeUntil ?? b._meta?.paFreezeUntil ?? '2031-04-05', // Autumn Budget 2025 — freeze to end of 2030/31 tax year
+
+    // Cash protection / safeguarded-benefit advice -------------------------
+    // FSCS deposit protection rose £85,000 → £120,000 from 1 Dec 2025. Read
+    // from the bundle so no UI/engine site carries the stale £85k literal.
+    fscsLimit:              b.cashProtection?.fscsLimit                     ?? 120000,   // PRA PS18/25 — per person per banking licence (from 1 Dec 2025)
+    fscsJointLimit:         b.cashProtection?.fscsJointLimit                ?? 240000,   // joint accounts = 2× limit
+    fscsTempHighBalance:    b.cashProtection?.fscsTemporaryHighBalanceLimit ?? 1000000, // temporary high balances, 6 months
+    // Safeguarded benefit (DB/GAR/GMP) transfer advice threshold — FCA COBS 19.1A
+    safeguardedAdviceThreshold: b.pension?.safeguardedBenefitAdviceThreshold ?? 30000,
+    // Long-term care — Care Act 2014 (England) upper capital limit for LA means-test.
+    laCareUpperCapital:     b.care?.upperCapitalLimit ?? b.longTermCare?.upperCapitalLimit ?? 23250,
+    // Per-asset-class growth (decision 'B') — engine reads these, never hardcodes.
+    growthDefault:          b.growthAssumptions?.default      ?? 0.05,
+    growthByCategory:       b.growthAssumptions?.byCategory   ?? {},
+    growthByClass:          b.growthAssumptions?.byClass      ?? {},
+    growthInflation:        b.growthAssumptions?.inflation    ?? 0.025,
     // ── END v0.3 ROUTE-SPECS BUNDLE ADDITIONS ─────────────────────────────
     scottishBands: [
       { name: 'Starter',      from: b.income?.scottishStarterBandFrom      ?? 12570,  to: b.income?.scottishStarterBandTo        ?? 14876,  rate: b.income?.scottishStarterRate      ?? 0.19 },

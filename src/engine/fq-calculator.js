@@ -7,6 +7,7 @@
 
 import { TAX, onBundleChange } from './_bundle.js';
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
+import { netWorthAtHorizon as _netWorthAtHorizon } from './projection.js';
 import {
   pensionTotal      as _pensionTotal,
   investmentsTotal  as _investmentsTotal,
@@ -64,11 +65,28 @@ export function fmt(n) {
 }
 
 /**
- * Days remaining until the SIPP-enters-estate deadline (TAX.deadline).
+ * CANONICAL countdown — whole calendar days remaining until SIPPs enter the
+ * estate for IHT (6 Apr 2027 00:00 UTC). This is the SINGLE source every visible
+ * "days until the rule change" surface must use so two visuals of one quantity
+ * always reconcile (T&E tile, IHTDeltaCard, sub-anchor strip, CoI daily-rate).
+ * Floor — the rule has not bitten until the day actually arrives; matches the
+ * IHTDeltaCard renderer. Today-relative, UTC-pivot to dodge DST/local drift.
+ * @param {number} [nowMs=Date.now()]
+ * @returns {number} integer ≥ 0
+ */
+export function sippIhtCountdownDays(nowMs = Date.now()) {
+  const pivot = Date.UTC(2027, 3, 6, 0, 0, 0, 0); // 2027-04-06 00:00 UTC
+  return Math.max(0, Math.floor((pivot - nowMs) / 86400000));
+}
+
+/**
+ * Days remaining until the SIPP-enters-estate deadline.
+ * Delegates to {@link sippIhtCountdownDays} so the CoI daily-rate denominator
+ * uses the same single countdown the UI shows.
  * @returns {number} integer ≥ 0
  */
 export function daysLeft() {
-  return Math.max(0, Math.round((TAX.deadline - new Date()) / 86400000));
+  return sippIhtCountdownDays();
 }
 
 // ── LIFE STAGE ────────────────────────────────────────────────────────────────
@@ -2537,12 +2555,14 @@ export function netWorthAtYears(entity, years) {
       if (point) return { value: Math.round(point.value), confidence: 'HIGH', source: 'trajectory' };
     }
   }
-  // Forward — compound at 4%; reduce confidence as horizon extends.
-  const factor = Math.pow(1.04, years);
-  const confidence = Math.abs(years) <= 1 ? 'HIGH'
-                   : Math.abs(years) <= 5 ? 'MEDIUM'
-                   : 'LOW';
-  return { value: Math.round(cur * factor), confidence, source: 'projection' };
+  // Forward — delegate to the ONE canonical projector (projection.js) so this
+  // agrees with MyMoney's hero strip, Timeline's forecast, and the Decision
+  // Engine. P1 model-unification (2026-06-07): the prior flat `cur × 1.04^years`
+  // grew the NET at a portfolio rate — it could not amortise debt (a debt with
+  // payments must trend to ZERO). netWorthAtHorizon() grows assets and amortises
+  // liabilities separately, then derives NW = assets − liabilities.
+  const proj = _netWorthAtHorizon(entity, years, 0.04);
+  return { value: proj.value, confidence: proj.confidence, source: 'projection' };
 }
 
 /**
@@ -3824,4 +3844,5 @@ export {
   whatWouldHelpMost,
   projectBTR,
   shockTrajectory,
+  SHOCK_PARAM_DEFAULTS,
 } from './risk-engine.js';

@@ -41,6 +41,16 @@
   --c-violet:   #ba8cff;       /* data-vis only */
   --c-mint:     #7cf7de;       /* lighter teal variant */
 
+  /* ── Semantic status aliases ─────────────────────────────────────
+     Risk.jsx (and other screens) reference --c-danger/--c-success/
+     --c-warning but these were never defined anywhere → resolved to
+     transparent/inherited, silently breaking dim-bar, shock-card,
+     setback-chip and Shock-Lab colour semantics. Aliased to the real
+     functional tokens here (purely additive). */
+  --c-success:  var(--c-acc);   /* mint = resilient/good */
+  --c-danger:   var(--c-coral); /* coral = exposed/loss */
+  --c-warning:  var(--c-gold);  /* gold = caution */
+
   --c-acc-bg:   rgba(93,219,194,.10);
   --c-acc2-bg:  rgba(122,167,255,.10);
   --c-acc3-bg:  rgba(255,111,125,.10);
@@ -139,6 +149,12 @@
      (indigo) so success-state visual carries the same semantic across
      both themes. Dark mode keeps mint as the success color. */
   --c-mint:     #1c3fe7;       /* indigo — success-state alias (light) */
+
+  /* Semantic status aliases (see dark block). Light theme: success =
+     indigo (no green per Digital Sterling), danger = deep red, warn = gold. */
+  --c-success:  var(--c-acc);   /* indigo = success-state */
+  --c-danger:   var(--c-coral); /* deep red = exposed/loss */
+  --c-warning:  var(--c-gold);  /* gold = caution */
 
   --c-acc-bg:   rgba(28,63,231,.08);
   --c-acc2-bg:  rgba(61,90,254,.10);
@@ -715,7 +731,22 @@ body {
    ───────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sw-app-topbar__tagline { display: none !important; }
+  /* Keep the NW/Wealth/Risk/CoI pills NEXT TO the avatar down to 600px
+     (founder 2026-06-05: "the 3 anchors should be next to the user name —
+     we had it there before"). The old rule hid them at ≤768 and dropped
+     them into a detached full-width strip — that strip IS the "wrong place".
+     There's room beside the avatar at this width once the wordmark shrinks
+     (rule below); only true-mobile (≤600) can't fit them. */
+  .sw-app-topbar__brand > div:last-child > div:first-child {
+    font-size: 16px !important; letter-spacing: 0 !important;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;
+  }
+}
+@media (max-width: 600px) {
+  /* True mobile: avatar + 4 pills + theme + more + settings can't share one
+     row, so fall back to the full-width strip just below the header. */
   .sw-app-topbar__anchors { display: none !important; }
+  .sw-mobile-anchors { display: flex !important; }
 }
 
 /* ── Desktop brand de-duplication (2026-05-28) ────────────────────────────

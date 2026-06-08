@@ -274,7 +274,9 @@
     "juniorPensionNote": "Anyone can contribute up to \u00a32,880/year net per child; 20% basic-rate relief added = \u00a33,600 gross. Accessible from age 57 (from 2028). UK-PEN-68.",
     "nmpaCurrentTo2028": 55,
     "nmpaFrom2028": 57,
-    "nmpaNote": "Normal Minimum Pension Age: 55 until April 2028, then 57. Protected retirement ages for some older DC schemes."
+    "nmpaNote": "Normal Minimum Pension Age: 55 until April 2028, then 57. Protected retirement ages for some older DC schemes.",
+    "safeguardedBenefitAdviceThreshold": 30000,
+    "safeguardedBenefitAdviceThresholdNote": "Transfers or conversions of safeguarded benefits (DB / GAR / GMP) with a transfer value of £30,000 or more legally require advice from an FCA pension-transfer specialist (FCA COBS 19.1A / PS18/6 / FG21/3). Sonuswealth stores values for information only. UK-PEN-DB-ADVICE."
   },
   "isa": {
     "annualAllowance": 20000,
@@ -820,6 +822,44 @@
   },
   "safeWithdrawalRate": 0.04,
   "bengenNote": "4% safe withdrawal rate (Bengen rule). Investable assets \u00d7 4% = safe annual spending ceiling.",
+  "growthAssumptions": {
+    "_note": "Nominal annual growth defaults (decimal). Engine precedence: per-holding growthRate override \u2192 byClass \u2192 byCategory \u2192 default. Never hardcode growth in engine/UI \u2014 read these. Real-terms growth = nominal \u2212 inflation. Decision 'B' (per-asset-class), 2026-06-03.",
+    "default": 0.05,
+    "inflation": 0.025,
+    "byCategory": {
+      "pensions": 0.05,
+      "investments": 0.06,
+      "property": 0.04,
+      "business": 0.05,
+      "cash": 0.03,
+      "alternatives": 0.05
+    },
+    "byClass": {
+      "global-equity": 0.066,
+      "equity": 0.066,
+      "developed-equity": 0.062,
+      "emerging-equity": 0.072,
+      "bonds": 0.035,
+      "gilts": 0.03,
+      "corporate-bonds": 0.04,
+      "money-market": 0.03,
+      "property": 0.04,
+      "commodity": 0.04,
+      "everyday-cash": 0.025,
+      "multi-asset": 0.05
+    }
+  },
+  "cashProtection": {
+    "fscsLimit": 120000,
+    "fscsJointLimit": 240000,
+    "fscsTemporaryHighBalanceLimit": 1000000,
+    "fscsTemporaryHighBalanceMonths": 6,
+    "effectiveFrom": "2025-12-01",
+    "supersededValue": 85000,
+    "supersededUntil": "2025-11-30",
+    "nsiTreasuryBacked": true,
+    "note": "FSCS deposit protection \u00a3120,000 per eligible person, per banking-licence institution from 1 December 2025 (raised from \u00a385,000, in force 2017\u20132025). Joint accounts \u00a3240,000. Temporary high balances (e.g. property-sale proceeds) protected up to \u00a31,000,000 for 6 months. NS&I products are 100% HM Treasury-backed with no FSCS cap. Investments/pensions carry a separate \u00a385,000 FSCS investment-protection limit (unchanged). UK-CASH-FSCS-01."
+  },
   "milestones": {
     "_note": "Timeline milestone catalogue v1.0 (UK-2026.1.1). Starter set.",
     "catalogue": [

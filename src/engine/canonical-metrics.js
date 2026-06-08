@@ -459,9 +459,9 @@ export function ihtDeltaPrePost2027(entity) {
   const post2027 = post2027Detail.ihtDue;
   const delta = post2027 - today;
 
-  const now = new Date();
-  const pivot = new Date('2027-04-06');
-  const daysUntilApril2027 = Math.max(0, Math.round((pivot.getTime() - now.getTime()) / 86400000));
+  // P2 reconciliation (2026-06-07): UTC-pivot floor to match the single
+  // canonical sippIhtCountdownDays() the UI renders (was round → off-by-one).
+  const daysUntilApril2027 = Math.max(0, Math.floor((Date.UTC(2027, 3, 6) - Date.now()) / 86400000));
 
   return {
     today,

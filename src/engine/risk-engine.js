@@ -28,39 +28,63 @@ function _monthlyDebtService(liab) {
 // nwDelta → economically-modelled immediate NW impact per RL v1.1 §16 (E)
 // (some shocks don't mutate entity NW fields directly — income shocks drain cash)
 
-function _applyJobLoss(e) {
+// ── Shock parameters (grabbable on the Risk surface) ──────────────────────────
+// Each applicator accepts an optional `params` object so the UI can drag the
+// shock SIZE / HORIZON / income-loss depth and re-run the engine live. When
+// `params` is omitted the defaults reproduce the v1.0 baseline exactly — no
+// regression for callers that don't pass overrides (riskShockSuite, tie-out).
+export const SHOCK_PARAM_DEFAULTS = {
+  job_loss:    { incomeLossPct: 1.00, durationMonths: 6 },   // 100% income loss, 6mo drain
+  illness:     { incomeLossPct: 1.00, durationMonths: 6 },
+  market_fall: { dropPct: 0.30 },                            // −30% portfolio
+  rate_rise:   { riseBps: 200 },                             // +200bps (2%)
+  death:       {},                                           // estate-driven, no slider
+};
+
+function _num(v, fallback) {
+  return (typeof v === 'number' && isFinite(v)) ? v : fallback;
+}
+
+function _applyJobLoss(e, params = {}) {
   const m = _clone(e);
-  // 6-month cash drain before person draws down or seeks alternative income
+  const d = SHOCK_PARAM_DEFAULTS.job_loss;
+  const lossPct  = Math.max(0, Math.min(1, _num(params.incomeLossPct, d.incomeLossPct)));
+  const months   = Math.max(1, _num(params.durationMonths, d.durationMonths));
+  // Cash drain = lost monthly income × duration before alternative income/drawdown
   const monthlyEmployment = (e.income?.employment || 0) / 12;
-  const nwDelta = -(monthlyEmployment * 6);
+  const nwDelta = -(monthlyEmployment * lossPct * months);
 
   if (m.income) {
-    m.income.employment = 0;
-    m.income.dividends = 0;
+    m.income.employment = (m.income.employment || 0) * (1 - lossPct);
+    if (lossPct >= 1) m.income.dividends = 0;
   }
-  m.drawdown = 0;
-  if (m.riskQuestionnaire) {
+  if (lossPct >= 1) m.drawdown = 0;
+  if (m.riskQuestionnaire && lossPct >= 1) {
     m.riskQuestionnaire.q13_income_sources = 'one';
   }
   return { mutated: m, nwDelta };
 }
 
-function _applyIllness(e) {
+function _applyIllness(e, params = {}) {
   const m = _clone(e);
+  const d = SHOCK_PARAM_DEFAULTS.illness;
+  const lossPct = Math.max(0, Math.min(1, _num(params.incomeLossPct, d.incomeLossPct)));
+  const months  = Math.max(1, _num(params.durationMonths, d.durationMonths));
   const monthlyEmployment = (e.income?.employment || 0) / 12;
-  // SSP: £116.75/week × 28 weeks statutory maximum
-  const sspTotal = 116.75 * 28;
-  const nwDelta = -(monthlyEmployment * 6) + sspTotal;
+  // SSP: £116.75/week × up to 28 weeks (≈ 6.46mo) statutory maximum, scaled to horizon
+  const sspWeeks  = Math.min(28, months * 4.33);
+  const sspTotal  = 116.75 * sspWeeks;
+  const nwDelta = -(monthlyEmployment * lossPct * months) + sspTotal;
 
   if (m.income) {
-    m.income.employment = 0;
+    m.income.employment = (m.income.employment || 0) * (1 - lossPct);
   }
   return { mutated: m, nwDelta };
 }
 
-function _applyMarketFall(e) {
+function _applyMarketFall(e, params = {}) {
   const m = _clone(e);
-  const FALL = 0.30;
+  const FALL = Math.max(0, Math.min(0.90, _num(params.dropPct, SHOCK_PARAM_DEFAULTS.market_fall.dropPct)));
   let nwDelta = 0;
 
   if (m.assets?.sipp) {
@@ -87,9 +111,10 @@ function _applyMarketFall(e) {
   return { mutated: m, nwDelta };
 }
 
-function _applyRateRise(e) {
+function _applyRateRise(e, params = {}) {
   const m = _clone(e);
-  const RISE = 0.02;
+  const bps  = Math.max(0, _num(params.riseBps, SHOCK_PARAM_DEFAULTS.rate_rise.riseBps));
+  const RISE = bps / 10000; // basis points → decimal (200bps → 0.02)
   let extraMonthly = 0;
 
   if (m.liabilities?.mortgage?.rateType === 'variable') {
@@ -113,7 +138,7 @@ function _applyRateRise(e) {
   return { mutated: m, nwDelta };
 }
 
-function _applyDeath(e) {
+function _applyDeath(e, _params = {}) {
   const m = _clone(e);
   if (m.income) {
     m.income.employment = 0;
@@ -177,7 +202,7 @@ const SHOCKS = {
  * @param {object} [bundle] - jurisdictional bundle (uses engine defaults if omitted)
  * @returns {{ shockId, label, description, nwBefore, nwAfter, nwDelta, fqBefore, fqAfter, fqDelta, rsBefore, rsAfter, rsDelta, rulesVersion }}
  */
-export function runShock(entity, shockId, bundle) {
+export function runShock(entity, shockId, bundle, params = {}) {
   const shock = SHOCKS[shockId];
   if (!shock) throw new Error(`Unknown shockId: "${shockId}". Valid: ${Object.keys(SHOCKS).join(', ')}`);
 
@@ -185,7 +210,7 @@ export function runShock(entity, shockId, bundle) {
   const fqBefore = calcFQ(entity).total;
   const rsBefore = calcRisk(entity).total;
 
-  const { mutated, nwDelta } = shock.apply(entity);
+  const { mutated, nwDelta } = shock.apply(entity, params);
 
   const fqAfter = calcFQ(mutated).total;
   const rsAfter = calcRisk(mutated).total;
@@ -195,6 +220,7 @@ export function runShock(entity, shockId, bundle) {
     shockId,
     label:       shock.label,
     description: shock.description,
+    params:      { ...SHOCK_PARAM_DEFAULTS[shockId], ...params },
     nwBefore,
     nwAfter,
     nwDelta,
@@ -373,7 +399,7 @@ function _projectBTRPoints(months, level) {
  * @param {number} months  - projection window (default 24)
  * @returns {{ baseline, shocked, survivalMonths, recoveryMonth }}
  */
-export function shockTrajectory(entity, shockId, months = 24) {
+export function shockTrajectory(entity, shockId, months = 24, params = {}) {
   // Investable assets (liquid + portfolio; excludes primary residence)
   function investable(e) {
     return (
@@ -425,12 +451,17 @@ export function shockTrajectory(entity, shockId, months = 24) {
   const baseStart   = investable(entity);
   const burn        = monthlyBurn(entity);
 
-  // Apply the shock to get shocked starting value
-  const shockResult = runShock(entity, shockId);
+  // Apply the shock (with any dragged params) to get shocked starting value
+  const shockResult = runShock(entity, shockId, undefined, params);
   const shockedStart = Math.max(0, baseStart + shockResult.nwDelta);
 
   const baseline = [{ month: 0, value: baseStart }];
   const shocked  = [{ month: 0, value: shockedStart }];
+  // Uncertainty band around the shocked median path. Width scales with portfolio
+  // volatility and compounds over the horizon (√t) so the cone widens with time —
+  // the brief mandates a labelled BAND, not one deterministic line.
+  const shockedLo = [{ month: 0, value: shockedStart }];
+  const shockedHi = [{ month: 0, value: shockedStart }];
 
   let survivalMonths = months;
   let recoveryMonth  = null;
@@ -448,6 +479,13 @@ export function shockTrajectory(entity, shockId, months = 24) {
     baseline.push({ month: m, value: Math.round(nextBase) });
     shocked.push({ month: m, value: Math.round(nextShocked) });
 
+    // ±1σ cone around the median shocked value (monthly vol × √elapsed-months)
+    const sigma = (annualVol / Math.sqrt(12)) * Math.sqrt(m);
+    const lo = Math.max(0, Math.round(nextShocked * (1 - sigma)));
+    const hi = Math.round(nextShocked * (1 + sigma));
+    shockedLo.push({ month: m, value: lo });
+    shockedHi.push({ month: m, value: hi });
+
     // First month stressed shocked portfolio hits 0 → survival ceiling
     if (nextShocked <= 0 && survivalMonths === months) {
       survivalMonths = m;
@@ -460,7 +498,12 @@ export function shockTrajectory(entity, shockId, months = 24) {
     }
   }
 
-  return { baseline, shocked, survivalMonths, recoveryMonth };
+  return {
+    baseline, shocked, shockedLo, shockedHi,
+    survivalMonths, recoveryMonth,
+    netRate: annualReturn, annualVol,
+    params: shockResult.params,
+  };
 }
 
 export function projectBTR(entity, months = 12, engagementLevel = 'medium') {

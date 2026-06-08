@@ -306,13 +306,20 @@ export default function Sankey({
       >
         {/* flows first so nodes sit on top */}
         <g>{flows}</g>
-        {/* nodes */}
+        {/* nodes — clickable to drill into that node's breakdown (onFlowTap) */}
         {safeNodes.map((n) => {
           const p = positions[n.id];
           if (!p) return null;
           const isSink = n.type === 'sink';
+          const inbound = safeLinks.filter((l) => l.target === n.id).reduce((s, l) => s + l.value, 0);
+          const outbound = safeLinks.filter((l) => l.source === n.id).reduce((s, l) => s + l.value, 0);
+          const nodeVal = n.type === 'source' ? outbound : inbound;
           return (
-            <g key={`node-${n.id}`}>
+            <g key={`node-${n.id}`}
+              onClick={() => onFlowTap && onFlowTap({ node: n.id, target: n.id, label: n.label, type: n.type, value: nodeVal })}
+              style={{ cursor: onFlowTap ? 'pointer' : 'default' }}>
+              {/* invisible wide hit-target so the thin 12px bar is easy to tap */}
+              {onFlowTap && <rect x={p.x - 8} y={p.y - 3} width={p.w + 16} height={p.h + 6} fill="transparent" />}
               <rect
                 x={p.x}
                 y={p.y}
@@ -322,6 +329,9 @@ export default function Sankey({
                 fill={isSink ? 'var(--c-acc)' : 'var(--c-text2)'}
                 opacity={isSink ? 0.92 : 0.6}
               />
+              {onFlowTap && (
+                <title>Tap to break down {n.label}</title>
+              )}
               <text
                 x={
                   p.layer === 'source'

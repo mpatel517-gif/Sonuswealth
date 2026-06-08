@@ -151,18 +151,18 @@ function pickFirstName(entity) {
    id: 'nominations' (see fq-calculator.js L1211); the legacy mapping used
    'update-pension-nominations' which never matched. Fixed. */
 const ACTION_ROUTE_OVERRIDE = {
-  'cgt-bedisa':            'tax',
-  'life-in-trust':         'tax',
-  'nominations':           'tax',
-  'fallback-iht':          'tax',
-  'pension-drawdown':      'money',
+  'cgt-bedisa': 'tax',
+  'life-in-trust': 'tax',
+  'nominations': 'tax',
+  'fallback-iht': 'tax',
+  'pension-drawdown': 'money',
   'pension-contributions': 'money',
-  'income-protection':     'risk',
-  'will-update':           'tax',
-  'sipp-nominations':      'tax',
-  'wrapper-sequencing':    'tax',
-  'debt-clearance':        'money',
-  'isa-allowance':         'money',
+  'income-protection': 'risk',
+  'will-update': 'tax',
+  'sipp-nominations': 'tax',
+  'wrapper-sequencing': 'tax',
+  'debt-clearance': 'money',
+  'isa-allowance': 'money',
 }
 function safeRoute(action) {
   if (!action) return null
@@ -175,10 +175,10 @@ function rankReasonFor(action, rank) {
   const bits = []
   if (rank === 1) {
     if (action.priority === 1) bits.push('Highest priority')
-    else                       bits.push('Top action today')
+    else bits.push('Top action today')
   } else if (rank === 2) bits.push('Next priority')
   else if (rank === 3) bits.push('Worth doing')
-  else                  bits.push('Standard')
+  else bits.push('Standard')
 
   const fqMove = action?.impact?.finioScore || 0
   if (fqMove > 0) bits.push(`+${fqMove} Wealth Score`)
@@ -189,7 +189,7 @@ function rankReasonFor(action, rank) {
       const d = new Date(dl)
       if (!isNaN(d.getTime())) {
         const days = Math.max(0, Math.round((d.getTime() - Date.now()) / 86400000))
-        if (days <= 60)   bits.push(`${days} days to act`)
+        if (days <= 60) bits.push(`${days} days to act`)
         else if (days <= 180) bits.push(`${days} days left`)
       }
     } catch { /* ignore bad deadline */ }
@@ -210,17 +210,17 @@ const card = (extra = {}) => ({
 
 /* ─── mode pill label map ───────────────────────────────────────────────── */
 const MODE_LABEL = {
-  actual:   'Today',
+  actual: 'Today',
   forecast: 'Future',
-  plan:     'Plan',
+  plan: 'Plan',
   scenario: 'What-if',
 }
 
 /* ─── MODES array (for pill buttons in MastheadCard) ───────────────────── */
 const MODES = [
-  { id: 'actual',   label: 'Today' },
+  { id: 'actual', label: 'Today' },
   { id: 'forecast', label: 'Future' },
-  { id: 'plan',     label: 'Plan' },
+  { id: 'plan', label: 'Plan' },
   { id: 'scenario', label: 'What If' },
 ]
 
@@ -287,12 +287,12 @@ function nwComposition(entity) {
     if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
     return +v?.total || +v?.value || 0
   }
-  const pensions  = num(a.sipp) + num(a.pension) + num(a.pensions)
-  const isa       = num(a.isa) + num(a.lisa)
-  const home      = safe(() => (Array.isArray(a.property) ? a.property : []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
-              + num(a.residence) + num(a.home)
-  const cash      = num(a.cash) + num(a.bank) + num(a.savings)
-  const business  = safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
+  const pensions = num(a.sipp) + num(a.pension) + num(a.pensions)
+  const isa = num(a.isa) + num(a.lisa)
+  const home = safe(() => (Array.isArray(a.property) ? a.property : []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0)
+    + num(a.residence) + num(a.home)
+  const cash = num(a.cash) + num(a.bank) + num(a.savings)
+  const business = safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
   // Portfolio: check holdings OR direct value
   const portfolio = safe(() => {
     const h = a.portfolio?.holdings || a.holdings || []
@@ -301,12 +301,12 @@ function nwComposition(entity) {
   }, 0) + num(a.investments) + num(a.alternatives)
   const total = pensions + isa + home + cash + business + portfolio || 1
   const segments = [
-    { label: 'Pensions',    key: 'pensions',  pct: pensions   / total, color: 'var(--c-acc2)' },
-    { label: 'ISA',         key: 'isa',       pct: isa        / total, color: 'var(--c-acc)'  },
-    { label: 'Home',        key: 'property',  pct: home       / total, color: 'var(--c-gold)' },
-    { label: 'Cash',        key: 'cash',      pct: cash       / total, color: 'var(--c-text3)' },
-    { label: 'Business',    key: 'business',  pct: business   / total, color: '#ba8cff' },
-    { label: 'Investments', key: 'portfolio', pct: portfolio  / total, color: 'var(--c-success)' },
+    { label: 'Pensions', key: 'pensions', pct: pensions / total, color: 'var(--c-acc2)' },
+    { label: 'ISA', key: 'isa', pct: isa / total, color: 'var(--c-acc)' },
+    { label: 'Home', key: 'property', pct: home / total, color: 'var(--c-gold)' },
+    { label: 'Cash', key: 'cash', pct: cash / total, color: 'var(--c-text3)' },
+    { label: 'Business', key: 'business', pct: business / total, color: '#ba8cff' },
+    { label: 'Investments', key: 'portfolio', pct: portfolio / total, color: 'var(--c-success)' },
   ].filter(s => s.pct > 0.005)
   // V-2 fix (2026-05-28): displayPct uses Hamilton (largest-remainder) so the
   // printed integers always sum to exactly 100. Earlier each segment was
@@ -326,225 +326,227 @@ function nwComposition(entity) {
 
 function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdown }) {
   const [anchorTrend, setAnchorTrend] = useState(null)
-  const score      = fqData?.total ?? 0
-  const riskScore  = riskData?.total ?? 0
-  const riskColor  = riskData?.band?.colour || 'var(--c-gold)'
-  const riskBand   = riskData?.band?.name || '—'
-  const segments   = nwComposition(entity)
+  const score = fqData?.total ?? 0
+  const riskScore = riskData?.total ?? 0
+  const riskColor = riskData?.band?.colour || 'var(--c-gold)'
+  const riskBand = riskData?.band?.name || '—'
+  const segments = nwComposition(entity)
   const targetDims = useMemo(() => getWealthTarget(entity)?.dims || {}, [entity])
-  const gapCount   = gapDimsVsTarget(fqData?.dims || {}, targetDims, 0.15).length
+  const gapCount = gapDimsVsTarget(fqData?.dims || {}, targetDims, 0.15).length
 
   // History sparklines from persona trajectories
   const traj = entity?.trajectories || {}
-  const nwSpark    = (traj.netWorthHistory || []).map(p => p.value ?? p)
-  const scoreSpark = (traj.scoreHistory    || []).map(p => p.score ?? p)
-  const riskSpark  = (traj.riskHistory     || []).map(p => p.score ?? p)
-  const coiSpark   = (traj.coiHistory || []).map(p => (typeof p === 'object' && p !== null) ? (p.value ?? p.total ?? 0) : p)
+  const nwSpark = (traj.netWorthHistory || []).map(p => p.value ?? p)
+  const scoreSpark = (traj.scoreHistory || []).map(p => p.score ?? p)
+  const riskSpark = (traj.riskHistory || []).map(p => p.score ?? p)
+  const coiSpark = (traj.coiHistory || []).map(p => (typeof p === 'object' && p !== null) ? (p.value ?? p.total ?? 0) : p)
 
-  const coiTotal   = safe(() => totalCoI(entity).total ?? 0, 0)
-  const sippDelta  = safe(() => ihtSippDelta(entity) ?? 0, 0)
-  const dueDate  = new Date('2027-04-06')
-  const now      = new Date()
-  const days     = engineDaysLeft()
-  const enacted  = new Date('2026-03-18')
+  const coiTotal = safe(() => totalCoI(entity).total ?? 0, 0)
+  const sippDelta = safe(() => ihtSippDelta(entity) ?? 0, 0)
+  const dueDate = new Date('2027-04-06')
+  const now = new Date()
+  const days = engineDaysLeft()
+  const enacted = new Date('2026-03-18')
   const totalSpan = (dueDate - enacted) / 86_400_000
-  const elapsed   = (now - enacted) / 86_400_000
-  const pct       = Math.min(100, Math.max(0, (elapsed / totalSpan) * 100))
+  const elapsed = (now - enacted) / 86_400_000
+  const pct = Math.min(100, Math.max(0, (elapsed / totalSpan) * 100))
 
   // SVG donut for Score
   const r = 16, C = 2 * Math.PI * r
-  const filled       = (score / 100) * C
-  const targetFilled = (68   / 100) * C
+  const filled = (score / 100) * C
+  const targetFilled = (68 / 100) * C
 
   return (
     <>
-    <div style={card({ padding: '14px 18px', margin: '0 16px 12px' })}>
-      <div className="sw-anchor-row">
+      <div style={card({ padding: '14px 18px', margin: '0 16px 12px' })}>
+        <div className="sw-anchor-row">
 
-        {/* NW + composition bar — whole column is drillable */}
-        <div
-          onClick={() => onDrillMetric?.('netWorth')}
-          style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 16, cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)' }}>Net Worth ›</div>
-            {nwSpark.length > 1 && (
-              <div onClick={e => { e.stopPropagation(); setAnchorTrend({ label: 'Net Worth', value: fmt(nw), spark: nwSpark, what: 'The total value of everything you own minus what you owe. Your primary measure of financial progress.', colour: 'var(--c-text2)' }) }}>
-                <Sparkline values={nwSpark} color="var(--c-text2)" width={40} height={18} />
-              </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span data-tieout="home.nw" data-tieout-raw={String(nw)} style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -1 }}>{fmt(nw)}</span>
-          </div>
-          <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: 'var(--c-surface2)', marginTop: 8 }}>
-            {segments.map(s => <div key={s.label} style={{ width: `${s.pct * 100}%`, background: s.color }} />)}
-          </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', overflow: 'hidden' }}>
-            {segments.map(s => (
-              <button
-                key={s.label}
-                type="button"
-                onClick={() => onDrillMetric?.(`netWorth:${s.key}`)}
-                aria-label={`Drill into ${s.label} composition (${s.displayPct}%)`}
-                className="sw-tap"
-                style={{ background: 'none', border: 'none', padding: '6px 2px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
-              >
-                <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
-                <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments','Inv.')} {s.displayPct}%</span>
-              </button>
-            ))}
-          </div>
-          {/* P13-1 (2026-05-28, IFA must-fix #1): concentration risk chip.
+          {/* NW + composition bar — whole column is drillable */}
+          <div
+            onClick={() => onDrillMetric?.('netWorth')}
+            style={{ borderRight: '1px solid var(--c-sep)', paddingRight: 16, cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)' }}>Net Worth ›</div>
+              {nwSpark.length > 1 && (
+                <div onClick={e => { e.stopPropagation(); setAnchorTrend({ label: 'Net Worth', value: fmt(nw), spark: nwSpark, what: 'The total value of everything you own minus what you owe. Your primary measure of financial progress.', colour: 'var(--c-text2)' }) }}>
+                  <Sparkline values={nwSpark} color="var(--c-text2)" width={40} height={18} />
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span data-tieout="home.nw" data-tieout-raw={String(nw)} style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: -1 }}>{fmt(nw)}</span>
+            </div>
+            <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden', background: 'var(--c-surface2)', marginTop: 8 }}>
+              {segments.map(s => <div key={s.label} style={{ width: `${s.pct * 100}%`, background: s.color }} />)}
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', overflow: 'hidden' }}>
+              {segments.map(s => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => onDrillMetric?.(`netWorth:${s.key}`)}
+                  aria-label={`Drill into ${s.label} composition (${s.displayPct}%)`}
+                  className="sw-tap"
+                  style={{ background: 'none', border: 'none', padding: '6px 2px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0 }}
+                >
+                  <i style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ fontSize: 9, color: 'var(--c-text3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{s.label.replace('Investments', 'Inv.')} {s.displayPct}%</span>
+                </button>
+              ))}
+            </div>
+            {/* P13-1 (2026-05-28, IFA must-fix #1): concentration risk chip.
               Surfaces single-asset-class %  when > 50%. Renders nothing for
               well-diversified portfolios. Amber at 50–65%, coral at 65%+. */}
-          {(() => {
-            const cr = (() => { try { return concentrationRisk(entity) } catch { return null } })()
-            if (!cr || cr.status === 'ok') return null
-            const label = cr.topClass.charAt(0).toUpperCase() + cr.topClass.slice(1)
-            const pct = Math.round(cr.topPct * 100)
-            const colour =
-              cr.status === 'severe'      ? 'var(--c-coral-text)' :
-              cr.status === 'concentrated'? 'var(--c-amber-text)' :
-                                            'var(--c-amber-text)'
-            const bg =
-              cr.status === 'severe'      ? 'var(--c-tint-coral)' :
-                                            'var(--c-tint-amber)'
-            return (
-              <div title={`${label} accounts for ${pct}% of your wealth — most IFAs would discuss diversification at this level.`} style={{
-                marginTop: 6, padding: '4px 8px',
-                background: bg, color: colour,
-                borderRadius: 6, fontSize: 10, fontWeight: 700,
-                display: 'inline-block', lineHeight: 1.3,
-              }}>
-                Concentration · {label} {pct}%
-              </div>
-            )
-          })()}
-        </div>
+            {(() => {
+              const cr = (() => { try { return concentrationRisk(entity) } catch { return null } })()
+              if (!cr || cr.status === 'ok') return null
+              const label = cr.topClass.charAt(0).toUpperCase() + cr.topClass.slice(1)
+              const pct = Math.round(cr.topPct * 100)
+              const colour =
+                cr.status === 'severe' ? 'var(--c-coral-text)' :
+                  cr.status === 'concentrated' ? 'var(--c-amber-text)' :
+                    'var(--c-amber-text)'
+              const bg =
+                cr.status === 'severe' ? 'var(--c-tint-coral)' :
+                  'var(--c-tint-amber)'
+              return (
+                <div title={`${label} accounts for ${pct}% of your wealth — most IFAs would discuss diversification at this level.`} style={{
+                  marginTop: 6, padding: '4px 8px',
+                  background: bg, color: colour,
+                  borderRadius: 6, fontSize: 10, fontWeight: 700,
+                  display: 'inline-block', lineHeight: 1.3,
+                }}>
+                  Concentration · {label} {pct}%
+                </div>
+              )
+            })()}
+          </div>
 
-        {/* Score + donut + gaps badge */}
-        <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Wealth Score</div>
-          <button onClick={() => onOpenBreakdown?.()} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-            <svg width="40" height="40" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-              <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-surface2)" strokeWidth="5" />
-              <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,189,89,0.25)" strokeWidth="5"
-                strokeDasharray={`${targetFilled.toFixed(1)} ${(C - targetFilled).toFixed(1)}`} />
-              <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-acc)" strokeWidth="5"
-                strokeLinecap="round"
-                strokeDasharray={`${filled.toFixed(1)} ${(C - filled).toFixed(1)}`} />
-            </svg>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
-                {score}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
+          {/* Score + donut + gaps badge */}
+          <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Wealth Score</div>
+            <button onClick={() => onOpenBreakdown?.()} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+              <svg width="40" height="40" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+                <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-surface2)" strokeWidth="5" />
+                <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,189,89,0.25)" strokeWidth="5"
+                  strokeDasharray={`${targetFilled.toFixed(1)} ${(C - targetFilled).toFixed(1)}`} />
+                <circle cx="22" cy="22" r={r} fill="none" stroke="var(--c-acc)" strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray={`${filled.toFixed(1)} ${(C - filled).toFixed(1)}`} />
+              </svg>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc)', letterSpacing: -0.5 }}>
+                  {score}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
+                </div>
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.7 }}>
+                  {gapCount > 0 && fqData?.band?.name === 'Optimised' ? 'On Track' : (fqData?.band?.name || '—')}
+                </div>
               </div>
-              <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: 0.7 }}>
-                {gapCount > 0 && fqData?.band?.name === 'Optimised' ? 'On Track' : (fqData?.band?.name || '—')}
-              </div>
-            </div>
-            {scoreSpark.length > 1 && (
-              <div onClick={e => { e.stopPropagation(); setAnchorTrend({ label: 'Wealth Score', value: `${score}/100`, spark: scoreSpark, what: 'Your overall financial health — combining money habits, capital, tax, protection, cashflow, debt and estate planning.', colour: 'var(--c-acc)' }) }}>
-                <Sparkline values={scoreSpark} color="var(--c-acc)" width={40} height={18} />
-              </div>
-            )}
-          </button>
-          {gapCount > 0 && (
-            <button onClick={() => onDrillMetric?.('gaps')} style={{
-              marginTop: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              <span style={{
-                width: 16, height: 16, borderRadius: '50%', background: 'var(--c-acc3)',
-                fontSize: 9, fontWeight: 800, color: '#fff',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>!</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>
-                {gapCount} {gapCount === 1 ? 'gap' : 'gaps'} in radar →
-              </span>
+              {scoreSpark.length > 1 && (
+                <div onClick={e => { e.stopPropagation(); setAnchorTrend({ label: 'Wealth Score', value: `${score}/100`, spark: scoreSpark, what: 'Your overall financial health — combining money habits, capital, tax, protection, cashflow, debt and estate planning.', colour: 'var(--c-acc)' }) }}>
+                  <Sparkline values={scoreSpark} color="var(--c-acc)" width={40} height={18} />
+                </div>
+              )}
             </button>
-          )}
-        </div>
-
-        {/* Risk + gradient gauge */}
-        <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Risk Score</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Drillable metric="riskScore" onOpen={onDrillMetric} inline affordance="none">
-              <span style={{ fontSize: 20, fontWeight: 800, color: riskColor, letterSpacing: -0.5 }}>
-                {riskScore}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
-              </span>
-            </Drillable>
-            {riskSpark.length > 1 && (
-              <div onClick={() => setAnchorTrend({ label: 'Risk Score', value: `${riskScore}/100`, spark: riskSpark, what: 'How much financial risk you carry — investment volatility, debt, concentration, and liquidity gaps.', colour: riskColor })}>
-                <Sparkline values={riskSpark} color={riskColor} width={40} height={18} />
-              </div>
+            {gapCount > 0 && (
+              <button onClick={() => onDrillMetric?.('gaps')} style={{
+                marginTop: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: '50%', background: 'var(--c-acc3)',
+                  fontSize: 9, fontWeight: 800, color: '#fff',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>!</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>
+                  {gapCount} {gapCount === 1 ? 'gap' : 'gaps'} in radar →
+                </span>
+              </button>
             )}
           </div>
-          <div style={{ position: 'relative', height: 8, borderRadius: 4, marginTop: 8, overflow: 'hidden',
-            background: 'linear-gradient(90deg, #34c759 0%, #34c759 33%, #ffb347 33%, #ffb347 66%, #ff6b6b 66%, #ff6b6b 100%)' }}>
-            <div style={{
-              position: 'absolute', top: -5, left: `calc(${riskScore}% - 9px)`,
-              width: 18, height: 18, borderRadius: '50%',
-              background: riskColor, border: '2px solid var(--c-bg)',
-              boxShadow: `0 0 8px ${riskColor}88`,
-            }} />
-          </div>
-          <div style={{ marginTop: 6 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: riskColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>{riskBand}</div>
-          </div>
-        </div>
 
-        {/* CoI + countdown bar */}
-        <div style={{ paddingLeft: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Cost of Inaction</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Drillable metric="coi" onOpen={onDrillMetric} inline affordance="none">
-              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{coiTotal > 0 ? fmt(coiTotal) : '—'}</span>
-            </Drillable>
-            {coiSpark.length > 1 && (
-              <div
-                onClick={() => setAnchorTrend({ label: 'Cost of Inaction', value: fmt(coiTotal), spark: coiSpark.map(p => p.value ?? p), what: 'The annual financial cost of staying on your current path without taking recommended actions.', colour: 'var(--c-acc3)' })}
-                title="Tap to see trend"
-                style={{ cursor: 'zoom-in', borderRadius: 4 }}
-              >
-                <Sparkline values={coiSpark} color="var(--c-acc3)" width={40} height={18} lowerIsBetter />
-              </div>
-            )}
-          </div>
-          {coiTotal > 0 && (
-            <div style={{ marginTop: 2 }}>
-              {sippDelta > 0
-                ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', whiteSpace: 'nowrap' }}>{fmt(sippDelta)} SIPP · {days} days</span>
-                : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{days} days to act</span>
-              }
+          {/* Risk + gradient gauge */}
+          <div style={{ borderRight: '1px solid var(--c-sep)', padding: '0 14px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Risk Score</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Drillable metric="riskScore" onOpen={onDrillMetric} inline affordance="none">
+                <span style={{ fontSize: 20, fontWeight: 800, color: riskColor, letterSpacing: -0.5 }}>
+                  {riskScore}<span style={{ fontSize: 11, opacity: 0.6, fontWeight: 500 }}>/100</span>
+                </span>
+              </Drillable>
+              {riskSpark.length > 1 && (
+                <div onClick={() => setAnchorTrend({ label: 'Risk Score', value: `${riskScore}/100`, spark: riskSpark, what: 'How much financial risk you carry — investment volatility, debt, concentration, and liquidity gaps.', colour: riskColor })}>
+                  <Sparkline values={riskSpark} color={riskColor} width={40} height={18} />
+                </div>
+              )}
             </div>
-          )}
-          <div style={{ position: 'relative', height: 4, background: 'var(--c-surface2)', borderRadius: 2, marginTop: 5, overflow: 'visible' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--c-gold), var(--c-acc3))', borderRadius: 2 }} />
             <div style={{
-              position: 'absolute', top: '50%', left: `${pct}%`,
-              transform: 'translate(-50%, -50%)',
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'var(--c-acc3)', border: '2px solid var(--c-bg)',
-              boxShadow: '0 0 6px var(--c-acc3)',
-            }} />
+              position: 'relative', height: 8, borderRadius: 4, marginTop: 8, overflow: 'hidden',
+              background: 'linear-gradient(90deg, #34c759 0%, #34c759 33%, #ffb347 33%, #ffb347 66%, #ff6b6b 66%, #ff6b6b 100%)'
+            }}>
+              <div style={{
+                position: 'absolute', top: -5, left: `calc(${riskScore}% - 9px)`,
+                width: 18, height: 18, borderRadius: '50%',
+                background: riskColor, border: '2px solid var(--c-bg)',
+                boxShadow: `0 0 8px ${riskColor}88`,
+              }} />
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: riskColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>{riskBand}</div>
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-            <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.4 }}>Mar 2026</div>
-            <div style={{ fontSize: 9, color: 'var(--c-acc3)', lineHeight: 1.4, fontWeight: 700 }}>6 Apr 2027</div>
-          </div>
-        </div>
 
+          {/* CoI + countdown bar */}
+          <div style={{ paddingLeft: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: 'var(--c-text3)', marginBottom: 4 }}>Cost of Inaction</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Drillable metric="coi" onOpen={onDrillMetric} inline affordance="none">
+                <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-acc3)', letterSpacing: -0.5 }}>{coiTotal > 0 ? fmt(coiTotal) : '—'}</span>
+              </Drillable>
+              {coiSpark.length > 1 && (
+                <div
+                  onClick={() => setAnchorTrend({ label: 'Cost of Inaction', value: fmt(coiTotal), spark: coiSpark.map(p => p.value ?? p), what: 'The annual financial cost of staying on your current path without taking recommended actions.', colour: 'var(--c-acc3)' })}
+                  title="Tap to see trend"
+                  style={{ cursor: 'zoom-in', borderRadius: 4 }}
+                >
+                  <Sparkline values={coiSpark} color="var(--c-acc3)" width={40} height={18} lowerIsBetter />
+                </div>
+              )}
+            </div>
+            {coiTotal > 0 && (
+              <div style={{ marginTop: 2 }}>
+                {sippDelta > 0
+                  ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', whiteSpace: 'nowrap' }}>{fmt(sippDelta)} SIPP · {days} days</span>
+                  : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{days} days to act</span>
+                }
+              </div>
+            )}
+            <div style={{ position: 'relative', height: 4, background: 'var(--c-surface2)', borderRadius: 2, marginTop: 5, overflow: 'visible' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--c-gold), var(--c-acc3))', borderRadius: 2 }} />
+              <div style={{
+                position: 'absolute', top: '50%', left: `${pct}%`,
+                transform: 'translate(-50%, -50%)',
+                width: 8, height: 8, borderRadius: '50%',
+                background: 'var(--c-acc3)', border: '2px solid var(--c-bg)',
+                boxShadow: '0 0 6px var(--c-acc3)',
+              }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.4 }}>Mar 2026</div>
+              <div style={{ fontSize: 9, color: 'var(--c-acc3)', lineHeight: 1.4, fontWeight: 700 }}>6 Apr 2027</div>
+            </div>
+          </div>
+
+        </div>
       </div>
-    </div>
-    {anchorTrend && (
-      <TrendModal
-        tile={anchorTrend}
-        colour={anchorTrend.colour}
-        onClose={() => setAnchorTrend(null)}
-      />
-    )}
+      {anchorTrend && (
+        <TrendModal
+          tile={anchorTrend}
+          colour={anchorTrend.colour}
+          onClose={() => setAnchorTrend(null)}
+        />
+      )}
     </>
   )
 }
@@ -647,23 +649,23 @@ function listAssetClasses(entity, max = 3) {
   }
   // Category map: probe key → label (and aggregation key)
   const probes = [
-    { key: 'sipp',         label: 'pensions',        v: num(a.sipp) },
-    { key: 'pension',      label: 'pensions',        v: num(a.pension) },
-    { key: 'db',           label: 'pensions',        v: num(a.db) },
-    { key: 'isa',          label: 'ISAs',            v: num(a.isa) },
-    { key: 'lisa',         label: 'ISAs',            v: num(a.lisa) },
-    { key: 'investments',  label: 'investments',     v: num(a.investments) },
-    { key: 'portfolio',    label: 'investments',     v: num(a.portfolio) },
-    { key: 'gia',          label: 'investments',     v: num(a.gia) },
-    { key: 'residence',    label: 'home',            v: num(a.residence) },
-    { key: 'home',         label: 'home',            v: num(a.home) },
-    { key: 'property',     label: 'property',        v: num(a.property) },
-    { key: 'btl',          label: 'property',        v: num(a.btl) },
-    { key: 'cash',         label: 'cash',            v: num(a.cash) },
-    { key: 'bank',         label: 'cash',            v: num(a.bank) },
-    { key: 'savings',      label: 'cash',            v: num(a.savings) },
-    { key: 'business',     label: 'business assets', v: num(a.business) || num(a.business_assets) },
-    { key: 'companies',    label: 'business assets', v: num(a.companies) },
+    { key: 'sipp', label: 'pensions', v: num(a.sipp) },
+    { key: 'pension', label: 'pensions', v: num(a.pension) },
+    { key: 'db', label: 'pensions', v: num(a.db) },
+    { key: 'isa', label: 'ISAs', v: num(a.isa) },
+    { key: 'lisa', label: 'ISAs', v: num(a.lisa) },
+    { key: 'investments', label: 'investments', v: num(a.investments) },
+    { key: 'portfolio', label: 'investments', v: num(a.portfolio) },
+    { key: 'gia', label: 'investments', v: num(a.gia) },
+    { key: 'residence', label: 'home', v: num(a.residence) },
+    { key: 'home', label: 'home', v: num(a.home) },
+    { key: 'property', label: 'property', v: num(a.property) },
+    { key: 'btl', label: 'property', v: num(a.btl) },
+    { key: 'cash', label: 'cash', v: num(a.cash) },
+    { key: 'bank', label: 'cash', v: num(a.bank) },
+    { key: 'savings', label: 'cash', v: num(a.savings) },
+    { key: 'business', label: 'business assets', v: num(a.business) || num(a.business_assets) },
+    { key: 'companies', label: 'business assets', v: num(a.companies) },
   ]
   // Aggregate by label so 'sipp' + 'pension' both count as "pensions" once
   const byLabel = new Map()
@@ -719,19 +721,19 @@ function pickLowestDim(entity, dims) {
 }
 
 const MODE_BRIEF = {
-  actual:   (nw, assetList, taxShelter, lowestDim) =>
+  actual: (nw, assetList, taxShelter, lowestDim) =>
     `You hold ${fmt(nw)} across ${assetList}. ${taxShelter}% is in tax shelters. ${lowestDim?.label || 'One dimension'} is the area that would most benefit from a closer look.`,
   forecast: () =>
     `On your current trajectory, your wealth shape shifts over 5 years. The gold dashed ring shows where you are aiming — gaps between today (mint) and target (gold) are the priority actions.`,
-  plan:     (nw, assetList, taxShelter, lowestDim) =>
+  plan: (nw, assetList, taxShelter, lowestDim) =>
     `Your plan target (gold dashed ring) vs today (mint). Close the gap by addressing the dimensions below target — ${lowestDim?.label || 'Legacy'} is furthest from your plan.`,
   scenario: () =>
     `Drag any radar point to explore what-if. Moving a dimension outward = better. Inward = worse. Watch the score in the centre update live.`,
 }
 
 function RadarCard({ entity, fqData, nw, viewMode, diffs, onDrillMetric }) {
-  const dims       = fqData?.dims || {}
-  const lowestDim  = useMemo(() => pickLowestDim(entity, dims), [entity, dims])
+  const dims = fqData?.dims || {}
+  const lowestDim = useMemo(() => pickLowestDim(entity, dims), [entity, dims])
   const taxShelter = useMemo(() => {
     const a = entity?.assets || {}
     const num = v => {
@@ -812,8 +814,8 @@ function PlanProgressStrip({ entity, onNav }) {
     </div>
   )
 
-  const targetDate    = plan.target?.date || plan.horizonDate || null
-  const targetValue   = typeof plan.target === 'number'
+  const targetDate = plan.target?.date || plan.horizonDate || null
+  const targetValue = typeof plan.target === 'number'
     ? plan.target
     : (plan.target?.netWorth || plan.target?.value || plan.targetValue || 0)
   const monthlyTarget = plan.target?.monthlyDrawdown || 0
@@ -838,10 +840,10 @@ function PlanProgressStrip({ entity, onNav }) {
     statusLabel = drawdownStarted ? 'In progress' : onTrack === false ? 'Behind plan' : onTrack ? 'On course' : 'Saving'
     statusColor = onTrack === false ? 'var(--c-acc3)' : 'var(--c-acc)'
   } else if (targetDate) {
-    const deadline  = new Date(targetDate)
-    const created   = plan.createdAt ? new Date(plan.createdAt) : new Date(Date.now() - 86_400_000 * 365)
+    const deadline = new Date(targetDate)
+    const created = plan.createdAt ? new Date(plan.createdAt) : new Date(Date.now() - 86_400_000 * 365)
     const totalSpan = deadline - created
-    const elapsed   = Date.now() - created
+    const elapsed = Date.now() - created
     pct = totalSpan > 0 ? Math.min(100, Math.max(0, Math.round((elapsed / totalSpan) * 100))) : 0
     progressKind = 'time'
     statusLabel = drawdownStarted ? 'In progress' : 'Timeline'
@@ -854,7 +856,7 @@ function PlanProgressStrip({ entity, onNav }) {
 
   const barColor = progressKind === 'time' ? 'var(--c-text3)'
     : statusLabel === 'Behind plan' ? 'var(--c-acc3)'
-    : 'var(--c-acc)'
+      : 'var(--c-acc)'
 
   return (
     <div style={{ margin: '14px 16px 0', padding: '14px 18px', background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16 }}>
@@ -915,14 +917,14 @@ function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
   const cW = W - PAD.left - PAD.right
   const cH = H - PAD.top - PAD.bottom
 
-  const min  = Math.min(...values)
-  const max  = Math.max(...values)
-  const rng  = max - min || 1
-  const toX  = i => PAD.left + (i / Math.max(values.length - 1, 1)) * cW
-  const toY  = v => PAD.top + cH - ((v - min) / rng) * cH
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const rng = max - min || 1
+  const toX = i => PAD.left + (i / Math.max(values.length - 1, 1)) * cW
+  const toY = v => PAD.top + cH - ((v - min) / rng) * cH
 
-  const pts  = values.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ')
-  const bot  = (PAD.top + cH).toFixed(1)
+  const pts = values.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ')
+  const bot = (PAD.top + cH).toFixed(1)
   const areaPath = [
     `M${toX(0).toFixed(1)},${toY(values[0]).toFixed(1)}`,
     ...values.map((v, i) => `L${toX(i).toFixed(1)},${toY(v).toFixed(1)}`),
@@ -931,9 +933,9 @@ function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
   ].join(' ')
 
   const current = values[values.length - 1]
-  const first   = values[0]
-  const change  = current - first
-  const up      = change >= 0
+  const first = values[0]
+  const change = current - first
+  const up = change >= 0
 
   // Y-axis: 4 evenly-spaced gridlines
   const yTicks = [0, 1, 2, 3].map(k => {
@@ -942,7 +944,7 @@ function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
   })
 
   // X-axis labels every 6 months + "Now" at the end
-  const n   = values.length
+  const n = values.length
   const now = new Date()
   const xLabels = []
   for (let i = 0; i < n; i++) {
@@ -956,7 +958,7 @@ function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
     }
   }
 
-  const col   = colour || 'var(--c-acc)'
+  const col = colour || 'var(--c-acc)'
   const gradId = `tg-${tile.dimKey || tile.key || 'dim'}`
 
   return (
@@ -1006,8 +1008,8 @@ function TrendModal({ tile, colour, onClose, onNav, onDrillDim }) {
           <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor={col} stopOpacity="0.28" />
-                <stop offset="100%" stopColor={col} stopOpacity="0"    />
+                <stop offset="0%" stopColor={col} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={col} stopOpacity="0" />
               </linearGradient>
             </defs>
             {/* Y gridlines + labels */}
@@ -1097,8 +1099,8 @@ function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 2
   // (CoI accruing, debt, expenses) rising is BAD. Previous code always
   // green-on-up which mis-signalled rising CoI as positive.
   const trend = (lowerIsBetter && direction === 'up') ? 'down'
-              : (lowerIsBetter && direction === 'down') ? 'up'
-              : direction
+    : (lowerIsBetter && direction === 'down') ? 'up'
+      : direction
   const trendColor = trend === 'up' ? 'var(--c-success, #34c759)' : trend === 'down' ? 'var(--c-danger, #ff6b6b)' : color
   return (
     <svg
@@ -1121,15 +1123,15 @@ function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 2
 
 function StateTilesCard({ entity, onNav, onDrillDim }) {
   // Engine values for sub-labels only — scores come from calcFQ().dims
-  const fq   = useMemo(() => safe(() => calcFQ(entity),            { dims: {} }),                      [entity])
-  const ms   = useMemo(() => safe(() => monthlySurplus(entity),    { surplus: 0, deficit: 0, income: 0 }), [entity])
-  const debt = useMemo(() => safe(() => debtRatio(entity),         { ratio: 0, monthlyService: 0, band: 'none' }), [entity])
-  const prot = useMemo(() => safe(() => protectionScore(entity),   { total: 0, band: 'critical' }),     [entity])
-  const est  = useMemo(() => safe(() => estateReadiness(entity),   { total: 0, components: {}, band: 'gaps' }), [entity])
-  const tax  = useMemo(() => safe(() => taxEfficiency(entity),     { total: 0, components: {} }),       [entity])
+  const fq = useMemo(() => safe(() => calcFQ(entity), { dims: {} }), [entity])
+  const ms = useMemo(() => safe(() => monthlySurplus(entity), { surplus: 0, deficit: 0, income: 0 }), [entity])
+  const debt = useMemo(() => safe(() => debtRatio(entity), { ratio: 0, monthlyService: 0, band: 'none' }), [entity])
+  const prot = useMemo(() => safe(() => protectionScore(entity), { total: 0, band: 'critical' }), [entity])
+  const est = useMemo(() => safe(() => estateReadiness(entity), { total: 0, components: {}, band: 'gaps' }), [entity])
+  const tax = useMemo(() => safe(() => taxEfficiency(entity), { total: 0, components: {} }), [entity])
 
-  const dims      = fq.dims || {}
-  const traj      = entity?.trajectories || {}
+  const dims = fq.dims || {}
+  const traj = entity?.trajectories || {}
   const cfMonthly = ms.surplus > 0 ? ms.surplus : ms.deficit > 0 ? -ms.deficit : 0
 
   // Dim score as % of its max (per dimensions.js)
@@ -1145,7 +1147,7 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
   // Value-colour: green = good, amber = building, red = needs attention
   const valueColor = s => s === 'Optimised' || s === 'On Track' ? 'var(--c-acc)'
     : s === 'Building' ? 'var(--c-gold)'
-    : 'var(--c-acc3)'
+      : 'var(--c-acc3)'
 
   // Trend arrow from last 3 sparkline points
   const trendOf = spark => {
@@ -1160,13 +1162,13 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
   // Sparklines — best available proxy per dimension (upward = improving)
   // debtHistory is £ amounts; negate so sparkline rises as debt reduces
   const sparks = {
-    behaviour:  (traj.behaviourHistory  || (traj.scoreHistory || []).map(p => typeof p === 'object' ? p.score : p)).slice(-24),
-    capital:    (traj.capitalHistory    || (traj.netWorthHistory || []).map(p => Math.round((typeof p === 'object' ? p.value : p) / 100000))).slice(-24),
-    tax:        (traj.taxEfficiencyHistory || []).slice(-24),
-    protection: (traj.protectionHistory    || []).slice(-24),
-    cashflow:   (traj.cashflowHistory      || []).slice(-24),
-    debt:       (traj.debtHistory          || []).map(v => -v).slice(-24),
-    estate:     (traj.estateHistory        || []).slice(-24),
+    behaviour: (traj.behaviourHistory || (traj.scoreHistory || []).map(p => typeof p === 'object' ? p.score : p)).slice(-24),
+    capital: (traj.capitalHistory || (traj.netWorthHistory || []).map(p => Math.round((typeof p === 'object' ? p.value : p) / 100000))).slice(-24),
+    tax: (traj.taxEfficiencyHistory || []).slice(-24),
+    protection: (traj.protectionHistory || []).slice(-24),
+    cashflow: (traj.cashflowHistory || []).slice(-24),
+    debt: (traj.debtHistory || []).map(v => -v).slice(-24),
+    estate: (traj.estateHistory || []).slice(-24),
   }
 
   // Plain-English sub-label per dimension
@@ -1175,13 +1177,13 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
     switch (key) {
       case 'behaviour': return pct >= 80 ? 'You review and act on your finances regularly'
         : pct >= 60 ? 'Good habits in place — keep your quarterly reviews up'
-        : 'Set up regular reviews and automated contributions to improve this'
+          : 'Set up regular reviews and automated contributions to improve this'
       case 'capital': return pct >= 80 ? 'Your savings and investments are on track for retirement'
         : pct >= 60 ? 'Building well — closing in on your retirement target'
-        : 'Gap between what you have saved and what you will need at retirement'
+          : 'Gap between what you have saved and what you will need at retirement'
       case 'tax': return (tax.total || 0) >= 70 ? 'Tax allowances well used this year'
         : (tax.total || 0) >= 50 ? 'Check your £20k ISA each April'
-        : '£20k ISA and pension gap — use before 5 Apr 2027'
+          : '£20k ISA and pension gap — use before 5 Apr 2027'
       case 'protection':
         if (prot.band === 'good' || prot.band === 'excellent') return 'Life insurance and illness cover in place'
         if (prot.band === 'partial') return 'Life cover done · no power of attorney'
@@ -1205,123 +1207,123 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
 
   // Build one tile per dimension, sorted worst-first so most urgent is always visible
   const tiles = DIMENSIONS.map(dim => {
-    const pct   = dimPct(dim.key)
+    const pct = dimPct(dim.key)
     const state = stateOf(pct)
     const spark = sparks[dim.key] || []
     // Only show trend arrow when not Optimised — avoids confusing "88% ↓ OPTIMISED"
     const arrow = state !== 'Optimised' ? trendOf(spark) : ''
     return {
-      label:  dim.label,
+      label: dim.label,
       dimKey: dim.key,
       colour: dim.colour,
-      value:  `${pct}%${arrow}`,
+      value: `${pct}%${arrow}`,
       state,
       spark,
-      what:   dim.definition,
-      sub:    subFor(dim.key),
-      _pct:   pct,
+      what: dim.definition,
+      sub: subFor(dim.key),
+      _pct: pct,
     }
   }).sort((a, b) => a._pct - b._pct)
 
   const [expandedTile, setExpandedTile] = useState(null)
-  const [trendTile,    setTrendTile]    = useState(null)
+  const [trendTile, setTrendTile] = useState(null)
 
   return (
     <>
-    <div style={{ margin: '0 16px 4px' }}>
-      <div className="sw-state-tiles" style={{ paddingBottom: 2 }}>
-        {tiles.map(tile => {
-          const valColor   = valueColor(tile.state)
-          const isExpanded = expandedTile === tile.label
-          return (
-            <div
-              key={tile.label}
-              onClick={() => setExpandedTile(isExpanded ? null : tile.label)}
-              role="button" tabIndex={0}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setExpandedTile(isExpanded ? null : tile.label) }}
-              style={{
-                background: 'var(--c-surface)',
-                border: `1px solid ${isExpanded ? tile.colour : 'var(--c-sep)'}`,
-                borderTop: `3px solid ${tile.colour}`,
-                borderRadius: 14,
-                padding: '12px 10px',
-                cursor: 'pointer',
-                flex: '1 1 104px', minWidth: 104,
-                height: isExpanded ? 'auto' : 116,
-                overflow: isExpanded ? 'visible' : 'hidden',
-                transition: 'border-color 120ms',
-                display: 'flex', flexDirection: 'column',
-              }}
-            >
-              {/* Label — full width, no sparkline competing */}
-              <div title={tile.label} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }}>{tile.label}</div>
-              {/* Value + sparkline on same row */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 3, marginBottom: 2 }}>
-                <div style={{ fontSize: 17, fontWeight: 800, color: valColor, letterSpacing: -0.5 }}>{tile.value}</div>
-                {tile.spark?.length > 1 && (
-                  <div
-                    onClick={e => { e.stopPropagation(); setTrendTile({ ...tile }) }}
-                    title="Tap to see full trend"
-                    style={{ cursor: 'zoom-in', borderRadius: 4, flexShrink: 0 }}
-                  >
-                    <Sparkline values={tile.spark} color={tile.colour} width={36} height={14} />
+      <div style={{ margin: '0 16px 4px' }}>
+        <div className="sw-state-tiles" style={{ paddingBottom: 2 }}>
+          {tiles.map(tile => {
+            const valColor = valueColor(tile.state)
+            const isExpanded = expandedTile === tile.label
+            return (
+              <div
+                key={tile.label}
+                onClick={() => setExpandedTile(isExpanded ? null : tile.label)}
+                role="button" tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setExpandedTile(isExpanded ? null : tile.label) }}
+                style={{
+                  background: 'var(--c-surface)',
+                  border: `1px solid ${isExpanded ? tile.colour : 'var(--c-sep)'}`,
+                  borderTop: `3px solid ${tile.colour}`,
+                  borderRadius: 14,
+                  padding: '12px 10px',
+                  cursor: 'pointer',
+                  flex: '1 1 104px', minWidth: 104,
+                  height: isExpanded ? 'auto' : 116,
+                  overflow: isExpanded ? 'visible' : 'hidden',
+                  transition: 'border-color 120ms',
+                  display: 'flex', flexDirection: 'column',
+                }}
+              >
+                {/* Label — full width, no sparkline competing */}
+                <div title={tile.label} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }}>{tile.label}</div>
+                {/* Value + sparkline on same row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 3, marginBottom: 2 }}>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: valColor, letterSpacing: -0.5 }}>{tile.value}</div>
+                  {tile.spark?.length > 1 && (
+                    <div
+                      onClick={e => { e.stopPropagation(); setTrendTile({ ...tile }) }}
+                      title="Tap to see full trend"
+                      style={{ cursor: 'zoom-in', borderRadius: 4, flexShrink: 0 }}
+                    >
+                      <Sparkline values={tile.spark} color={tile.colour} width={36} height={14} />
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: tile.colour, opacity: 0.85, marginBottom: 4 }}>{tile.state}</div>
+                <div style={{ fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tile.sub}</div>
+                {isExpanded && (
+                  <div style={{
+                    marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--c-sep)',
+                    fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.5,
+                  }}>
+                    {tile.what}
+                    {onDrillDim && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setExpandedTile(null); onDrillDim(tile.dimKey) }}
+                        style={{ display: 'block', marginTop: 6, fontSize: 10, fontWeight: 700, color: tile.colour, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                      >
+                        See full details →
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: tile.colour, opacity: 0.85, marginBottom: 4 }}>{tile.state}</div>
-              <div style={{ fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tile.sub}</div>
-              {isExpanded && (
-                <div style={{
-                  marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--c-sep)',
-                  fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.5,
-                }}>
-                  {tile.what}
-                  {onDrillDim && (
-                    <button
-                      onClick={e => { e.stopPropagation(); setExpandedTile(null); onDrillDim(tile.dimKey) }}
-                      style={{ display: 'block', marginTop: 6, fontSize: 10, fontWeight: 700, color: tile.colour, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
-                    >
-                      See full details →
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-    </div>
-    {trendTile && (
-      <TrendModal
-        tile={trendTile}
-        colour={trendTile.colour}
-        onClose={() => setTrendTile(null)}
-        onDrillDim={onDrillDim}
-      />
-    )}
+      {trendTile && (
+        <TrendModal
+          tile={trendTile}
+          colour={trendTile.colour}
+          onClose={() => setTrendTile(null)}
+          onDrillDim={onDrillDim}
+        />
+      )}
     </>
   )
 }
 
 const DIM_EXPLAINERS = {
-  behaviour:  { what: 'How consistently your financial actions match your goals — contributions, reviews, rebalancing.', lift: 'Automatic contributions and regular plan reviews tend to keep actions aligned with goals.', route: 'money' },
-  capital:    { what: 'How hard your capital is working — return vs risk vs wrapper efficiency.', lift: 'Tax-free ISA and pension allowances are commonly used before a taxable general account (GIA).', route: 'money' },
-  tax:        { what: 'How much of your return you keep after tax — allowances, shelters, sequencing.', lift: 'Annual CGT and dividend allowances reset each year; wrapper sequencing (ISA / pension / GIA) affects how much tax you keep.', route: 'tax' },
+  behaviour: { what: 'How consistently your financial actions match your goals — contributions, reviews, rebalancing.', lift: 'Automatic contributions and regular plan reviews tend to keep actions aligned with goals.', route: 'money' },
+  capital: { what: 'How hard your capital is working — return vs risk vs wrapper efficiency.', lift: 'Tax-free ISA and pension allowances are commonly used before a taxable general account (GIA).', route: 'money' },
+  tax: { what: 'How much of your return you keep after tax — allowances, shelters, sequencing.', lift: 'Annual CGT and dividend allowances reset each year; wrapper sequencing (ISA / pension / GIA) affects how much tax you keep.', route: 'tax' },
   protection: { what: 'Whether a shock — illness, death, or liability — would derail your financial plan.', lift: 'Life cover, income protection and a lasting power of attorney are the usual protection building blocks to review.', route: 'risk' },
-  cashflow:   { what: 'Whether your monthly surplus gives you flexibility and a resilience buffer.', lift: 'Many advisers suggest 3–6 months of expenses in liquid, accessible savings as a resilience buffer.', route: 'flow' },
-  debt:       { what: 'Whether your debt is costing more than your investments earn after tax.', lift: 'When debt interest exceeds expected after-tax investment returns, paying it down first is a common approach.', route: 'money' },
-  estate:     { what: 'Whether your wealth transfers efficiently — IHT exposure, nominations, and Will.', lift: 'Up-to-date beneficiary nominations and a current Will are estate-planning basics; trust structures are one option some people consider.', route: 'tax' },
+  cashflow: { what: 'Whether your monthly surplus gives you flexibility and a resilience buffer.', lift: 'Many advisers suggest 3–6 months of expenses in liquid, accessible savings as a resilience buffer.', route: 'flow' },
+  debt: { what: 'Whether your debt is costing more than your investments earn after tax.', lift: 'When debt interest exceeds expected after-tax investment returns, paying it down first is a common approach.', route: 'money' },
+  estate: { what: 'Whether your wealth transfers efficiently — IHT exposure, nominations, and Will.', lift: 'Up-to-date beneficiary nominations and a current Will are estate-planning basics; trust structures are one option some people consider.', route: 'tax' },
 }
 
 const TAB_LABELS = { money: 'MyMoney', tax: 'Tax & Estate', risk: 'Risk', flow: 'Cashflow', timeline: 'Timeline' }
 
 function DimExplainerStub({ metric, fqData, onClose, onNav }) {
   const dimKey = (metric || '').replace(/^wealth\./, '')
-  const dim    = DIMENSIONS.find(d => d.key === dimKey)
-  const label  = dim?.label || dimKey || metric
-  const exp    = DIM_EXPLAINERS[dimKey] || {}
-  const score  = fqData?.dims?.[dimKey]
-  const route  = exp.route || null
+  const dim = DIMENSIONS.find(d => d.key === dimKey)
+  const label = dim?.label || dimKey || metric
+  const exp = DIM_EXPLAINERS[dimKey] || {}
+  const score = fqData?.dims?.[dimKey]
+  const route = exp.route || null
   return (
     <div
       role="dialog"
@@ -1389,23 +1391,23 @@ function DimExplainerStub({ metric, fqData, onClose, onNav }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 const COI_DOMAIN_META = {
-  drawdown:           { label: 'SIPP estate exposure',           screen: 'tax',   action: 'From April 2027 pensions count toward the estate, so an up-to-date expression of wishes and beneficiary nominations matter — the choices made before then affect the IHT position while gifting windows remain open.' },
-  wrapperSequencing:  { label: 'Wrapper sequencing (ISA/SIPP)', screen: 'tax',   action: 'Drawing ISA before pension is a common retirement sequence — it preserves pension growth and keeps the pot outside the estate for longer.' },
-  contributions:      { label: 'Pension contributions',         screen: 'money', action: 'Pension contributions reduce income tax now and grow the pot tax-free.' },
-  taxAllowances:      { label: 'Unused tax allowances',         screen: 'tax',   action: 'ISA, CGT and dividend allowances reset on 5 April each year — unused, they are lost.' },
-  estatePlanning:     { label: 'Estate planning gap',           screen: 'tax',   action: 'A current Will, lasting power of attorney and beneficiary nominations are estate-planning basics; IHT exposure and gifting allowances are the usual things to review.' },
-  protection:         { label: 'Protection coverage gap',       screen: 'risk',  action: 'Life cover, income protection and critical illness are typically weighed against current income and dependant obligations.' },
-  debt:               { label: 'High-cost debt',                screen: 'money', action: 'Debt costing more than your expected after-tax investment return is, in effect, a guaranteed risk-free return when paid down.' },
-  gifting:            { label: 'Gifting opportunity',           screen: 'tax',   action: 'The annual gift exemption is £3,000/yr free of IHT (one prior year can be carried forward); it does not accumulate beyond that.' },
-  propertyDecisions:  { label: 'Property decisions',            screen: 'money', action: 'Rental yield, CGT on disposal and how property fits the wider plan are the usual factors weighed here.' },
-  investmentStrategy: { label: 'Investment strategy',           screen: 'money', action: 'Asset allocation, wrapper efficiency and rebalancing are typically reviewed against risk profile and timeline.' },
+  drawdown: { label: 'SIPP estate exposure', screen: 'tax', action: 'From April 2027 pensions count toward the estate, so an up-to-date expression of wishes and beneficiary nominations matter — the choices made before then affect the IHT position while gifting windows remain open.' },
+  wrapperSequencing: { label: 'Wrapper sequencing (ISA/SIPP)', screen: 'tax', action: 'Drawing ISA before pension is a common retirement sequence — it preserves pension growth and keeps the pot outside the estate for longer.' },
+  contributions: { label: 'Pension contributions', screen: 'money', action: 'Pension contributions reduce income tax now and grow the pot tax-free.' },
+  taxAllowances: { label: 'Unused tax allowances', screen: 'tax', action: 'ISA, CGT and dividend allowances reset on 5 April each year — unused, they are lost.' },
+  estatePlanning: { label: 'Estate planning gap', screen: 'tax', action: 'A current Will, lasting power of attorney and beneficiary nominations are estate-planning basics; IHT exposure and gifting allowances are the usual things to review.' },
+  protection: { label: 'Protection coverage gap', screen: 'risk', action: 'Life cover, income protection and critical illness are typically weighed against current income and dependant obligations.' },
+  debt: { label: 'High-cost debt', screen: 'money', action: 'Debt costing more than your expected after-tax investment return is, in effect, a guaranteed risk-free return when paid down.' },
+  gifting: { label: 'Gifting opportunity', screen: 'tax', action: 'The annual gift exemption is £3,000/yr free of IHT (one prior year can be carried forward); it does not accumulate beyond that.' },
+  propertyDecisions: { label: 'Property decisions', screen: 'money', action: 'Rental yield, CGT on disposal and how property fits the wider plan are the usual factors weighed here.' },
+  investmentStrategy: { label: 'Investment strategy', screen: 'money', action: 'Asset allocation, wrapper efficiency and rebalancing are typically reviewed against risk profile and timeline.' },
 }
 
 const COI_SCREEN_LABELS = { tax: 'Tax & Estate', money: 'MyMoney', risk: 'Risk' }
 
 function CoIDrillPanel({ entity, onClose, onNav }) {
-  const coiObj   = useMemo(() => safe(() => totalCoI(entity), { total: 0, byDomain: {} }), [entity])
-  const total    = coiObj.total || 0
+  const coiObj = useMemo(() => safe(() => totalCoI(entity), { total: 0, byDomain: {} }), [entity])
+  const total = coiObj.total || 0
   const byDomain = coiObj.byDomain || {}
   const [openRow, setOpenRow] = useState(null)
 
@@ -1579,7 +1581,7 @@ function APQDrillPanel({ entity, onNav, onClose }) {
             </div>
           )}
           {items.map((action, i) => {
-            const route  = ACTION_ROUTE_OVERRIDE[action.id] || action.screen || null
+            const route = ACTION_ROUTE_OVERRIDE[action.id] || action.screen || null
             const impact = action?.impact?.finioScore || action?.impact?.score || 0
             const canNav = route || action.id === 'pension-drawdown'
             return (
@@ -1648,10 +1650,10 @@ function APQDrillPanel({ entity, onNav, onClose }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
-  const nw     = safe(() => netWorth(entity), 0)
-  const inv    = safe(() => investable(entity), 0)
-  const lb     = safe(() => liquidityBuffer(entity), null)
-  const a      = entity?.assets || {}
+  const nw = safe(() => netWorth(entity), 0)
+  const inv = safe(() => investable(entity), 0)
+  const lb = safe(() => liquidityBuffer(entity), null)
+  const a = entity?.assets || {}
   const [expandedRow, setExpandedRow] = useState(focusAsset || null)
 
   // Universal numeric extractor — handles flat number, object.total, object.value, array-of-pots
@@ -1662,10 +1664,10 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
     return +v?.total || +v?.value || 0
   }
 
-  const pensions  = safe(() => _num(a.sipp) + _num(a.pension) + _num(a.pensions), 0)
-  const isa       = safe(() => _num(a.isa) + _num(a.lisa), 0)
+  const pensions = safe(() => _num(a.sipp) + _num(a.pension) + _num(a.pensions), 0)
+  const isa = safe(() => _num(a.isa) + _num(a.lisa), 0)
   // Property: check all known field names (property[], residence, home)
-  const property  = safe(() => {
+  const property = safe(() => {
     const arr = (Array.isArray(a.property) ? a.property : []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0)
     return arr + _num(a.residence) + _num(a.home)
   }, 0)
@@ -1675,9 +1677,9 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
     const fromHoldings = h.reduce((s, hh) => s + (+hh.currentValue || +hh.value || 0), 0)
     return fromHoldings > 0 ? fromHoldings : (_num(a.portfolio) + _num(a.investments) + _num(a.gias))
   }, 0)
-  const business  = safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
+  const business = safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
   // Cash: must use _num, not +a.cash (would NaN on an object)
-  const cash      = safe(() => _num(a.cash) + _num(a.savings) + _num(a.cashSavings) + _num(a.bank), 0)
+  const cash = safe(() => _num(a.cash) + _num(a.savings) + _num(a.cashSavings) + _num(a.bank), 0)
   const altAssets = safe(() => (Array.isArray(a.alternatives) ? a.alternatives : []).reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0), 0)
 
   // P0-2: delegate to the engine's canonical liabilitiesTotal walker so
@@ -1885,7 +1887,7 @@ function NetWorthDrillPanel({ entity, onClose, focusAsset }) {
 // verify which version is live without guessing.
 const BUILD = (() => {
   const d = new Date()
-  return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+  return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 })()
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1960,7 +1962,7 @@ function DeficitBanner({ entity, onNav }) {
 
 export default function HomeScreen({
   entity,
-  viewMode: _viewModeProp,  // eslint-disable-line no-unused-vars — ignored; local state owns this
+  viewMode: _viewModeProp,  // eslint-disable-line no-unused-vars -- ignored; local state owns this
   personaId,                // eslint-disable-line no-unused-vars
   onNav,
   onCommit,                 // eslint-disable-line no-unused-vars
@@ -1974,8 +1976,8 @@ export default function HomeScreen({
   const { mode: viewMode, setMode: setViewMode } = useTemporalMode()
 
   // ── Core engine values ─────────────────────────────────────────────────
-  const nw   = useMemo(() => safe(() => netWorth(entity), 0), [entity])
-  const fq   = useMemo(() => safe(() => calcFQ(entity),
+  const nw = useMemo(() => safe(() => netWorth(entity), 0), [entity])
+  const fq = useMemo(() => safe(() => calcFQ(entity),
     { total: 0, score: 0, band: { name: 'Building', colour: 'var(--c-text3)' }, dims: {} }), [entity])
   const risk = useMemo(() => safe(() => calcRisk(entity),
     { total: 0, band: { name: 'Building', colour: 'var(--c-text3)' } }), [entity])
@@ -1995,9 +1997,9 @@ export default function HomeScreen({
     if (typeof metric === 'string' && metric.startsWith('nav:')) { onNav?.(metric.slice(4)); return }
     if (metric === 'netWorth' || metric === 'networth') { setLocalDrill('networth:'); return }
     if (typeof metric === 'string' && metric.startsWith('netWorth:')) { setLocalDrill('networth:' + metric.split(':')[1]); return }
-    if (metric === 'coi')                               { setLocalDrill('coi');      return }
-    if (metric === 'apq' || metric === 'gaps')          { setLocalDrill('apq');      return }
-    if (metric === 'pension-drawdown')                  { setLocalDrill('pension-drawdown'); return }
+    if (metric === 'coi') { setLocalDrill('coi'); return }
+    if (metric === 'apq' || metric === 'gaps') { setLocalDrill('apq'); return }
+    if (metric === 'pension-drawdown') { setLocalDrill('pension-drawdown'); return }
     // Dim keys — strip prefix if present ('wealth.behaviour' → 'behaviour')
     const dimKey = typeof metric === 'string' ? metric.replace(/^wealth\./, '') : metric
     const DIM_KEYS = ['behaviour', 'capital', 'tax', 'protection', 'cashflow', 'debt', 'estate']
@@ -2015,8 +2017,8 @@ export default function HomeScreen({
     <>
       {/* Drill panels — float above everything (replaces early returns) */}
       {localDrill?.startsWith('networth') && <NetWorthDrillPanel entity={entity} focusAsset={localDrill.split(':')[1] || null} onClose={() => setLocalDrill(null)} />}
-      {localDrill === 'coi'     && <CoIDrillPanel       entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
-      {localDrill === 'apq'     && <APQDrillPanel entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'coi' && <CoIDrillPanel entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
+      {localDrill === 'apq' && <APQDrillPanel entity={entity} onNav={onNav} onClose={() => setLocalDrill(null)} />}
       {localDrill === 'pension-drawdown' && (
         <PensionDrawdownPanel entity={entity} onClose={() => setLocalDrill(null)} onNav={onNav} />
       )}
@@ -2040,7 +2042,7 @@ export default function HomeScreen({
               transition: 'transform .15s ease, box-shadow .15s ease',
             }}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(93,219,194,0.28)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)';   e.currentTarget.style.boxShadow = '0 4px 16px rgba(93,219,194,0.18)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(93,219,194,0.18)' }}
           >
             <span style={{ fontSize: 26, lineHeight: 1 }}>✨</span>
             <div style={{ flex: 1, textAlign: 'left' }}>
@@ -2148,7 +2150,7 @@ export default function HomeScreen({
 
 function WhatIfSection({ viewMode, onSelectScenario, onFreeform, entity }) {
   const [freeform, setFreeform] = useState('')
-  const [showAll, setShowAll]   = useState(false)
+  const [showAll, setShowAll] = useState(false)
   const isActive = viewMode === 'scenario'
   // P1-22 (2026-05-28): prefer user's saved scenarios over canned list.
   // Each live persona has 3-4 scenarios in entity.scenarios — show those
@@ -2156,18 +2158,18 @@ function WhatIfSection({ viewMode, onSelectScenario, onFreeform, entity }) {
   const userScenarios = Array.isArray(entity?.scenarios) ? entity.scenarios : []
   const scenarios = userScenarios.length > 0
     ? [
-        ...userScenarios.map(s => ({
-          key: s.id || s.key || s.name,
-          label: s.name || s.label || 'Scenario',
-          sub: s.summary || s.description || s.note || 'Your saved scenario',
-          icon: s.icon || '⚙',
-          tag: 'YOURS',
-          engine: !!s.engine_backed,
-        })),
-        ...DE_SCENARIOS,
-      ]
+      ...userScenarios.map(s => ({
+        key: s.id || s.key || s.name,
+        label: s.name || s.label || 'Scenario',
+        sub: s.summary || s.description || s.note || 'Your saved scenario',
+        icon: s.icon || '⚙',
+        tag: 'YOURS',
+        engine: !!s.engine_backed,
+      })),
+      ...DE_SCENARIOS,
+    ]
     : DE_SCENARIOS
-  const visible  = showAll ? scenarios : scenarios.slice(0, 5)
+  const visible = showAll ? scenarios : scenarios.slice(0, 5)
 
   return (
     <div style={{
@@ -2251,10 +2253,10 @@ function WhatIfSection({ viewMode, onSelectScenario, onFreeform, entity }) {
 
 function severityBadge(action) {
   const p = action?.priority
-  if (p === 1) return { label: 'CRIT', bg: 'rgba(255,89,89,0.18)',    color: '#ff5959' }
-  if (p === 2) return { label: 'HIGH', bg: 'rgba(255,189,89,0.18)',   color: 'var(--c-gold)' }
-  if (p === 3) return { label: 'MED',  bg: 'rgba(93,219,194,0.15)',   color: 'var(--c-acc)' }
-  return             { label: 'LOW',  bg: 'rgba(255,255,255,0.06)',   color: 'var(--c-text3)' }
+  if (p === 1) return { label: 'CRIT', bg: 'rgba(255,89,89,0.18)', color: '#ff5959' }
+  if (p === 2) return { label: 'HIGH', bg: 'rgba(255,189,89,0.18)', color: 'var(--c-gold)' }
+  if (p === 3) return { label: 'MED', bg: 'rgba(93,219,194,0.15)', color: 'var(--c-acc)' }
+  return { label: 'LOW', bg: 'rgba(255,255,255,0.06)', color: 'var(--c-text3)' }
 }
 
 function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
@@ -2299,8 +2301,8 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {actions.slice(0, 6).map((action, i) => {
-              const badge  = severityBadge(action)
-              const route  = safeRoute(action)
+              const badge = severityBadge(action)
+              const route = safeRoute(action)
               const isOpen = expandedId === (action.id || i)
               const impact = action?.impact?.finioScore || 0
               return (
@@ -2382,18 +2384,18 @@ function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 const DE_SCENARIOS = [
-  { key: 'relocate',     icon: '✈️', label: 'How much do I need to relocate?',             sub: 'Kenya · Portugal · UAE — cost, tax, residency',  tag: 'Ask Sonu', engine: false, query: 'What would it cost and mean financially to relocate abroad?', eventId: null },
-  { key: 'house',        icon: '🏡', label: 'What if I moved to a bigger house?',           sub: 'Stamp duty, mortgage impact, equity',              tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
-  { key: 'retire',       icon: '⏱️', label: 'What if I retired 5 years earlier?',          sub: 'Pension drawdown — cashflow, Score, IHT',          tag: 'Instant',  engine: true,  query: 'What if I retired 5 years earlier?', eventId: 'retire' },
-  { key: 'part_time',    icon: '🌴', label: 'What if I went part-time or took a break?',   sub: 'Runway, monthly shortfall, when to return',        tag: 'Instant',  engine: true,  query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
-  { key: 'children',     icon: '🏠', label: 'What if I helped my children get started?',   sub: 'Gifting, trust, mortgage — IHT impact',            tag: 'Ask Sonu', engine: false, query: 'What if I helped my children financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
-  { key: 'downsize',     icon: '🔑', label: 'What if I downsized my home?',                sub: 'Equity release, SDLT saving, cashflow impact',     tag: 'Instant',  engine: true,  query: 'What if I downsized my home? Show the equity I would release, any SDLT saving, and how it changes my cashflow and estate.', eventId: 'sell_property' },
-  { key: 'lump_pension', icon: '💰', label: 'What if I made a large pension top-up?',      sub: 'Tax relief, carry-forward, IHT benefit',           tag: 'Instant',  engine: true,  query: 'What if I made a large one-off pension contribution? Cover tax relief available, annual allowance, carry-forward rules, and the IHT benefit of a larger SIPP.', eventId: 'pension_contribution' },
-  { key: 'inheritance',  icon: '📜', label: 'What if I received an inheritance?',           sub: 'IHT position, investment options, trust',          tag: 'Ask Sonu', engine: false, query: 'What if I received a significant inheritance? How should I invest it, what are the IHT implications, and should I consider a trust?', eventId: null },
-  { key: 'care',         icon: '🏥', label: 'What if I needed long-term care?',             sub: 'Care costs, estate depletion, LPA urgency',        tag: 'Ask Sonu', engine: false, query: 'What if I or my partner needed long-term care? Cover likely costs, the impact on my estate, and why a lasting power of attorney matters now.', eventId: null },
-  { key: 'market_drop',  icon: '📉', label: 'What if markets fell 20%?',                   sub: 'Drawdown impact, Score, recovery timeline',        tag: 'Instant',  engine: true,  query: 'What if my investment portfolio dropped 20%? Show the impact on my drawdown sustainability, Wealth Score, and estimated recovery timeline.', eventId: 'market_shock' },
-  { key: 'business',     icon: '🏢', label: 'What if I sold my business?',                  sub: 'CGT, BADR, reinvestment, retirement timing',       tag: 'Ask Sonu', engine: false, query: 'What if I sold my business? Cover CGT, Business Asset Disposal Relief, reinvestment options, and how the timing interacts with my retirement plan.', eventId: 'business_sale' },
-  { key: 'gift',         icon: '🎁', label: 'What if I gifted to family this tax year?',    sub: '7-year rule, PETs, IHT saving',                    tag: 'Instant',  engine: true,  query: 'What if I made significant gifts to family now? Cover the 7-year rule, potentially exempt transfers, and how much IHT this would save from my estate.', eventId: 'gift_to_family' },
+  { key: 'relocate', icon: '✈️', label: 'How much do I need to relocate?', sub: 'Kenya · Portugal · UAE — cost, tax, residency', tag: 'Ask Sonu', engine: false, query: 'What would it cost and mean financially to relocate abroad?', eventId: null },
+  { key: 'house', icon: '🏡', label: 'What if I moved to a bigger house?', sub: 'Stamp duty, mortgage impact, equity', tag: 'Ask Sonu', engine: false, query: 'What if I moved to a bigger house? Cover SDLT, funding options, and cashflow impact.', eventId: 'buy_second_home' },
+  { key: 'retire', icon: '⏱️', label: 'What if I retired 5 years earlier?', sub: 'Pension drawdown — cashflow, Score, IHT', tag: 'Instant', engine: true, query: 'What if I retired 5 years earlier?', eventId: 'retire' },
+  { key: 'part_time', icon: '🌴', label: 'What if I went part-time or took a break?', sub: 'Runway, monthly shortfall, when to return', tag: 'Instant', engine: true, query: 'What if I went part-time or took a career break?', eventId: 'part_time' },
+  { key: 'children', icon: '🏠', label: 'What if I helped my children get started?', sub: 'Gifting, trust, mortgage — IHT impact', tag: 'Ask Sonu', engine: false, query: 'What if I helped my children financially — gifting, trust, or joint mortgage?', eventId: 'setup_trust' },
+  { key: 'downsize', icon: '🔑', label: 'What if I downsized my home?', sub: 'Equity release, SDLT saving, cashflow impact', tag: 'Instant', engine: true, query: 'What if I downsized my home? Show the equity I would release, any SDLT saving, and how it changes my cashflow and estate.', eventId: 'sell_property' },
+  { key: 'lump_pension', icon: '💰', label: 'What if I made a large pension top-up?', sub: 'Tax relief, carry-forward, IHT benefit', tag: 'Instant', engine: true, query: 'What if I made a large one-off pension contribution? Cover tax relief available, annual allowance, carry-forward rules, and the IHT benefit of a larger SIPP.', eventId: 'pension_contribution' },
+  { key: 'inheritance', icon: '📜', label: 'What if I received an inheritance?', sub: 'IHT position, investment options, trust', tag: 'Ask Sonu', engine: false, query: 'What if I received a significant inheritance? How should I invest it, what are the IHT implications, and should I consider a trust?', eventId: null },
+  { key: 'care', icon: '🏥', label: 'What if I needed long-term care?', sub: 'Care costs, estate depletion, LPA urgency', tag: 'Ask Sonu', engine: false, query: 'What if I or my partner needed long-term care? Cover likely costs, the impact on my estate, and why a lasting power of attorney matters now.', eventId: null },
+  { key: 'market_drop', icon: '📉', label: 'What if markets fell 20%?', sub: 'Drawdown impact, Score, recovery timeline', tag: 'Instant', engine: true, query: 'What if my investment portfolio dropped 20%? Show the impact on my drawdown sustainability, Wealth Score, and estimated recovery timeline.', eventId: 'market_shock' },
+  { key: 'business', icon: '🏢', label: 'What if I sold my business?', sub: 'CGT, BADR, reinvestment, retirement timing', tag: 'Ask Sonu', engine: false, query: 'What if I sold my business? Cover CGT, Business Asset Disposal Relief, reinvestment options, and how the timing interacts with my retirement plan.', eventId: 'business_sale' },
+  { key: 'gift', icon: '🎁', label: 'What if I gifted to family this tax year?', sub: '7-year rule, PETs, IHT saving', tag: 'Instant', engine: true, query: 'What if I made significant gifts to family now? Cover the 7-year rule, potentially exempt transfers, and how much IHT this would save from my estate.', eventId: 'gift_to_family' },
 ]
 
 

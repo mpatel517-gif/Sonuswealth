@@ -18,6 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useMemo, useEffect } from 'react'
+import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
 
 // Canonical facade engine (Wave 1A): imports cashflow-engine via cf_* re-exports.
 // S1 selector migration (Phase 2): canonical readers pulled via selector facade.
@@ -25,16 +26,16 @@ import { netWorth, fq as calcFQ, ani as _aniSel } from '../engine/selectors/inde
 const calcANI = (e, b) => _aniSel(e, b)
 import {
   // Core
-  fmt, calcRisk, fqBand, riskBand,
+  fmt, calcRisk, fqBand, riskBand, TAX,
   // Cashflow Health (§3B)
   cashflowHealth,
   // §A NOW
   calcAllIncome, classifyIncomeType, monthlySurplus, cashflowFlow, inferLifeStage,
+  calcAge,
   liquidityBuffer, recommendedSurplusAllocation,
   debtRatio,
   // §B TRAJECTORY
   swrFromRegime, fundedRatio, fiRatio,
-  guytonKlingerPath, goalSeek,
   // §C DEPTH
   totalCoI, coiCashflowVariants,
   // Cashflow-engine re-exports
@@ -61,7 +62,10 @@ import { incomeTaxDetail, nicsDetail } from '../engine/tax-estate-engine.js'
 // for decumulators — replaces the relabeled-G-K "Optimal" + the forward-table stub.
 import { goalSpec as buildGoalSpec } from '../engine/goal-engine.js'
 import { solveDecumulation } from '../engine/decumulation-solver.js'
-import { compareMethods, recommendMethodForGoal } from '../engine/withdrawal-methods.js'
+import { extractAccumulationContext } from '../engine/accumulation-solver.js'
+import { sequenceDrawHoldings, evaluateDrawRoutes } from '../engine/decumulation-sequence.js'
+import { allocateSurplus } from '../engine/surplus-allocation.js'
+import { compareMethods, recommendMethodForGoal, methodPath, METHODS } from '../engine/withdrawal-methods.js'
 import { useEvents, EV } from '../state/events.jsx'
 
 // L3-3 (2026-05-28): DrillStack wiring so existing L3 drill panels can chain
@@ -217,14 +221,20 @@ function SurplusDrillPanelInner({ entity, onClose }) {
     try { return recommendedSurplusAllocation(entity, s) } catch { return null }
   }, [entity, ms])
 
-  const gross       = +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
-  const taxAnn      = +(incomeAll?.tax_total_annual ?? incomeAll?.tax ?? 0)
-  const pensionMo   = +(entity?.assets?.sipp?.contribMonthly ?? entity?.pensionContribMonthly ?? 0)
-  const pensionAnn  = pensionMo * 12
-  const essAnn      = +(ms?.essentials_annual ?? (ms?.essential != null ? ms.essential * 12 : 0))
-  const debtAnn     = +(ms?.debt_service_annual ?? (ms?.debtService != null ? ms.debtService * 12 : 0))
-  const surplusAnn  = gross > 0 ? (gross - taxAnn - pensionAnn - essAnn - debtAnn) : +(ms?.surplus != null ? ms.surplus * 12 : 0)
-  const surplusMo   = surplusAnn / 12
+  // CANONICAL: every figure from cashflowFlow — the SAME fn the now-tile,
+  // waterfall, Sankey and Home use — so this drill cannot diverge. The old code
+  // recomputed surplus from fields that don't exist (incomeAll.tax_total_annual
+  // → £0) and OMITTED protection, showing a +£6k SURPLUS when the engine says a
+  // −£5k DEFICIT (founder 2026-06-04 reconciliation flag).
+  const flow        = useMemo(() => { try { return cashflowFlow(entity, CMA_BUNDLE) } catch { return null } }, [entity])
+  const gross       = +(flow?.gross ?? 0)
+  const taxAnn      = +(flow?.taxAndNI ?? 0)
+  const committedAnn= +(flow?.committed ?? 0)
+  const essAnn      = +(flow?.essentials ?? 0)
+  const debtAnn     = +(flow?.debtService ?? 0)
+  const protAnn     = +(flow?.protection ?? 0)
+  const surplusAnn  = +(flow?.surplusAnnual ?? 0)
+  const surplusMo   = +(flow?.surplusMonthly ?? 0)
 
   // L3-3 row-level L4 drill payloads — engine-derived, no fabrication.
   const incomeSourceBreakdown = useMemo(() => {
@@ -253,7 +263,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
 
   const steps = [
     {
-      label: 'Gross income',         value: gross,       colour: 'var(--c-success)', kind: 'income',    note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null,
+      label: 'Gross income',         value: gross,        colour: 'var(--c-mint-text)',  kind: 'income',    note: incomeAll?.marginal_band ? `${incomeAll.marginal_band} band` : null,
       drill: incomeSourceBreakdown.length > 0 ? {
         metric: 'Gross income',
         value: fmt(gross) + '/yr',
@@ -264,7 +274,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
       } : null,
     },
     {
-      label: 'Tax & NI',             value: -taxAnn,     colour: 'var(--c-danger)',  kind: 'deduction', note: null,
+      label: 'Tax & NI',             value: -taxAnn,      colour: 'var(--c-coral-text)', kind: 'deduction', note: null,
       drill: taxBandBreakdown.length > 0 ? {
         metric: 'Tax & NI',
         value: fmt(taxAnn) + '/yr',
@@ -274,10 +284,11 @@ function SurplusDrillPanelInner({ entity, onClose }) {
         breakdown: taxBandBreakdown,
       } : null,
     },
-    { label: 'Pension contributions',value: -pensionAnn, colour: 'var(--c-acc)',     kind: 'deduction', note: pensionAnn > 0 ? 'Pre-tax via salary sacrifice' : null },
-    { label: 'Essentials',           value: -essAnn,     colour: 'var(--c-warning)', kind: 'deduction', note: 'Housing, bills, transport' },
-    { label: 'Debt service',         value: -debtAnn,    colour: 'var(--c-acc3)',    kind: 'deduction', note: 'Loans and cards' },
-    { label: 'Monthly surplus × 12', value: surplusAnn,  colour: surplusAnn >= 0 ? 'var(--c-acc)' : 'var(--c-danger)', kind: 'surplus', note: null },
+    { label: 'Pension & ISA put aside', value: -committedAnn, colour: 'var(--c-acc)',        kind: 'deduction', note: committedAnn > 0 ? 'Contributions you set aside' : null },
+    { label: 'Essentials',           value: -essAnn,      colour: 'var(--c-amber-text)', kind: 'deduction', note: 'Housing, bills, transport' },
+    { label: 'Debt service',         value: -debtAnn,     colour: 'var(--c-acc3, var(--c-text3))', kind: 'deduction', note: 'Loans and cards' },
+    { label: 'Protection premiums',  value: -protAnn,     colour: 'var(--c-coral-text)', kind: 'deduction', note: 'Life · CI · IP · PMI' },
+    { label: surplusAnn >= 0 ? 'Net surplus × 12' : 'Net deficit × 12', value: surplusAnn,   colour: surplusAnn >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)', kind: 'surplus', note: null },
   ].filter(s => Math.abs(s.value) > 0)
 
   const maxAbs = Math.max(...steps.map(s => Math.abs(s.value)), 1)
@@ -318,7 +329,7 @@ function SurplusDrillPanelInner({ entity, onClose }) {
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <div style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'var(--c-text)' }}>
-          Monthly surplus breakdown
+          Monthly cashflow breakdown
         </div>
         <div style={{ width: 56 }} />
       </div>
@@ -329,15 +340,15 @@ function SurplusDrillPanelInner({ entity, onClose }) {
           background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
           borderRadius: 18, padding: '14px 18px', marginBottom: 12,
         }}>
-          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Monthly surplus</div>
+          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>{surplusMo >= 0 ? 'Monthly surplus' : 'Monthly deficit'}</div>
           <div style={{
             fontSize: 28, fontWeight: 800, letterSpacing: -0.8,
-            color: surplusMo >= 0 ? 'var(--c-acc)' : 'var(--c-danger)',
+            color: surplusMo >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)',
           }}>
-            {surplusMo >= 0 ? '' : '−'}{fmt(Math.abs(surplusMo))}/mo
+            {surplusMo >= 0 ? '+' : '−'}{fmt(Math.abs(surplusMo))}/mo
           </div>
           <div style={{ fontSize: 12, color: 'var(--c-text3)', marginTop: 4 }}>
-            {fmt(gross)}/yr gross · {fmt(surplusAnn >= 0 ? surplusAnn : 0)}/yr surplus
+            {fmt(gross)}/yr gross · {surplusMo >= 0 ? `${fmt(surplusAnn)}/yr surplus` : `${fmt(Math.abs(surplusAnn))}/yr shortfall, covered from savings or pots`}
           </div>
           <span className="sw-chip sw-chip-sm" style={{ marginTop: 8, display: 'inline-block' }}>
             From your data
@@ -425,10 +436,10 @@ function SurplusDrillPanelInner({ entity, onClose }) {
           }}>
             <div className="sw-eyebrow" style={{ marginBottom: 4 }}>Emergency buffer</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--c-text)' }}>
-              {lb.months.toFixed(1)} months
+              {lb.months >= 24 ? `${(lb.months / 12).toFixed(1)} years` : `${lb.months.toFixed(1)} months`} of essentials
             </div>
             <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 4 }}>
-              {lb.months >= 6 ? 'Buffer healthy (6+ months)' : lb.months >= 3 ? 'Buffer adequate (3–6 months)' : 'Buffer below typical 3–6 month range (information only)'}
+              {lb.months >= 6 ? 'Healthy — well above the typical 3–6 month range (information only)' : lb.months >= 3 ? 'Adequate (3–6 months)' : 'Below the typical 3–6 month range (information only)'}
             </div>
           </div>
         )}
@@ -722,21 +733,110 @@ function HealthScoreDrillPanelInner({ entity, onClose }) {
 // This replaces the calendar-heatmap-as-signature mis-tag flagged by the
 // dataviz critique. The heatmap stays as a secondary depth strip.
 // ─────────────────────────────────────────────────────────────────────────────
+const SRC_LABELS = {
+  employment: 'Employment', 'self-employment': 'Self-employment',
+  dividends: 'Dividends', rental: 'Rental', 'savings-interest': 'Interest',
+  'state-pension': 'State pension', drawdown: 'Pension drawdown',
+  overseas: 'Overseas', other: 'Other',
+}
+// ── MoneyFlowDrill — breaks down whichever money-map node was tapped (founder
+// 2026-06-05: "you haven't made this diagram drillable"). Drills to SOURCE: the
+// real components behind each box, from the engine where available, with a plain
+// meaning and a pointer to the surface that owns the detail. Info, not advice.
+function MoneyFlowDrill({ drill, entity, f, incomeAll, onClose }) {
+  if (!drill) return null
+  const id = drill.target || drill.node || ''
+  const val = +drill.value || 0
+  let rows = []      // { label, value }
+  let note = ''
+  let owns = null    // deep-link hint to the owning surface
+  try {
+    if (id.startsWith('src:')) {
+      const items = (incomeAll?.items || []).filter(it => (SRC_LABELS[it.type] || 'Other') === drill.label)
+      rows = items.map(it => ({ label: it.name || it.label || SRC_LABELS[it.type] || it.type, value: +it.amount || 0 }))
+      note = 'Gross income before tax — tax and NI are taken at the next stage.'
+      owns = drill.label === 'Rental' ? 'Property on My Money' : 'Income on My Money'
+    } else if (id === 'stage:tax') {
+      let it = null, ni = null
+      try { it = incomeTaxDetail(entity) } catch { /* */ }
+      try { ni = nicsDetail(entity) } catch { /* */ }
+      if (it?.bands?.length) (it.bands).filter(b => (b.tax || 0) > 0).forEach(b => rows.push({ label: `Income tax — ${b.label || b.name || (b.rate ? Math.round(b.rate * 100) + '%' : 'band')}`, value: Math.round(b.tax) }))
+      else if (it?.total_tax) rows.push({ label: 'Income tax', value: Math.round(it.total_tax) })
+      if (ni?.class1) rows.push({ label: 'National Insurance (Class 1)', value: ni.class1 })
+      if (ni?.class4) rows.push({ label: 'National Insurance (Class 4)', value: ni.class4 })
+      if (!rows.length) rows.push({ label: 'Income tax & NI', value: val })
+      note = it?.marginal_rate != null ? `Your marginal rate is ${Math.round(it.marginal_rate * 100)}% — the tax on your next £1 of income.` : 'Income tax and National Insurance on your earnings.'
+      owns = 'Tax & Estate'
+    } else if (id === 'stage:pension') {
+      rows = [{ label: 'Pension & ISA contributions', value: val }]
+      note = 'Money you set aside into pensions/ISAs — it leaves your cashflow but builds your wealth (it is not "spent").'
+      owns = 'My Money'
+    } else if (id === 'stage:essentials') {
+      const ex = entity?.expenses || {}
+      const cats = ex.categories || ex.breakdown || null
+      if (cats && typeof cats === 'object') rows = Object.entries(cats).map(([k, v]) => ({ label: k, value: +((v && v.amount) ?? v) * (((v && v.amount) ?? v) < 2000 ? 12 : 1) }))
+      if (!rows.length) rows = [{ label: 'Housing, bills, food, transport', value: val }]
+      note = 'Your committed day-to-day spending. Track it by category to see what moves the number most.'
+      owns = 'spending detail'
+    } else if (id === 'stage:debt') {
+      const libs = entity?.liabilities || entity?.debts || []
+      const arr = Array.isArray(libs) ? libs : Object.values(libs || {})
+      rows = arr.map(l => ({ label: l.name || l.type || 'Debt', value: Math.round((+l.monthlyPayment || +l.payment || 0) * 12) || +l.annualPayment || 0 })).filter(r => r.value > 0)
+      if (!rows.length) rows = [{ label: 'Loan & card repayments', value: val }]
+      note = 'Annual repayments across your loans and cards. Clearing higher-rate debt first frees the most cashflow.'
+      owns = 'Liabilities on My Money'
+    } else if (id === 'stage:protection') {
+      rows = [{ label: 'Insurance premiums (Life · CI · IP · PMI)', value: val }]
+      note = 'Protection premiums that keep your plan intact if income stops.'
+      owns = 'Protection on Tax & Estate'
+    } else if (id === 'sink:net') {
+      const gross = f.gross || 0
+      rows = [
+        { label: 'Gross income', value: Math.round(gross) },
+        { label: 'less Tax & NI', value: -Math.round(f.taxAndNI || 0) },
+        { label: 'less Pension/ISA', value: -Math.round(f.committed || 0) },
+        { label: 'less Essentials', value: -Math.round(f.essentials || 0) },
+        { label: 'less Debt service', value: -Math.round(f.debtService || 0) },
+        ...(f.protection > 0 ? [{ label: 'less Protection', value: -Math.round(f.protection) }] : []),
+      ]
+      note = (f.surplusAnnual < 0)
+        ? 'You spend more than comes in — the gap is funded from savings or borrowing. Closing it is priority one.'
+        : 'What is left after everything — available to save or invest.'
+      owns = null
+    } else {
+      rows = [{ label: drill.label || 'Flow', value: val }]
+    }
+  } catch { rows = [{ label: drill.label || 'Flow', value: val }] }
+
+  return (
+    <div style={{ marginTop: 10, padding: '11px 12px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--c-text)' }}>{drill.label || 'Breakdown'}{val ? <span style={{ color: 'var(--c-text3)', fontWeight: 600, fontSize: 11 }}> · {_gk(Math.abs(val))}/yr</span> : null}</div>
+        <button onClick={onClose} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0 }}>Close ✕</button>
+      </div>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {rows.map((r, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11.5 }}>
+            <span style={{ color: 'var(--c-text2)' }}>{r.label}</span>
+            <span style={{ color: r.value < 0 ? 'var(--c-coral-text)' : 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{r.value < 0 ? '−' : ''}{_gk(Math.abs(r.value))}</span>
+          </div>
+        ))}
+      </div>
+      {note && <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.5 }}>{note}</div>}
+      {owns && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--c-acc)', fontWeight: 600 }}>Full detail: {owns} →</div>}
+    </div>
+  )
+}
 function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
   // Single source of truth: cashflowFlow (net-of-tax). All aggregates below come
   // from it so the Sankey ties out to the reconciliation strip and to Home's
   // surplus by construction (2026-06-02 correctness gate).
   const f = flow || cashflowFlow(entity)
+  const [drill, setDrill] = useState(null) // tapped node → inline breakdown
 
   // Source nodes derived from the SAME income items that f.gross sums (grouped by
   // type) — so Σ sources === f.gross exactly. Previously these were re-summed
   // from entity.income sub-fields, which drifted from the engine total.
-  const SRC_LABELS = {
-    employment: 'Employment', 'self-employment': 'Self-employment',
-    dividends: 'Dividends', rental: 'Rental', 'savings-interest': 'Interest',
-    'state-pension': 'State pension', drawdown: 'Pension drawdown',
-    overseas: 'Overseas', other: 'Other',
-  }
   const byLabel = {}
   for (const it of (incomeAll?.items || [])) {
     const lbl = SRC_LABELS[it.type] || 'Other'
@@ -840,8 +940,13 @@ function CashflowMoneySankey({ entity, incomeAll, ms, flow }) {
       <Sankey
         nodes={nodes}
         links={links}
+        onFlowTap={setDrill}
         ariaLabel={`Money flow Sankey. ${sources.length} sources totalling £${Math.round(gross/1000)}k, ${stages.length} expense stages, ${sinkLabel.toLowerCase()} £${Math.round(Math.abs(surplus)/1000)}k.`}
       />
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 4, textAlign: 'center' }}>
+        Tap any box to break it down →
+      </div>
+      {drill && <MoneyFlowDrill drill={drill} entity={entity} f={f} incomeAll={incomeAll} onClose={() => setDrill(null)} />}
       {/* V-3 fix (2026-05-28): explicit reconciliation strip so the headline
           ("Net deficit −£86k") ties out visibly to the receipt items. Before
           this strip the user could read Rental + Dividends + State pension on
@@ -997,7 +1102,341 @@ function CashflowCalendarHeatmap({ entity }) {
 // Render via <MoneyXDrawer activeRoute="flow" entity={entity} onNav={onNav} />.
 import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 
-export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed }) {
+// ── DeficitFixAnalysis — the engine-grade "am I OK / how do I fix it" (founder
+// 2026-06-05: "rethink this pill using the network-diagram + engine principle").
+// Same pattern as the draw-order: HONEST decomposition first (a "deficit" that's
+// really deliberate saving is reframed), then a priority selector that SCORES
+// the candidate fixes on impact / effort / durability and recommends one — so
+// the user sees the trade-offs, not just two sliders. Info/guidance, not advice.
+const _FIX_PRIORITY = [
+  { id: 'wealth', label: 'Keep building wealth' },
+  { id: 'easy', label: 'Least effort now' },
+  { id: 'durable', label: 'Fix it for good' },
+]
+const _FIX_W = {
+  wealth: { i: 0.35, e: 0.15, d: 0.20, w: 0.30 },
+  easy: { i: 0.35, e: 0.50, d: 0.10, w: 0.05 },
+  durable: { i: 0.30, e: 0.10, d: 0.50, w: 0.10 },
+}
+const _effortLabel = (s) => s >= 80 ? 'Easy' : s >= 50 ? 'Moderate' : 'Harder'
+const _durLabel = (s) => s >= 80 ? 'Durable' : s >= 40 ? 'Slows wealth' : 'Stop-gap'
+function DeficitFixAnalysis({ ms, msNet, lb }) {
+  const [priority, setPriority] = useState('wealth')
+  const gap = Math.max(0, -msNet)
+  if (gap <= 0) return null
+  const committed = Math.round(ms.committed || 0)
+  const bufMonths = lb?.months != null ? Math.round(lb.months) : null
+  const beforeSaving = msNet + committed // position if not making deliberate contributions
+  const cands = [
+    committed > 0 && { id: 'ease', name: 'Ease your pension / ISA saving', impact: Math.min(gap, committed), effort: 90, durable: 55, wealth: 20,
+      note: `You put ${_gk(committed)}/mo into pensions & ISAs — easing it closes most of the gap instantly, but slows your retirement pot.` },
+    { id: 'trim', name: 'Trim your spending', impact: gap, effort: 55, durable: 85, wealth: 80,
+      note: `Find ${_gk(gap)}/mo across discretionary spend — durable, but needs a habit change.` },
+    { id: 'earn', name: 'Earn a bit more', impact: gap, effort: 35, durable: 90, wealth: 95,
+      note: `An extra ${_gk(gap)}/mo of income closes it for good without touching your savings or lifestyle.` },
+    bufMonths != null && { id: 'buffer', name: 'Cover it from your buffer', impact: gap, effort: 85, durable: 20, wealth: 50,
+      note: `Your buffer covers about ${bufMonths} month${bufMonths === 1 ? '' : 's'} at this rate — a stop-gap, not a fix.` },
+  ].filter(Boolean)
+  const W = _FIX_W[priority]
+  const scored = cands.map(c => {
+    const impactPct = Math.min(100, Math.round((c.impact / gap) * 100))
+    const weighted = Math.round(W.i * impactPct + W.e * c.effort + W.d * c.durable + W.w * c.wealth)
+    return { ...c, impactPct, weighted }
+  }).sort((a, b) => b.weighted - a.weighted).map((c, i) => ({ ...c, rank: i + 1 }))
+  const winner = scored[0]
+  const maxW = Math.max(...scored.map(s => s.weighted), 1)
+  const savingShare = committed > 0 ? Math.min(100, Math.round((Math.min(gap, committed) / gap) * 100)) : 0
+
+  return (
+    <div>
+      {/* HONEST DECOMPOSITION — a "deficit" that's mostly deliberate saving is not overspending. */}
+      {committed > 0 && (
+        <div style={{ padding: '10px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 8%, var(--c-surface))', border: '1px solid var(--c-border)', marginBottom: 12 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.5 }}>
+            <strong>{savingShare}% of your {_gk(gap)}/mo gap is money you choose to save.</strong> You put {_gk(committed)}/mo into pensions & ISAs. Set that aside and your day-to-day position is <strong style={{ color: beforeSaving >= 0 ? 'var(--c-mint-text)' : 'var(--c-text)' }}>{beforeSaving >= 0 ? '+' : '−'}{_gk(Math.abs(beforeSaving))}/mo</strong> — {Math.abs(beforeSaving) < gap * 0.25 ? 'essentially breaking even' : 'closer than the headline suggests'}. The gap is you building wealth faster than salary covers, funded from savings.
+          </div>
+          {/* decomposition bar: deliberate saving vs genuine shortfall */}
+          <div style={{ display: 'flex', height: 8, borderRadius: 5, overflow: 'hidden', marginTop: 8, background: 'var(--c-surface2)' }}>
+            <div style={{ width: `${savingShare}%`, background: 'var(--c-mint-text)' }} title="deliberate saving" />
+            <div style={{ width: `${100 - savingShare}%`, background: 'var(--c-coral-text)' }} title="genuine shortfall" />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--c-text3)', marginTop: 3 }}>
+            <span style={{ color: 'var(--c-mint-text)' }}>deliberate saving {_gk(Math.min(gap, committed))}</span>
+            <span style={{ color: 'var(--c-coral-text)' }}>true shortfall {_gk(Math.max(0, gap - committed))}</span>
+          </div>
+        </div>
+      )}
+      {/* WAYS TO CLOSE IT — scored by what matters to you (mirrors the draw-order). */}
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>
+        Ways to close the {_gk(gap)}/mo gap — what matters most?
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {_FIX_PRIORITY.map(p => (
+          <button key={p.id} onClick={() => setPriority(p.id)} className="sw-pressable" style={{
+            fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+            border: '1px solid ' + (priority === p.id ? 'var(--c-acc)' : 'var(--c-border)'),
+            background: priority === p.id ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+            color: priority === p.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{p.label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {scored.map(c => {
+          const win = c.rank === 1
+          return (
+            <div key={c.id} style={{ padding: '9px 11px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid ' + (win ? 'var(--c-acc)' : 'var(--c-border)') }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 0 }}>{c.name}</span>
+                {win && <span style={{ fontSize: 8, fontWeight: 800, color: '#fff', background: 'var(--c-acc)', padding: '2px 6px', borderRadius: 100, letterSpacing: 0.3 }}>RECOMMENDED</span>}
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: win ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>closes {_gk(c.impact)}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 5 }}>
+                <div style={{ width: `${(c.weighted / maxW) * 100}%`, height: '100%', background: win ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 5, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Effort <strong style={{ color: 'var(--c-text2)' }}>{_effortLabel(c.effort)}</strong></span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Lasting <strong style={{ color: 'var(--c-text2)' }}>{_durLabel(c.durable)}</strong></span>
+                <span style={{ fontSize: 9, color: 'var(--c-text3)' }}>Covers <strong style={{ color: 'var(--c-text2)' }}>{c.impactPct}%</strong> of the gap</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45, marginTop: 5 }}>{c.note}</div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
+        Ranked under your stated priority on your own figures — one illustration of how to close the gap, not a personal recommendation.
+      </div>
+    </div>
+  )
+}
+
+// ── SurplusAllocationEngine — "where should my next £1 go?" (founder 2026-06-05:
+// "if I have surplus what should I do — reinvest where/how?"). The accumulation
+// twin of the draw-order: a priority selector scores the candidate homes (debt /
+// buffer / pension / ISA / GIA) on tax · growth · access · safety and recommends
+// where to deploy spare cashflow + the why. Info/guidance, not advice.
+const _ALLOC_PRIORITY = [
+  { id: 'grow', label: 'Grow fastest' },
+  { id: 'flex', label: 'Stay flexible' },
+  { id: 'derisk', label: 'Cut risk' },
+]
+const _ALLOC_FACTOR = { tax: 'Tax', growth: 'Growth', access: 'Access', safety: 'Safety' }
+function SurplusAllocationEngine({ ms, msNet, entity }) {
+  const [priority, setPriority] = useState('grow')
+  const surplus = Math.max(0, Math.round(msNet))
+  const r = useMemo(() => { try { return allocateSurplus(entity, { priority, surplusMonthly: surplus }) } catch { return null } }, [entity, priority, surplus])
+  if (!r || surplus <= 0 || !r.candidates?.length) return null
+  const maxW = Math.max(...r.candidates.map(c => c.weighted), 1)
+  return (
+    <div>
+      <div style={{ padding: '10px 12px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 8%, var(--c-surface))', border: '1px solid var(--c-border)', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.5 }}>
+          You have <strong style={{ color: 'var(--c-mint-text)' }}>{_gk(surplus)}/mo spare</strong> ({_gk(r.surplusAnnual)}/yr). This is the money that builds your wealth — where it goes is the single biggest lever you control right now. There's no one answer: it depends what matters most to you.
+        </div>
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>
+        Where should it go? — what matters most?
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+        {_ALLOC_PRIORITY.map(p => (
+          <button key={p.id} onClick={() => setPriority(p.id)} className="sw-pressable" style={{
+            fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+            border: '1px solid ' + (priority === p.id ? 'var(--c-acc)' : 'var(--c-border)'),
+            background: priority === p.id ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+            color: priority === p.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{p.label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+        {r.factors.map((f, i) => <span key={i} style={{ fontSize: 9, fontWeight: 600, color: 'var(--c-text3)', padding: '2px 7px', borderRadius: 100, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>{f}</span>)}
+      </div>
+      {/* Scored homes */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+        {r.candidates.map(c => {
+          const win = c.rank === 1
+          return (
+            <div key={c.id} style={{ padding: '9px 11px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid ' + (win ? 'var(--c-acc)' : 'var(--c-border)') }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 0 }}>{c.name}</span>
+                {win && <span style={{ fontSize: 8, fontWeight: 800, color: '#fff', background: 'var(--c-acc)', padding: '2px 6px', borderRadius: 100, letterSpacing: 0.3 }}>RECOMMENDED</span>}
+                <span style={{ fontSize: 12, fontWeight: 800, color: win ? 'var(--c-acc)' : 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{c.weighted}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 5 }}>
+                <div style={{ width: `${(c.weighted / maxW) * 100}%`, height: '100%', background: win ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 5 }}>
+                {Object.entries(c.scores).map(([k, v]) => <span key={k} style={{ fontSize: 9, color: 'var(--c-text3)' }}>{_ALLOC_FACTOR[k]} <strong style={{ color: 'var(--c-text2)' }}>{v}</strong></span>)}
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45, marginTop: 5 }}>{c.reason}</div>
+            </div>
+          )
+        })}
+      </div>
+      {/* Recommended allocation — where the £ actually goes */}
+      {r.allocation?.length > 0 && (
+        <div style={{ padding: '9px 11px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 8%, var(--c-surface))', border: '1px solid var(--c-acc)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--c-acc)', marginBottom: 6 }}>{r.allocation.length > 1 ? `Recommended split of your ${_gk(surplus)}/mo` : `Where to put your ${_gk(surplus)}/mo`}</div>
+          {r.allocation.map((a, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, marginBottom: 2 }}>
+              <span style={{ color: 'var(--c-text)' }}>{i + 1}. {a.name}</span>
+              <span style={{ color: 'var(--c-acc)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{_gk(a.amount)}/mo</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>{r.disclaimer}</div>
+    </div>
+  )
+}
+
+// "Am I OK right now?" rebuilt to the drawer bar (founder 2026-06-04: "apply
+// this logic to all tiles"). Leads with the net position + an INTERACTIVE
+// break-even model (trim spend / add income + a back-solve that closes the gap),
+// then COMPACT ROWS that open detail sub-drawers — replacing the old 8-card
+// static scroll. msNet = signed monthly net (surplus − deficit), engine-sourced.
+// Mini-visual primitives for the row faces (founder 2026-06-05: the plain rows
+// "don't feel as professional as the rest" — give each a real at-a-glance visual).
+const _Trk = ({ children, h = 7 }) => <div style={{ flex: 1, height: h, borderRadius: 5, background: 'var(--c-surface2)', overflow: 'hidden', display: 'flex' }}>{children}</div>
+const _SegBar = ({ pct, color }) => <div style={{ width: `${Math.max(0, Math.min(100, pct))}%`, height: '100%', background: color }} />
+const _SRC_COLORS = ['var(--c-acc)', 'var(--c-mint-text)', 'var(--c-amber-text)', 'var(--c-coral-text)', 'var(--c-text3)']
+function NowDrawer({ entity, incomeAll, ms, msNet, flow, accountantMode, lb, surplusAlloc, onSurplusBreakdown, onIncomeBreakdown }) {
+  const [openRow, setOpenRow] = useState(null)
+  const [trim, setTrim] = useState(0)     // £/mo spending cut (delta on engine baseline)
+  const [extra, setExtra] = useState(0)   // £/mo extra income (delta)
+  const income = Math.round(ms.income || 0)
+  const out = Math.round((ms.essential || 0) + (ms.committed || 0) + (ms.debtService || 0) + (ms.tax || 0))
+  const newNet = msNet + trim + extra
+  const deficit = Math.max(0, -msNet)
+  const maxTrim = Math.max(100, Math.round((ms.essential || 0) + (ms.committed || 0)))
+  const maxExtra = Math.max(500, income)
+  const essPct = income > 0 ? Math.round(((ms.essential || 0) / income) * 100) : null
+  const dirty = trim > 0 || extra > 0
+  const inDeficit = msNet < 0
+  // Row-face data (at-a-glance mini-visuals).
+  const _max = Math.max(income, out, 1)
+  const incomeSegs = (incomeAll?.items || []).slice().sort((a, b) => (b.amount || 0) - (a.amount || 0)).slice(0, 5)
+    .map((it, i) => ({ pct: (it.amount || 0) / Math.max(1, incomeAll?.total || income) * 100, color: _SRC_COLORS[i % 5] }))
+  const bm = lb?.months || 0
+  const bufColor = bm >= 6 ? 'var(--c-mint-text)' : bm >= 3 ? 'var(--c-amber-text)' : 'var(--c-coral-text)'
+  const rows = [
+    { key: 'flow', label: 'Where your money flows', stat: `${_gk(income)} in · ${_gk(out)} out`,
+      face: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 8, width: 20, color: 'var(--c-text3)', fontWeight: 700 }}>IN</span><_Trk><_SegBar pct={income / _max * 100} color="var(--c-mint-text)" /></_Trk></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ fontSize: 8, width: 20, color: 'var(--c-text3)', fontWeight: 700 }}>OUT</span><_Trk><_SegBar pct={out / _max * 100} color="var(--c-coral-text)" /></_Trk></div>
+        </div>
+      ), render: (
+      <>
+        <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
+        <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
+        <button onClick={onSurplusBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full surplus breakdown ›</button>
+      </>
+    ) },
+    { key: 'split', label: 'Essentials vs discretionary', stat: essPct != null ? `${essPct}% essential` : '—',
+      face: (
+        <div>
+          <_Trk><_SegBar pct={essPct || 0} color="var(--c-mint-text)" /><_SegBar pct={100 - (essPct || 0)} color="var(--c-amber-text)" /></_Trk>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: 'var(--c-text3)', marginTop: 2 }}><span style={{ color: 'var(--c-mint-text)' }}>essentials</span><span style={{ color: 'var(--c-amber-text)' }}>discretionary</span></div>
+        </div>
+      ), render: (
+      <>
+        <EssentialsDiscretionarySplit ms={ms} entity={entity} />
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 10, lineHeight: 1.5 }}>Subscriptions count toward essentials. Automatic detection arrives with Open Banking; until then they're inside the figures above.</div>
+      </>
+    ) },
+    { key: 'income', label: 'Income — by source & tax band', stat: `${_gk(incomeAll?.total || income)} · ${incomeAll?.items?.length || 0} src`,
+      face: (
+        <div>
+          <_Trk>{incomeSegs.map((s, i) => <_SegBar key={i} pct={s.pct} color={s.color} />)}</_Trk>
+          <div style={{ fontSize: 8, color: 'var(--c-text3)', marginTop: 2 }}>by income stream, biggest first</div>
+        </div>
+      ), render: (
+      <>
+        <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
+        <IncomeBreakdownByBand incomeAll={incomeAll} />
+        <button onClick={onIncomeBreakdown} className="sw-chip sw-chip-sm sw-press" style={{ marginTop: 10, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>Full income breakdown ›</button>
+      </>
+    ) },
+    { key: 'buffer', label: 'Your safety buffer', stat: lb?.months != null ? (lb.months >= 24 ? `${Math.round(lb.months / 12)}+ yrs` : `${Math.round(lb.months)} mo`) : '—',
+      face: (
+        <div style={{ position: 'relative' }}>
+          <_Trk><_SegBar pct={Math.min(100, bm / 12 * 100)} color={bufColor} /></_Trk>
+          <div style={{ position: 'absolute', left: '50%', top: -2, bottom: 6, width: 1, background: 'var(--c-text3)' }} />
+          <div style={{ fontSize: 8, color: 'var(--c-text3)', marginTop: 2 }}>{bm >= 6 ? 'covered' : `${Math.round(bm)} of 6-month target`} · marker = 6 mo</div>
+        </div>
+      ), render: <LiquidityBufferCard lb={lb} /> },
+    // 'What to do with your surplus' row REMOVED (agent D5, 2026-06-05): the lead
+    // now renders the full SurplusAllocationEngine for surplus personas, so this
+    // row was a faceless duplicate of it.
+  ]
+  const open = rows.find(r => r.key === openRow)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* LEAD — net position + interactive break-even */}
+      <div className="sw-card" style={{ padding: '14px 16px' }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: inDeficit ? 'var(--c-coral-text)' : msNet > 0 ? 'var(--c-mint-text)' : 'var(--c-text)' }}>
+          {inDeficit ? 'In deficit' : msNet > 0 ? 'In surplus' : 'Breaking even'} {_gk(Math.abs(msNet))}/mo
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5, marginTop: 3 }}>
+          {_gk(income)} comes in and {_gk(out)} goes out each month{inDeficit ? `, so you draw about ${_gk(deficit)}/mo from savings or pots to cover it.` : msNet > 0 ? `, leaving ${_gk(msNet)} spare.` : '.'}
+        </div>
+        <div style={{ marginTop: 10, display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', background: 'var(--c-surface2)' }}>
+          <div style={{ width: `${Math.min(100, Math.round((income / Math.max(1, income, out)) * 100))}%`, background: 'var(--c-mint-text)' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: 'var(--c-text3)', marginTop: 3 }}><span>in {_gk(income)}</span><span>out {_gk(out)}</span></div>
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--c-sep)', paddingTop: 10 }}>
+          {/* Engine-grade gap analysis (deficit) OR surplus-allocation engine
+              (surplus) — the symmetric "what do I DO" answer. Fed the LIVE
+              adjusted net (newNet = base + trim + extra) so dragging a fine-tune
+              lever updates the gap/allocation interactively (founder 2026-06-05:
+              "if I change extra income the allocation stays static — should be
+              interactive"). Render-gated on base msNet so the surface doesn't
+              swap mid-drag. */}
+          {inDeficit && <DeficitFixAnalysis ms={ms} msNet={newNet} lb={lb} />}
+          {!inDeficit && msNet > 0 && <SurplusAllocationEngine ms={ms} msNet={newNet} entity={entity} />}
+          {inDeficit && newNet >= 0 && (
+            <div style={{ padding: '9px 11px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 12%, var(--c-surface))', border: '1px solid var(--c-mint-text)', fontSize: 12, color: 'var(--c-text)', lineHeight: 1.5 }}>
+              With those changes you&rsquo;d be <strong style={{ color: 'var(--c-mint-text)' }}>{newNet > 0 ? `in surplus ${_gk(newNet)}/mo` : 'breaking even'}</strong> — the gap is closed. Open the levers below to see how.
+            </div>
+          )}
+          {/* Fine-tune — the manual levers, demoted below the recommendation. */}
+          <details style={{ marginTop: inDeficit ? 12 : 0 }}>
+            <summary style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', cursor: 'pointer' }}>Or fine-tune it yourself</summary>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', margin: '7px 0 7px' }}>New monthly position: <strong style={{ color: newNet >= 0 ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>{newNet >= 0 ? '+' : '−'}{_gk(Math.abs(newNet))}/mo</strong>{dirty && <button onClick={() => { setTrim(0); setExtra(0) }} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, fontSize: 11, padding: 0, marginLeft: 8 }}>reset</button>}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+              <SolverSlider label="Trim spending" value={trim} min={0} max={maxTrim} step={50} fmt={v => `−${_gk(v)}/mo`} onChange={setTrim} dirty={trim > 0} />
+              <SolverSlider label="Extra income" value={extra} min={0} max={maxExtra} step={50} fmt={v => `+${_gk(v)}/mo`} onChange={setExtra} dirty={extra > 0} />
+            </div>
+            {inDeficit && <button onClick={() => { setExtra(Math.min(deficit, maxExtra)); setTrim(0) }} className="sw-chip sw-chip-sm sw-chip-mint sw-press" style={{ marginTop: 8, cursor: 'pointer', fontWeight: 700 }}>↩ Back-solve: close the {_gk(deficit)}/mo gap</button>}
+          </details>
+        </div>
+      </div>
+      {/* COMPACT ROWS → detail sub-drawers. Each carries an at-a-glance mini-
+          visual on its face so it reads engine-grade before you tap (founder). */}
+      {rows.map(r => (
+        <button key={r.key} onClick={() => setOpenRow(r.key)} className="sw-lift sw-pressable" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8, textAlign: 'left', cursor: 'pointer', width: '100%', padding: '12px 14px', borderRadius: 12, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{r.label}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text2)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.stat}</div>
+            <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
+          </div>
+          {r.face && <div>{r.face}</div>}
+        </button>
+      ))}
+      {open && (
+        <DrillStackProvider>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ maxWidth: 760, margin: '0 auto', padding: '14px 16px 96px' }}>
+              <button onClick={() => setOpenRow(null)} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
+              <h2 style={{ fontSize: 21, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 14px' }}>{open.label}</h2>
+              <RevealStagger interval={60} startDelay={40}>{open.render}</RevealStagger>
+            </div>
+          </div>
+        </DrillStackProvider>
+      )}
+    </div>
+  )
+}
+
+export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, scenarioSeed, onScenarioSeedConsumed, onOpenDecision }) {
   // Back-routing (2026-05-28): if the user came from another screen (e.g.
   // MyMoney → Cashflow via section-nav chip), the back chevron should return
   // there, not jump to Home. Dashboard threads `onBack=goBack` which reads
@@ -1005,6 +1444,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   // unwired (standalone snap, deep-link entry, etc.).
   const goBackOrHome = onBack || onHome
   const [windowId, setWindowId] = useState('current-period')
+  // Decisions tab (founder 2026-06-06): minimal view-bar hosts a Decisions tab
+  // that swaps the body for the decision categories (chip style).
+  const [showDecisions, setShowDecisions] = useState(false)
   // F4 (2026-06-02): viewMode now reads the SHARED temporal store (useTemporalMode)
   // instead of a local useState, so the global tax-year/mode chip and the other
   // tabs stay in sync — previously Cashflow's Today/Future/Plan was an island.
@@ -1059,6 +1501,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     [entity, bv, cv]
   )
   const ms = useMemo(() => monthlySurplus(entity, CMA_BUNDLE), [entity, bv, cv])
+  // Net monthly position. monthlySurplus clamps surplus to ≥0 and routes the
+  // negative into `deficit`, so surplus − deficit is the true signed figure that
+  // reconciles with Home's deficit hero (same engine, was read off the wrong key).
+  const msNet = (+(ms?.surplus) || 0) - (+(ms?.deficit) || 0)
   // Canonical net-of-tax cashflow — single source for Sankey + waterfall so they
   // cannot diverge and tax & NI are real, never £0 (2026-06-02 correctness gate).
   const flow = useMemo(() => cashflowFlow(entity, CMA_BUNDLE), [entity, bv, cv])
@@ -1087,7 +1533,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     try {
       const spec = buildGoalSpec(entity)
       if (spec.branch !== 'decumulation') return null
-      return solveDecumulation({ entity, goalSpec: spec })
+      // perHolding: per-asset-class growth (cash ~3% vs equity ~6%) + per-line
+      // CGT (real embedded gain, not flat 0.4). Opt-in so test baselines stay
+      // flat; production uses the accurate engine.
+      return solveDecumulation({ entity, goalSpec: spec, opts: { perHolding: true } })
     } catch { return null }
   }, [entity, bv, cv])
   // Same target income + horizon the deterministic plan resolved, so the MC
@@ -1104,6 +1553,21 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     }
   }, [decSolve])
 
+  // Year-1 income range across the 5 pacing methods — drives the "How fast can
+  // I spend?" tile headline so it reads as a real spending range, not "5 methods".
+  const methodsRange = useMemo(() => {
+    if (!decSolve?.rankedPaths?.length) return null
+    try {
+      const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+      const ws = compareMethods({
+        portfolio, years: Math.max(1, (decSolve.inputs?.horizonAge || 95) - (decSolve.inputs?.currentAge || 65)),
+        growth: decSolve.inputs?.growth ?? 0.05, inflation: decSolve.inputs?.inflation ?? 0.025,
+        essentialsAnnual: Math.round((decSolve.inputs?.incomeTargetAnnual || 0) * 0.6), age: decSolve.inputs?.currentAge || 65,
+      }).map(m => m.year1Withdrawal || 0).filter(Boolean)
+      return ws.length ? { lo: Math.min(...ws), hi: Math.max(...ws) } : null
+    } catch { return null }
+  }, [decSolve])
+
   // 1000-run Monte Carlo per spec §5.4 / §5.5 (O-CF-RULES-01).
   const pos = useMemo(
     () => cf_probabilityOfSuccess(entity, CMA_BUNDLE, 1000, trajOpts),
@@ -1113,13 +1577,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
     () => cf_sequenceOfReturnsVulnerability(entity, CMA_BUNDLE, trajOpts),
     [entity, bv, cv, trajOpts]
   )
-  const gkPath = useMemo(
-    () => guytonKlingerPath(entity, trajOpts.horizonYears || 30, CMA_BUNDLE),
-    [entity, bv, cv, trajOpts]
-  )
 
   // ── §C DEPTH computations ──────────────────────────────────────────────
-  const coi = useMemo(() => totalCoI(entity, CMA_BUNDLE), [entity, bv, cv])
+  const coi = useMemo(() => { try { return totalCoI(entity, CMA_BUNDLE) || { total: 0, byDomain: {}, confidence: 'LOW' } } catch { return { total: 0, byDomain: {}, confidence: 'LOW' } } }, [entity, bv, cv])
   const coiVar = useMemo(() => coiCashflowVariants(entity), [entity, bv, cv])
   const prcPcc = useMemo(() => cf_prcPccSpread(entity), [entity, bv, cv])
   const reality = useMemo(
@@ -1133,6 +1593,25 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   const eff = useMemo(
     () => cf_portfolioEfficiency(entity, CMA_BUNDLE),
     [entity, bv, cv]
+  )
+
+  // §A "Now" section content — built here (parent scope: entity/incomeAll/ms/
+  // flow/accountantMode/surplusAlloc/lb/setDrillView all available) and passed
+  // as the 'now' question-tile's render-prop content, so the drill buttons keep
+  // working and nothing is re-typed.
+  const nowSectionContent = (
+    <NowDrawer
+      entity={entity}
+      incomeAll={incomeAll}
+      ms={ms}
+      msNet={msNet}
+      flow={flow}
+      accountantMode={accountantMode}
+      lb={lb}
+      surplusAlloc={surplusAlloc}
+      onSurplusBreakdown={() => setDrillView('surplus')}
+      onIncomeBreakdown={() => setDrillView('income')}
+    />
   )
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -1160,14 +1639,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
         <div style={S.headerTitle}>Cashflow</div>
-        <button
-          onClick={() => setAccountantMode(m => !m)}
-          className={`sw-chip sw-chip-sm sw-press ${accountantMode ? 'sw-chip-mint' : ''}`}
-          style={{ cursor: 'pointer', fontWeight: 700, letterSpacing: 0.4 }}
-          title="Toggle simple / accountant view"
-        >
-          {accountantMode ? 'P&L view' : 'Simple view'}
-        </button>
+        {/* P&L view toggle REMOVED (founder 2026-06-04 — "redundant"): the
+            accountant view is auto-inferred (inferAccountantMode) and the
+            waterfall already shows its own Simple/Accountant indicator, so a
+            floating top-level toggle was redundant chrome. */}
+        <div style={{ width: 1 }} />
       </div>
 
       {/* ── Scrollable body — STORY-FIRST ORDER (R3v2 founder direction 2026-05-26) ─
@@ -1180,25 +1656,53 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
            PRC/PCC moves to the engine-detail reveal at the bottom of the screen. */}
       <div style={S.body}>
 
-        {/* §0 — SECTION DRAWER (2026-05-28) — same 8-chip MoneyX nav that lives
-             on MyMoney. Founder direction: every MoneyX-family screen should
-             carry the same drawer so the user can pivot between Balance Sheet,
-             Income Statement, Cashflow, Tax, Protection, Business, Trusts and
-             Cost-of-inaction from any tab. Chips that lead off this screen call
-             onNav(route); the active chip (Cashflow) is filled accent. */}
-        <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} />
+        {/* Compact cross-screen nav (founder 2026-06-06) — restores reach to the
+            money sub-sections from Cashflow without the full chip strip the
+            founder removed 2026-06-04 (kept the clean top, fixed the dead-end). */}
+        <MoneyXDrawer entity={entity} activeRoute="flow" onNav={onNav} variant="compact" />
 
-        {/* §1 — Today / Future / Plan / What if — PRIMARY navigation chrome.
-            Moved to top of body (was mid-page round 7) so the user has the
-            time-axis context before reading any number. */}
-        <FadeInOnMount delay={20}>
+        {/* Minimal view-bar — Choices toggle only (founder 2026-06-06). The
+            Today/Future/Plan/What-if view modes are no-ops on Cashflow (the time +
+            scenario functions live inside the drawers), so they're hidden via
+            showViewModes={false} rather than shown as dead tabs (sweep #54). The
+            window row was already hidden (showWindowRow={false}, #55). */}
+        <div style={{ margin: '0 -16px' }}>
           <X28TopBar
             window={windowId}
             viewMode={viewMode}
             onWindowChange={setWindowId}
-            onViewModeChange={setViewMode}
+            onViewModeChange={(m) => { setShowDecisions(false); setViewMode(m) }}
+            rulesVersion={BRAND.rulesVersion}
+            dataDate={BRAND.dataDate}
+            showWindowRow={false}
+            showViewModes={false}
+            showDecisions
+            decisionsActive={showDecisions}
+            onDecisions={() => setShowDecisions(s => !s)}
           />
-        </FadeInOnMount>
+        </div>
+
+        {showDecisions ? (
+          <DecisionDrawers screen="flow" variant="chips" onOpen={onOpenDecision} heading="Choices you can make from Cashflow" />
+        ) : (<>
+
+        {/* §0 — STATEMENT STRIP (MoneyXDrawer) REMOVED from Cashflow (founder
+             decision 2026-06-04, locking a 3×-oscillating call). The Balance
+             Sheet / Income Statement / Tax / Protection / Trusts / Cost-of-
+             inaction cross-statement nav dominated the top of the tab (worst on
+             mobile, where it overflowed) and answered "why am I seeing Balance
+             Sheet on Cashflow?". Other statements are reachable via the sidebar
+             and contextual deep-links. Strip stays on the screens where it fits. */}
+
+        {/* §1 — Today/Future/Plan/What-if 4-way control REMOVED (founder
+            2026-06-05: "fold into drawers"). The control was decorative —
+            Future/Plan only showed "coming soon" and What-if was a SILENT
+            no-op (audit CF-01). The time + scenario functions already live
+            inside the drawers that own them: the income-network drawer has
+            retirement-age/growth projection sliders, and "What if markets
+            fall?" owns the scenario/stress lens. viewMode still exists in the
+            shared store for deep-link scenario seeds (below), just no longer
+            driven by a dead tab bar. */}
 
         {/* §2 — STORY BANNER — the 10-second answer.
             R3v2 (2026-05-26): real-answer card now computes a single sentence
@@ -1209,44 +1713,38 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             lb={lb}
             fr={fr}
             pos={pos?.pos ?? pos}
-            health={health}
+            fi={fi}
+            ms={ms}
+            decSolve={decSolve}
           />
         </FadeInOnMount>
 
-        {/* SequenceStressHero RELOCATED into §B (A3 calm-first): it now sits
-            under the funded-ratio anchor as the risk read, not as the doom
-            banner that opened the tab. (Was P13-3 IFA must-fix — still prominent
-            in §B, just no longer the very first thing the user sees.) */}
-
-        {/* §3 — Cashflow Health Score hero (band + 5 sub-scores with ⓘ tooltips). */}
-        <FadeInOnMount delay={100}>
-          <div style={{ position: 'relative' }}>
-            <CashflowHealthHero
-              health={health}
-              incomeAll={incomeAll}
-              ms={ms}
-              fr={fr}
-              entity={entity}
-            />
-            <button
-              onClick={() => setDrillView('health')}
-              className="sw-chip sw-chip-sm sw-press"
-              style={{
-                position: 'absolute', top: 14, right: 14,
-                cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                color: 'var(--c-acc)',
-              }}
-            >
-              Detail ›
-            </button>
+        {/* ── YOUR MONEY MAP — signature centrepiece (founder 2026-06-05) ──────
+            The money-flow Sankey was buried 3 levels deep (Am I OK now? → Where
+            your money flows → sub-drawer), so the tab "lacked visibility from the
+            start" and the most important diagram looked missing. Elevated to the
+            landing, under the answer band, above the tiles. Reconciled to
+            cashflowFlow (same source as the hero, waterfall, Home). Works for
+            every persona — accumulator (income → spend → surplus → savings) and
+            decumulator (incl. pot draws → income → spend). */}
+        <FadeInOnMount delay={90}>
+          <div className="sw-card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 2 }}>Your money map</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 8 }}>Where your money comes from, and where it goes — every figure traces to the same engine as the cards above.</div>
+            <CashflowMoneySankey entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} />
           </div>
         </FadeInOnMount>
 
-        {/* §4 — Monthly seasonality heatmap (depth visual). */}
-        <FadeInOnMount delay={140}>
-          <CashflowCalendarHeatmap entity={entity} />
-        </FadeInOnMount>
+        {/* Cashflow Health Score REMOVED (founder decision 2026-06-04): the
+            composite band needed an apology note ("reads Healthy but surplus is
+            £0") and blended accumulation metrics into a single number that
+            contradicted the hero. The "Am I OK right now?" tile owns that job
+            honestly and per-persona. CashflowHealthHero kept in-file for the
+            health drill only (reachable from that tile if ever wanted).
+
+            Monthly seasonality heatmap REMOVED: it rendered 12 identical green
+            bars ("all months surplus") — placeholder data with no real series,
+            and it contradicted the actual surplus. Real-or-nothing per §9. */}
 
         {/* Scenario seed banner — surfaces what the user asked us to model when
             they landed here via a TappableNumber "Tweak in scenario mode" link. */}
@@ -1254,23 +1752,9 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           <ScenarioSeedBanner seed={activeSeed} onDismiss={() => setActiveSeed(null)} />
         )}
 
-        {/* View-mode context chip — differentiates Today/Future/Plan visually.
-            Phase 2: remove once each mode branches to distinct content. */}
-        {viewMode !== 'scenario' && viewMode !== 'actual' && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '6px 16px',
-            background: 'var(--c-surface2)',
-            borderRadius: 'var(--r-md, 12px)',
-            fontSize: 11, fontWeight: 600, color: 'var(--c-text2)',
-            letterSpacing: '0.04em',
-            margin: '0 0 4px',
-          }}>
-            <span style={{ color: 'var(--c-acc)' }}>●</span>
-            {viewMode === 'forecast' && "Showing today's figures — forward-modelled spend isn't on this tab yet (coming soon). See Timeline for projections."}
-            {viewMode === 'plan'     && "Showing today's figures — plan-vs-actual variance isn't on this tab yet (coming soon)."}
-          </div>
-        )}
+        {/* View-mode "coming soon" context chip REMOVED with the 4-way control
+            (founder 2026-06-05). It only ever apologised for Future/Plan being
+            empty; with the control gone there's nothing to annotate. */}
 
         {/* View-mode + window aware container — re-key triggers reveal animations */}
         <div
@@ -1278,128 +1762,59 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
           className="sw-tab-slide"
           style={{ display: 'contents' }}
         >
-          {/* ════ SECTION A ════════════════════════════════════════════ */}
-          <SectionDelimiter
-            letter="A"
-            title="NOW · This month, this year"
-            subtitle="Where your money goes — and what's left."
-            chipClass="sw-chip-mint"
-          />
+          {/* WHOLE-TAB QUESTION-TILE GRID (redesign complete): §A "Now" + the
+              four trajectory tiles + §C "Costs" are now one adaptive grid, each
+              tile opening a full-screen page that renders the SAME components
+              (moved, not rewritten). The long A/B/C scroll the founder flagged
+              is gone; the headline band above answers "will my money last?". */}
+          {/* Life-stage is auto-detected and trusted; quiet one-line correction
+              only if the detection is wrong (replaces the old loud 3-chip bar). */}
+          <LifeStageCorrection entity={entity} />
 
-          <RevealStagger interval={60} startDelay={50}>
-            {/* v0.3 R3v2 SIGNATURE COMP — Money-in / Money-out Sankey.
-                Founder direction 2026-05-26: the screen owes a signature
-                story-comp showing where money comes from and where it goes.
-                The calendar heatmap was carrying the SIGNATURE tag in code
-                comments but failed the dataviz contract (decoration not data).
-                Sankey is the canonical R3 signature per route-3-cashflow.md §4.1. */}
-            <CashflowMoneySankey
-              entity={entity}
-              incomeAll={incomeAll}
-              ms={ms}
-              flow={flow}
-            />
-
-            {/* Phase 2 Batch C — new waterfall replaces local version.
-                MATH-01/02 fix: steps derived purely from engine; no hardcoded
-                fallbacks (£78k / £29k / etc removed — Mr T's real gross is
-                £67,420, was being masked by the magic numbers). Surplus is
-                arithmetic-computed from the deductions so the visible total
-                always reconciles. Empty state when engine returns no income. */}
-            <div style={{ position: 'relative' }}>
-              <CashflowWaterfallReconciled entity={entity} incomeAll={incomeAll} ms={ms} flow={flow} accountantMode={accountantMode} />
-              {/* L3 drill affordance — tap to open SurplusDrillPanel */}
-              <button
-                onClick={() => setDrillView('surplus')}
-                className="sw-chip sw-chip-sm sw-press"
-                style={{
-                  position: 'absolute', top: 14, right: 14,
-                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                  color: 'var(--c-acc)',
-                }}
-                title="Open full surplus breakdown"
-              >
-                Breakdown ›
-              </button>
-            </div>
-            <EssentialsDiscretionarySplit ms={ms} />
-            {/* Bill calendar removed 2026-06-02 — founder direction: scheduled
-                outflows / calendar live on Timeline (§C Action Calendar), not
-                Cashflow. The BillCalendar component is retained below for reuse
-                by Timeline but no longer rendered here. */}
-            <SubscriptionTracker entity={entity} />
-            <SurplusAllocator surplus={ms.surplus} deficit={ms.deficit} alloc={surplusAlloc} />
-            <LiquidityBufferCard lb={lb} />
-            {/* CAT-03: Domain O split — salary / dividends / rental /
-                drawdown / interest / pension. Sits ABOVE the tax-band
-                view so the user sees the source breakdown first. */}
-            <div style={{ position: 'relative' }}>
-              <IncomeBySourceCard entity={entity} incomeAll={incomeAll} />
-              <button
-                onClick={() => setDrillView('income')}
-                className="sw-chip sw-chip-sm sw-press"
-                style={{
-                  position: 'absolute', top: 14, right: 14,
-                  cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                  color: 'var(--c-acc)',
-                }}
-              >
-                Breakdown ›
-              </button>
-            </div>
-            <IncomeBreakdownByBand incomeAll={incomeAll} />
-          </RevealStagger>
-
-          {/* ════ SECTION B ════════════════════════════════════════════ */}
-          <SectionDelimiter
-            letter="B"
-            title="TRAJECTORY · This year to retirement"
-            subtitle="Will it last?"
-            chipClass="sw-chip-blue"
-          />
-          {/* A4 — pin the face (Building wealth / Drawing income) or leave Auto. */}
-          <LifeStageOverrideChip entity={entity} />
-
-          {/* §B is now four question-tiles, each opening a full-screen page that
-              renders the SAME components (moved, not rewritten). Kills the long
-              scroll the founder flagged; §A/§C migrate to the same grammar next. */}
           <CashflowTrajectoryTiles
             entity={entity}
             fr={fr}
             fi={fi}
             pos={pos}
             seqVuln={seqVuln}
-            gkPath={gkPath}
             swr={swr}
             swrRegime={swrRegime}
             setSwrRegime={setSwrRegime}
             decSolve={decSolve}
+            extraTiles={[
+              // §A "Now" → first tile (the whole NOW section moved intact).
+              { key: 'now', position: 'start', q: 'Am I OK right now?',
+                // Net = surplus − deficit. monthlySurplus clamps surplus to ≥0
+                // (negatives go to `deficit`), so reading `surplus` alone made
+                // everyone "In surplus £0". Net ties this tile to Home's deficit.
+                headline: (msNet > 0 ? 'In surplus' : msNet < 0 ? 'In deficit' : 'Breaking even'),
+                sub: `${msNet < 0 ? '−' : ''}${fmtSeedNum(Math.abs(msNet))}/mo · spend, buffer & income`,
+                tone: (msNet > 0 ? 'mint' : msNet < 0 ? 'coral' : 'acc'),
+                content: nowSectionContent },
+              // Methods → its own tile (decumulators with a solved plan only).
+              ...(decSolve?.rankedPaths?.length ? [{ key: 'methods', q: 'How fast can I spend?',
+                headline: methodsRange ? `${fmtSeedNum(methodsRange.lo)}–${fmtSeedNum(methodsRange.hi)}/yr` : 'Pace options',
+                sub: 'five ways to pace it — steady ↔ flexible', tone: 'acc',
+                content: (<MethodsComparison
+                  portfolio={(decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)}
+                  years={(decSolve.inputs?.horizonAge || 95) - (decSolve.inputs?.currentAge || 65)}
+                  growth={decSolve.inputs?.growth ?? 0.05}
+                  inflation={decSolve.inputs?.inflation ?? 0.025}
+                  essentialsAnnual={Math.round((decSolve.inputs?.incomeTargetAnnual || 0) * 0.6)}
+                  age={decSolve.inputs?.currentAge || 65}
+                  horizon={decSolve.inputs?.horizonAge || 95}
+                  primaryGoal={decSolve.binding?.primaryGoal || 'min_lifetime_tax'} />) }] : []),
+              // §C "Costs/Depth" → last tile (engine internals, always-open here).
+              { key: 'costs', q: "What's it costing?", headline: coi?.total ? `${fmtSeedNum(coi.total)}` : 'See depth',
+                sub: 'value at stake · charges · efficiency', tone: 'acc',
+                content: (<CostDrawer coi={coi} depth={<EngineInternalsReveal coi={coi} coiVar={coiVar} prcPcc={prcPcc} reality={reality} mdd={mdd} eff={eff} fi={fi} health={health} fr={fr} pos={pos} />} />) },
+            ]}
           />
 
-          {/* ════ SECTION C — ENGINE INTERNALS (collapsed by default) ═════════
-              R3v2 (2026-05-26): everything below this line is diagnostic /
-              power-user. It moves the methodology behind a single user toggle
-              so the screen reads as a story above, with the maths available
-              on demand. Founder direction: story first, methodology behind a
-              reveal.
-
-              The toggle uses local state on this component (re-mounts reset
-              to collapsed — by design; this is depth content, not state). */}
-          <EngineInternalsReveal
-            coi={coi}
-            coiVar={coiVar}
-            prcPcc={prcPcc}
-            reality={reality}
-            mdd={mdd}
-            eff={eff}
-            fi={fi}
-            health={health}
-            fr={fr}
-            pos={pos}
-          />
+          {/* §C engine internals moved into the 'costs' question-tile (extraTiles). */}
         </div>
+
+        </>)}
 
         {/* Disclaimer footer */}
         <div style={S.disclaimer}>
@@ -1419,10 +1834,11 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
 // "Show engine detail" toggle so the screen reads as a narrative above the
 // fold. Power users / IFA reviewers expand to see the methodology.
 
-function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, health, fr, pos }) {
-  const [open, setOpen] = useState(false)
+function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, health, fr, pos, alwaysOpen = false }) {
+  const [open, setOpen] = useState(!!alwaysOpen)
   return (
-    <div style={{ marginTop: 16 }}>
+    <div style={{ marginTop: alwaysOpen ? 0 : 16 }}>
+      {!alwaysOpen && (
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -1445,19 +1861,25 @@ function EngineInternalsReveal({ coi, coiVar, prcPcc, reality, mdd, eff, fi, hea
           {open ? 'Hide' : 'Show methodology'}
         </span>
       </button>
+      )}
       {open && (
         <div style={{ marginTop: 12 }}>
           <SectionDelimiter
             letter="C"
-            title="DEPTH · Analytical layer"
-            subtitle="Why it works — and what could break it. Diagnostic / power-user."
+            title="What waiting costs you"
+            subtitle="The price of leaving things as they are — and where charges quietly erode the plan."
             chipClass="sw-chip-violet"
           />
           <RevealStagger interval={60} startDelay={50}>
             <CoIOdometerWithHalo coi={coi} />
             <CfCoiVariantsCard coiVar={coiVar} />
-            <PrcPccStubCard prcPcc={prcPcc} />
-            <RealityEngineStubCard reality={reality} />
+            {/* PRC/PCC Spread + Reality Engine stub cards REMOVED from the user
+                surface (founder decision 2026-06-04). Both are founder-IP stubs
+                that rendered "methodology in progress" / "Experimental" to users
+                — engineer diagnostics, not a cost the user can act on. They live
+                in the engine (cf_prcPccSpread / cf_realityEngineFactorisation)
+                for when the methodology is defined; until then they don't face
+                users. O-CF-RULES-07 / O-CF-RULES-09. */}
             <MaxDrawdownCard mdd={mdd} />
             <EfficientFrontierV2
               userPosition={eff?.user_position || null}
@@ -1562,7 +1984,52 @@ function SubAnchor({ prcPcc }) {
 // v0.3 R3 fix (2026-05-26): purpose-statement was a floating question with
 // no answer next to it. The answer IS computable from runway + funded ratio
 // + PoS. Surface it inline so the user sees the headline take in 3 seconds.
-function PurposeStatement({ entity, lb, fr, pos, health }) {
+// ── Hero: TWO LENSES, clearly separated (founder decision 2026-06-04) ────────
+// The old single sentence welded two disagreeing numbers with "but" ("pots
+// stretch the full plan BUT cover only 48%") and never named WHY they differ.
+// They were never contradictory: `fundedRatio` counts INVESTABLE POTS ONLY
+// (excludes state pension + DB + annuities); `solveDecumulation` includes that
+// secure-income floor. The gap between them IS the secure income. So we show
+// two named lenses instead of one hedged line — never blended, never "but".
+//   Decumulator → Lens A "Your plan" (lived answer, incl. secure floor) ·
+//                 Lens B "If markets disappoint" (investment self-sufficiency)
+//   Accumulator → funded-ratio is the WRONG metric (it assumes zero future
+//                 saving), so Lens A "On track" (FI progress) · Lens B
+//                 "Resilience" (buffer + the surplus lever). No doom %.
+const HERO_TONE = {
+  good: 'var(--c-acc)', warn: '#FF9500', bad: 'var(--c-coral, #FF6F7D)', neutral: 'var(--c-text3)',
+}
+function HeroLens({ label, head, sub, tone = 'neutral', gauge = null, tieout }) {
+  const c = HERO_TONE[tone] || HERO_TONE.neutral
+  return (
+    <div data-tieout={tieout} style={{
+      flex: '1 1 240px', minWidth: 0,
+      padding: '12px 14px',
+      background: `color-mix(in srgb, ${c} 9%, var(--c-surface))`,
+      border: `1px solid color-mix(in srgb, ${c} 26%, transparent)`,
+      borderRadius: 'var(--r-md, 12px)',
+    }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: c, marginBottom: 5 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.32 }}>
+        {head}
+      </div>
+      {sub && (
+        <div style={{ fontSize: 11.5, color: 'var(--c-text3)', lineHeight: 1.45, marginTop: 5 }}>
+          {sub}
+        </div>
+      )}
+      {gauge != null && (
+        <div style={{ marginTop: 8, height: 6, borderRadius: 99, background: 'var(--c-surface2)', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.max(2, Math.min(100, Math.round(gauge * 100)))}%`, height: '100%', background: c, borderRadius: 99 }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve }) {
   // Runway months — prefer the liquidityBuffer engine answer; fall back to
   // cash ÷ essentials if needed.
   let runwayMo = +(lb?.months_covered ?? lb?.months ?? 0)
@@ -1579,65 +2046,113 @@ function PurposeStatement({ entity, lb, fr, pos, health }) {
       || 0)
     if (cashLike && mEss) runwayMo = Math.round(cashLike / mEss)
   }
-  const fundedRatio = +(fr?.funded_ratio ?? fr?.ratio ?? 0)
-  const posPct = pos != null ? Math.round((+pos) * 100) : null
-  const healthScore = +(health?.score ?? 0)
+  const stage = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
+  const isDecum = stage === 'decumulator' && !!decSolve?.rankedPaths?.length
 
-  // Compose the one-line answer. Three states with honest qualifiers.
-  let headline = 'Add income and essentials to see the answer.'
-  let tone = 'neutral'
-  if (runwayMo > 0 || fundedRatio > 0) {
-    if (runwayMo >= 24 && fundedRatio >= 0.85 && (posPct == null || posPct >= 75)) {
-      headline = 'On track. Cash buffer holds, plan is funded, and the long-run model is healthy.'
-      tone = 'good'
-    } else if (runwayMo < 6 || fundedRatio < 0.5) {
-      headline = runwayMo < 6
-        ? `Cash buffer covers ${runwayMo} month${runwayMo === 1 ? '' : 's'} of essentials. Plan is under-funded.`
-        : `Plan is under-funded — current trajectory covers ${Math.round(fundedRatio * 100)}% of target.`
-      tone = 'bad'
-    } else {
-      headline = `Buffer ${runwayMo}mo · plan ${Math.round(fundedRatio * 100)}% funded${posPct != null ? ` · PoS ${posPct}%` : ''}. Manageable, with attention points below.`
-      tone = 'warn'
+  const fundedRatioVal = +(fr?.ratio ?? 0) // canonical key is fr.ratio (funded_ratio never existed — wrong-key fallback removed)
+  const fundedPct = fundedRatioVal > 0 ? Math.round(fundedRatioVal * 100) : null
+  const swrPct = fr?.swr ? Math.round(fr.swr * 1000) / 10 : null
+  const posPct = pos != null ? Math.round((+pos) * 100) : null
+
+  let lensA, lensB, question
+  if (isDecum) {
+    const floor = decSolve.floor || {}
+    const inp = decSolve.inputs || {}
+    const target = inp.incomeTargetAnnual || fr?.target_income_real || 0
+    const secure = floor.grossAnnual || 0
+    // Tie out to the displayed target: residual = target − secure (gross basis),
+    // so "£31k secure + £65k pots" sums to the £96k target on screen. (floor.
+    // residualNeed is net-of-tax and wouldn't reconcile with the gross secure.)
+    const residual = Math.max(0, target - secure)
+    const lastsAge = decSolve.rankedPaths?.[0]?.depletedAtAge
+    const horizonAge = inp.horizonAge || null
+    question = 'Will your money last — and how much can you safely draw? Information only.'
+    // Lens A — the LIVED plan: includes the secure-income floor, so it's the
+    // complete answer ("lasts to X"), not the investments-only view.
+    lensA = {
+      label: 'Your plan',
+      tone: lastsAge ? (lastsAge >= 90 ? 'good' : lastsAge >= 80 ? 'warn' : 'bad') : 'good',
+      head: lastsAge
+        ? `Drawing ${fmtSeedNum(target)}/yr, your money lasts to age ${lastsAge}.`
+        : `Your ${fmtSeedNum(target)}/yr target holds${horizonAge ? ` through age ${horizonAge}` : ' for the full plan'} — your pots don’t run out.`,
+      sub: secure > 0
+        ? `${fmtSeedNum(secure)}/yr is secure income (state pension + DB); your pots supply the remaining ${fmtSeedNum(residual)}/yr.`
+        : 'Every pound comes from your pots — no guaranteed income floor is captured yet.',
+      tieout: 'cashflow.hero.plan',
+    }
+    // Lens B — investment self-sufficiency. The SAME funded ratio, but framed
+    // honestly: it's what your pots alone would cover; the gap is the secure
+    // income named in Lens A. Never welded to Lens A with "but".
+    lensB = {
+      label: 'If markets disappoint',
+      tone: fundedRatioVal >= 0.85 ? 'good' : fundedRatioVal >= 0.6 ? 'warn' : 'bad',
+      head: fundedPct != null
+        ? `Your investments alone fund ${fundedPct}% of the target.`
+        : 'Not enough investment data to stress-test.',
+      sub: fundedPct != null
+        ? `At a ${swrPct ?? 4}% safe-withdrawal rate your pots cover ${fundedPct}%; the rest leans on the secure income above.${posPct != null ? ` ${posPct}% of simulated markets sustain the full plan.` : ''}`
+        : '',
+      gauge: fundedPct != null ? fundedRatioVal : null,
+      tieout: 'cashflow.hero.resilience',
+    }
+  } else {
+    // Accumulator — funded-ratio assumes ZERO future saving, so it's the wrong
+    // verdict here (that's why "under-funded 36%" was nonsense for a 35-yo).
+    // Lens A = FI progress (a real current-state measure); Lens B = buffer +
+    // the monthly-surplus lever. No doom percentage.
+    const fiPct = fi?.ratio != null ? Math.round(fi.ratio * 100) : null
+    const fiMult = fi?.multiple ?? null
+    // monthlySurplus clamps surplus to ≥0 and puts the negative in `deficit`,
+    // so the true net is surplus − deficit. Reading `surplus` alone made every
+    // persona look like £0/"breaking even" (and Home, which reads the deficit,
+    // disagreed). Net reconciles the two tabs.
+    const surplusM = (+(ms?.surplus) || 0) - (+(ms?.deficit) || 0)
+    question = 'Are you saving enough, and on track for the life you want? Information only.'
+    lensA = {
+      label: 'On track',
+      tone: fiPct != null && fiPct >= 100 ? 'good' : fiPct != null && fiPct >= 40 ? 'warn' : 'neutral',
+      head: fiPct != null
+        ? (fiPct >= 100
+            ? `You’ve reached financial independence — ${fiMult}× your target spend.`
+            : `You’re ${fiPct}% of the way to financial independence.`)
+        : 'Add investments and a target to track financial independence.',
+      sub: fiPct != null
+        ? `Financial independence ≈ 25× your annual spend. You hold ${fiMult}× today — keep investing to close the gap.`
+        : '',
+      tieout: 'cashflow.hero.fi',
+    }
+    lensB = {
+      label: 'Resilience',
+      tone: runwayMo >= 6 ? 'good' : runwayMo >= 3 ? 'warn' : 'bad',
+      head: runwayMo > 0
+        ? `Your cash buffer covers ${runwayMo} month${runwayMo === 1 ? '' : 's'} of essentials.`
+        : 'No cash buffer captured yet.',
+      sub: surplusM > 0
+        ? `You’re saving about ${fmtSeedNum(surplusM)}/mo — the lever that compounds toward the goal.`
+        : surplusM < 0
+          ? `Spending exceeds income by ${fmtSeedNum(Math.abs(surplusM))}/mo — closing that gap is the first lever.`
+          : 'Monthly surplus is about £0 — nothing is being saved right now; that’s the lever to watch.',
+      tieout: 'cashflow.hero.resilience',
     }
   }
 
-  const toneColor = tone === 'good' ? 'var(--c-acc)'
-    : tone === 'warn' ? '#FF9500'
-    : tone === 'bad' ? 'var(--c-coral, #FF6F7D)'
-    : 'var(--c-text3)'
-
-  // Adaptive by life stage (Phase 2): a saver and a retiree are asking different
-  // questions of this tab. The hero question + chip reflect which one applies.
-  const stage = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
   const stageChip = stage === 'decumulator' ? 'Drawing income' : 'Building wealth'
-  const stageQuestion = stage === 'decumulator'
-    ? 'How much can you draw, for how long — and in the most tax-efficient way? Information only.'
-    : 'Are you saving enough — and is your plan on track for the life you want? Information only.'
 
   return (
-    <div style={S.purpose}>
-      {/* v0.3 R3v2 Frontend critique fix: answer FIRST, question second.
-          The headline IS the answer; the question is the sub-context. */}
-      <div style={{
-        padding: '10px 14px',
-        background: `color-mix(in srgb, ${toneColor} 10%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${toneColor} 24%, transparent)`,
-        borderRadius: 'var(--r-md)',
-        fontSize: 15, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.4,
-      }}>
-        {headline}
-        {healthScore > 0 && (
-          <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--c-text3)', fontWeight: 500 }}>
-            · Health {healthScore}/100
-          </span>
-        )}
+    <div style={{ ...S.purpose, textAlign: 'left' }}>
+      {/* TWO LENSES, never blended. Each owns its own number; Lens A's sub-line
+          names WHY the two views differ (the secure income), so they read as
+          complements, not the old self-contradicting "stretch ... but 48%". */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <HeroLens {...lensA} />
+        <HeroLens {...lensB} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <span className="sw-chip sw-chip-sm" data-tieout="cashflow.life-stage" style={{ fontWeight: 600 }}>
           {stageChip}
         </span>
         <div style={{ ...S.purposeLine2, fontSize: 11, color: 'var(--c-text3)' }}>
-          {stageQuestion}
+          {question}
         </div>
       </div>
     </div>
@@ -1847,11 +2362,29 @@ function ComponentRow({ label, value, tip }) {
 // migration + the headline-answer band (evolving PurposeStatement) follow.
 const CF_TILE_TITLES = {
   lastability: 'Will my money last?',
-  drawdown: 'How do I draw it down?',
-  resilience: 'What could break it?',
+  drawdown: 'Where my income comes from',
+  resilience: 'What if markets fall?',
   whatif: 'What would change it most?',
 }
-function QuestionTile({ q, headline, sub, tone, onClick }) {
+// Tile-face sparkline (balance-sheet grammar). Draws a real engine series only —
+// pass `spark` = [{balance|value}] with ≥2 points or it renders nothing (no
+// fabricated trend). `spark` carries a tone so depleting curves read coral.
+function TileSparkline({ pts, color }) {
+  const s = (pts || []).filter(p => p && (p.balance != null || p.value != null)).map(p => +(p.balance ?? p.value))
+  if (s.length < 2) return null
+  const W = 100, H = 26
+  const max = Math.max(...s, 1), min = Math.min(...s, 0)
+  const span = max - min || 1
+  const px = i => (i / (s.length - 1)) * W
+  const py = v => H - ((v - min) / span) * (H - 4) - 2
+  const d = s.map((v, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(v).toFixed(1)).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block', marginTop: 6 }} aria-hidden="true">
+      <path d={d} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+function QuestionTile({ q, headline, sub, tone, onClick, spark, teaser }) {
   const accent = tone === 'coral' ? 'var(--c-coral-text)' : tone === 'mint' ? 'var(--c-mint-text)' : 'var(--c-acc)'
   return (
     <button onClick={onClick} className="sw-card sw-lift sw-pressable" style={{
@@ -1861,42 +2394,164 @@ function QuestionTile({ q, headline, sub, tone, onClick }) {
       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text3)' }}>{q}</div>
       <div style={{ fontSize: 19, fontWeight: 800, color: accent, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{headline}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.4 }}>{sub}</div>}
-      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>View ›</div>
+      {spark && spark.length > 1 && <TileSparkline pts={spark} color={accent} />}
+      {/* Teaser — the reason to dig in (founder 2026-06-05: "encourage them to
+          dig deeper to get the answer they're looking for"). Says what's behind
+          the tile, so the click is earned, not blind. */}
+      {teaser && <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45 }}>{teaser}</div>}
+      <div style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--c-acc)' }}>{teaser ? 'Dig in ›' : 'View ›'}</div>
     </button>
   )
 }
-function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, swrRegime, setSwrRegime, decSolve }) {
+// What each tile reveals — the promise that earns the tap. Keyed by tile.key.
+const TILE_TEASER = {
+  now: 'Inside: your live surplus or deficit, what’s driving it, and the first move that closes the gap.',
+  drawdown: 'Inside: how today’s pots turn into a retirement income — drag your retirement age and growth to test it.',
+  lastability: 'Inside: how close you are to never needing to work, and what gets you there sooner.',
+  costs: 'Inside: what tax, fees and inaction quietly cost you — ordered by deadline.',
+  resilience: 'Inside: how a bad market run would hit you, and whether your buffer holds.',
+  whatif: 'Inside: every lever you control, ranked by how much it moves your future.',
+  methods: 'Inside: five ways to turn pots into a paycheck, compared side by side.',
+}
+// Tile priority — problem-first, left→right by decision importance (founder
+// 2026-06-05): what’s wrong now → the income plan → progress → cost → risk → levers.
+const TILE_ORDER = { now: 0, drawdown: 1, lastability: 2, methods: 3, costs: 4, resilience: 5, whatif: 6 }
+function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, swr, swrRegime, setSwrRegime, decSolve, extraTiles = [] }) {
   const [open, setOpen] = useState(null)
   const ratio = +(fr?.ratio || fr?.value || 0)
   const lastsAge = decSolve?.rankedPaths?.[0]?.depletedAtAge
   const routeName = decSolve?.rankedPaths?.[0]?.name
   const sev = seqVuln?.severity || seqVuln?.level
-  const tiles = [
-    { key: 'lastability', q: 'Will my money last?', headline: ratio ? `${ratio.toFixed(2)}×` : '—', sub: lastsAge ? `funded ratio · to age ${lastsAge}` : 'funded ratio', tone: ratio >= 1 ? 'mint' : 'coral' },
-    { key: 'drawdown', q: 'How do I draw it down?', headline: decSolve ? (routeName || 'Your plan') : 'Building wealth', sub: decSolve ? (lastsAge ? `lasts to age ${lastsAge}` : 'ranked plan + map') : 'progress to FI', tone: 'acc' },
-    { key: 'resilience', q: 'What could break it?', headline: sev ? String(sev) : 'Stress test', sub: 'sequence & market risk', tone: 'acc' },
-    { key: 'whatif', q: 'What would change it most?', headline: 'Model levers', sub: 'what-if & goal-seek', tone: 'acc' },
+  // Adaptive face — three states: a decumulator WITH a solved plan asks "how do
+  // I draw it down?"; a decumulator with NO target income (no routes) is prompted
+  // to set one; an accumulator asks "am I on track?". Gate on rankedPaths so the
+  // tile matches the drawer, never claiming a plan that isn't there.
+  const isDecum = !!(decSolve?.rankedPaths?.length)
+  let decumStage = false
+  try { decumStage = inferLifeStage(entity) === 'decumulator' } catch { decumStage = false }
+  const fiPct = fi?.ratio != null ? Math.round(fi.ratio * 100) : null
+  // planAge = when pots deplete, or the plan horizon when they never do — so the
+  // tile says "To age 95" in step with the hero, not the bare "0.48×" funded
+  // ratio (which keys off depletedAtAge and is null when pots hold).
+  const planAge = lastsAge || decSolve?.inputs?.horizonAge || null
+  // Sustainability tile is ADAPTIVE — one tile, not two. Decumulators ask "will
+  // it last" (plan answer + funded stress); accumulators ask "am I on track"
+  // (FI progress, NOT funded-ratio doom). This kills the duplicate funded/FI
+  // pair the founder flagged ("Will my money last 0.36×" beside "Building
+  // wealth"). Both drill to the same lastability panel.
+  const sustainTile = isDecum
+    ? { key: 'lastability', q: 'Will my money last?', headline: planAge ? `To age ${planAge}` : (ratio ? `${ratio.toFixed(2)}×` : '—'),
+        sub: ratio ? `plan + ${Math.round(ratio * 100)}% funded on investments` : 'your plan + market stress', tone: (planAge ? planAge >= 90 : ratio >= 1) ? 'mint' : 'coral' }
+    : { key: 'lastability', q: 'Am I on track? (FI)', headline: fiPct != null ? (fiPct >= 100 ? 'On track' : `${fiPct}% to FI`) : '—',
+        sub: 'progress to financial independence', tone: (fiPct != null && fiPct >= 100) ? 'mint' : 'acc' }
+  // Drawdown tile only for decumulators — for an accumulator it would open an
+  // empty ScenarioForwardSummary (decSolve is null → the panel returns null).
+  // That empty-drawer bug is why the accumulator face must not show this tile.
+  // Name by the user's GOAL (turn savings into income), never the engine's chosen
+  // mechanism. "Pension-first sequence" was the solver's OUTPUT as a tile name —
+  // exactly what every adviser source avoids ("where does your paycheck come
+  // from", not "pension-first"). The order + its reasoning live INSIDE the drawer.
+  // The tile answers "where does my income COME FROM" — so the headline is the
+  // SOURCE SPLIT (guaranteed + pots), NOT the target spend. Showing the £96k
+  // target here was wrong: it's the input, not the answer, and it duplicated the
+  // hero. £47k secure + £49k pots = the £96k, but framed as "where from".
+  const targetInc = decSolve?.inputs?.incomeTargetAnnual || 0
+  const secureInc = decSolve?.floor?.grossAnnual || 0
+  const fromPots = Math.max(0, targetInc - secureInc)
+  // Accumulator forward-income headline — today's pots projected to retirement and
+  // converted at the SWR, plus the State Pension floor. Mirrors AccumIncomeNetwork
+  // so the tile face matches the drawer. (Mr T has no decSolve, so this is his
+  // "where my income comes from".)
+  const accumIncome = useMemo(() => {
+    try {
+      const c = extractAccumulationContext(entity)
+      if (!c) return null
+      const years = Math.max(0.5, (c.retirementAge || 67) - (c.age || 45))
+      const g = c.growth || 0.05, swr = TAX?.swr || 0.04
+      const pots = ['pension', 'isa', 'gia'].reduce((s, k) => {
+        const mo = k === 'pension' ? (c.monthlyContribution || 0) : 0
+        return s + _fvAccum(c.pots[k] || 0, mo, years, g)
+      }, 0)
+      const spRaw = entity?.income?.statePension
+      const sp = +(spRaw?.annual ?? (typeof spRaw === 'number' ? spRaw : 0)) || +(TAX?.statePensionFull || 0)
+      const total = pots * swr + sp
+      return { total, retAge: c.retirementAge || 67, hasData: pots > 0 || sp > 0 }
+    } catch { return null }
+  }, [entity])
+  const drawdownTile = isDecum
+    ? { key: 'drawdown', q: 'Where my income comes from',
+        headline: secureInc ? `${fmtSeedNum(secureInc)} + ${fmtSeedNum(fromPots)}` : (targetInc ? `${fmtSeedNum(targetInc)}/yr` : 'Your income plan'),
+        sub: secureInc ? 'secure income + your pots, tax-smart order' : 'a tax-smart order across your pots', tone: 'acc' }
+    : decumStage
+      ? { key: 'drawdown', q: 'Where my income comes from', headline: 'Set a target', sub: 'add a target income to plan it', tone: 'acc' }
+      : (accumIncome?.hasData
+        ? { key: 'drawdown', q: 'Where my income will come from',
+            headline: `${fmtSeedNum(accumIncome.total)}/yr`,
+            sub: `your pots projected to age ${accumIncome.retAge}, plus State Pension`, tone: 'acc' }
+        : null)
+  // Tile-face sparklines — REAL engine series only (balance-sheet grammar, P4-04).
+  // Lastability: the pot trajectory (depletion for decum, accumulation for accum).
+  // Resilience: the Monte-Carlo median pot path. Others have no honest single
+  // series, so they carry none (no fabricated trend).
+  const lastSpark = useMemo(() => {
+    try {
+      if (isDecum) {
+        const inp = decSolve.inputs || {}; const a0 = inp.currentAge || 65
+        const hz = Math.max((inp.horizonAge || 95) + 5, 105)
+        const pf = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+        if (!(pf > 0)) return null
+        const mid = recommendMethodForGoal(decSolve.binding?.primaryGoal || 'min_lifetime_tax')
+        return methodPath(mid, { portfolio: pf, years: hz - a0, growth: inp.growth ?? 0.05, inflation: inp.inflation ?? 0.025, essentialsAnnual: Math.round((inp.incomeTargetAnnual || 0) * 0.6), age: a0 })
+      }
+      if (fi?.fiTarget) {
+        const a0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+        const invested = Math.round((fi.fiTarget || 0) * (fi.ratio || 0))
+        const sv = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); return Math.max(0, ((+(m?.surplus) || 0) - (+(m?.deficit) || 0)) * 12) } catch { return 0 } })()
+        return accumProjection({ pot: invested, annualSaving: sv, growth: 0.05, age0: a0, years: Math.min(50, 100 - a0) })
+      }
+    } catch { /* */ }
+    return null
+  }, [entity, decSolve, fi, isDecum])
+  const resSpark = (pos && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1)
+    ? pos.per_year_percentiles.map(p => ({ value: p.p50 })) : null
+  const baseTiles = [
+    { ...sustainTile, spark: lastSpark },
+    ...(drawdownTile ? [drawdownTile] : []),
+    { key: 'resilience', q: 'What if markets fall?', headline: sev ? `${sev} exposure` : 'Stress-tested', sub: 'a bad run of markets early on', tone: 'acc', spark: resSpark },
+    { key: 'whatif', q: 'What would change it most?', headline: 'Top levers', sub: 'rank the levers by impact', tone: 'acc' },
   ]
+  // Whole-tab grid: §A "now" tiles first, the trajectory four, then §C "costs"
+  // (and methods) last — each extra tile carries its own render-prop content.
+  const startTiles = extraTiles.filter(t => t.position === 'start')
+  const endTiles = extraTiles.filter(t => t.position !== 'start')
+  // Problem-first ordering by decision importance, not source array (founder
+  // 2026-06-05: tiles "were just there", not ordered). Sort the combined set by
+  // TILE_ORDER so it reads now → income → on-track → cost → risk → levers.
+  const tiles = [...startTiles, ...baseTiles, ...endTiles]
+    .sort((a, b) => (TILE_ORDER[a.key] ?? 99) - (TILE_ORDER[b.key] ?? 99))
+  const openTile = tiles.find(t => t.key === open)
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} onClick={() => setOpen(t.key)} />)}
+        {tiles.map(t => <QuestionTile key={t.key} q={t.q} headline={t.headline} sub={t.sub} tone={t.tone} spark={t.spark} teaser={TILE_TEASER[t.key]} onClick={() => setOpen(t.key)} />)}
       </div>
       {open && (
         <DrillStackProvider>
           <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div style={{ maxWidth: 760, margin: '0 auto', padding: '14px 16px 96px' }}>
               <button onClick={() => setOpen(null)} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Back</button>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{CF_TILE_TITLES[open]}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 16px' }}>{openTile?.q || CF_TILE_TITLES[open]}</h2>
               <RevealStagger interval={60} startDelay={40}>
-                {open === 'lastability' && <>
-                  <FundedRatioGaugeV2 ratio={+(fr?.ratio || fr?.value || 1.0)} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
-                  <SwrRegimePicker regime={swrRegime} onChange={setSwrRegime} swr={swr} />
-                  <FiProgressTile fi={fi} />
-                </>}
-                {open === 'drawdown' && <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />}
-                {open === 'resilience' && <>
+                {openTile?.content || null}
+                {open === 'lastability' && <LastabilityDrawer entity={entity} decSolve={decSolve} fr={fr} fi={fi} />}
+                {open === 'drawdown' && (isDecum
+                  ? <ScenarioMatrixWithRecompute entity={entity} decSolve={decSolve} />
+                  : <AccumIncomeNetwork entity={entity} />)}
+                {open === 'resilience' && (isDecum ? <>
+                  {/* Decumulator: the drawdown sits in markets — sequence-risk story,
+                      interactive crash explorer, then the engine's Monte-Carlo range. */}
                   <SequenceStressHero entity={entity} seqVuln={seqVuln} />
+                  <StressExplorer decSolve={decSolve} />
                   {pos && !pos.insufficient_data && Array.isArray(pos.per_year_percentiles) && pos.per_year_percentiles.length > 1 && (() => {
                     const startYear = new Date().getFullYear()
                     const pyp = pos.per_year_percentiles
@@ -1908,9 +2563,13 @@ function CashflowTrajectoryTiles({ entity, fr, fi, pos, seqVuln, gkPath, swr, sw
                     </>)
                   })()}
                   {seqVuln && seqVuln.good_path && seqVuln.bad_path && !seqVuln.insufficient_data && <SequenceStressVisV2 goodSequence={seqVuln.good_path} badSequence={seqVuln.bad_path} horizonYears={seqVuln.horizon_years || 30} />}
-                  <GuytonKlingerCorridor path={gkPath} />
-                </>}
-                {open === 'whatif' && <GoalSeekCard entity={entity} />}
+                </> : <>
+                  {/* Accumulator: not drawing yet, so the decumulation success-probability
+                      simulation (which read a contradictory "0% / plan survives") does NOT
+                      apply. The real risk is a crash WHILE saving delaying FI. (D1 fix.) */}
+                  <StressExplorerAccum entity={entity} fi={fi} />
+                </>)}
+                {open === 'whatif' && <LeversCard entity={entity} decSolve={decSolve} fi={fi} />}
               </RevealStagger>
             </div>
           </div>
@@ -1938,42 +2597,48 @@ function SectionDelimiter({ letter, title, subtitle, chipClass = 'sw-chip-mint' 
   )
 }
 
-// A4 — manual life-stage override. The §B face is inferred (inferLifeStage),
-// but "not everyone wants a drawdown" — the user can pin it. Commits a
-// PREFERENCE_SET event → folds into entity.preferences.lifeStageOverride, which
-// inferBranch/inferLifeStage already read, so the drawdown plan card flips to
-// the FI face (and back) on the next fold. Two real branches only (the engine
-// knows accumulator/decumulator) + Auto — no cosmetic 4th option. Preserve/
-// legacy intent lives in the drawdown plan's priority reorder, not here.
-function LifeStageOverrideChip({ entity }) {
+// Life-stage CORRECTION (redesigned 2026-06-05, founder: the old 3-chip "This
+// view: Auto / Building wealth / Drawing income" bar was loud jargon for a
+// once-in-a-lifetime fact, mislabelled a "view" when it actually persists into the
+// engine app-wide). Now: trust the detection, state it in ONE quiet line, and only
+// if it's wrong reveal a plain real-world question. The choice persists (it's a
+// fact about you), and we say so — it changes how every screen models you.
+function LifeStageCorrection({ entity }) {
   const { commit } = useEvents()
   const pid = entity?.id || entity?.personaId
   const override = entity?.preferences?.lifeStageOverride || null
   const inferred = (() => { try { return inferLifeStage(entity) } catch { return 'accumulator' } })()
-  const set = (val) => { if (pid) commit(pid, { type: EV.PREFERENCE_SET, ts: Date.now(), payload: { lifeStageOverride: val } }) }
-  const seg = (val, label) => {
+  const effective = override || inferred
+  const [open, setOpen] = useState(false)
+  const set = (val) => { if (pid) commit(pid, { type: EV.PREFERENCE_SET, ts: Date.now(), payload: { lifeStageOverride: val } }); setOpen(false) }
+  const phrase = (s) => s === 'decumulator' ? 'drawing an income in retirement' : 'still building toward retirement'
+
+  if (!open) return (
+    <div style={{ fontSize: 11.5, color: 'var(--c-text3)', lineHeight: 1.5, margin: '2px 0 12px' }}>
+      Set up for someone <strong style={{ color: 'var(--c-text2)' }}>{phrase(effective)}</strong>{override ? ' — your choice' : ''}.{' '}
+      <button onClick={() => setOpen(true)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--c-acc)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>Not right?</button>
+    </div>
+  )
+  const opt = (val, label, sub) => {
     const isOn = val === null ? !override : override === val
     return (
-      <button key={val || 'auto'} onClick={() => set(val)} className="sw-press"
-        style={{ padding: '4px 11px', borderRadius: 'var(--r-pill, 999px)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-          border: isOn ? '1px solid var(--c-acc)' : '1px solid var(--c-border)',
-          background: isOn ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'transparent',
-          color: isOn ? 'var(--c-acc)' : 'var(--c-text3)' }}>
-        {label}
+      <button onClick={() => set(val)} className="sw-pressable" style={{ display: 'block', textAlign: 'left', width: '100%', padding: '8px 10px', borderRadius: 9, cursor: 'pointer',
+        border: isOn ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)', background: isOn ? 'color-mix(in srgb, var(--c-acc) 10%, transparent)' : 'var(--c-surface)' }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)' }}>{label}{isOn && ' ✓'}</span>
+        <span style={{ display: 'block', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1 }}>{sub}</span>
       </button>
     )
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', margin: '2px 0 12px' }}>
-      <span style={{ fontSize: 10, color: 'var(--c-text3)', fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>This view:</span>
-      {seg(null, 'Auto')}
-      {seg('accumulator', 'Building wealth')}
-      {seg('decumulator', 'Drawing income')}
-      {!override && (
-        <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>
-          detected: {inferred === 'decumulator' ? 'drawing income' : 'building wealth'}
-        </span>
-      )}
+    <div className="sw-card" style={{ padding: '12px 14px', margin: '2px 0 12px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', marginBottom: 2 }}>Have you started taking a regular income from your pensions or investments?</div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.5 }}>This sets whether Sonuswealth plans for you as <em>building wealth</em> or <em>drawing it down</em> — and it changes every screen, not just this one.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {opt('decumulator', "Yes — I'm drawing an income", 'Show my drawdown plan and how long it lasts')}
+        {opt('accumulator', 'No — still building', 'Show my progress to financial independence')}
+        {opt(null, 'Let Sonuswealth decide', `Auto from your data — currently: ${phrase(inferred)}`)}
+      </div>
+      <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', padding: '8px 0 0', color: 'var(--c-text3)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
     </div>
   )
 }
@@ -2083,13 +2748,16 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, flow, accountantMo
 // not by reviving this dead function.
 
 // ── §A.2 Essentials vs Discretionary (§4.4) ─────────────────────────────
-function EssentialsDiscretionarySplit({ ms }) {
+function EssentialsDiscretionarySplit({ ms, entity }) {
   const essentialsPct = (ms?.income || 0) > 0
     ? Math.min(100, Math.round(((ms?.essential || 0) / ms.income) * 100))
     : 0
-  // ONS Living Costs and Food Survey 2022-23, Table A6 — UK households aged 45-54,
-  // essential spend as % of disposable income.
-  const cohortMedian = 58 // Source: ONS
+  // ONS Living Costs and Food Survey 2022-23, Table A6 — essential spend as % of
+  // disposable income for UK households aged 45-54. We only surface it to users in
+  // that band — no fabricated benchmark for other ages.
+  const cohortMedian = 58
+  const cohortAge = (() => { try { return calcAge(entity) } catch { return null } })()
+  const showCohort = cohortAge != null && cohortAge >= 45 && cohortAge <= 54
   const colour = essentialsPct >= 70 ? 'var(--c-coral-text)'
               : essentialsPct >= 60 ? 'var(--c-amber-text)'
               : 'var(--c-mint-text)'
@@ -2114,8 +2782,8 @@ function EssentialsDiscretionarySplit({ ms }) {
         <div className="fill" style={{ width: `${essentialsPct}%`, background: colour }} />
       </div>
       <div style={S.implication}>
-        UK 45-54 cohort median: {cohortMedian}% (Source: ONS Living Costs and Food Survey).
-        {essentialsPct >= 70 && ' If essentials exceed 70%, a single income shock creates a cashflow gap within weeks.'}
+        {showCohort && `UK 45-54 cohort median: ${cohortMedian}% (Source: ONS Living Costs and Food Survey). `}
+        {essentialsPct >= 70 && 'If essentials exceed 70%, a single income shock creates a cashflow gap within weeks.'}
       </div>
     </div>
   )
@@ -2373,7 +3041,7 @@ function LiquidityBufferCard({ lb }) {
   )
 }
 
-// ── §A.7a Income by source — Domain O split (CAT-03) ────────────────────
+// ── §A.7a Income by source (reconciled to canonical incomeAll.items) ────────
 // Spec §4.3: split income into salary / dividends / rental / drawdown /
 // interest / pension instead of presenting a single income band. Reads
 // entity.income (array or object shape) and groups by canonical source.
@@ -2410,23 +3078,21 @@ function classifyIncomeSource(rawType) {
   return 'other'
 }
 function IncomeBySourceCard({ entity, incomeAll }) {
-  const inc = entity?.income
-  const incomeArr = Array.isArray(inc)
-    ? inc
-    : (inc && typeof inc === 'object')
-      ? Object.entries(inc).map(([type, amount]) => ({ type, amount }))
-      : []
-  // Group annual amounts.
+  // RECONCILIATION FIX (agent D1/D2, 2026-06-05): this card used to re-parse
+  // entity.income raw, which double-counted / mis-read object fields and summed
+  // to ~3× the real gross (Mr T £252k vs £79k) while dumping £124k into "Other".
+  // Drive it from the CANONICAL incomeAll.items — the same source the row face,
+  // the tax-band breakdown, and the money-map Sankey all use — so it ties out.
   const buckets = {}
-  for (const row of incomeArr) {
+  for (const row of (incomeAll?.items || [])) {
     const src = classifyIncomeSource(row?.type)
-    const amount = +(row?.annual ?? row?.amount ?? row?.monthly_amount * 12 ?? 0)
+    const amount = +(row?.amount ?? row?.annual ?? 0)
     if (!amount) continue
     buckets[src] = (buckets[src] || 0) + amount
   }
   const entries = Object.entries(buckets).sort((a, b) => b[1] - a[1])
   const total = entries.reduce((s, [, v]) => s + v, 0)
-    || +(incomeAll?.gross_annual ?? incomeAll?.total ?? 0)
+    || +(incomeAll?.total ?? incomeAll?.gross_annual ?? 0)
 
   if (entries.length === 0) {
     return (
@@ -2451,7 +3117,6 @@ function IncomeBySourceCard({ entity, incomeAll }) {
     <div className="sw-card sw-lift" style={S.card}>
       <div style={S.cardHeader}>
         <div style={S.cardTitle}>Income by source</div>
-        <span className="sw-chip sw-chip-sm">Domain O</span>
       </div>
       <div style={{
         marginTop: 'var(--space-md)', display: 'flex',
@@ -2878,61 +3543,10 @@ function SequenceOfReturnsCard({ seqVuln }) {
   )
 }
 
-// ── §B.7 Guyton-Klinger corridor (§5.7) — DrawSVG envelope ─────────────
-function GuytonKlingerCorridor({ path }) {
-  if (!path || path.length === 0) {
-    return (
-      <div className="sw-card sw-lift" style={S.card}>
-        <div style={S.cardTitle}>Dynamic guardrails corridor (Guyton-Klinger)</div>
-      </div>
-    )
-  }
-  const W = 320, H = 110, pL = 40, pR = 8, pT = 10, pB = 22
-  const pw = W - pL - pR, ph = H - pT - pB
-  const maxBal = Math.max(...path.map(p => p.balance), 1)
-  const px = i => pL + (i / Math.max(1, path.length - 1)) * pw
-  const py = v => pT + ph - (v / maxBal) * ph
-  const d = path.map((p, i) =>
-    (i === 0 ? 'M' : 'L') + px(i).toFixed(1) + ',' + py(p.balance).toFixed(1)
-  ).join(' ')
-  // Build the ±20% corridor envelope around the median path
-  const upper = path.map((p, i) =>
-    (i === 0 ? 'M' : 'L') + px(i).toFixed(1) + ',' + py(p.balance * 1.2).toFixed(1)
-  ).join(' ')
-  const lower = path.map((p, i) =>
-    (i === 0 ? 'M' : 'L') + px(i).toFixed(1) + ',' + py(p.balance * 0.8).toFixed(1)
-  ).join(' ')
-  const raises = path.filter(p => p.rule === 'prosperity').length
-  const cuts = path.filter(p => p.rule === 'preservation').length
-
-  return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Dynamic guardrails corridor (Guyton-Klinger)</div>
-        <span className="sw-chip sw-chip-sm">±20% triggers</span>
-      </div>
-      <DrawSVG duration={1100}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{
-          display: 'block', marginTop: 'var(--space-sm)',
-        }}>
-          <path d={upper} fill="none" stroke="var(--c-tint-mint-2)" strokeWidth="1" strokeDasharray="2 3" />
-          <path d={lower} fill="none" stroke="var(--c-tint-mint-2)" strokeWidth="1" strokeDasharray="2 3" />
-          <path d={d} fill="none" stroke="var(--c-mint-text)" strokeWidth="2" />
-          {path.map((p, i) =>
-            p.rule === 'prosperity' ? (
-              <circle key={i} cx={px(i)} cy={py(p.balance)} r="3" fill="var(--c-mint-text)" />
-            ) : p.rule === 'preservation' ? (
-              <circle key={i} cx={px(i)} cy={py(p.balance)} r="3" fill="var(--c-coral-text)" />
-            ) : null
-          )}
-        </svg>
-      </DrawSVG>
-      <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
-        Expected over {path.length}y: {raises} raises · {cuts} cuts.
-      </div>
-    </div>
-  )
-}
+// GuytonKlingerCorridor REMOVED 2026-06-05 — it drew a FABRICATED ±20% envelope
+// (balance*1.2 / *0.8), not engine uncertainty, with unlabelled axes (P4-06).
+// Replaced by StressExplorer (adjustable single-shock) + the real Monte-Carlo
+// p10–p90 band. gkPath / guytonKlingerPath dropped with it.
 
 // ── Scenario matrix wrapper with real selection state (STUB-02) ────────
 // Tracks active scenario in local state so onSelect actually does work;
@@ -2970,6 +3584,7 @@ const _POTS = [
   { key: 'pension', label: 'Pension', color: 'var(--c-acc)' },
 ]
 function DepletionCurve({ schedule, depletedAtAge }) {
+  const [sel, setSel] = useState(null) // tapped point index → per-pot balances (drill)
   const pts = (schedule || []).filter(r => r && r.potsEnd)
   if (pts.length < 2) return null
   const maxV = Math.max(...pts.map(r => r.potsTotal || 0), 1) * 1.05
@@ -3026,8 +3641,34 @@ function DepletionCurve({ schedule, depletedAtAge }) {
                   textAnchor={k === 0 ? 'start' : k === xTickIdx.length - 1 ? 'end' : 'middle'}>age {ageOf(i)}</text>
           ))}
           <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+          {/* Selected-age marker (drill) */}
+          {sel != null && pts[sel] && (
+            <g pointerEvents="none">
+              <line x1={px(sel)} y1={pT} x2={px(sel)} y2={pT + ph} stroke="var(--c-acc)" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.85" />
+              <circle cx={px(sel)} cy={py(pts[sel].potsTotal || 0)} r="3.5" fill="var(--c-acc)" />
+            </g>
+          )}
+          {/* Invisible per-age tap-bands → drill (all charts drillable) */}
+          {pts.map((r, i) => (
+            <rect key={`dh-${i}`} x={px(i) - (pw / Math.max(1, n - 1)) / 2} y={pT}
+              width={pw / Math.max(1, n - 1)} height={ph} fill="transparent"
+              style={{ cursor: 'pointer' }} onClick={() => setSel(sel === i ? null : i)} />
+          ))}
         </svg>
       </DrawSVG>
+      {/* Drill reveal — every pot's balance at the tapped age. */}
+      {sel != null && pts[sel] && (
+        <div style={{ margin: '8px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--c-text)' }}>Age {pts[sel].age}</strong> —{' '}
+          {_POTS.filter(p => (pts[sel].potsEnd[p.key] || 0) > 0).map((p, idx, arr) => (
+            <span key={p.key}>
+              <span style={{ color: p.color }}>●</span> {p.label} <strong>{_gk(pts[sel].potsEnd[p.key] || 0)}</strong>{idx < arr.length - 1 ? ' · ' : ''}
+            </span>
+          ))}
+          {' = '}<strong style={{ color: 'var(--c-acc)' }}>{_gk(pts[sel].potsTotal || 0)}</strong> total.
+          {(pts[sel].potsTotal || 0) <= 0 && <span style={{ color: 'var(--c-coral-text)' }}> Pots exhausted — only secure income from here.</span>}
+        </div>
+      )}
       {/* Legend (composition needs a key) */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
         {_POTS.map(p => (
@@ -3075,7 +3716,14 @@ const RANKABLE_GOALS = [
 // (£/yr per pot) come from the schedule so each node carries its real flow.
 const _POT_PRETTY = { pension: 'Pension', isa: 'ISA', gia: 'GIA', cash: 'Cash', sipp: 'SIPP', db: 'DB pension' }
 const _POT_IDS = ['pension', 'isa', 'gia', 'cash']
-function DrawNetworkDiagram({ route, network, netTotal }) {
+// Secure-income stream labels for the floor node (state/DB/annuity/rental).
+const _STREAM_PRETTY = { state: 'State pension', DB: 'DB pension', lifetimeAnnuity: 'Annuity', PLA: 'Annuity', rental: 'Rental' }
+function _secureStreamLabel(streams) {
+  if (!streams?.length) return 'state pension, DB & guaranteed income'
+  return streams.filter(s => s.gross > 0)
+    .map(s => `${_STREAM_PRETTY[s.type] || (s.source === 'BTL' ? 'Rental' : 'Income')} ${_gk(s.gross)}`).join(' · ')
+}
+function DrawNetworkDiagram({ route, network, netTotal, currentAge }) {
   // Pot starting values come from the network; the per-pot draw TIMING + amounts
   // come from the SELECTED route's schedule (not always the #1 path), so the map
   // follows whichever route the user is reading + answers "how much from each pot
@@ -3104,8 +3752,17 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
   if (!seq.length) return null
   const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th']
 
+  // Secure-income floor node (P3 buildNetwork) — guaranteed income that feeds the
+  // sink ALONGSIDE the pots, so the map no longer implies all income is drawn
+  // from pots. Rendered as an extra row, never a depletable pot.
+  const secureNode = (network?.nodes || []).find(n => n.kind === 'secure')
+  const nRows = seq.length + (secureNode ? 1 : 0)
+  // Calendar year beside each age (founder: years beside ages on the map).
+  const baseYear = new Date().getFullYear()
+  const calYear = (age) => (currentAge && age != null) ? baseYear + (age - currentAge) : null
+
   const rowH = 66, padY = 12
-  const H = padY * 2 + seq.length * rowH - 14
+  const H = padY * 2 + nRows * rowH - 14
   const viewW = 340, leftW = 158, sinkX = 254, sinkCY = H / 2
   const potCY = i => padY + i * rowH + 26
   return (
@@ -3128,6 +3785,13 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
                 opacity={first ? 1 : 0.5} />
             )
           })}
+          {secureNode && (() => {
+            const y = potCY(seq.length)
+            return (
+              <path key="secure-edge" d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
+                fill="none" stroke="var(--c-mint-text)" strokeWidth={2} opacity={0.85} strokeDasharray="5 3" />
+            )
+          })()}
         </svg>
         {/* Pot nodes (left) — order badge, pot size, £/yr + start age (or preserved) */}
         {seq.map((id, i) => {
@@ -3142,11 +3806,24 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
               </div>
               <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gk(d.value)} pot</div>
               <div style={{ fontSize: 9.5, fontWeight: 600, color: d.drawn ? 'var(--c-acc)' : 'var(--c-text3)', marginTop: 1 }}>
-                {d.drawn ? `${_gk(d.perYear)}/yr from age ${d.firstAge}` : 'kept — not drawn'}
+                {d.drawn ? `${_gk(d.perYear)}/yr from age ${d.firstAge}${calYear(d.firstAge) ? ` · ${calYear(d.firstAge)}` : ''}` : 'kept — not drawn'}
               </div>
             </div>
           )
         })}
+        {/* Secure-income floor node — guaranteed inflow, not a depletable pot. */}
+        {secureNode && (
+          <div style={{ position: 'absolute', left: 0, top: `${(potCY(seq.length) - 27) / H * 100}%`, width: leftW - 8,
+            padding: '7px 9px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 12%, var(--c-surface))',
+            border: '1px solid var(--c-mint-text)', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-mint-text)' }}>FLOOR</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>Secure income</span>
+            </div>
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--c-mint-text)', marginTop: 1 }}>{_gk(secureNode.value)}/yr guaranteed</div>
+            <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_secureStreamLabel(secureNode.streams)}</div>
+          </div>
+        )}
         {/* Income sink (right) */}
         <div style={{ position: 'absolute', right: 0, top: `${(sinkCY - 22) / H * 100}%`, width: 86,
           padding: '7px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface))', border: '1px solid var(--c-acc)', boxSizing: 'border-box', textAlign: 'center' }}>
@@ -3155,8 +3832,374 @@ function DrawNetworkDiagram({ route, network, netTotal }) {
         </div>
       </div>
       <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 8 }}>
-        Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The year-by-year table below has the exact figures.
+        Pot sizes are today&rsquo;s value; the £/yr is the future (nominal) draw averaged over the years that pot funds your income, which is why a later pot can pay more than its size today (it grows first). The <span style={{ color: 'var(--c-mint-text)', fontWeight: 700 }}>green floor</span> is guaranteed income (state pension, DB, rental) that isn&rsquo;t drawn from a pot &mdash; it keeps paying even after the pots run out. The year-by-year table below has the exact figures.
       </div>
+    </div>
+  )
+}
+
+// ── Accumulator forward-income network (the accumulation-side equivalent of
+// DrawNetworkDiagram). Mr T isn't drawing income yet, so the decumulation solver
+// never runs for him and the pots→income draw map is hidden. This builds the
+// FORWARD picture every accumulator needs: today's pots, projected to retirement
+// at a draggable growth rate, converted to a sustainable income (SWR) and added
+// to the State Pension floor. Same visual grammar as the draw map (pots left →
+// income sink right, green guaranteed floor), but lifecycle-correct: it answers
+// "where will my income come from" instead of "where does it come from now".
+// FCA: projection under the user's assumptions, not a forecast or advice.
+function _fvAccum(current, monthly, years, annualRate) {
+  const r = Math.pow(1 + annualRate, 1 / 12) - 1
+  const months = Math.round(years * 12)
+  const fvCurrent = current * Math.pow(1 + annualRate, years)
+  const annuity = r === 0 ? months : (Math.pow(1 + r, months) - 1) / r
+  return fvCurrent + monthly * annuity
+}
+
+// ── DrawOrderDrill — the per-holding priority sequence + WHY (founder
+// 2026-06-05: "if I have 5 pensions which one should be drawn first, taking
+// into account costs, growth, tax… come up with a priority sequencing — that
+// was the whole point of the engine"). Reads the P2 sequencer
+// (decumulation-sequence.js). The GOAL selector is the interactive core: the
+// order CHANGES with the priority, so the user sees there is no single "right"
+// answer — it depends what they're optimising for. Information/guidance, not advice.
+const _GOAL_OPTS = [
+  { id: 'min_lifetime_tax', label: 'Pay less tax' },
+  { id: 'legacy', label: 'Leave more to family' },
+  { id: 'max_lifetime_spend', label: 'Spend more now' },
+  { id: 'income_floor', label: 'Secure income for life' },
+]
+const _WRAP_CHIP = { cash: 'Cash', gia: 'Taxable', pension: 'Pension', isa: 'ISA' }
+const _WRAP_COLOR = { cash: 'var(--c-text3)', gia: 'var(--c-amber-text)', pension: 'var(--c-acc)', isa: 'var(--c-mint-text)' }
+const _WRAP_NODE_LABEL = { pension: 'Pensions', isa: 'ISAs', gia: 'Investment accounts', cash: 'Cash accounts' }
+const _FACTOR_LABEL = { tax: 'Tax', charge: 'Charges', iht: 'IHT', flex: 'Flexibility' }
+// Plain-English trade-off line for a candidate route (strongest vs weakest factor).
+function _tradeoff(scores) {
+  const ent = Object.entries(scores)
+  const hi = ent.reduce((a, b) => b[1] > a[1] ? b : a)
+  const lo = ent.reduce((a, b) => b[1] < a[1] ? b : a)
+  if (hi[0] === lo[0]) return 'balanced across factors'
+  return `strong on ${_FACTOR_LABEL[hi[0]].toLowerCase()}, weaker on ${_FACTOR_LABEL[lo[0]].toLowerCase()}`
+}
+function DrawOrderDrill({ entity, goal: goalProp, setGoal: setGoalProp, routes }) {
+  // Controlled when a parent shares the goal (so the diagram + drill move
+  // together); self-contained otherwise.
+  const [goalLocal, setGoalLocal] = useState('min_lifetime_tax')
+  const goal = goalProp ?? goalLocal
+  const setGoal = setGoalProp ?? setGoalLocal
+  const [showRoutes, setShowRoutes] = useState(false)
+  const rLocal = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
+  const r = routes || rLocal
+  if (!r || !r.sequence?.length) return null
+  const maxW = Math.max(...r.candidates.map(c => c.weighted), 1)
+  return (
+    <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>
+        Which pot to draw first — and why
+      </div>
+      {/* The PROBLEM — convey the size + rigor of the decision (founder 2026-06-05:
+          "show what the engine considered and how many routes it evaluated"). */}
+      <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 10 }}>
+        Your <strong style={{ color: 'var(--c-text)' }}>{r.sequenceableCount} drawable holdings</strong> can be drawn in <strong style={{ color: 'var(--c-text)' }}>{r.searchSpaceSize.toLocaleString()}</strong> different orders. {r.excludedCount} more are set aside (not for income). The engine scores <strong style={{ color: 'var(--c-text)' }}>{r.candidates.length} sensible strategies</strong> on <strong style={{ color: 'var(--c-text)' }}>{r.factors.length} factors</strong> against your priority — there's no single right answer, so pick what you're optimising for:
+      </div>
+      {/* Goal selector — the whole answer is a FUNCTION of the priority. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {_GOAL_OPTS.map(g => (
+          <button key={g.id} onClick={() => setGoal(g.id)} className="sw-pressable" style={{
+            fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 100, cursor: 'pointer',
+            border: '1px solid ' + (goal === g.id ? 'var(--c-acc)' : 'var(--c-border)'),
+            background: goal === g.id ? 'color-mix(in srgb, var(--c-acc) 14%, transparent)' : 'var(--c-surface)',
+            color: goal === g.id ? 'var(--c-acc)' : 'var(--c-text2)' }}>{g.label}</button>
+        ))}
+      </div>
+      {/* Factors considered — chips so the user sees WHAT was weighed. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+        {r.factors.map((f, i) => (
+          <span key={i} style={{ fontSize: 9, fontWeight: 600, color: 'var(--c-text3)', padding: '2px 7px', borderRadius: 100, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>{f}</span>
+        ))}
+      </div>
+
+      {/* CANDIDATE ROUTES the engine compared — the "how many routes + why this one won". */}
+      <button onClick={() => setShowRoutes(s => !s)} className="sw-pressable" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', marginBottom: 6 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text2)', textTransform: 'uppercase', letterSpacing: 0.4 }}>The {r.candidates.length} strategies it compared</span>
+        <span style={{ fontSize: 11, color: 'var(--c-acc)', fontWeight: 700 }}>{showRoutes ? 'Hide' : 'Show scoring'} ›</span>
+      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+        {(showRoutes ? r.candidates : r.candidates.slice(0, 1)).map(c => {
+          const win = c.id === r.winnerId
+          return (
+            <div key={c.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)',
+              border: '1px solid ' + (win ? 'var(--c-acc)' : 'var(--c-border)') }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 0 }}>{c.name}</span>
+                {win && <span style={{ fontSize: 8, fontWeight: 800, color: '#fff', background: 'var(--c-acc)', padding: '2px 6px', borderRadius: 100, letterSpacing: 0.3 }}>BEST FOR THIS GOAL</span>}
+                <span style={{ fontSize: 12, fontWeight: 800, color: win ? 'var(--c-acc)' : 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{c.weighted}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 5 }}>
+                <div style={{ width: `${(c.weighted / maxW) * 100}%`, height: '100%', background: win ? 'var(--c-acc)' : 'var(--c-text3)', borderRadius: 3 }} />
+              </div>
+              {showRoutes && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                  {Object.entries(c.scores).map(([k, v]) => (
+                    <span key={k} style={{ fontSize: 9, color: 'var(--c-text3)' }}>{_FACTOR_LABEL[k]} <strong style={{ color: 'var(--c-text2)' }}>{v}</strong></span>
+                  ))}
+                  <span style={{ fontSize: 9, color: 'var(--c-text3)', fontStyle: 'italic' }}>— {_tradeoff(c.scores)}</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* THE ANSWER — winning route as a compact 3-column flow + the per-holding queue. */}
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text2)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
+        The order it recommends → {r.winnerName}
+      </div>
+      {/* multi-column flow: ordered pots → net of tax/charges → your income */}
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 6, marginBottom: 10 }}>
+        <div style={{ flex: 1.4, minWidth: 0, padding: '8px 9px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', marginBottom: 4 }}>Drawn in this order</div>
+          {r.sequence.map(o => (
+            <div key={o.id || o.rank} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-text3)', width: 12 }}>{o.rank}</span>
+              <span style={{ width: 6, height: 6, borderRadius: 2, background: _WRAP_COLOR[o.wrapper], flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.label}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', color: 'var(--c-text3)', fontSize: 14 }}>→</div>
+        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 9px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-text3)', textTransform: 'uppercase', marginBottom: 2 }}>Net of tax & charges</div>
+          <div style={{ fontSize: 10, color: 'var(--c-text2)', lineHeight: 1.4 }}>ordered to use allowances & bands first</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', color: 'var(--c-text3)', fontSize: 14 }}>→</div>
+        <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', padding: '8px 9px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 12%, var(--c-surface))', border: '1px solid var(--c-acc)' }}>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-text)', textTransform: 'uppercase' }}>Your income</div>
+          {r.netFloorIncome > 0 && <div style={{ fontSize: 9, color: 'var(--c-mint-text)', marginTop: 2 }}>+{_gk(r.netFloorIncome)}/yr floor</div>}
+        </div>
+      </div>
+      {/* Per-holding detail with the WHY */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {r.sequence.map(o => (
+          <div key={o.id || o.rank} style={{ display: 'flex', gap: 10, alignItems: 'flex-start',
+            padding: '9px 10px', borderRadius: 10, background: 'var(--c-surface)',
+            border: '1px solid ' + (o.rank === 1 ? 'var(--c-acc)' : 'var(--c-border)') }}>
+            <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800, color: o.rank === 1 ? '#fff' : 'var(--c-text2)',
+              background: o.rank === 1 ? 'var(--c-acc)' : 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{o.rank}</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)' }}>{o.label}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: _WRAP_COLOR[o.wrapper], padding: '1px 6px', borderRadius: 100, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{_WRAP_CHIP[o.wrapper] || o.wrapper}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{_gk(o.value)}</span>
+                {o.charge ? <span style={{ fontSize: 9.5, color: 'var(--c-coral-text)' }}>{(o.charge * 100).toFixed(2)}% charge</span> : null}
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text2)', lineHeight: 1.45, marginTop: 3 }}>{o.reason}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {r.netFloorIncome > 0 && (
+        <div style={{ marginTop: 10, fontSize: 10.5, color: 'var(--c-mint-text)', lineHeight: 1.5 }}>
+          Before any of these, <strong>{_gk(r.netFloorIncome)}/yr</strong> of guaranteed income (State Pension, DB, annuity) covers your floor — so your pots only fund what's above it.
+        </div>
+      )}
+      {r.excluded?.length > 0 && (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--c-text3)', cursor: 'pointer' }}>Set aside — not drawn for income ({r.excluded.length}) — and why</summary>
+          <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {r.excluded.map((e, i) => (
+              <div key={i} style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.4 }}>
+                <strong style={{ color: 'var(--c-text2)' }}>{e.label}</strong> — {e.reason}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      <div style={{ fontSize: 9, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>{r.disclaimer}</div>
+    </div>
+  )
+}
+function AccumIncomeNetwork({ entity }) {
+  let ctx = null
+  try { ctx = extractAccumulationContext(entity) } catch { ctx = null }
+  const age0 = ctx?.age || 45
+  const [retAge, setRetAge] = useState(ctx?.retirementAge || 67)
+  const [gPct, setGPct] = useState(Math.round((ctx?.growth || 0.05) * 1000) / 10)
+  const [dirty, setDirty] = useState(false)
+  // Shared draw-order GOAL — drives BOTH the diagram (node order + rank badges)
+  // and the DrawOrderDrill below it, so the picture changes with the priority
+  // (founder 2026-06-05: "the diagram is static, it doesn't change with the
+  // drawers"). The income TOTAL is the same pots either way; the ORDER they're
+  // drawn in (and its tax/charge efficiency) is what the goal changes.
+  const [goal, setGoal] = useState('min_lifetime_tax')
+  const [expanded, setExpanded] = useState({}) // wrapper -> bool (in-diagram drill)
+  const routes = useMemo(() => { try { return evaluateDrawRoutes(entity, { goal }) } catch { return null } }, [entity, goal])
+  if (!ctx) return null
+  // Draw rank per wrapper, from the winning route for this goal.
+  const wrapperRank = {}
+  ;(routes?.sequence || []).forEach(o => { if (wrapperRank[o.wrapper] == null) wrapperRank[o.wrapper] = o.rank })
+
+  const swr = TAX?.swr || 0.04
+  // State Pension floor (status-checked figure from the bundle; entity override wins).
+  const spRaw = entity?.income?.statePension
+  const sp = +(spRaw?.annual ?? (typeof spRaw === 'number' ? spRaw : 0)) || +(TAX?.statePensionFull || 0)
+  const spa = +(spRaw?.startAge ?? TAX?.spa) || 67
+
+  const years = Math.max(0.5, retAge - age0)
+  const growth = gPct / 100
+  const contribMo = ctx.monthlyContribution || 0
+
+  // Income-producing pots projected to retirement. The monthly contribution is
+  // allocated to the pension (where UK retirement saving overwhelmingly lands);
+  // ISA/GIA grow on their balances. Cash is a kept buffer, not an income pot.
+  const proj = {
+    pension: _fvAccum(ctx.pots.pension || 0, contribMo, years, growth),
+    isa: _fvAccum(ctx.pots.isa || 0, 0, years, growth),
+    gia: _fvAccum(ctx.pots.gia || 0, 0, years, growth),
+  }
+  const incomePots = [
+    { id: 'pension', today: ctx.pots.pension || 0, at: proj.pension, contrib: contribMo },
+    { id: 'isa', today: ctx.pots.isa || 0, at: proj.isa, contrib: 0 },
+    { id: 'gia', today: ctx.pots.gia || 0, at: proj.gia, contrib: 0 },
+  ].filter(p => p.today > 0 || p.at > 0)
+  const projTotal = incomePots.reduce((s, p) => s + p.at, 0)
+  const potsIncome = projTotal * swr
+  const cashBuf = ctx.pots.cash || 0
+  const totalIncome = potsIncome + sp
+
+  if (projTotal <= 0 && sp <= 0) {
+    return (
+      <div style={{ marginTop: 12, padding: '12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.6 }}>
+        Add your pensions and investments to see how today&rsquo;s pots are projected to turn into a retirement income.
+      </div>
+    )
+  }
+
+  // Node rows are driven by the WINNING ROUTE's per-holding sequence, grouped
+  // into wrapper blocks (the sequence keeps a wrapper's holdings contiguous).
+  // A wrapper with >1 holding (e.g. 4 pensions) shows as one aggregate node that
+  // DRILLS IN-PLACE to its individual holdings on tap (founder 2026-06-05).
+  const projByWrapper = { pension: proj.pension, isa: proj.isa, gia: proj.gia, cash: cashBuf }
+  const groups = []
+  ;(routes?.sequence || []).forEach(o => {
+    const last = groups[groups.length - 1]
+    if (last && last.wrapper === o.wrapper) last.items.push(o)
+    else groups.push({ wrapper: o.wrapper, items: [o] })
+  })
+  const drawableNodes = []
+  groups.forEach(g => {
+    const isExp = expanded[g.wrapper] && g.items.length > 1
+    if (isExp) {
+      g.items.forEach(it => drawableNodes.push({ kind: 'pot', leaf: true, id: it.id, label: it.label, today: it.value, at: it.value, drawRank: it.rank, charge: it.charge, wrapper: g.wrapper }))
+    } else {
+      const today = g.items.reduce((s, it) => s + (it.value || 0), 0)
+      const single = g.items.length === 1
+      drawableNodes.push({
+        kind: 'pot', id: g.wrapper, wrapper: g.wrapper,
+        label: single ? g.items[0].label : _WRAP_NODE_LABEL[g.wrapper] || g.wrapper,
+        today, at: projByWrapper[g.wrapper] ?? today, drawRank: g.items[0].rank,
+        count: g.items.length, expandable: g.items.length > 1,
+        contrib: g.wrapper === 'pension' ? contribMo : 0,
+      })
+    }
+  })
+  const nodes = [
+    ...drawableNodes,
+    ...(sp > 0 ? [{ id: 'floor', kind: 'floor', at: sp }] : []),
+  ]
+  const nRows = nodes.length
+  const rowH = 74, padY = 12
+  const H = padY * 2 + nRows * rowH - 14
+  const viewW = 340, leftW = 168, sinkX = 262, sinkCY = H / 2
+  const rowCY = i => padY + i * rowH + 28
+
+  return (
+    <div style={{ marginTop: 12, padding: '12px 12px 14px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 }}>
+        Your money map — income at {retAge}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5, marginBottom: 10 }}>
+        Today&rsquo;s pots grown to age {retAge} at {gPct}% a year, then turned into a sustainable income at a {Math.round(swr * 1000) / 10}% withdrawal rate, plus your State Pension. The number on each pot is the order it&rsquo;s drawn for <strong style={{ color: 'var(--c-text2)' }}>{(_GOAL_OPTS.find(g => g.id === goal) || {}).label}</strong> — change the priority below and the order re-draws.
+      </div>
+      <div style={{ position: 'relative', width: '100%', maxWidth: viewW, margin: '0 auto' }}>
+        <svg width="100%" viewBox={`0 0 ${viewW} ${H}`} style={{ display: 'block', overflow: 'visible' }} role="img" aria-label="Forward income map: pots projected to retirement income">
+          {nodes.map((n, i) => {
+            const y = rowCY(i), first = n.kind === 'pot' && n.drawRank === 1
+            const stroke = n.kind === 'floor' ? 'var(--c-mint-text)' : 'var(--c-acc)'
+            return (
+              <path key={n.id} d={`M ${leftW} ${y} C ${leftW + 44} ${y}, ${sinkX - 34} ${sinkCY}, ${sinkX} ${sinkCY}`}
+                fill="none" stroke={stroke} strokeWidth={first ? 2.4 : 1.7}
+                opacity={n.kind === 'floor' ? 0.85 : (first ? 1 : 0.55)}
+                strokeDasharray={n.kind === 'floor' ? '5 3' : undefined} />
+            )
+          })}
+        </svg>
+        {nodes.map((n, i) => {
+          if (n.kind === 'floor') {
+            return (
+              <div key={n.id} style={{ position: 'absolute', left: 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8,
+                padding: '7px 9px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-mint-text) 12%, var(--c-surface))',
+                border: '1px solid var(--c-mint-text)', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--c-mint-text)' }}>FLOOR</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text)' }}>State Pension</span>
+                </div>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--c-mint-text)', marginTop: 1 }}>{_gk(n.at)}/yr from age {spa}</div>
+                <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>guaranteed, inflation-linked</div>
+              </div>
+            )
+          }
+          const ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'][(n.drawRank || 1) - 1] || `${n.drawRank}th`
+          const canExpand = n.expandable
+          const isFirstLeaf = n.leaf && n.drawRank === wrapperRank[n.wrapper]
+          const toggle = () => setExpanded(e => ({ ...e, [n.wrapper]: !e[n.wrapper] }))
+          const clickable = canExpand || n.leaf
+          return (
+            <div key={n.id} onClick={clickable ? toggle : undefined}
+              role={clickable ? 'button' : undefined} tabIndex={clickable ? 0 : undefined}
+              className={clickable ? 'sw-pressable' : undefined}
+              title={n.leaf ? 'Tap to fold these back into one node' : (canExpand ? 'Tap to see each holding' : undefined)}
+              style={{ position: 'absolute', left: n.leaf ? 14 : 0, top: `${(rowCY(i) - 29) / H * 100}%`, width: leftW - 8 - (n.leaf ? 14 : 0),
+              padding: '7px 9px', borderRadius: 10, background: n.leaf ? 'var(--c-surface2)' : 'var(--c-surface)', boxSizing: 'border-box',
+              cursor: canExpand ? 'pointer' : 'default',
+              border: n.drawRank === 1 ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ flexShrink: 0, width: 15, height: 15, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 8.5, fontWeight: 800, color: n.drawRank === 1 ? '#fff' : 'var(--c-text2)',
+                  background: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>{n.drawRank}</span>
+                <span style={{ fontSize: n.leaf ? 10 : 11, fontWeight: 700, color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.label || _POT_PRETTY[n.id] || n.id}</span>
+                {n.contrib > 0 && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>+{_gmo(n.contrib * 12)}/mo</span>}
+              </div>
+              <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>
+                {_gk(n.today)} today{!n.leaf && n.at !== n.today ? ` → ${_gk(n.at)} at ${retAge}` : ''}{n.charge ? ` · ${(n.charge * 100).toFixed(2)}%` : ''}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginTop: 1 }}>
+                <span style={{ fontSize: 9.5, fontWeight: 600, color: n.drawRank === 1 ? 'var(--c-acc)' : 'var(--c-text2)' }}>drawn {ord}</span>
+                {canExpand && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>▾ {n.count}</span>}
+                {isFirstLeaf && <span style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--c-acc)' }}>▲ fold</span>}
+              </div>
+            </div>
+          )
+        })}
+        {/* Income sink (right) */}
+        <div style={{ position: 'absolute', right: 0, top: `${(sinkCY - 26) / H * 100}%`, width: 92,
+          padding: '7px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface))', border: '1px solid var(--c-acc)', boxSizing: 'border-box', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text)' }}>Income at {retAge}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', marginTop: 1 }}>{_gk(totalIncome)}/yr</div>
+          <div style={{ fontSize: 9, color: 'var(--c-text3)', marginTop: 1 }}>{_gmo(totalIncome)}/mo</div>
+        </div>
+      </div>
+      {/* Draggable assumptions — the picture moves as the user changes their mind. */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+        <SolverSlider label="Retirement age" value={retAge} min={55} max={75} step={1} fmt={v => `age ${v}`} onChange={v => { setRetAge(v); setDirty(true) }} dirty={dirty} />
+        <SolverSlider label="Growth (nominal)" value={gPct} min={2} max={8} step={0.5} fmt={v => `${v}%`} onChange={v => { setGPct(v); setDirty(true) }} dirty={dirty} />
+      </div>
+      <div style={{ fontSize: 9.5, color: 'var(--c-text3)', lineHeight: 1.5, marginTop: 10 }}>
+        Pots are projected at your chosen growth, then converted at a {Math.round(swr * 1000) / 10}% sustainable withdrawal rate — the same rule the &ldquo;will it last&rdquo; plan uses when you start drawing. {retAge < spa ? `Your State Pension starts at ${spa}, so your pots cover the ${spa - retAge}-year gap first.` : ''} A projection under your assumptions — not a forecast or personal advice.
+      </div>
+      {/* Per-holding draw-order drill — SHARES the goal so diagram + drill move
+          together (founder 2026-06-05: "the diagram doesn't change with the drawers"). */}
+      <DrawOrderDrill entity={entity} goal={goal} setGoal={setGoal} routes={routes} />
     </div>
   )
 }
@@ -3218,6 +4261,1024 @@ function AssumptionsPanel({ methodology }) {
 // growth) AND reorder their priorities, and watch the plan re-solve — their
 // inputs, not our forecast.
 // Compliance: routes are "ranked under your priorities", never "optimal/best".
+// Five withdrawal-PACING methods (how fast to spend the pot), a different lens
+// from the draw ORDER. Standalone so it renders both inside the drawdown drawer
+// (withToggle) and as its own "How fast can I spend?" question-tile (always open).
+// Plain-English layer over the academic method names. The founder's complaint:
+// "5 methods" / "Bengen · Guyton-Klinger" means nothing to a real user. Lead
+// with what each one DOES and the income SHAPE (the real differentiator — every
+// method "lasts to 95+" here, so that line discriminates nothing); keep the
+// academic name as small provenance for the curious.
+const METHOD_PLAIN = {
+  bengen:          { name: 'Steady & predictable',           shape: 'a fixed income that rises with inflation',
+    how: 'You take 4% of your starting pot in year one, then give yourself an inflation pay-rise every year after — no matter what your investments do.' },
+  guyton_klinger:  { name: 'Flexible guardrails',            shape: 'more on average, but it rises and falls with markets',
+    how: 'You start a little higher, then follow two rules: after a bad year you skip your inflation rise, and after a good year you take an extra one — so your income gently tracks your luck.' },
+  vanguard:        { name: 'A share of your pot',            shape: 'tracks the pot, smoothed by a floor and a ceiling',
+    how: 'Each year you take a set percentage of whatever your pot is worth that year — but a cap and a floor stop your income from jumping or dropping too far.' },
+  bucket:          { name: 'Cash-buffer first',              shape: 'steady — you spend cash in downturns so you never sell low',
+    how: 'You split your money into three pots — cash, medium-risk and growth. You spend from cash, and only refill it from growth after good years, so you never sell investments in a crash.' },
+  floor_guardrail: { name: 'Protect essentials, flex the rest', shape: 'essentials are never cut; the extra flexes up and down',
+    how: 'First you lock in enough safe income to cover your essentials for life. Only the money above essentials flexes up and down — so a bad market can trim your luxuries but never your basics.' },
+}
+// Worked example in plain English, using THIS user's real numbers (from the
+// engine's methodPath), so the abstract rule becomes concrete.
+function methodNarrative(id, { age0, w1, w2, portfolio, essentialsAnnual }) {
+  const m = v => _gk(v || 0)
+  switch (id) {
+    case 'bengen':
+      return `Year 1 (age ${age0}): you draw ${m(w1)} — that's 4% of your ${m(portfolio)} pot. Year 2: you add an inflation pay-rise to ${m(w2)}, and you take it whether markets rose or fell. The upside is certainty — your income never surprises you. The risk: a bad early run shrinks the pot while your withdrawals keep climbing.`
+    case 'guyton_klinger':
+      return `Year 1 (age ${age0}): you draw ${m(w1)}. After a strong year you'd give yourself a raise; after a poor year you'd skip the inflation rise (and trim a little if it's really bad). Over time this usually pays more than a fixed rule — the trade-off is your income moving up and down with markets.`
+    case 'vanguard':
+      return `Year 1 (age ${age0}): you take ${m(w1)} — a set share of today's pot. If the pot grows, next year's income rises; if it falls, it dips to around ${m(w2)} — but a ceiling and floor stop either from lurching. You stay responsive to markets without the whiplash.`
+    case 'bucket':
+      return `Year 1 (age ${age0}): you spend ${m(w1)} from your cash bucket — roughly two years of spending kept in cash. In a downturn you keep spending cash and leave your investments alone to recover, refilling the bucket after good years. The catch: it only works if you actually top the bucket back up.`
+    case 'floor_guardrail': {
+      const disc = Math.max(0, (w1 || 0) - (essentialsAnnual || 0))
+      return `Your essentials (about ${m(essentialsAnnual)}/yr) are secured first at a safe rate — they're never cut. On top, your discretionary income starts around ${m(disc)}/yr and flexes with markets. In a crash your basics are untouched and only the extra dips. This fixes the main flaw of the other four — none of them protect the income you actually need.`
+    }
+    default: return ''
+  }
+}
+// Pot-balance-over-time chart for ONE method — labelled axes, area+line, a
+// "runs out" marker. Reuses the DepletionCurve visual language; recomputes as the
+// growth slider moves so the user can SEE the sensitivity, not read a static table.
+function MethodChart({ path }) {
+  const pts = (path || []).filter(Boolean)
+  if (pts.length < 2) return null
+  const maxV = Math.max(...pts.map(r => r.balance || 0), 1) * 1.05
+  const W = 320, H = 150, pL = 44, pR = 10, pT = 12, pB = 26, pw = W - pL - pR, ph = H - pT - pB
+  const n = pts.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const line = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const area = `M${px(0).toFixed(1)},${py(0).toFixed(1)} ` + pts.map((r, i) => 'L' + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ') + ` L${px(n - 1).toFixed(1)},${py(0).toFixed(1)} Z`
+  const depIdx = pts.findIndex(r => (r.balance || 0) <= 0)
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your pot over time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Pot balance across the drawdown years under this method, on your assumptions">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        <path d={area} fill="var(--c-acc)" opacity="0.12" />
+        <path d={line} fill="none" stroke="var(--c-acc)" strokeWidth="1.75" />
+        {depIdx >= 0 && (
+          <g>
+            <line x1={px(depIdx)} y1={pT} x2={px(depIdx)} y2={pT + ph} stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 2" />
+            <text x={px(depIdx)} y={pT - 3} fontSize="8" fill="var(--c-coral-text)" textAnchor="middle">runs out</text>
+          </g>
+        )}
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {pts[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+    </div>
+  )
+}
+// Tiny pot-trajectory sparkline for the compact method rows (balance-sheet grammar).
+function MiniSparkline({ path, color = 'var(--c-acc)' }) {
+  const pts = (path || []).filter(Boolean)
+  if (pts.length < 2) return null
+  const W = 60, H = 22
+  const maxV = Math.max(...pts.map(r => r.balance || 0), 1)
+  const n = pts.length
+  const px = i => (i / (n - 1)) * W
+  const py = v => H - (Math.max(0, v) / maxV) * (H - 3) - 1.5
+  const d = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const dep = pts.some(r => (r.balance || 0) <= 0)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ display: 'block', flexShrink: 0 }} aria-hidden="true">
+      <path d={d} fill="none" stroke={dep ? 'var(--c-coral-text)' : color} strokeWidth="1.5" />
+    </svg>
+  )
+}
+// Back-solve: find the draw level (rateScale) so the pot lasts to ~targetAge.
+// Higher scale → draws more → depletes earlier; bisection converges on the most
+// you could draw and still reach the target. The "drag the outcome, solve the
+// lever" interaction the founder wants everywhere.
+function solveDrawScaleForAge(methodId, baseOpts, targetAge) {
+  const age0 = baseOpts.age || 65
+  const endAge = age0 + (baseOpts.years || 30) - 1
+  const tgt = Math.min(targetAge, endAge + 1)
+  let lo = 0.3, hi = 3
+  for (let i = 0; i < 26; i++) {
+    const mid = (lo + hi) / 2
+    let path = []
+    try { path = methodPath(methodId, { ...baseOpts, rateScale: mid }) } catch { /* */ }
+    const dep = path.find(r => (r.balance || 0) <= 0)
+    const depAge = dep ? dep.age : endAge + 1
+    if (depAge >= tgt) lo = mid; else hi = mid
+  }
+  return Math.round(lo * 100) / 100
+}
+// Per-method drawer — INTERACTIVE, MULTI-VARIABLE + BACK-SOLVE. Flex the pot, the
+// draw level and growth and watch the chart / income / longevity move; or drag
+// the "last to age" target and the engine solves the draw for you. (founder
+// 2026-06-04: "interactive = all equations, not one"; "back solver everywhere".)
+function MethodDetail({ method, opts, horizon, recommended, onBack }) {
+  const p = METHOD_PLAIN[method.id] || { name: method.label }
+  const age0 = opts.age || 65
+  const endAge = age0 + (opts.years || 30) - 1
+  const seedG = Math.round((opts.growth ?? 0.05) * 1000) / 10
+  const seedPotK = Math.max(10, Math.round((opts.portfolio || 0) / 1000))
+  const [gPct, setGPct] = useState(seedG)
+  const [potK, setPotK] = useState(seedPotK)
+  const [drawScale, setDrawScale] = useState(1)
+  const dirty = Math.abs(gPct - seedG) > 0.001 || potK !== seedPotK || Math.abs(drawScale - 1) > 0.001
+  const reset = () => { setGPct(seedG); setPotK(seedPotK); setDrawScale(1) }
+  const liveOpts = useMemo(() => ({ ...opts, portfolio: potK * 1000, growth: gPct / 100, rateScale: drawScale }), [opts, potK, gPct, drawScale])
+  const path = useMemo(() => { try { return methodPath(method.id, liveOpts) } catch { return [] } }, [method.id, liveOpts])
+  const depletes = path.find(r => (r.balance || 0) <= 0)
+  const lastsHorizon = !depletes
+  const lastsAge = depletes ? depletes.age : endAge
+  const w1 = path[0]?.withdrawal ?? 0
+  const w2 = path[1]?.withdrawal ?? w1
+  const idxs = [...new Set([0, 4, 9, 19, path.length - 1].filter(i => i >= 0 && i < path.length))]
+  const rows = idxs.map(i => path[i]).filter(Boolean)
+  const onTargetAge = (tAge) => setDrawScale(solveDrawScaleForAge(method.id, { ...opts, portfolio: potK * 1000, growth: gPct / 100 }, tAge))
+  return (
+    <DrillStackProvider>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'var(--c-bg)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '14px 16px 96px' }}>
+          <button onClick={onBack} className="sw-pressable" style={{ background: 'none', border: 'none', color: 'var(--c-acc)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '4px 0' }}>← Methods</button>
+          <h2 style={{ fontSize: 21, fontWeight: 800, color: 'var(--c-text)', margin: '8px 0 2px' }}>
+            {p.name}{recommended && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 8, verticalAlign: 'middle' }}>fits your #1 priority</span>}
+          </h2>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 14 }}>{method.label} · {method.source}</div>
+
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it works</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text)', lineHeight: 1.55 }}>{p.how || method.summary}</div>
+          </div>
+
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Explore it — drag any lever</div>
+              {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+              Year-1 income <strong style={{ color: 'var(--c-text)' }}>{_gk(w1)}</strong> · {lastsHorizon ? <>lasts to age <strong style={{ color: 'var(--c-mint-text)' }}>{endAge}+</strong></> : <>runs out at age <strong style={{ color: 'var(--c-coral-text)' }}>{lastsAge}</strong></>}
+            </div>
+            <MethodChart path={path} />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+              <SolverSlider label="Starting pot" value={potK} min={Math.max(10, Math.round(seedPotK * 0.3))} max={Math.round(seedPotK * 2)} step={10} fmt={() => _gk(potK * 1000)} onChange={setPotK} dirty={potK !== seedPotK} />
+              <SolverSlider label="Draw level" value={drawScale} min={0.4} max={2} step={0.05} fmt={() => `${_gk(w1)}/yr`} onChange={setDrawScale} dirty={Math.abs(drawScale - 1) > 0.001} />
+              <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+            </div>
+            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+              <SolverSlider label="↩ Back-solve — make it last to" value={Math.min(Math.max(lastsAge, age0 + 5), 105)} min={age0 + 5} max={105} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+              <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want it to last to — the engine solves the most you could draw, and the chart + numbers follow.</div>
+            </div>
+          </div>
+
+          <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How it plays out for you</div>
+            <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(method.id, { age0, w1, w2, portfolio: liveOpts.portfolio, essentialsAnnual: opts.essentialsAnnual })}</div>
+            {rows.length > 1 && (
+              <div style={{ marginTop: 12, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                  <thead>
+                    <tr style={{ color: 'var(--c-text3)', textAlign: 'left' }}>
+                      <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Age</th>
+                      <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>You draw</th>
+                      <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Pot left</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => (
+                      <tr key={i} style={{ borderTop: '1px solid var(--c-sep, var(--c-border))' }}>
+                        <td style={{ padding: '5px 8px 5px 0', color: 'var(--c-text)' }}>{r.age}</td>
+                        <td style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--c-text)' }}>{_gk(r.withdrawal)}</td>
+                        <td style={{ padding: '5px 0 5px 8px', textAlign: 'right', color: r.balance <= 0 ? 'var(--c-coral-text)' : 'var(--c-text3)' }}>{r.balance <= 0 ? 'gone' : _gk(r.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
+                  Constant-return illustration on your assumptions (not a forecast); real markets vary year to year — see "What if markets fall?" for the stochastic view.
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="sw-card" style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--c-mint-text)' }}>Strength:</strong> {method.strength}.<br />
+              <strong style={{ color: 'var(--c-amber-text)' }}>Watch:</strong> {method.weakness}.<br />
+              <strong style={{ color: 'var(--c-text)' }}>Lasts:</strong> {lastsHorizon ? `to age ${endAge}+ on these levers` : `funds run low by age ${lastsAge}`}.
+            </div>
+          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
+            A general approach advisers reference, shown as an illustration on your assumptions — not a personal recommendation.
+          </div>
+        </div>
+      </div>
+    </DrillStackProvider>
+  )
+}
+// ── Accumulation projection — the accumulator face of "Will my money last?" ──
+// Compound a pot forward with annual saving. Pure & deterministic; mirrors
+// methodPath's grammar so the chart/back-solve language is shared.
+function accumProjection({ pot, annualSaving, growth, age0, years }) {
+  const out = []
+  let bal = +pot || 0
+  const g = growth != null ? +growth : 0.05
+  const sv = +annualSaving || 0
+  const n = Math.max(1, years)
+  for (let y = 0; y <= n; y++) { out.push({ age: age0 + y, balance: Math.round(bal) }); bal = bal * (1 + g) + sv }
+  return out
+}
+// Back-solve: the annual saving needed to reach fiTarget by targetAge (bisection).
+function solveSavingForFI({ pot, growth, age0, targetAge, fiTarget }) {
+  const years = Math.max(1, targetAge - age0)
+  let lo = 0, hi = Math.max(fiTarget, 1e5)
+  for (let i = 0; i < 44; i++) {
+    const mid = (lo + hi) / 2
+    const end = accumProjection({ pot, annualSaving: mid, growth, age0, years }).slice(-1)[0].balance
+    if (end >= fiTarget) hi = mid; else lo = mid
+  }
+  return Math.round(hi)
+}
+// Rising pot vs the FI target line — labelled axes + "FI reached" marker.
+function AccumChart({ path, target }) {
+  const pts = (path || []).filter(Boolean)
+  if (pts.length < 2) return null
+  const maxV = Math.max(...pts.map(r => r.balance || 0), target || 0, 1) * 1.05
+  const W = 320, H = 150, pL = 44, pR = 10, pT = 12, pB = 26, pw = W - pL - pR, ph = H - pT - pB
+  const n = pts.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const line = pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const area = `M${px(0).toFixed(1)},${py(0).toFixed(1)} ` + pts.map((r, i) => 'L' + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ') + ` L${px(n - 1).toFixed(1)},${py(0).toFixed(1)} Z`
+  const reachIdx = pts.findIndex(r => (r.balance || 0) >= (target || Infinity))
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your savings over time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Projected savings climbing toward your financial-independence target, on your assumptions">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        {target > 0 && target < maxV && (
+          <g>
+            <line x1={pL} y1={py(target)} x2={W - pR} y2={py(target)} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="4 2" />
+            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">FI target {_gk(target)}</text>
+          </g>
+        )}
+        <path d={area} fill="var(--c-acc)" opacity="0.12" />
+        <path d={line} fill="none" stroke="var(--c-acc)" strokeWidth="1.75" />
+        {reachIdx > 0 && (
+          <g>
+            <line x1={px(reachIdx)} y1={pT} x2={px(reachIdx)} y2={pT + ph} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="3 2" />
+            <text x={px(reachIdx)} y={pT - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="middle">FI at {pts[reachIdx].age}</text>
+          </g>
+        )}
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {pts[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+    </div>
+  )
+}
+
+// "Will my money last?" — rebuilt to the interactive bar (founder 2026-06-04:
+// every tile must inform graphically, support multi-variable what-if + back-solve,
+// and reconcile). Decumulator: a real depletion chart on the recommended method
+// with pot / draw / growth levers + a "make it last to age X" back-solve; the
+// secure-income floor is named as the second lens (never welded with "but"); the
+// funded gauge stays as a pots-only secondary read with the gap explained.
+// Accumulator: a savings projection toward the FI target with pot / saving / growth
+// levers + a "reach FI by age X" back-solve — closing P4-03 (the accumulator had
+// zero interactive surfaces) and P4-14 (funded gauge had no back-solve).
+function LastabilityDrawer({ entity, decSolve, fr, fi }) {
+  if (decSolve?.rankedPaths?.length) return <LastDecum entity={entity} decSolve={decSolve} fr={fr} />
+  return <LastAccum entity={entity} fi={fi} />
+}
+
+function LastDecum({ decSolve, fr }) {
+  const inp = decSolve.inputs || {}
+  const age0 = inp.currentAge || 65
+  const horizonAge = inp.horizonAge || 95
+  // Simulate PAST the plan horizon so "will it last?" can actually be explored —
+  // the back-solve target and the depletion curve must reach beyond the plan, not
+  // clamp at it. (Plan horizon 95 made "make it last to 100" a no-op.)
+  const simEndAge = Math.max(horizonAge + 5, 105)
+  const years = Math.max(1, simEndAge - age0)
+  const portfolio0 = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+  const seedG = Math.round((inp.growth ?? 0.05) * 1000) / 10
+  const seedPotK = Math.max(10, Math.round(portfolio0 / 1000))
+  const essentials = Math.round((inp.incomeTargetAnnual || 0) * 0.6)
+  const primaryGoal = decSolve.binding?.primaryGoal || 'min_lifetime_tax'
+  const methodId = recommendMethodForGoal(primaryGoal)
+  const plain = METHOD_PLAIN[methodId] || { name: (METHODS[methodId] || {}).label || 'your plan' }
+  const secureGross = decSolve.floor?.grossAnnual || 0
+  const infl = inp.inflation ?? 0.025
+
+  const [gPct, setGPct] = useState(seedG)
+  const [potK, setPotK] = useState(seedPotK)
+  const [drawScale, setDrawScale] = useState(1)
+  const dirty = Math.abs(gPct - seedG) > 0.001 || potK !== seedPotK || Math.abs(drawScale - 1) > 0.001
+  const reset = () => { setGPct(seedG); setPotK(seedPotK); setDrawScale(1) }
+  const liveOpts = useMemo(() => ({ portfolio: potK * 1000, years, growth: gPct / 100, inflation: infl, essentialsAnnual: essentials, age: age0, rateScale: drawScale }), [potK, gPct, drawScale, years, infl, essentials, age0])
+  const path = useMemo(() => { try { return methodPath(methodId, liveOpts) } catch { return [] } }, [methodId, liveOpts])
+  const depletes = path.find(r => (r.balance || 0) <= 0)
+  const lastsHorizon = !depletes                    // survives the whole simulation
+  const lastsAge = depletes ? depletes.age : simEndAge
+  const w1 = path[0]?.withdrawal ?? 0
+  const onTargetAge = (tAge) => setDrawScale(solveDrawScaleForAge(methodId, { portfolio: potK * 1000, years, growth: gPct / 100, inflation: infl, essentialsAnnual: essentials, age: age0 }, tAge))
+  const frRatio = +(fr?.ratio || fr?.value || 0)
+
+  return (<>
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>The answer, on your plan</div>
+      <div style={{ fontSize: 15, color: 'var(--c-text)', lineHeight: 1.5 }}>
+        Your <strong>{_gk(potK * 1000)}</strong> of pots, drawn using <strong>{plain.name}</strong>, {lastsHorizon
+          ? <>last beyond <strong style={{ color: 'var(--c-mint-text)' }}>age {horizonAge}</strong> — your full plan and more — on these assumptions.</>
+          : <>run low at <strong style={{ color: 'var(--c-coral-text)' }}>age {lastsAge}</strong> on these assumptions.</>}
+      </div>
+      {secureGross > 0 && (
+        <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          On top of the pots, your <strong style={{ color: 'var(--c-mint-text)' }}>secure income {_gk(secureGross)}/yr</strong> (state pension, DB &amp; guaranteed income) is paid <strong>for life</strong> — it never runs out. The pots only have to cover the gap above it.
+        </div>
+      )}
+    </div>
+
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Explore it — drag any lever</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+        Year-1 income <strong style={{ color: 'var(--c-text)' }}>{_gk(w1)}</strong> · {lastsHorizon ? <>lasts past age <strong style={{ color: 'var(--c-mint-text)' }}>{horizonAge}</strong></> : <>runs out at age <strong style={{ color: 'var(--c-coral-text)' }}>{lastsAge}</strong></>}
+      </div>
+      <MethodChart path={path} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Pot at retirement" value={potK} min={Math.max(10, Math.round(seedPotK * 0.3))} max={Math.round(seedPotK * 2)} step={10} fmt={() => _gk(potK * 1000)} onChange={setPotK} dirty={potK !== seedPotK} />
+        <SolverSlider label="Draw level" value={drawScale} min={0.4} max={2} step={0.05} fmt={() => `${_gk(w1)}/yr`} onChange={setDrawScale} dirty={Math.abs(drawScale - 1) > 0.001} />
+        <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — make it last to" value={Math.min(Math.max(lastsAge, age0 + 5), 105)} min={age0 + 5} max={105} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want it to last to — the engine solves the most you could draw, and the chart + numbers follow.</div>
+      </div>
+    </div>
+
+    {frRatio > 0 && (
+      <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>Second lens — pots only</div>
+        <FundedRatioGaugeV2 ratio={frRatio} confidence={fr?.confidence_low != null ? { low: +fr.confidence_low, high: +fr.confidence_high } : null} fundedYears={fr?.fundedYears || fr?.years || null} />
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>
+          This gauge weighs your <strong>investable pots alone</strong> against a safe-withdrawal target — it deliberately ignores secure income. That's why it can read "{Math.round(frRatio * 100)}% funded" while the plan above lasts to {lastsHorizon ? `age ${horizonAge}+` : `age ${lastsAge}`}: {secureGross > 0 ? `the difference is the ${_gk(secureGross)}/yr of secure income carrying the rest.` : 'the two simply measure different things.'} The chart above assumes <strong>steady</strong> returns; the band on this gauge — and <strong>"What if markets fall?"</strong> — show how real, variable markets widen the range either way.
+        </div>
+      </div>
+    )}
+
+    <div className="sw-card" style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 5 }}>How this pace plays out</div>
+      <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.6 }}>{methodNarrative(methodId, { age0, w1, w2: path[1]?.withdrawal ?? w1, portfolio: liveOpts.portfolio, essentialsAnnual: essentials })}</div>
+    </div>
+    <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 12, lineHeight: 1.5 }}>
+      A constant-return illustration on your assumptions — not a forecast. Real markets vary year to year; see "What if markets fall?" for the stochastic view.
+    </div>
+  </>)
+}
+
+function LastAccum({ entity, fi }) {
+  const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+  const fiTarget = Math.round(fi?.fiTarget || 0)
+  const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
+  const rawNetMonthly = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); return (+(m?.surplus) || 0) - (+(m?.deficit) || 0) } catch { return 0 } })()
+  const seedSaveAnnual = Math.max(0, Math.round(rawNetMonthly * 12))
+  const seedPotK = Math.max(1, Math.round(invested0 / 1000))
+  const seedSaveK = Math.max(0, Math.round(seedSaveAnnual / 1000))
+  const seedG = 5
+  const horizonAge = Math.min(100, age0 + 45)
+  const years = Math.max(1, horizonAge - age0)
+
+  const [potK, setPotK] = useState(seedPotK)
+  const [saveK, setSaveK] = useState(seedSaveK)
+  const [gPct, setGPct] = useState(seedG)
+  const dirty = potK !== seedPotK || saveK !== seedSaveK || Math.abs(gPct - seedG) > 0.001
+  const reset = () => { setPotK(seedPotK); setSaveK(seedSaveK); setGPct(seedG) }
+  const path = useMemo(() => accumProjection({ pot: potK * 1000, annualSaving: saveK * 1000, growth: gPct / 100, age0, years }), [potK, saveK, gPct, age0, years])
+  const reachIdx = path.findIndex(r => (r.balance || 0) >= fiTarget)
+  const fiAge = reachIdx >= 0 ? path[reachIdx].age : null
+  const onTargetAge = (tAge) => { const sv = solveSavingForFI({ pot: potK * 1000, growth: gPct / 100, age0, targetAge: tAge, fiTarget }); setSaveK(Math.round(sv / 1000)) }
+
+  if (!fiTarget) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Add your investable savings and a target retirement income to project your path to financial independence.</div>
+
+  return (<>
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>The answer, on your plan</div>
+      <div style={{ fontSize: 15, color: 'var(--c-text)', lineHeight: 1.5 }}>
+        Saving <strong>{_gk(saveK * 1000)}/yr</strong> at <strong>{gPct}%</strong>, your <strong>{_gk(potK * 1000)}</strong> reaches your <strong>{_gk(fiTarget)}</strong> independence target {fiAge
+          ? <>at <strong style={{ color: 'var(--c-mint-text)' }}>age {fiAge}</strong>.</>
+          : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong> — raise saving or growth below.</>}
+      </div>
+      {rawNetMonthly < 0 && (
+        <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: 'var(--c-tint-coral)', border: '1px solid var(--c-coral-text)', fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          But right now you're spending <strong style={{ color: 'var(--c-coral-text)' }}>{_gmo(Math.abs(rawNetMonthly) * 12)}/mo more than you earn</strong> — so this projection assumes you add <strong>nothing</strong> new (and existing pots just grow). Closing that monthly gap is step one; until then you're relying on growth alone. See "Am I OK right now?".
+        </div>
+      )}
+    </div>
+
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Explore it — drag any lever</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <AccumChart path={path} target={fiTarget} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Savings now" value={potK} min={0} max={Math.max(50, Math.round(seedPotK * 2 + 50))} step={5} fmt={() => _gk(potK * 1000)} onChange={setPotK} dirty={potK !== seedPotK} />
+        <SolverSlider label="Saving / yr" value={saveK} min={0} max={Math.max(20, Math.round(seedSaveK * 2 + 20))} step={1} fmt={() => `${_gk(saveK * 1000)}/yr`} onChange={setSaveK} dirty={saveK !== seedSaveK} />
+        <SolverSlider label="Growth (nominal)" value={gPct} min={1} max={9} step={0.5} fmt={v => `${v}%`} onChange={setGPct} dirty={Math.abs(gPct - seedG) > 0.001} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — reach FI by" value={Math.min(Math.max(fiAge || (age0 + 20), age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onTargetAge} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you want to be independent by — the engine solves how much you'd need to save each year, and the chart follows.</div>
+      </div>
+    </div>
+
+    <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.5 }}>
+      The 25× target is a long-standing planning rule of thumb (a ~4% withdrawal), not a guarantee. A constant-return illustration on your assumptions — not a forecast.
+    </div>
+  </>)
+}
+
+// ── Adjustable market-shock model — the interactive core of "What if markets
+// fall?" (replaces the fabricated ±20% GK corridor, P4-06). Injects a single
+// crash year into an otherwise constant-return drawdown, so the user can drag the
+// crash SIZE, its TIMING, and the draw and watch the depletion age move — plus
+// back-solve the largest crash the plan can absorb. Pure & deterministic.
+function stressPath({ portfolio, years, growth, inflation = 0.025, draw, crashPct, crashAtYear, age0 }) {
+  let bal = +portfolio || 0
+  let w = +draw || 0
+  const g = growth != null ? +growth : 0.05
+  const out = [{ age: age0, balance: Math.round(bal) }]
+  const n = Math.max(1, years)
+  for (let y = 1; y <= n; y++) {
+    const yg = (y === crashAtYear) ? -Math.abs(crashPct) : g
+    bal = Math.max(0, bal * (1 + yg) - w)
+    out.push({ age: age0 + y, balance: Math.round(bal) })
+    w *= (1 + inflation)
+  }
+  return out
+}
+function _depAge(path, age0, years) { const d = path.find(p => (p.balance || 0) <= 0); return d ? d.age : age0 + years }
+// Back-solve: the biggest one-year crash the plan still survives to targetAge.
+function solveSurvivableCrash({ portfolio, years, growth, inflation, draw, crashAtYear, age0, targetAge }) {
+  let lo = 0, hi = 0.9
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2
+    const dep = _depAge(stressPath({ portfolio, years, growth, inflation, draw, crashPct: mid, crashAtYear, age0 }), age0, years)
+    if (dep >= targetAge) lo = mid; else hi = mid   // survives → try a bigger crash
+  }
+  return Math.round(lo * 100) / 100
+}
+// Baseline vs stressed pot path — labelled axes, both depletion markers.
+function StressChart({ baseline, stressed, crashAtAge }) {
+  const a = (baseline || []).filter(Boolean), b = (stressed || []).filter(Boolean)
+  if (a.length < 2) return null
+  const maxV = Math.max(...a.map(r => r.balance || 0), ...b.map(r => r.balance || 0), 1) * 1.05
+  const W = 320, H = 160, pL = 44, pR = 10, pT = 12, pB = 28, pw = W - pL - pR, ph = H - pT - pB
+  const n = a.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const mk = pts => pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const depB = b.findIndex(r => (r.balance || 0) <= 0)
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  const crashIdx = a.findIndex(r => r.age === crashAtAge)
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your pot — calm markets vs a crash</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Your pot over time under calm markets versus an early crash, on your assumptions">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        {crashIdx > 0 && (
+          <g>
+            <line x1={px(crashIdx)} y1={pT} x2={px(crashIdx)} y2={pT + ph} stroke="var(--c-amber-text)" strokeWidth="0.75" strokeDasharray="2 2" />
+            <text x={px(crashIdx)} y={pT - 3} fontSize="8" fill="var(--c-amber-text)" textAnchor="middle">crash</text>
+          </g>
+        )}
+        <path d={mk(a)} fill="none" stroke="var(--c-mint-text)" strokeWidth="1.75" />
+        <path d={mk(b)} fill="none" stroke="var(--c-coral-text)" strokeWidth="1.75" />
+        {depB >= 0 && (
+          <g>
+            <line x1={px(depB)} y1={pT} x2={px(depB)} y2={pT + ph} stroke="var(--c-coral-text)" strokeWidth="1" strokeDasharray="3 2" />
+            <text x={px(depB)} y={pT - 3} fontSize="8" fill="var(--c-coral-text)" textAnchor="middle">runs out</text>
+          </g>
+        )}
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {a[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+      </svg>
+      <div style={{ display: 'flex', gap: 14, marginTop: 2, fontSize: 10, color: 'var(--c-text3)' }}>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-mint-text)', verticalAlign: 'middle', marginRight: 4 }} />Calm markets</span>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-coral-text)', verticalAlign: 'middle', marginRight: 4 }} />After the crash</span>
+      </div>
+    </div>
+  )
+}
+
+// Interactive "What if markets fall?" — drag the crash, see the damage, back-solve
+// the crash you can survive. Sits ABOVE the real stochastic views (sequence-risk
+// story + Monte-Carlo bands), which stay as the engine's own uncertainty read.
+function StressExplorer({ decSolve }) {
+  const inp = decSolve.inputs || {}
+  const age0 = inp.currentAge || 65
+  const horizonAge = inp.horizonAge || 95
+  const simEndAge = Math.max(horizonAge + 5, 105)
+  const years = Math.max(1, simEndAge - age0)
+  const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+  const growth = inp.growth ?? 0.05
+  const inflation = inp.inflation ?? 0.025
+  const secureGross = decSolve.floor?.grossAnnual || 0
+  const seedDraw = Math.max(0, (inp.incomeTargetAnnual || 0) - secureGross)   // what the pots must cover
+
+  const [crashPctI, setCrashPctI] = useState(30)   // % drop, integer
+  const [crashYr, setCrashYr] = useState(1)        // years from now
+  const [drawScale, setDrawScale] = useState(100)  // % of plan draw, integer
+  const dirty = crashPctI !== 30 || crashYr !== 1 || drawScale !== 100
+  const reset = () => { setCrashPctI(30); setCrashYr(1); setDrawScale(100) }
+  const draw = seedDraw * (drawScale / 100)
+  const common = { portfolio, years, growth, inflation, draw, age0 }
+  const baseline = useMemo(() => stressPath({ ...common, crashPct: 0, crashAtYear: -1 }), [portfolio, years, growth, inflation, draw, age0])
+  const stressed = useMemo(() => stressPath({ ...common, crashPct: crashPctI / 100, crashAtYear: crashYr }), [portfolio, years, growth, inflation, draw, age0, crashPctI, crashYr])
+  const depBase = _depAge(baseline, age0, years)
+  const depStress = _depAge(stressed, age0, years)
+  const baseSurvives = depBase >= simEndAge
+  const stressSurvives = depStress >= simEndAge
+  const onSurvivable = (tAge) => { const c = solveSurvivableCrash({ ...common, crashAtYear: crashYr, targetAge: tAge }); setCrashPctI(Math.round(c * 100)) }
+
+  if (!(portfolio > 0) || !(seedDraw > 0)) return null   // pure secure-income plan: nothing to stress
+
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Stress it yourself — drag the crash</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+        A <strong style={{ color: 'var(--c-coral-text)' }}>{crashPctI}% crash</strong> {crashYr <= 1 ? 'next year' : `in ${crashYr} years`} {stressSurvives
+          ? <>still leaves your pots lasting <strong style={{ color: 'var(--c-mint-text)' }}>beyond age {horizonAge}</strong>{secureGross > 0 ? <> — and your {_gk(secureGross)}/yr secure income carries on regardless.</> : '.'}</>
+          : <>brings your pots' end forward to <strong style={{ color: 'var(--c-coral-text)' }}>age {depStress}</strong>{baseSurvives
+              ? <> — your plan otherwise lasts beyond age {horizonAge}.</>
+              : (depBase - depStress > 0 ? <> — about <strong>{depBase - depStress} years</strong> sooner than calm markets (age {depBase}).</> : '.')}{secureGross > 0 ? <> Your {_gk(secureGross)}/yr secure income is unaffected.</> : ''}</>}
+      </div>
+      <StressChart baseline={baseline} stressed={stressed} crashAtAge={age0 + crashYr} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Crash size" value={crashPctI} min={5} max={60} step={5} fmt={v => `−${v}%`} onChange={setCrashPctI} dirty={crashPctI !== 30} />
+        <SolverSlider label="When it hits" value={crashYr} min={1} max={Math.min(20, years)} step={1} fmt={v => v <= 1 ? 'next yr' : `in ${v}y`} onChange={setCrashYr} dirty={crashYr !== 1} />
+        <SolverSlider label="Your draw" value={drawScale} min={50} max={150} step={5} fmt={() => `${_gk(draw)}/yr`} onChange={setDrawScale} dirty={drawScale !== 100} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — still last to" value={Math.min(Math.max(depStress, age0 + 5), simEndAge)} min={age0 + 5} max={simEndAge} step={1} fmt={v => `age ${v}`} onChange={onSurvivable} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you'd still want to be funded to — the engine solves the <strong>biggest crash your plan could absorb</strong> and still get there.</div>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        A single-shock illustration on your assumptions — not a forecast. The sequence-risk story and Monte-Carlo range below model many market paths, not one crash.
+      </div>
+    </div>
+  )
+}
+// ── "What's it costing?" — drillable, toggleable cost-of-inaction (P4-05). The
+// old surface dumped the whole §C methodology stack as a static always-open
+// scroll. coi.byDomain is a map of 10 fixable items, each worth £/yr — so this
+// leads with the total + biggest driver, lets the user TOGGLE any combination of
+// items "fixed" (multi-variable what-if) to see the remaining waste, charts the
+// PRICE OF WAITING (cost compounds over a horizon slider), and keeps the full
+// methodology depth collapsed below for power users.
+// urgency: 'deadline' = has a clock; 'annual' = resets each tax year (use-it-or-
+// lose-it before 5 April); 'anytime' = no fixed date. action = the plain next step.
+const COI_DOMAIN_PLAIN = {
+  drawdown:           { label: 'Pension & IHT timing', why: 'pulling pension into your estate before the 2027 rule, or drawing in the wrong order', urgency: 'deadline', action: 'Review your draw order & timing before the April 2027 rule' },
+  wrapperSequencing:  { label: 'Un-sheltered investments', why: 'tax drag on holdings sitting outside an ISA or pension', urgency: 'annual', action: 'Move holdings into an ISA/pension over time ("Bed & ISA")' },
+  contributions:      { label: 'Unused pension relief', why: 'higher-rate relief left unclaimed on pension headroom', urgency: 'annual', action: 'Top up your pension to claim the higher-rate relief' },
+  taxAllowances:      { label: 'Unused ISA allowance', why: 'cash that could be sheltered from tax each April', urgency: 'annual', action: `Use this year's £${TAX.isaAllowance.toLocaleString()} ISA before 5 April` },
+  estatePlanning:     { label: 'Estate & will gaps', why: 'lost residence nil-rate band or no current will', urgency: 'anytime', action: 'Make or update your will; check the residence nil-rate band' },
+  protection:         { label: 'Protection gaps', why: 'cover missing against death or illness', urgency: 'anytime', action: 'Review life and income-protection cover' },
+  debt:               { label: 'Expensive debt', why: 'interest you could refinance or clear', urgency: 'anytime', action: 'Refinance or clear the most expensive debt first' },
+  gifting:            { label: 'Gifting allowances', why: 'annual gift exemptions left unused', urgency: 'annual', action: `Use your £${TAX.giftExemption.toLocaleString()} annual gift exemption before 5 April` },
+  propertyDecisions:  { label: 'Property decisions', why: 'tax or cost tied up in property choices', urgency: 'anytime', action: 'Review how your property is held' },
+  investmentStrategy: { label: 'Investment efficiency', why: 'return given up versus an efficient mix', urgency: 'anytime', action: 'Review your fund mix against a lower-cost efficient blend' },
+}
+const _COST_URGENCY = {
+  deadline: { tag: 'Clock ticking', tone: 'coral' },
+  annual:   { tag: 'Before 5 Apr', tone: 'amber' },
+  anytime:  { tag: 'Anytime', tone: 'neutral' },
+}
+function CostDrawer({ coi, depth }) {
+  const rows = useMemo(() => Object.entries(coi?.byDomain || {})
+    .map(([k, v]) => ({ k, v: +v || 0, ...COI_DOMAIN_PLAIN[k] }))
+    .filter(r => r.v > 0)
+    .sort((a, b) => b.v - a.v), [coi])
+  const [fixed, setFixed] = useState(() => ({}))
+  const total = rows.reduce((s, r) => s + r.v, 0)
+  const remaining = rows.filter(r => !fixed[r.k]).reduce((s, r) => s + r.v, 0)
+  const saved = total - remaining
+  const top = rows[0]
+  const maxRow = rows.length ? rows[0].v : 1
+  const toggle = k => setFixed(f => ({ ...f, [k]: !f[k] }))
+
+  if (!rows.length) return (
+    <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>
+      Nothing material is at stake on your plan right now — no unused allowances, tax drag or timing exposure we can see. We'll flag it here if that changes.
+    </div>
+  )
+  return (<>
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What leaving things as they are could cost you</div>
+      <div style={{ fontSize: 15, color: 'var(--c-text)', lineHeight: 1.5 }}>
+        About <strong style={{ color: 'var(--c-coral-text)' }}>{_gk(total)}</strong> of value is at stake across {rows.length} {rows.length === 1 ? 'area' : 'areas'}{top ? <> — the biggest is <strong>{top.label}</strong> at <strong style={{ color: 'var(--c-coral-text)' }}>{_gk(top.v)}</strong>.</> : '.'}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>A mix of one-off exposures (like tax that falls due) and recurring drag (like unused allowances each year). Tick the ones you'd tackle to see what's left. Information only, not advice.</div>
+    </div>
+
+    {(() => {
+      const g = { deadline: rows.filter(r => r.urgency === 'deadline'), annual: rows.filter(r => r.urgency === 'annual'), anytime: rows.filter(r => r.urgency === 'anytime') }
+      const sumOf = a => a.reduce((s, r) => s + r.v, 0)
+      const names = a => a.map(r => r.label).join(', ')
+      const step = (n, color, head, items, note) => items.length ? (
+        <div style={{ display: 'flex', gap: 9, marginBottom: 8 }}>
+          <span style={{ flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: color, color: 'var(--c-bg)', fontSize: 11, fontWeight: 800, lineHeight: '18px', textAlign: 'center' }}>{n}</span>
+          <span style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--c-text)' }}>{head}</strong> — {names(items)} <span style={{ color: 'var(--c-text3)' }}>({_gk(sumOf(items))})</span>. {note}
+          </span>
+        </div>
+      ) : null
+      return (
+        <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 8 }}>Where to start — order by deadline, not just size</div>
+          {step(1, 'var(--c-coral-text)', 'Now — there’s a clock', g.deadline, coi?.daysToImpact > 0 && coi.daysToImpact < 365 ? `${coi.daysToImpact} days left.` : 'Time-sensitive.')}
+          {step(2, 'var(--c-amber-text)', 'Before 5 April — use-it-or-lose-it', g.annual, 'These allowances reset each tax year; unused, they’re gone.')}
+          {step(3, 'var(--c-text3)', 'When you can — no fixed date', g.anytime, 'Worth doing, but no deadline.')}
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.5 }}>The biggest number isn’t always the first move — a smaller item with a deadline can matter more. Each item below carries its next step.</div>
+        </div>
+      )
+    })()}
+
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>If you tackled…</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text2)' }}>still at stake <strong style={{ color: remaining > 0 ? 'var(--c-coral-text)' : 'var(--c-mint-text)' }}>{_gk(remaining)}</strong>{saved > 0 && <> · removing <strong style={{ color: 'var(--c-mint-text)' }}>{_gk(saved)}</strong></>}</div>
+      </div>
+      {/* Composition of the total value-at-stake, drillable per driver. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {rows.map(r => {
+          const on = !!fixed[r.k]
+          return (
+            <button key={r.k} onClick={() => toggle(r.k)} className="sw-pressable" style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+              background: on ? 'var(--c-surface2)' : 'var(--c-surface)', border: '1px solid var(--c-border)', width: '100%', opacity: on ? 0.6 : 1 }}>
+              <span style={{ width: 16, height: 16, flexShrink: 0, borderRadius: 5, border: `1.5px solid ${on ? 'var(--c-mint-text)' : 'var(--c-text3)'}`, background: on ? 'var(--c-mint-text)' : 'transparent', color: 'var(--c-bg)', fontSize: 11, fontWeight: 900, lineHeight: '14px', textAlign: 'center' }}>{on ? '✓' : ''}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', textDecoration: on ? 'line-through' : 'none' }}>{r.label}</span>
+                    {!on && r.urgency && _COST_URGENCY[r.urgency] && (() => { const u = _COST_URGENCY[r.urgency]; const c = u.tone === 'coral' ? 'var(--c-coral-text)' : u.tone === 'amber' ? 'var(--c-amber-text)' : 'var(--c-text3)'; return <span style={{ fontSize: 9, fontWeight: 700, color: c, border: `1px solid ${c}`, borderRadius: 100, padding: '0 6px', whiteSpace: 'nowrap' }}>{u.tag}</span> })()}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: on ? 'var(--c-text3)' : 'var(--c-coral-text)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{_gk(r.v)}</span>
+                </span>
+                <span style={{ display: 'block', height: 4, marginTop: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)' }}>
+                  <span style={{ display: 'block', height: '100%', width: `${Math.max(3, (r.v / maxRow) * 100)}%`, borderRadius: 3, background: on ? 'var(--c-tint-neutral-2)' : 'var(--c-coral-text)' }} />
+                </span>
+                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--c-text3)', marginTop: 4, lineHeight: 1.4 }}>{r.why}</span>
+                {r.action && <span style={{ display: 'block', fontSize: 10.5, color: on ? 'var(--c-text3)' : 'var(--c-acc)', marginTop: 3, fontWeight: 600, lineHeight: 1.4 }}>→ {r.action}</span>}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {coi?.daysToImpact > 0 && coi.daysToImpact < 365 && (
+        <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-tint-amber)', border: '1px solid var(--c-amber-text)', fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+          <strong style={{ color: 'var(--c-amber-text)' }}>{coi.daysToImpact} days</strong> until the timing-sensitive part (the pension &amp; IHT exposure) crystallises — the one piece here with a clock on it.
+        </div>
+      )}
+    </div>
+
+    {depth || null}
+    <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+      Each figure is an estimate of value at stake on your current data, traced to the rule or allowance behind it — information and guidance, not personal advice.
+    </div>
+  </>)
+}
+// Accumulation under a crash — the accumulator's "What if markets fall?" (D1). A
+// market crash WHILE you're saving delays the day you reach independence; this
+// lets the user drag the crash and see how many years it pushes FI back, with a
+// back-solve for the biggest crash that still hits a chosen FI age.
+function accumStressPath({ pot, annualSaving, growth, age0, years, crashPct, crashAtYear }) {
+  let bal = +pot || 0
+  const g = growth != null ? +growth : 0.05
+  const sv = +annualSaving || 0
+  const out = [{ age: age0, balance: Math.round(bal) }]
+  const n = Math.max(1, years)
+  for (let y = 1; y <= n; y++) {
+    const yg = (y === crashAtYear) ? -Math.abs(crashPct) : g
+    bal = Math.max(0, bal * (1 + yg) + sv)
+    out.push({ age: age0 + y, balance: Math.round(bal) })
+  }
+  return out
+}
+function _fiAge(path, target, fallback) { const h = path.find(r => (r.balance || 0) >= target); return h ? h.age : fallback }
+function solveSurvivableCrashAccum({ pot, annualSaving, growth, age0, years, crashAtYear, fiTarget, targetAge }) {
+  let lo = 0, hi = 0.9
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2
+    const age = _fiAge(accumStressPath({ pot, annualSaving, growth, age0, years, crashPct: mid, crashAtYear }), fiTarget, 999)
+    if (age <= targetAge) lo = mid; else hi = mid   // still reaches in time → try a bigger crash
+  }
+  return Math.round(lo * 100) / 100
+}
+function AccumStressChart({ baseline, stressed, target, crashAtAge }) {
+  const [sel, setSel] = useState(null) // tapped age index → calm-vs-crash reveal (drill)
+  const a = (baseline || []).filter(Boolean), b = (stressed || []).filter(Boolean)
+  if (a.length < 2) return null
+  const maxV = Math.max(...a.map(r => r.balance || 0), ...b.map(r => r.balance || 0), target || 0, 1) * 1.05
+  const W = 320, H = 160, pL = 44, pR = 10, pT = 12, pB = 28, pw = W - pL - pR, ph = H - pT - pB
+  const n = a.length
+  const px = i => pL + (i / (n - 1)) * pw
+  const py = v => pT + ph - (Math.max(0, v) / maxV) * ph
+  const mk = pts => pts.map((r, i) => (i ? 'L' : 'M') + px(i).toFixed(1) + ',' + py(r.balance || 0).toFixed(1)).join(' ')
+  const yTicks = [0, maxV / 2, maxV]
+  const xIdx = [...new Set([0, Math.floor((n - 1) / 2), n - 1])]
+  const crashIdx = a.findIndex(r => r.age === crashAtAge)
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>Your savings — calm markets vs a crash</div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block' }} role="img" aria-label="Your savings climbing to the independence target under calm markets versus an early crash">
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pL} y1={py(v)} x2={W - pR} y2={py(v)} stroke="var(--c-tint-neutral-2)" strokeWidth="0.5" strokeDasharray="2 3" />
+            <text x={pL - 4} y={py(v) + 3} fontSize="8" fill="var(--c-text3)" textAnchor="end">{_gk(v)}</text>
+          </g>
+        ))}
+        {target > 0 && target < maxV && (
+          <g>
+            <line x1={pL} y1={py(target)} x2={W - pR} y2={py(target)} stroke="var(--c-mint-text)" strokeWidth="1" strokeDasharray="4 2" />
+            <text x={W - pR} y={py(target) - 3} fontSize="8" fill="var(--c-mint-text)" textAnchor="end">FI target {_gk(target)}</text>
+          </g>
+        )}
+        {crashIdx > 0 && (
+          <g>
+            <line x1={px(crashIdx)} y1={pT} x2={px(crashIdx)} y2={pT + ph} stroke="var(--c-amber-text)" strokeWidth="0.75" strokeDasharray="2 2" />
+            <text x={px(crashIdx)} y={pT - 3} fontSize="8" fill="var(--c-amber-text)" textAnchor="middle">crash</text>
+          </g>
+        )}
+        <path d={mk(a)} fill="none" stroke="var(--c-mint-text)" strokeWidth="1.75" />
+        <path d={mk(b)} fill="none" stroke="var(--c-coral-text)" strokeWidth="1.75" />
+        {xIdx.map((i, k) => (
+          <text key={k} x={px(i)} y={H - 8} fontSize="8" fill="var(--c-text3)" textAnchor={k === 0 ? 'start' : k === xIdx.length - 1 ? 'end' : 'middle'}>age {a[i].age}</text>
+        ))}
+        <text x={2} y={pT + 2} fontSize="8" fill="var(--c-text3)">£</text>
+        {/* Selected-age marker (drill) */}
+        {sel != null && a[sel] && (
+          <g pointerEvents="none">
+            <line x1={px(sel)} y1={pT} x2={px(sel)} y2={pT + ph} stroke="var(--c-acc)" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.85" />
+            <circle cx={px(sel)} cy={py(a[sel].balance || 0)} r="3.5" fill="var(--c-mint-text)" />
+            {b[sel] && <circle cx={px(sel)} cy={py(b[sel].balance || 0)} r="3.5" fill="var(--c-coral-text)" />}
+          </g>
+        )}
+        {/* Invisible per-age tap-bands → drill (all charts drillable) */}
+        {a.map((_, i) => (
+          <rect key={`ah-${i}`} x={px(i) - (pw / Math.max(1, n - 1)) / 2} y={pT}
+            width={pw / Math.max(1, n - 1)} height={ph} fill="transparent"
+            style={{ cursor: 'pointer' }} onClick={() => setSel(sel === i ? null : i)} />
+        ))}
+      </svg>
+      <div style={{ display: 'flex', gap: 14, marginTop: 2, fontSize: 10, color: 'var(--c-text3)' }}>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-mint-text)', verticalAlign: 'middle', marginRight: 4 }} />Calm markets</span>
+        <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--c-coral-text)', verticalAlign: 'middle', marginRight: 4 }} />After the crash</span>
+      </div>
+      {/* Drill reveal — both paths at the tapped age + the gap the crash opens. */}
+      {sel != null && a[sel] && (() => {
+        const calm = a[sel].balance || 0
+        const crash = (b[sel] || {}).balance != null ? b[sel].balance : null
+        return (
+          <div style={{ margin: '8px 0 2px', padding: '8px 10px', borderRadius: 8, background: 'var(--c-surface2)', border: '1px solid var(--c-acc)', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            <strong style={{ color: 'var(--c-text)' }}>Age {a[sel].age}</strong> — calm markets{' '}
+            <strong style={{ color: 'var(--c-mint-text)' }}>{_gk(calm)}</strong>
+            {crash != null && <> vs after a crash <strong style={{ color: 'var(--c-coral-text)' }}>{_gk(crash)}</strong>, a gap of <strong>{_gk(Math.abs(calm - crash))}</strong></>}
+            {target > 0 && <span style={{ color: 'var(--c-text3)' }}> · target {_gk(target)}.</span>}
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+function StressExplorerAccum({ entity, fi }) {
+  const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+  const fiTarget = Math.round(fi?.fiTarget || 0)
+  const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
+  const seedSave = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); return Math.max(0, Math.round(((+(m?.surplus) || 0) - (+(m?.deficit) || 0)) * 12)) } catch { return 0 } })()
+  const growth = 0.05
+  const horizonAge = Math.min(100, age0 + 50)
+  const years = Math.max(1, horizonAge - age0)
+  const [crashPctI, setCrashPctI] = useState(30)
+  const [crashYr, setCrashYr] = useState(1)
+  const dirty = crashPctI !== 30 || crashYr !== 1
+  const reset = () => { setCrashPctI(30); setCrashYr(1) }
+  const common = { pot: invested0, annualSaving: seedSave, growth, age0, years }
+  const baseline = useMemo(() => accumStressPath({ ...common, crashPct: 0, crashAtYear: -1 }), [invested0, seedSave, age0, years])
+  const stressed = useMemo(() => accumStressPath({ ...common, crashPct: crashPctI / 100, crashAtYear: crashYr }), [invested0, seedSave, age0, years, crashPctI, crashYr])
+  const baseAge = _fiAge(baseline, fiTarget, null)
+  const stressAge = _fiAge(stressed, fiTarget, null)
+  const delay = (baseAge && stressAge) ? stressAge - baseAge : null
+  const onSurvivable = (tAge) => setCrashPctI(Math.round(solveSurvivableCrashAccum({ ...common, crashAtYear: crashYr, fiTarget, targetAge: tAge }) * 100))
+
+  if (!fiTarget) return null
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)' }}>Stress it yourself — a crash while you save</div>
+        {dirty && <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset</button>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.5, marginBottom: 2 }}>
+        A <strong style={{ color: 'var(--c-coral-text)' }}>{crashPctI}% crash</strong> {crashYr <= 1 ? 'next year' : `in ${crashYr} years`} {baseAge == null
+          ? <>doesn't change much — you don't reach the target within this horizon either way.</>
+          : delay > 0
+            ? <>pushes your independence date from <strong style={{ color: 'var(--c-mint-text)' }}>age {baseAge}</strong> to <strong style={{ color: 'var(--c-coral-text)' }}>age {stressAge}</strong> — about <strong>{delay} {delay === 1 ? 'year' : 'years'}</strong> later.</>
+            : <>barely moves your independence date — you'd still reach it around <strong style={{ color: 'var(--c-mint-text)' }}>age {stressAge || baseAge}</strong>.</>}
+      </div>
+      <AccumStressChart baseline={baseline} stressed={stressed} target={fiTarget} crashAtAge={age0 + crashYr} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10 }}>
+        <SolverSlider label="Crash size" value={crashPctI} min={5} max={60} step={5} fmt={v => `−${v}%`} onChange={setCrashPctI} dirty={crashPctI !== 30} />
+        <SolverSlider label="When it hits" value={crashYr} min={1} max={Math.min(20, years)} step={1} fmt={v => v <= 1 ? 'next yr' : `in ${v}y`} onChange={setCrashYr} dirty={crashYr !== 1} />
+      </div>
+      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+        <SolverSlider label="↩ Back-solve — still reach FI by" value={Math.min(Math.max(stressAge || baseAge || age0 + 10, age0 + 1), horizonAge)} min={age0 + 1} max={horizonAge} step={1} fmt={v => `age ${v}`} onChange={onSurvivable} dirty={false} />
+        <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>Drag the age you'd still want to be independent by — the engine solves the biggest crash you could ride out and still get there.</div>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        A single-shock illustration on your assumptions — not a forecast. The further off your target, the more time you have to recover.
+      </div>
+    </div>
+  )
+}
+// Decision dimensions per method — the "paper" the founder wants: how each one
+// behaves on the axes that actually drive the choice. Qualitative facts (FCA-safe:
+// general characteristics of each approach, not a recommendation). Quantitative
+// columns (year-1, lasts, estate) come from the engine at runtime.
+const METHOD_COMPARE = {
+  bengen:          { income: 'Fixed, rises with inflation', stability: 'Very steady', crash: 'Keeps paying the same — the pot absorbs the hit', estate: 'Medium', suits: 'a predictable monthly paycheck' },
+  guyton_klinger:  { income: 'Highest on average', stability: 'Moves with markets', crash: 'Skips your pay-rise (and trims) after bad years', estate: 'Lower', suits: 'the most income over your life' },
+  vanguard:        { income: 'Tracks the pot', stability: 'Moves, but capped', crash: 'Income dips — a floor limits how far', estate: 'Medium', suits: 'staying responsive without whiplash' },
+  bucket:          { income: 'Steady', stability: 'Steady', crash: 'You spend cash, never sell investments low', estate: 'Medium', suits: 'peace of mind in a downturn' },
+  floor_guardrail: { income: 'Essentials fixed + flexible extra', stability: 'Basics fixed, extra flexes', crash: 'Essentials untouched; only the extra dips', estate: 'Varies', suits: 'never cutting the income you need' },
+}
+// Goal → method, in the founder's own words — the choose-by-priority guide.
+const PRIORITY_GUIDE = [
+  { goal: 'income_floor',       want: 'My essentials never get cut' },
+  { goal: 'max_lifetime_spend', want: 'The most income I can spend' },
+  { goal: 'min_lifetime_tax',   want: 'Smooth, controllable income' },
+  { goal: 'legacy',             want: 'Leave more behind' },
+]
+function MethodsCompareTable({ methods, recId, horizon }) {
+  if (!methods?.length) return null
+  const cell = { padding: '7px 8px', fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.35, verticalAlign: 'top', borderTop: '1px solid var(--c-border)' }
+  const head = { padding: '6px 8px', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--c-text3)', textAlign: 'left', whiteSpace: 'nowrap' }
+  return (
+    <div style={{ marginTop: 4, overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid var(--c-border)', borderRadius: 12 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 540, fontVariantNumeric: 'tabular-nums' }}>
+        <thead>
+          <tr>
+            <th style={{ ...head, position: 'sticky', left: 0, background: 'var(--c-surface)' }}>Method</th>
+            <th style={{ ...head, textAlign: 'right' }}>Year-1 income</th>
+            <th style={head}>Income over time</th>
+            <th style={head}>In a crash</th>
+            <th style={{ ...head, textAlign: 'right' }}>Lasts to</th>
+          </tr>
+        </thead>
+        <tbody>
+          {methods.map(m => {
+            const c = METHOD_COMPARE[m.id] || {}
+            const p = METHOD_PLAIN[m.id] || { name: m.label }
+            const rec = m.id === recId
+            return (
+              <tr key={m.id} style={{ background: rec ? 'var(--c-tint-blue)' : 'transparent' }}>
+                <td style={{ ...cell, fontWeight: 700, color: 'var(--c-text)', position: 'sticky', left: 0, background: rec ? 'var(--c-tint-blue)' : 'var(--c-surface)' }}>
+                  {p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 4 }}>#1</span>}
+                </td>
+                <td style={{ ...cell, textAlign: 'right', fontWeight: 700, color: 'var(--c-text)' }}>{_gk(m.year1Withdrawal)}</td>
+                <td style={cell}>{c.income || '—'}</td>
+                <td style={cell}>{c.crash || '—'}</td>
+                <td style={{ ...cell, textAlign: 'right', color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-amber-text)' }}>{m.lastsHorizon ? `${horizon}+` : m.depletesAtAge}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+function MethodsChooseGuide({ recId, onPick, methods }) {
+  const has = id => methods?.some(m => m.id === id)
+  return (
+    <div style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>Which should you pick? Start from what matters most</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {PRIORITY_GUIDE.map(g => {
+          const mid = recommendMethodForGoal(g.goal)
+          const p = METHOD_PLAIN[mid] || {}
+          if (!has(mid)) return null
+          const isRec = mid === recId
+          return (
+            <button key={g.goal} onClick={() => onPick(mid)} className="sw-pressable" style={{ display: 'flex', alignItems: 'baseline', gap: 8, textAlign: 'left', cursor: 'pointer', width: '100%', background: 'none', border: 'none', padding: '2px 0' }}>
+              <span style={{ fontSize: 12, color: 'var(--c-text2)', flex: 1, lineHeight: 1.4 }}>"{g.want}"</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: isRec ? 'var(--c-acc)' : 'var(--c-text)', whiteSpace: 'nowrap' }}>→ {p.name}{isRec && ' ★'}</span>
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>★ = fits the priority on your plan today. These are general approaches advisers reference, shown as illustration — not a personal recommendation.</div>
+    </div>
+  )
+}
+function MethodsComparison({ portfolio, years, growth, inflation, essentialsAnnual, age, horizon, primaryGoal, withToggle = false }) {
+  const [open, setOpen] = useState(!withToggle)
+  const [openMethod, setOpenMethod] = useState(null)
+  const opts = { portfolio, years: Math.max(1, years), growth, inflation, essentialsAnnual, age }
+  let methods = []
+  try { methods = compareMethods(opts) } catch { methods = [] }
+  const recId = recommendMethodForGoal(primaryGoal)
+  const usable = portfolio > 0 && methods.length && methods.some(m => m.year1Withdrawal)
+  const body = !usable
+    ? <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text3)', lineHeight: 1.5 }}>Pacing needs a drawable pot (pension / ISA / GIA / cash). Your income here comes from secure sources, or it hasn&rsquo;t been captured yet.</div>
+    : (() => {
+      const ws = methods.map(m => m.year1Withdrawal || 0).filter(Boolean)
+      const lo = Math.min(...ws), hi = Math.max(...ws)
+      const allLast = methods.every(m => m.lastsHorizon)
+      return (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
+            <strong style={{ color: 'var(--c-text)' }}>There's no single "right" one.</strong> All five pace the same {_gk(portfolio)} of pots, and {allLast ? `on your assumptions all five last to age ${horizon}+` : 'they differ in how long they last'} — so the real difference is what they <strong style={{ color: 'var(--c-text)' }}>trade off</strong>: how much you take early ({_gk(lo)}–{_gk(hi)}/yr) versus how <strong style={{ color: 'var(--c-text)' }}>steady</strong> it stays and how protected you are in a crash. Pick by what you value most.
+          </div>
+          <MethodsChooseGuide recId={recId} methods={methods} onPick={(id) => setOpenMethod(methods.find(m => m.id === id))} />
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 6 }}>How they compare, side by side</div>
+            <MethodsCompareTable methods={methods} recId={recId} horizon={horizon} />
+            <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, lineHeight: 1.5 }}>Same pot, same horizon, your assumptions. Tap any method below to open it, see a worked example, and drag the levers. An illustration, not advice.</div>
+          </div>
+          {/* Compact DRAWER ROWS (founder: "make it a drawer, not 5 cards on one
+              page") — name + income shape + a pot-trajectory sparkline + year-1
+              income + lasts-age. The detail lives in the opened drawer. */}
+          {methods.map(m => {
+            const rec = m.id === recId
+            const p = METHOD_PLAIN[m.id] || { name: m.label, shape: '' }
+            const spark = (() => { try { return methodPath(m.id, opts) } catch { return [] } })()
+            return (
+              <button key={m.id} onClick={() => setOpenMethod(m)} className="sw-lift sw-pressable" style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface)', border: rec ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{p.name}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>#1</span>}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.shape}</div>
+                </div>
+                <MiniSparkline path={spark} color={rec ? 'var(--c-acc)' : 'var(--c-text3)'} />
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: rec ? 'var(--c-acc)' : 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}</div>
+                  <div style={{ fontSize: 9, color: 'var(--c-text3)' }}>yr-1 · to {m.lastsHorizon ? `${horizon}+` : m.depletesAtAge}</div>
+                </div>
+                <span style={{ color: 'var(--c-text3)', fontSize: 18, flexShrink: 0, lineHeight: 1 }}>›</span>
+              </button>
+            )
+          })}
+        </div>
+      )
+    })()
+  const shell = !withToggle ? body : (
+    <div style={{ marginTop: 14 }}>
+      <button onClick={() => setOpen(s => !s)} className="sw-pressable"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', cursor: 'pointer' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>Compare withdrawal methods</span>
+        <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{open ? 'Hide ▲' : 'How fast to spend? ▼'}</span>
+      </button>
+      {open && body}
+    </div>
+  )
+  return (
+    <>
+      {shell}
+      {openMethod && <MethodDetail method={openMethod} opts={opts} horizon={horizon} recommended={openMethod.id === recId} onBack={() => setOpenMethod(null)} />}
+    </>
+  )
+}
 function ScenarioForwardSummary({ entity, decSolve }) {
   // Seed the controls from the engine's RESOLVED inputs (honest defaults, never
   // hardcoded). Sparse personas have no inputs → panel won't render (no routes).
@@ -3383,7 +5444,7 @@ function ScenarioForwardSummary({ entity, decSolve }) {
               turns the engine's default ranking into the user's stated choice. */}
           <div style={{ marginTop: 12, borderTop: '1px solid var(--c-border)', paddingTop: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>
-              Your priorities — drag #1 to the top
+              Your priorities — #1 ranks first (reorder with ▲▼)
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {order.map((t, i) => {
@@ -3408,29 +5469,36 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           {anyDirty && <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)' }}>Re-solved on your assumptions &amp; priorities — an illustration, not a forecast.</div>}
         </div>
 
-        {/* Routes considered — the branches the engine ranked, selectable. */}
+        {/* Routes considered — compact selectable chips; full detail only for the
+            selected route (founder: the strip was too bulky, keep interactivity). */}
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text3)', letterSpacing: 0.5, textTransform: 'uppercase', margin: '12px 0 6px' }}>
           Routes considered ({routes.length})
         </div>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {routes.map((r, i) => {
             const on = i === routeIdx
             return (
-              <button key={r.rank ?? i} onClick={() => setRouteIdx(i)} className="sw-pressable"
-                style={{ flexShrink: 0, textAlign: 'left', padding: '8px 10px', borderRadius: 12, cursor: 'pointer', minWidth: 138,
+              <button key={r.rank ?? i} onClick={() => setRouteIdx(i)} className="sw-pressable" aria-pressed={on}
+                style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 999, cursor: 'pointer', fontSize: 11,
+                  fontWeight: on ? 800 : 600, whiteSpace: 'nowrap',
+                  color: on ? 'var(--c-acc)' : 'var(--c-text2)',
                   background: on ? 'color-mix(in srgb, var(--c-acc) 14%, var(--c-surface2))' : 'var(--c-surface2)',
                   border: on ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-text)' }}>#{r.rank ?? i + 1} {r.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 2 }}>tax {_gk(r.totalTaxCost)} · est. left {_gk(r.afterIhtEstate)}</div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 1 }}>funds to age {r.depletedAtAge || '95+'}</div>
+                #{r.rank ?? i + 1} {r.name} · to {r.depletedAtAge || '95+'}
               </button>
             )
           })}
         </div>
+        {/* Detail for the selected route only. */}
+        {route && (
+          <div style={{ marginTop: 6, fontSize: 11, color: 'var(--c-text3)' }}>
+            <b style={{ color: 'var(--c-text2)' }}>#{route.rank ?? routeIdx + 1} {route.name}</b> — tax {_gk(route.totalTaxCost)} · est. left {_gk(route.afterIhtEstate)} · funds to age {route.depletedAtAge || '95+'}
+          </div>
+        )}
 
         {/* Money-map — pots → income in the solved draw order. Re-routes when the
             back-solve target above flips the #1 ranked path. */}
-        <DrawNetworkDiagram route={route} network={solve.network} netTotal={y1?.net} />
+        <DrawNetworkDiagram route={route} network={solve.network} netTotal={y1?.net} currentAge={currentAge} />
 
         {/* Year 1 as a monthly instruction — answers "how much from each pot". */}
         {y1 && (
@@ -3477,53 +5545,19 @@ function ScenarioForwardSummary({ entity, decSolve }) {
           </div>
         </div>
 
-        {/* MethodDrawer — five ways to PACE withdrawals (how much each year),
-            a different lens from the draw ORDER (which pot) above. Gross pacing
-            rules on the total pot — deliberately NOT the plan's net figures. */}
-        <div style={{ marginTop: 14 }}>
-          <button onClick={() => setShowMethods(s => !s)} className="sw-pressable"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 12px', borderRadius: 12, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', cursor: 'pointer' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>Compare withdrawal methods</span>
-            <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{showMethods ? 'Hide ▲' : 'How fast to spend? ▼'}</span>
-          </button>
-          {showMethods && (() => {
-            let methods = []
-            try { methods = compareMethods({ portfolio, years: Math.max(1, horizon - currentAge), growth: growthPct / 100, inflation: seed.inflation ?? 0.025, essentialsAnnual, age: currentAge }) } catch { methods = [] }
-            // compareMethods ALWAYS returns 5 entries, so guard on the real
-            // condition: no drawable pot to pace → don't render five £0/yr rows
-            // with bogus "lasts to age X" verdicts (sparse-degradation fix).
-            if (portfolio <= 0 || !methods.length || methods.every(m => !m.year1Withdrawal)) {
-              return <div style={{ marginTop: 8, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Method comparison needs a drawable pot (pension/ISA/GIA/cash) to pace. Your income here comes from secure sources or hasn&rsquo;t been captured yet.</div>
-            }
-            const recId = recommendMethodForGoal(primaryGoal)
-            const maxW1 = Math.max(...methods.map(m => m.year1Withdrawal || 0), 1)
-            return (
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>
-                  The same {_gk(portfolio)} of pots, paced five ways — gross draw before tax, a different lens from your net plan above (and from the single withdrawal-<em>rate</em> assumption behind the funded gauge: this compares how fast to spend, not one rate). Whether it lasts to age {horizon} is on your assumptions, an illustration not a recommendation.
-                </div>
-                {methods.map(m => {
-                  const rec = m.id === recId
-                  return (
-                    <div key={m.id} style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: rec ? '1px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>{m.label}{rec && <span className="sw-chip sw-chip-sm sw-chip-blue" style={{ marginLeft: 6 }}>fits your #1</span>}</span>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--c-acc)', fontVariantNumeric: 'tabular-nums' }}>{_gk(m.year1Withdrawal)}/yr</span>
-                      </div>
-                      <div style={{ marginTop: 5, height: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.round((m.year1Withdrawal / maxW1) * 100)}%`, height: '100%', background: rec ? 'var(--c-acc)' : 'var(--c-text3)' }} />
-                      </div>
-                      <div style={{ marginTop: 5, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>{m.summary}</div>
-                      <div style={{ marginTop: 3, fontSize: 10, color: m.lastsHorizon ? 'var(--c-mint-text)' : 'var(--c-coral-text)' }}>
-                        {m.lastsHorizon ? `Lasts to age ${horizon}+` : `Funds low by age ${m.depletesAtAge}`} · keeps {m.strength} · watch: {m.weakness}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })()}
-        </div>
+        {/* Five ways to PACE withdrawals — a different lens from the draw ORDER
+            above. Same component renders standalone in the 'methods' tile. */}
+        <MethodsComparison
+          portfolio={portfolio}
+          years={horizon - currentAge}
+          growth={growthPct / 100}
+          inflation={seed.inflation ?? 0.025}
+          essentialsAnnual={essentialsAnnual}
+          age={currentAge}
+          horizon={horizon}
+          primaryGoal={primaryGoal}
+          withToggle
+        />
 
         {/* What this plan assumes — surfaces solve.methodology (assumptions + named rules). */}
         <AssumptionsPanel methodology={solve.methodology} />
@@ -3552,9 +5586,26 @@ function ScenarioForwardSummary({ entity, decSolve }) {
     )
   }
 
-  // No solved drawdown (accumulator / sparse) → don't fabricate one. Show the
-  // accumulator's real surface: progress to financial independence (25× target
-  // income). The drawdown plan replaces this once they're decumulating.
+  // No solved drawdown. A decumulator who simply hasn't set a target income gets
+  // prompted to set one (and can do it right here — dragging the income up makes
+  // routes appear and the full plan renders). Accumulators get the FI surface.
+  let isDecumStage = false
+  try { isDecumStage = inferLifeStage(entity) === 'decumulator' } catch { isDecumStage = false }
+  if (isDecumStage) {
+    return (
+      <div className="sw-card" style={S.card}>
+        <div style={S.cardTitle}>Set a target retirement income</div>
+        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.6 }}>
+          Tell us the income you&rsquo;d like to draw and we&rsquo;ll show how long your pots last, the most tax-efficient order to draw them, and a money-map of where each &pound; comes from.
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <SolverSlider label="Target income" value={target} min={0} max={150000} step={1000} fmt={v => v ? `${fmt(v)}/yr` : 'not set'} onChange={setTarget} dirty={dT} />
+        </div>
+        <div style={{ marginTop: 10, fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.5 }}>Drag the income up to generate your plan. Information and guidance, not advice.</div>
+      </div>
+    )
+  }
+  // Accumulator / sparse → progress to financial independence (25× target income).
   return <FIProgressTile entity={entity} />
 }
 
@@ -3611,107 +5662,252 @@ function FIProgressTile({ entity }) {
 // STUB-01 fix: button now wires onClick to goalSeek(). Slider sets the
 // *target*; clicking Find paths commits it and runs the engine. Default
 // run on mount so the card isn't empty.
-function GoalSeekCard({ entity }) {
-  const [target, setTarget] = useState(85)
-  const [committedTarget, setCommittedTarget] = useState(85)
-  const [running, setRunning] = useState(false)
-  const paths = useMemo(
-    () => goalSeek(entity, 'wealthScore', committedTarget, 'lifetime', {}) || [],
-    [entity, committedTarget]
-  )
-  function runFindPaths() {
-    setRunning(true)
-    // Defer commit so the button registers a press state before the
-    // (potentially heavy) goalSeek useMemo re-runs.
-    requestAnimationFrame(() => {
-      setCommittedTarget(target)
-      setRunning(false)
-    })
-  }
-  const dirty = target !== committedTarget
+// "What would change it most?" — a CASHFLOW sensitivity ranking (P4-09 replaced
+// the old Wealth-Score goal-seek, which the founder flagged as the wrong subject
+// for this tab). For each real lever the user controls, perturb it by the chosen
+// size and measure the effect on the outcome that matters for their life stage:
+// how many YEARS longer the money lasts (decumulator) or how many years SOONER
+// they reach financial independence (accumulator). Ranked biggest-impact first —
+// the comparison IS the answer — with a size slider so they can see sensitivity.
+function LeversCard({ entity, decSolve, fi }) {
+  const isDecum = !!(decSolve?.rankedPaths?.length)
+  return isDecum ? <LeversDecum decSolve={decSolve} /> : <LeversAccum entity={entity} fi={fi} />
+}
+// How hard each lever is to actually pull — the second axis of the decision
+// (the biggest lever isn't always the one to do). Effort + a plain "how".
+const LEVER_EFFORT = {
+  grow:   { tag: 'Easiest', tone: 'mint',  how: 'usually just switching to lower-cost funds — no lifestyle change' },
+  pot:    { tag: 'Moderate', tone: 'amber', how: 'needs spare capital to put in' },
+  save:   { tag: 'Moderate', tone: 'amber', how: 'redirect spare income into savings' },
+  spend:  { tag: 'Harder',  tone: 'coral', how: 'a real cut to how you live' },
+  delay:  { tag: 'Harder',  tone: 'coral', how: 'work or retire later' },
+  target: { tag: 'Harder',  tone: 'coral', how: 'plan to live on less in retirement' },
+}
+const _EFFORT_RANK = { grow: 0, pot: 1, save: 1, spend: 2, delay: 2, target: 2 }
+const _EFFORT_COLOR = { mint: 'var(--c-mint-text)', amber: 'var(--c-amber-text)', coral: 'var(--c-coral-text)' }
+// Easiest lever that still has real impact (≥25% of the biggest) — the "quick win".
+function _easyWin(levers) {
+  const maxD = Math.max(1, ...levers.map(l => Math.abs(l.delta)))
+  return [...levers].filter(l => l.delta > 0 && Math.abs(l.delta) >= 0.25 * maxD)
+    .sort((a, b) => (_EFFORT_RANK[a.key] - _EFFORT_RANK[b.key]) || (b.delta - a.delta))[0] || null
+}
+function _LeverRow({ label, detail, deltaLabel, magnitude, max, positive, effort }) {
+  const col = positive ? 'var(--c-mint-text)' : 'var(--c-coral-text)'
+  const ec = effort ? _EFFORT_COLOR[effort.tone] : null
   return (
-    <div className="sw-card sw-lift" style={S.card}>
-      <div style={S.cardHeader}>
-        <div style={S.cardTitle}>Goal-Seek</div>
-        <span className="sw-chip sw-chip-sm">Goal: paths to target Wealth Score</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{label}</span>
+          {effort && <span style={{ fontSize: 9, fontWeight: 700, color: ec, border: `1px solid ${ec}`, borderRadius: 100, padding: '0 6px', whiteSpace: 'nowrap' }}>{effort.tag}</span>}
+        </div>
+        <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 1, lineHeight: 1.4 }}>{detail}</div>
+        <div style={{ display: 'block', height: 4, marginTop: 5, borderRadius: 3, background: 'var(--c-tint-neutral-2)' }}>
+          <div style={{ height: '100%', width: `${Math.max(3, (magnitude / (max || 1)) * 100)}%`, borderRadius: 3, background: col }} />
+        </div>
       </div>
-      <div style={{
-        marginTop: 'var(--space-md)', display: 'flex',
-        alignItems: 'center', gap: 'var(--space-sm)',
-      }}>
-        <span className="sw-eyebrow">Target</span>
-        <input
-          type="range" min="50" max="100" step="5"
-          value={target} onChange={e => setTarget(+e.target.value)}
-          style={{ flex: 1 }}
-          aria-label="Wealth Score target"
-        />
-        <strong style={{
-          minWidth: 32, textAlign: 'right',
-          fontSize: 14, fontVariantNumeric: 'tabular-nums', color: 'var(--c-mint-text)',
-        }}>{target}</strong>
-        <button
-          type="button"
-          onClick={runFindPaths}
-          disabled={running || !dirty}
-          aria-label="Find paths to target"
-          className="sw-press"
-          style={{
-            padding: '6px 14px', borderRadius: 'var(--r-pill)',
-            background: dirty ? 'var(--c-mint-text)' : 'var(--c-tint-neutral-2)',
-            color: dirty ? 'var(--c-bg)' : 'var(--c-text3)',
-            border: 'none', cursor: dirty ? 'pointer' : 'default',
-            fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
-            boxShadow: dirty ? '0 4px 12px var(--c-acc-bg)' : 'none',
-            opacity: running ? 0.6 : 1,
-          }}
-        >
-          {running ? 'Solving…' : dirty ? 'Find paths' : 'Up to date'}
-        </button>
-      </div>
-      <div style={{
-        marginTop: 6, fontSize: 11, color: 'var(--c-text3)',
-      }}>
-        Showing paths to Wealth Score {committedTarget}
-        {dirty && <span style={{ color: 'var(--c-amber-text)' }}>
-          {' '}· slider moved — press Find paths to re-solve.
-        </span>}
-      </div>
-      <div style={{
-        marginTop: 'var(--space-md)', display: 'flex',
-        flexDirection: 'column', gap: 'var(--space-xs)',
-      }}>
-        {(paths || []).slice(0, 3).map((p, i) => (
-          <div key={i} style={S.gsRow}>
-            <div style={{ flex: 1, fontSize: 13 }}>{humanise(p.action.kind)}</div>
-            <div style={{
-              minWidth: 90, textAlign: 'right',
-              fontSize: 11, color: 'var(--c-text3)',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {fmt(p.action.amount)}
-            </div>
-            <div style={{
-              minWidth: 60, textAlign: 'right',
-              fontSize: 11, fontWeight: 700, color: 'var(--c-mint-text)',
-            }}>
-              gap {p.gap}
-            </div>
-          </div>
-        ))}
-        {(paths || []).length === 0 && (
-          <div style={{ fontSize: 12, color: 'var(--c-text3)' }}>
-            No solver paths returned for this target.
-          </div>
-        )}
+      <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 64 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: col, fontVariantNumeric: 'tabular-nums' }}>{deltaLabel}</div>
       </div>
     </div>
   )
 }
+// "Where to start" — reconciles impact (biggest bar) with effort (easiest win).
+function _LeverStartHere({ top, easy, fmtImpact }) {
+  if (!top) return null
+  const sameAsTop = easy && easy.key === top.key
+  return (
+    <div style={{ marginTop: 10, padding: '9px 11px', borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--c-text3)', marginBottom: 4 }}>Where to start</div>
+      <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.55 }}>
+        <strong style={{ color: 'var(--c-text)' }}>Biggest effect:</strong> {top.label.replace(/^(\w)/, c => c.toLowerCase())} ({fmtImpact(top.delta)}).{' '}
+        {sameAsTop
+          ? <>Happily that's also one of the <strong style={{ color: 'var(--c-mint-text)' }}>easiest</strong> to do — {LEVER_EFFORT[easy.key]?.how}.</>
+          : easy
+            ? <><strong style={{ color: 'var(--c-mint-text)' }}>Easiest meaningful win:</strong> {easy.label.replace(/^(\w)/, c => c.toLowerCase())} ({fmtImpact(easy.delta)}) — {LEVER_EFFORT[easy.key]?.how}.</>
+            : null}
+      </div>
+    </div>
+  )
+}
+// One lever = one row with its OWN real-unit slider + live effect (direct
+// manipulation, replacing the abstract single "size of change %" slider the
+// founder found unintuitive/broken). Effect colours mint when it helps.
+function _LeverControl({ label, effort, effect, helps, isTop, setting, children }) {
+  const ec = effort ? _EFFORT_COLOR[effort.tone] : null
+  const oc = helps ? 'var(--c-mint-text)' : 'var(--c-text3)'
+  return (
+    <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--c-surface)', border: isTop ? '1.5px solid var(--c-acc)' : '1px solid var(--c-border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{label}</span>
+          {isTop && <span className="sw-chip sw-chip-sm sw-chip-blue">biggest</span>}
+          {effort && <span style={{ fontSize: 9, fontWeight: 700, color: ec, border: `1px solid ${ec}`, borderRadius: 100, padding: '0 6px', whiteSpace: 'nowrap' }}>{effort.tag}</span>}
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: oc, whiteSpace: 'nowrap', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{effect}</span>
+      </div>
+      <div style={{ marginTop: 6 }}>{children}</div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 3 }}>{setting}</div>
+    </div>
+  )
+}
+function LeversDecum({ decSolve }) {
+  const inp = decSolve.inputs || {}
+  const age0 = inp.currentAge || 65
+  const horizonAge = inp.horizonAge || 95
+  const simEndAge = Math.max(horizonAge + 5, 105)
+  const years = Math.max(1, simEndAge - age0)
+  const portfolio = (decSolve.network?.nodes || []).filter(n => n.kind === 'pot').reduce((s, n) => s + (n.value || 0), 0)
+  const growth = inp.growth ?? 0.05
+  const inflation = inp.inflation ?? 0.025
+  const essentials = Math.round((inp.incomeTargetAnnual || 0) * 0.6)
+  const methodId = recommendMethodForGoal(decSolve.binding?.primaryGoal || 'min_lifetime_tax')
+  const base = { portfolio, years, growth, inflation, essentialsAnnual: essentials, age: age0 }
+  const idxH = horizonAge - age0
+  const gBase = Math.round(growth * 1000) / 10
+  const pathOf = (o) => { try { return methodPath(methodId, o) } catch { return [] } }
+  const depOf = (o) => { const p = pathOf(o); const d = p.find(r => (r.balance || 0) <= 0); return d ? d.age : simEndAge }
+  const estateOf = (o) => { const p = pathOf(o); const r = p[Math.min(Math.max(0, idxH), p.length - 1)]; return Math.max(0, r?.balance || 0) }
+  const baseDep = depOf(base)
+  const survives = baseDep >= simEndAge
+  const measure = survives ? estateOf : depOf
+  const baseVal = measure(base)
+  const baseDraw = pathOf(base)[0]?.withdrawal || 0
+  const seedAdd = Math.max(10, Math.round(portfolio * 0.1 / 1000))
+
+  // Each lever has its OWN real-unit slider, seeded at a sensible EXAMPLE step.
+  const [growP, setGrowP] = useState(Math.round((gBase + 0.5) * 4) / 4)
+  const [spendLess, setSpendLess] = useState(10)
+  const [addK, setAddK] = useState(seedAdd)
+  const [delayY, setDelayY] = useState(2)
+  const reset = () => { setGrowP(Math.round((gBase + 0.5) * 4) / 4); setSpendLess(10); setAddK(seedAdd); setDelayY(2) }
+
+  if (!(portfolio > 0)) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Your income here comes from secure sources (state pension, DB, annuities), so there's no drawable pot to flex. Add investable pots to explore the levers.</div>
+
+  const optsSpend = { ...base, rateScale: 1 - spendLess / 100 }
+  const spendDraw = pathOf(optsSpend)[0]?.withdrawal || 0
+  const lv = [
+    { key: 'grow', label: 'Earn a bit more growth', val: measure({ ...base, growth: growP / 100 }),
+      setting: `${growP}%/yr (was ${gBase}%) — e.g. lower fund fees`,
+      control: <SolverSlider label="Growth rate" value={growP} min={gBase} max={gBase + 3} step={0.25} fmt={v => `${v}%`} onChange={setGrowP} dirty={Math.abs(growP - gBase) > 0.01} /> },
+    { key: 'spend', label: 'Spend a little less', val: measure(optsSpend),
+      setting: spendLess === 0 ? `drawing ${_gk(baseDraw)}/yr` : `draw ${_gk(spendDraw)}/yr (was ${_gk(baseDraw)})`,
+      control: <SolverSlider label="Spend less" value={spendLess} min={0} max={40} step={5} fmt={v => v === 0 ? 'no change' : `${v}% less`} onChange={setSpendLess} dirty={spendLess !== 0} /> },
+    { key: 'pot', label: 'Add to your pots first', val: measure({ ...base, portfolio: portfolio + addK * 1000 }),
+      setting: addK === 0 ? 'no top-up' : `+${_gk(addK * 1000)} (pot becomes ${_gk(portfolio + addK * 1000)})`,
+      control: <SolverSlider label="Top up" value={addK} min={0} max={Math.max(50, Math.round(portfolio / 1000))} step={10} fmt={v => v === 0 ? '£0' : `+${_gk(v * 1000)}`} onChange={setAddK} dirty={addK !== 0} /> },
+    { key: 'delay', label: 'Start drawing later', val: measure(delayY > 0 ? { ...base, portfolio: portfolio * Math.pow(1 + growth, delayY), years: years - delayY, age: age0 + delayY } : base),
+      setting: delayY === 0 ? `from age ${age0}` : `from age ${age0 + delayY} (${delayY} ${delayY === 1 ? 'yr' : 'yrs'} later)`,
+      control: <SolverSlider label="Delay start" value={delayY} min={0} max={8} step={1} fmt={v => v === 0 ? 'no change' : `${v}y later`} onChange={setDelayY} dirty={delayY !== 0} /> },
+  ].map(l => ({ ...l, delta: l.val - baseVal }))
+  const topKey = lv.reduce((best, l) => Math.abs(l.delta) > Math.abs(best.delta) ? l : best, lv[0]).key
+  const fmtOut = (d) => survives
+    ? (d > 0 ? `+${_gk(d)}` : d < 0 ? `${_gk(d)}` : '£0')
+    : (d > 0 ? `+${d} ${d === 1 ? 'yr' : 'yrs'}` : d < 0 ? `${d} yrs` : '0')
+  const topLabel = lv.find(l => l.key === topKey)?.label || ''
+
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What would change it most?</div>
+      <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.5, marginBottom: 4 }}>
+        Today your money {survives
+          ? <>lasts beyond <strong style={{ color: 'var(--c-mint-text)' }}>age {horizonAge}</strong>, leaving about <strong>{_gk(baseVal)}</strong> for your family</>
+          : <>runs out at <strong style={{ color: 'var(--c-coral-text)' }}>age {baseDep}</strong></>}.
+        Each lever below is set to an example move — <strong>drag any one</strong> to make it yours and watch the {survives ? 'amount left' : 'age it lasts to'} change.
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>Right now, the biggest mover is <strong style={{ color: 'var(--c-acc)' }}>{topLabel.toLowerCase()}</strong>. {survives ? `Each figure = extra left for your family at age ${horizonAge}.` : 'Each figure = extra years your money lasts.'}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {lv.map(l => (
+          <_LeverControl key={l.key} label={l.label} effort={LEVER_EFFORT[l.key]} effect={fmtOut(l.delta)} helps={l.delta > 0} isTop={l.key === topKey && Math.abs(l.delta) > 0} setting={l.setting}>
+            {l.control}
+          </_LeverControl>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+        <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset to examples</button>
+      </div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        Each effect is on your assumptions; the effort tag is a general guide — weigh both. A constant-return illustration, not a forecast or a recommendation.
+      </div>
+    </div>
+  )
+}
+function LeversAccum({ entity, fi }) {
+  const age0 = (() => { try { return calcAge(entity?.individual?.dob) || 45 } catch { return 45 } })()
+  const fiTarget = Math.round(fi?.fiTarget || 0)
+  const invested0 = Math.round((fi?.fiTarget || 0) * (fi?.ratio || 0))
+  const seedSaveAnnual = (() => { try { const m = monthlySurplus(entity, getActiveCMA()); const net = (+(m?.surplus) || 0) - (+(m?.deficit) || 0); return Math.max(0, Math.round(net * 12)) } catch { return 0 } })()
+  const growth = 0.05
+  const gBase = Math.round(growth * 1000) / 10
+  const horizonAge = Math.min(100, age0 + 50)
+  const years = Math.max(1, horizonAge - age0)
+  const fiAgeOf = ({ pot = invested0, saving = seedSaveAnnual, g = growth, target = fiTarget }) => {
+    const hit = accumProjection({ pot, annualSaving: saving, growth: g, age0, years }).find(r => (r.balance || 0) >= target)
+    return hit ? hit.age : horizonAge + 1
+  }
+  // example steps in real units
+  const seedExtra = Math.max(1, Math.round(Math.max(2000, fiTarget * 0.01) / 1000))   // £k/yr more
+  const seedLump = Math.max(5, Math.round((invested0 * 0.1) / 1000))                   // £k lump
+  const [saveK, setSaveK] = useState(seedExtra)
+  const [growP, setGrowP] = useState(Math.round((gBase + 0.5) * 4) / 4)
+  const [lumpK, setLumpK] = useState(seedLump)
+  const [lessPct, setLessPct] = useState(10)
+  const reset = () => { setSaveK(seedExtra); setGrowP(Math.round((gBase + 0.5) * 4) / 4); setLumpK(seedLump); setLessPct(10) }
+
+  if (!fiTarget) return <div style={{ fontSize: 13, color: 'var(--c-text3)', lineHeight: 1.6 }}>Add your investable savings and a target retirement income to see which lever moves your independence date most.</div>
+  const baseAge = fiAgeOf({})
+  const reached = baseAge <= horizonAge
+  const lv = [
+    { key: 'save', label: 'Save more each year', age: fiAgeOf({ saving: seedSaveAnnual + saveK * 1000 }),
+      setting: seedSaveAnnual > 0 ? `${_gk((seedSaveAnnual + saveK * 1000))}/yr total (was ${_gk(seedSaveAnnual)})` : `${_gk(saveK * 1000)}/yr (you save nothing spare now)`,
+      control: <SolverSlider label="Extra saving" value={saveK} min={0} max={Math.max(20, seedExtra * 4)} step={1} fmt={v => v === 0 ? 'no change' : `+${_gk(v * 1000)}/yr`} onChange={setSaveK} dirty={saveK !== 0} /> },
+    { key: 'grow', label: 'Earn a bit more growth', age: fiAgeOf({ g: growP / 100 }),
+      setting: `${growP}%/yr (was ${gBase}%) — e.g. lower fund fees`,
+      control: <SolverSlider label="Growth rate" value={growP} min={gBase} max={gBase + 3} step={0.25} fmt={v => `${v}%`} onChange={setGrowP} dirty={Math.abs(growP - gBase) > 0.01} /> },
+    { key: 'pot', label: 'Add a lump sum now', age: fiAgeOf({ pot: invested0 + lumpK * 1000 }),
+      setting: lumpK === 0 ? 'no lump sum' : `+${_gk(lumpK * 1000)} today (pot becomes ${_gk(invested0 + lumpK * 1000)})`,
+      control: <SolverSlider label="Lump sum" value={lumpK} min={0} max={Math.max(50, Math.round(invested0 / 1000))} step={5} fmt={v => v === 0 ? '£0' : `+${_gk(v * 1000)}`} onChange={setLumpK} dirty={lumpK !== 0} /> },
+    { key: 'target', label: 'Plan to need less income', age: fiAgeOf({ target: fiTarget * (1 - lessPct / 100) }),
+      setting: lessPct === 0 ? `target ${_gk(fiTarget)}` : `target ${_gk(fiTarget * (1 - lessPct / 100))} (was ${_gk(fiTarget)})`,
+      control: <SolverSlider label="Need less" value={lessPct} min={0} max={40} step={5} fmt={v => v === 0 ? 'no change' : `${v}% less`} onChange={setLessPct} dirty={lessPct !== 0} /> },
+  ].map(l => ({ ...l, delta: baseAge - l.age }))   // delta = years SOONER
+  const topKey = lv.reduce((best, l) => l.delta > best.delta ? l : best, lv[0]).key
+  const fmtOut = (d) => d > 0 ? `${d} ${d === 1 ? 'yr' : 'yrs'} sooner` : d < 0 ? `${-d} yrs later` : 'no change'
+  const topLabel = lv.find(l => l.key === topKey)?.label || ''
+
+  return (
+    <div className="sw-card" style={{ padding: '12px 14px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--c-text3)', marginBottom: 4 }}>What would change it most?</div>
+      <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.5, marginBottom: 4 }}>
+        On today's plan you reach independence {reached ? <>around <strong style={{ color: 'var(--c-mint-text)' }}>age {baseAge}</strong></> : <><strong style={{ color: 'var(--c-coral-text)' }}>not within this horizon</strong></>}.
+        Each lever below is set to an example move — <strong>drag any one</strong> to make it yours and watch your independence age move.
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 10 }}>Right now, the biggest mover is <strong style={{ color: 'var(--c-acc)' }}>{topLabel.toLowerCase()}</strong>. Each figure = how many years sooner you'd get there.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {lv.map(l => (
+          <_LeverControl key={l.key} label={l.label} effort={LEVER_EFFORT[l.key]} effect={fmtOut(l.delta)} helps={l.delta > 0} isTop={l.key === topKey && l.delta > 0} setting={l.setting}>
+            {l.control}
+          </_LeverControl>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+        <button onClick={reset} style={{ background: 'none', border: 'none', color: 'var(--c-acc)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11 }}>reset to examples</button>
+      </div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 8, lineHeight: 1.5 }}>
+        Each effect is on your assumptions; the effort tag is a general guide — weigh both. The 25× target is a planning rule of thumb. An illustration, not a forecast or a recommendation.
+      </div>
+    </div>
+  )
+}
+// GoalSeekCard (Wealth-Score goal-seek) REMOVED 2026-06-05 — wrong subject for
+// Cashflow (founder flagged the "paths to Wealth Score 85 / gap 15" framing as
+// confusing). Replaced by LeversCard (cashflow levers ranked by impact). P4-09/P1.
 
 // ── CoIOdometer wrapper — adds cascade-halo on totalCoI change ─────────
 function CoIOdometerWithHalo({ coi }) {
-  const total = coi?.total ?? coi?.byDomain?.estatePlanning ?? 0
+  // Always the AGGREGATE across domains (totalCoI returns .total = sum of
+  // byDomain). Fallback re-sums byDomain rather than collapsing to one domain.
+  const total = coi?.total ?? Object.values(coi?.byDomain || {}).reduce((s, v) => s + (+v || 0), 0)
   const halo = useCascadeTrigger(Math.round(total))
   return (
     <div className={halo ? 'sw-cascade-halo' : ''} style={{ borderRadius: 'var(--r-lg)' }}>

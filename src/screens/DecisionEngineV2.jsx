@@ -239,7 +239,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
     // but guards against future regressions blanking the screen entirely.
     return (
       <div style={{ padding: 24, color: 'var(--c-text)', textAlign: 'center' }}>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Decision Engine unavailable</div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Choices unavailable</div>
         <div style={{ fontSize: 13, color: 'var(--c-text2)' }}>Please refresh the page. If this persists, the React hook init failed.</div>
       </div>
     )
@@ -304,7 +304,7 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
           >←</button>
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>Decision Engine</div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>Choices</div>
           <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>60 life events · engine-pure · FCA-compliant</div>
         </div>
         {orc.loading && (

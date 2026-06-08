@@ -163,7 +163,11 @@ const TYPE_LABEL = {
   'ns-i':            'NS&I',
 }
 
-const FSCS_LIMIT = 85_000
+// FSCS deposit-protection limit — bundle-driven (rose £85k → £120k from 1 Dec 2025).
+const FSCS_LIMIT = +TAX.fscsLimit || 120_000
+const FSCS_JOINT_LIMIT = +TAX.fscsJointLimit || (FSCS_LIMIT * 2)
+const FSCS_LIMIT_LABEL = `£${FSCS_LIMIT.toLocaleString()}`
+const FSCS_JOINT_LABEL = `£${FSCS_JOINT_LIMIT.toLocaleString()}`
 
 // Normalise both schemas into a unified [{ id, name, bank, type, balance, rate, lastValued }] list.
 function readAccounts(entity) {
@@ -330,8 +334,8 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
         </Section>
 
         {/* Section 2 — Account-by-account */}
-        <Section title="2 · Accounts" sub="FSCS protects up to £85,000 per person, per banking-licence institution. Multiple accounts at the same licence are pooled.">
-          {/* v0.3 FSCS info chip — verbatim copy */}
+        <Section title="2 · Accounts" sub={`FSCS protects up to ${FSCS_LIMIT_LABEL} per person, per banking-licence institution. Multiple accounts at the same licence are pooled.`}>
+          {/* v0.3 FSCS info chip — bundle-driven limit */}
           <div
             style={{
               marginBottom: 10,
@@ -345,7 +349,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
             }}
           >
             <span style={{ fontWeight: 700, color: 'var(--c-text)' }}>FSCS protection</span>
-            {' — first £85,000 per banking licence (£170,000 joint accounts). Multiple accounts at same bank share one licence cap.'}
+            {` — first ${FSCS_LIMIT_LABEL} per banking licence (${FSCS_JOINT_LABEL} joint accounts). Multiple accounts at same bank share one licence cap.`}
           </div>
           <div style={{ background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden' }}>
             {accounts.map((a, i) => {
@@ -387,8 +391,8 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
                       : <Chip tone="warn">Rate unknown — {pct(fallbackRate)} assumed</Chip>}
                     <Chip tone="neutral">Interest {fmt(interest)}/yr</Chip>
                     {overFSCS
-                      ? <Chip tone="bad">Above £85k FSCS limit at this institution — concentration risk</Chip>
-                      : <Chip tone="good">FSCS-protected up to £85,000 per institution</Chip>}
+                      ? <Chip tone="bad">Above {FSCS_LIMIT_LABEL} FSCS limit at this institution — concentration risk</Chip>
+                      : <Chip tone="good">FSCS-protected up to {FSCS_LIMIT_LABEL} per institution</Chip>}
                   </div>
                 </div>
               )
@@ -401,7 +405,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
           </div>
           {anyOverFSCS && (
             <Disclosure title="What FSCS protection actually covers">
-              The Financial Services Compensation Scheme protects deposits up to £85,000 per eligible person, per banking-licence institution (not per account or per brand — some brands share a licence). Balances above that cap at the same licence are uncompensated if the bank fails. Joint accounts get £170,000 cover. Temporary high balances (e.g. house sale proceeds) carry a separate £1m limit for 6 months.
+              The Financial Services Compensation Scheme protects deposits up to {FSCS_LIMIT_LABEL} per eligible person, per banking-licence institution (not per account or per brand — some brands share a licence). Balances above that cap at the same licence are uncompensated if the bank fails. Joint accounts get {FSCS_JOINT_LABEL} cover. Temporary high balances (e.g. house sale proceeds) carry a separate £1m limit for 6 months.
             </Disclosure>
           )}
         </Section>
@@ -468,7 +472,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
             <div className="sw-card" style={{ padding: 12, background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>Cash ISA</div>
               <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
-                Interest is free of UK income tax. Counts toward the £{isaAllowance.toLocaleString()} annual ISA cap (combined with S&S, IF, LISA). FSCS protected to £85k per institution. Withdrawal does not restore allowance unless the ISA is flexible.
+                Interest is free of UK income tax. Counts toward the £{isaAllowance.toLocaleString()} annual ISA cap (combined with S&S, IF, LISA). FSCS protected to {FSCS_LIMIT_LABEL} per institution. Withdrawal does not restore allowance unless the ISA is flexible.
               </div>
             </div>
             <div className="sw-card" style={{ padding: 12, background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14 }}>
@@ -480,7 +484,7 @@ function CashDrillDownInner({ entity, personaId, onBack, onHome }) {
             <div className="sw-card" style={{ padding: 12, background: 'var(--card-bg2)', border: '1px solid var(--c-border)', borderRadius: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>NS&I Direct Saver / Income Bonds</div>
               <div style={{ fontSize: 11, color: 'var(--c-text2)', lineHeight: 1.5 }}>
-                Interest is taxable (counts toward PSA). 100% backed by HM Treasury. No FSCS limit. Useful for balances above £85k that would otherwise breach FSCS at a single bank.
+                Interest is taxable (counts toward PSA). 100% backed by HM Treasury. No FSCS limit. Useful for balances above {FSCS_LIMIT_LABEL} that would otherwise breach FSCS at a single bank.
               </div>
             </div>
           </div>

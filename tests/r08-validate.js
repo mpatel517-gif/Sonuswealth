@@ -346,6 +346,18 @@ function main() {
       f => f.startsWith('mrT-') && f.endsWith('.json')
     );
   } catch (e) {
+    // Fixtures live outside the repo (local engine fixture suite). When the
+    // default dir is absent and no explicit --fixtures-dir was passed (e.g.
+    // CI runners), skip cleanly rather than fail — the suite still runs in
+    // full on a machine that has the fixtures, or when pointed at them via
+    // --fixtures-dir "path/to/fixtures".
+    if (e.code === 'ENOENT' && dirIdx === -1) {
+      console.log(
+        `\n${C.yellow}SKIP: fixtures dir not present — r08 needs the local Mr T fixture suite. ` +
+        `Pass --fixtures-dir "path/to/fixtures" to run.${C.reset}`
+      );
+      process.exit(0);
+    }
     console.error(`\n${C.red}FATAL: Cannot read fixtures dir${C.reset}`);
     console.error(e.message);
     process.exit(1);

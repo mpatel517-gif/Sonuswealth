@@ -54,11 +54,14 @@ export function methodPath(methodId, opts = {}) {
   const infl = opts.inflation != null ? +opts.inflation : 0.025
   const essentials = +opts.essentialsAnnual || 0
   const age0 = +opts.age || 65
+  // UI lever: scale the draw up/down (1 = the method's own rate). Enables a
+  // "how much you take" slider and back-solving a target (e.g. last-to-age).
+  const rs = opts.rateScale != null ? +opts.rateScale : 1
   const out = []
   let bal = P
 
   if (methodId === 'bengen') {
-    let w = P * _rate('bengen')                              // 4% of initial
+    let w = P * _rate('bengen') * rs                         // 4% of initial × draw lever
     for (let y = 1; y <= years; y++) {
       const draw = Math.min(w, Math.max(0, bal))
       bal = Math.max(0, bal * (1 + g) - draw)
@@ -69,7 +72,7 @@ export function methodPath(methodId, opts = {}) {
   }
 
   if (methodId === 'guyton_klinger') {
-    const initRate = _rate('guyton_klinger')                // ~4.5%
+    const initRate = _rate('guyton_klinger') * rs           // ~4.5% × draw lever
     let w = P * initRate
     for (let y = 1; y <= years; y++) {
       const draw = Math.min(w, Math.max(0, bal))
@@ -85,7 +88,7 @@ export function methodPath(methodId, opts = {}) {
   }
 
   if (methodId === 'vanguard') {
-    const rate = _rate('vanguard')                          // ~3.3% of current
+    const rate = _rate('vanguard') * rs                     // ~3.3% of current × draw lever
     let prev = P * rate
     for (let y = 1; y <= years; y++) {
       let target = bal * rate
@@ -101,7 +104,7 @@ export function methodPath(methodId, opts = {}) {
 
   if (methodId === 'bucket') {
     // Spend from a 2yr cash bucket; growth bucket compounds, refilled annually.
-    const rate = _rate('bengen')
+    const rate = _rate('bengen') * rs
     let w = P * rate
     for (let y = 1; y <= years; y++) {
       const draw = Math.min(w, Math.max(0, bal))
@@ -122,7 +125,7 @@ export function methodPath(methodId, opts = {}) {
     const floorCost = essentials                            // the income that must never be cut
     let floor = floorCost
     const initRate = _rate('guyton_klinger')
-    let disc = Math.max(0, P * _rate('bengen') - floorCost) // discretionary headroom
+    let disc = Math.max(0, P * _rate('bengen') * rs - floorCost) // discretionary headroom × draw lever
     for (let y = 1; y <= years; y++) {
       const want = floor + disc
       const draw = Math.min(want, Math.max(0, bal))

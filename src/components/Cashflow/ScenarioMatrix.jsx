@@ -81,7 +81,7 @@ export default function ScenarioMatrix({
       }}>
         <div className="sw-eyebrow">Cashflow scenarios</div>
         <div style={{ fontSize: 12, color: 'var(--c-text3)', textAlign: 'center', maxWidth: 260 }}>
-          Calculating… engine needs drawdown targets to model your cashflow scenarios.
+          Add a drawdown target to model your cashflow scenarios — none captured yet.
         </div>
       </div>
     )

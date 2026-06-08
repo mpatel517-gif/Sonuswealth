@@ -104,7 +104,19 @@ export default function X28TopBar({
   rulesVersion = BRAND.rulesVersion,
   dataDate = BRAND.dataDate,
   showNowPill = true,
+  showWindowRow = true,
+  // Hide the Today/Future/Plan/What-if view-mode tabs (keep only the optional
+  // Choices toggle). Cashflow uses this: those modes are no-ops there, so showing
+  // them was a dead control (sweep #54). Default keeps them for My Money etc.
+  showViewModes = true,
   onNowTap,
+  // Optional 5th tab next to the view modes (founder 2026-06-06): a "Decisions"
+  // entry that, like "What if", swaps the screen content for the decision
+  // categories. It is NOT a viewMode (doesn't touch the engine time-state) —
+  // the screen owns a separate `decisionsActive` toggle via onDecisions.
+  showDecisions = false,
+  decisionsActive = false,
+  onDecisions,
 }) {
   // hydrate from storage if uncontrolled on first render
   const stored = useRef(readStore())
@@ -154,6 +166,13 @@ export default function X28TopBar({
 
   const nowDimmed = modeState === 'plan' || modeState === 'scenario'
 
+  // Tab list for Row 2 — view modes, plus an optional Decisions tab. Decisions
+  // is tracked separately (decisionsActive), so when it's on, none of the
+  // view-mode tabs read as active.
+  const baseModes = showViewModes ? VIEW_MODES : []
+  const tabs = showDecisions ? [...baseModes, { id: '__decisions', label: 'Choices' }] : baseModes
+  const activeIdx = decisionsActive ? baseModes.length : baseModes.findIndex(m => m.id === modeState)
+
   return (
     <div style={{
       display: 'flex',
@@ -164,6 +183,10 @@ export default function X28TopBar({
       borderBottom: '1px solid var(--c-sep)',
     }}>
       {/* ── Row 1 — Window pill · rules chip · Now pill ──────────────────── */}
+      {/* Cashflow passes showWindowRow={false}: this row's tax-year selector +
+          rules chip + NOW duplicate the global header's TAX YEAR control
+          (founder 2026-06-04 — "one is duplicated"). */}
+      {showWindowRow && (
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, minHeight: 30,
       }}>
@@ -287,6 +310,7 @@ export default function X28TopBar({
           </button>
         )}
       </div>
+      )}
 
       {/* ── Row 2 — 4-mode ghost-tab toggle (subtle pale active state) ──── */}
       <div
@@ -295,7 +319,7 @@ export default function X28TopBar({
         style={{
           position: 'relative',
           display: 'grid',
-          gridTemplateColumns: `repeat(${VIEW_MODES.length}, 1fr)`,
+          gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
           gap: 2,
         }}
       >
@@ -306,10 +330,9 @@ export default function X28TopBar({
             position: 'absolute',
             top: 0, bottom: 0,
             left: 0,
-            width: `calc(100% / ${VIEW_MODES.length})`,
-            transform: `translateX(${
-              VIEW_MODES.findIndex(m => m.id === modeState) * 100
-            }%)`,
+            width: `calc(100% / ${Math.max(1, tabs.length)})`,
+            transform: `translateX(${Math.max(0, activeIdx) * 100}%)`,
+            opacity: activeIdx < 0 ? 0 : 1, // no highlight when nothing is active (e.g. Choices-only bar, not toggled)
             background: 'var(--c-tint-neutral-2)',
             borderRadius: 'var(--r-md)',
             transition: 'transform var(--dur-normal, 350ms) var(--ease-out-cubic, cubic-bezier(0.33,1,0.68,1))',
@@ -317,14 +340,21 @@ export default function X28TopBar({
             zIndex: 0,
           }}
         />
-        {VIEW_MODES.map(m => {
-          const active = m.id === modeState
+        {tabs.map(m => {
+          const isDecisions = m.id === '__decisions'
+          const active = isDecisions ? decisionsActive : (!decisionsActive && m.id === modeState)
           return (
             <button
               key={m.id}
               role="tab"
               aria-selected={active}
-              onClick={() => pickMode(m)}
+              onClick={() => {
+                if (isDecisions) return onDecisions?.()
+                if (m.id !== modeState) return pickMode(m)
+                // Same view-mode tapped while Decisions is active → exit Decisions
+                // (pickMode early-returns on unchanged mode, so signal directly).
+                if (decisionsActive) onViewModeChange?.(m.id)
+              }}
               className={`sw-tab-ghost${active ? ' is-active' : ''}`}
               style={{
                 position: 'relative',
@@ -332,6 +362,8 @@ export default function X28TopBar({
                 background: 'transparent',
                 padding: '7px 8px',
                 fontSize: 13,
+                fontWeight: isDecisions ? 700 : undefined,
+                color: isDecisions && !active ? 'var(--c-acc)' : undefined,
               }}
             >
               {m.label}

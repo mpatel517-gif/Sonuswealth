@@ -66,6 +66,7 @@ import {
   TAX,
 } from '../engine/fq-calculator.js'
 import Drillable from '../components/shared/Drillable.jsx'
+import { DiffBadge, CausalityStripe } from '../components/shared/Diff.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
 import { DIMENSIONS } from '../config/dimensions.js'
 import { getWealthTarget, gapDims as gapDimsVsTarget } from '../config/wealth-targets.js'
@@ -741,6 +742,47 @@ const MODE_BRIEF = {
     `Your plan target (gold dashed ring) vs today (mint). Close the gap by addressing the dimensions below target — ${lowestDim?.label || 'Legacy'} is furthest from your plan.`,
   scenario: () =>
     `Drag any radar point to explore what-if. Moving a dimension outward = better. Inward = worse. Watch the score in the centre update live.`,
+}
+
+// ── Zone 2 (HOME-12) — "What changed since you last looked" ──────────────────
+// X29 daily-delta strip. `diffs` is engine diffSet() output: [] when nothing
+// material changed (honest empty state, not a fabricated "0"), else one badge
+// per changed headline metric with a causality stripe naming what moved it.
+function WhatChangedStrip({ diffs }) {
+  const items = Array.isArray(diffs) ? diffs : []
+  const sources = useMemo(
+    () => [...new Set(items.flatMap(d => Array.isArray(d.sources) ? d.sources : []))],
+    [items]
+  )
+  if (!items.length) {
+    return (
+      <div style={{
+        margin: '4px 16px 0', padding: '8px 12px',
+        display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 12, color: 'var(--c-text3)',
+        background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 12,
+      }}>
+        <span style={{ color: 'var(--c-acc)', fontWeight: 800 }}>✓</span>
+        <span>Up to date — nothing has changed since you last looked.</span>
+      </div>
+    )
+  }
+  return (
+    <div className="sw-card" style={{ margin: '4px 16px 0', padding: 0, overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px 8px' }}>
+        <div className="sw-eyebrow" style={{ marginBottom: 8 }}>What changed since you last looked</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', alignItems: 'center' }}>
+          {items.map(d => (
+            <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text2)' }}>{d.label}</span>
+              <DiffBadge value={d.delta} since={d.since} format={d.format === 'currency' ? 'currency' : undefined} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {sources.length > 0 && <CausalityStripe sources={sources} />}
+    </div>
+  )
 }
 
 function RadarCard({ entity, fqData, nw, viewMode, diffs, onDrillMetric }) {
@@ -2095,6 +2137,14 @@ export default function HomeScreen({
         onDrillMetric={drillFn}
         onOpenBreakdown={onOpenBreakdown}
       />
+
+      {/* ── Zone 2 (HOME-12): "What changed since you last looked" ──────
+          X29 daily-delta strip. Reads engine diffSet() — the delta between the
+          pristine persona snapshot (entity._baseline) and the current effective
+          entity. Shows nothing-fabricated: no changes → an honest "up to date"
+          line. Lights up the moment a value is updated or a life event is
+          logged (F3), so it answers §Q1.1 Q2 directly. */}
+      <WhatChangedStrip diffs={diffs} />
 
       {/* ── §Z10 SIPP-IHT countdown (regulatory: Finance Act 2026) ──── */}
       <SippIhtCountdown entity={entity} onNav={onNav} />

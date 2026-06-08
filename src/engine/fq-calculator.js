@@ -1817,8 +1817,92 @@ export function varianceFor(entity, mode1, mode2, window) {
 // ---------- Task 0.5: Diff / causality functions (X29) ----------
 
 // STUB: implement at s02a
+/**
+ * X29 diff layer — "what changed since you last looked".
+ *
+ * PURE. Diffs the entity's CURRENT engine snapshot (net worth + wealth score +
+ * risk score) against a baseline snapshot the caller attaches as `entity._baseline`
+ * (and optional per-metric causality in `entity._diffSources`). The React/events
+ * layer owns WHERE the baseline comes from (a snapshot taken on load, a bundled
+ * prior snapshot, or — for signed-in users — the persisted last-visit snapshot);
+ * this function just computes the delta so it can never diverge from the engine.
+ *
+ * Honest-by-default: no baseline, or no material change, returns [] — the strip
+ * then renders nothing rather than a fabricated "0 change" (FP-4 / no-fabrication).
+ *
+ * Baseline shape (any of these key spellings accepted, so it tolerates both a
+ * financialSnapshot and a hand-built baseline):
+ *   { asOf|capturedAt, netWorth, wealthScore|score, riskScore|risk }
+ *
+ * @param {object} entity - the EFFECTIVE entity (base + applied events)
+ * @param {string|null} [sinceTimestamp] - overrides the baseline's own date (drives decay)
+ * @returns {Array<{key,dim,label,from,to,delta,format,sources,since}>}
+ * CANONICAL
+ */
 export function diffSet(entity, sinceTimestamp) {
-  return [];
+  if (!entity || typeof entity !== 'object') return [];
+  const base = entity._baseline || entity._baselineSnapshot || null;
+  if (!base || typeof base !== 'object') return [];
+  const since = sinceTimestamp || base.asOf || base.capturedAt || null;
+  const srcMap = entity._diffSources || {};
+
+  // Current values straight from the engine — the same functions every other
+  // surface reads, so the diff can never show a number the screen doesn't.
+  const cur = {
+    netWorth:    Math.round(_num(netWorth(entity))),
+    wealthScore: Math.round(_num(_safeTotal(() => calcFQ(entity)))),
+    riskScore:   Math.round(_num(_safeTotal(() => calcRisk(entity)))),
+  };
+  const prev = {
+    netWorth:    Math.round(_num(base.netWorth)),
+    wealthScore: Math.round(_num(base.wealthScore ?? base.score)),
+    riskScore:   Math.round(_num(base.riskScore ?? base.risk)),
+  };
+
+  // Materiality thresholds (O-CF-X29-1: £100 default for money, 1pt for scores).
+  const DEFS = [
+    { key: 'netWorth',    label: 'Net worth',    format: 'currency', min: 100 },
+    { key: 'wealthScore', label: 'Wealth score', format: 'score',    min: 1   },
+    { key: 'riskScore',   label: 'Risk score',   format: 'score',    min: 1   },
+  ];
+  const out = [];
+  for (const d of DEFS) {
+    const from = prev[d.key];
+    const to   = cur[d.key];
+    if (!Number.isFinite(from) || !Number.isFinite(to)) continue;
+    const delta = to - from;
+    if (Math.abs(delta) < d.min) continue;
+    out.push({
+      key: d.key, dim: d.key, label: d.label,
+      from, to, delta, format: d.format,
+      sources: Array.isArray(srcMap[d.key]) ? srcMap[d.key] : [],
+      since,
+    });
+  }
+  return out;
+}
+
+// diffSet helpers — local, no new exports.
+function _num(v) { const n = +v; return Number.isFinite(n) ? n : 0; }
+function _safeTotal(fn) { try { return fn()?.total; } catch { return 0; } }
+
+/**
+ * Engine snapshot of the three headline metrics — the baseline `diffSet` diffs
+ * against. Kept deliberately small (NW + the two scores) so it's cheap to take
+ * on every visit and serialise into the event store (X29 / FORECAST_SNAPSHOT).
+ * Pure.
+ * @param {object} entity
+ * @param {string|null} [asOf]
+ * @returns {{asOf:string|null, netWorth:number, wealthScore:number, riskScore:number}}
+ * CANONICAL
+ */
+export function engineSnapshot(entity, asOf = null) {
+  return {
+    asOf: asOf || entity?.dataLastUpdated || null,
+    netWorth:    Math.round(_num(netWorth(entity))),
+    wealthScore: Math.round(_num(_safeTotal(() => calcFQ(entity)))),
+    riskScore:   Math.round(_num(_safeTotal(() => calcRisk(entity)))),
+  };
 }
 
 // STUB: implement at s02a

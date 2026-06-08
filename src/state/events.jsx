@@ -22,6 +22,7 @@
 import { createContext, useContext, useReducer, useCallback, useMemo } from 'react'
 import { ADD_ID_TO_TYPE } from '../engine/liability-taxonomy.js'
 import { classifyAsset } from '../engine/asset-taxonomy.js'
+import { engineSnapshot } from '../engine/fq-calculator.js'
 
 // Canonical sub-class of an Add-menu itemType (e.g. 'DB_PUBLIC' → 'db-pension').
 // Drives event routing so the FULL asset spectrum lands in the right entity slot
@@ -829,8 +830,38 @@ export function useEventsFor(personaId) {
   return events[personaId] || []
 }
 
-// Convenience: get the effective entity (base + committed events applied)
+// Human labels for the X29 "what changed" strip — committed event types →
+// plain-English causality. LIFE_EVENT subtypes are labelled in F3.
+const _DIFF_EVENT_LABELS = {
+  [EV.ASSET_VALUE_UPDATED]:   'Updated a value',
+  [EV.ASSET_FIELD_CORRECTED]: 'Corrected a figure',
+  [EV.ASSET_REMOVED]:         'Removed an item',
+  [EV.SCENARIO_SAVED]:        'Saved a scenario',
+  [EV.DRAWDOWN_COMMITTED]:    'Set your drawdown',
+  [EV.DRAWDOWN_SCHEDULE_SET]: 'Set a drawdown plan',
+  [EV.NOMINATION_REVIEWED]:   'Reviewed nominations',
+  [EV.PREFERENCE_SET]:        'Changed a preference',
+}
+
+// Distinct causality labels from a committed event log, applied to every
+// headline metric the strip shows. Empty log → {} (diffSet then returns []).
+function diffSourcesFromLog(log = []) {
+  const labels = [...new Set(log.map(ev => _DIFF_EVENT_LABELS[ev.type] || (ev.payload?.label)).filter(Boolean))]
+  if (!labels.length) return {}
+  return { netWorth: labels, wealthScore: labels, riskScore: labels }
+}
+
+// Convenience: get the effective entity (base + committed events applied).
+// Also attaches the X29 diff context (_baseline = the pristine persona's
+// snapshot, _diffSources = causality from the event log) so diffSet() on any
+// screen shows "what your committed actions changed vs where you started" —
+// browser-native, no persistence required. Cross-visit diffs (real users) layer
+// on top via the persisted last-visit snapshot (F2).
 export function useEffectiveEntity(baseEntity, personaId) {
   const log = useEventsFor(personaId)
-  return useMemo(() => applyEvents(baseEntity, log), [baseEntity, log])
+  const baseline = useMemo(() => engineSnapshot(baseEntity), [baseEntity])
+  return useMemo(() => {
+    const eff = applyEvents(baseEntity, log)
+    return { ...eff, _baseline: baseline, _diffSources: diffSourcesFromLog(log) }
+  }, [baseEntity, log, baseline])
 }

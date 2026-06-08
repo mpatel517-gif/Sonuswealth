@@ -143,16 +143,25 @@ export function investmentsTotal(entity) {
  */
 export function isaTotal(entity) {
   const a = entity?.assets || {};
-  let total = 0;
-  if (a.isa?.value != null)      total += +a.isa.value || 0;
-  if (typeof a.isa === 'number') total += +a.isa       || 0;
+  // Itemized investments[] ISA entries are the source of truth when present.
+  // `a.isa.value` is a denormalized SUMMARY of the same holdings — adding both
+  // double-counted (mrT-core: isa.value £46,600 + the same £46,600 itemized =
+  // £93,200), inflating netWorth and the IHT estate. Prefer itemized; fall back
+  // to the summary only when there are no itemized ISA entries. Verified across
+  // all personas: where both exist the summary equals the itemized sum, so this
+  // removes pure duplication with no data loss. (Task #16, 2026-06-08.)
+  let itemized = 0, hasItemized = false;
   if (Array.isArray(a.investments)) {
     for (const inv of a.investments) {
-      const t = (inv.type || '').toLowerCase();
-      if (t.includes('isa')) total += +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0) || 0;
+      if ((inv.type || '').toLowerCase().includes('isa')) {
+        itemized += +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0) || 0;
+        hasItemized = true;
+      }
     }
   }
-  return total;
+  if (hasItemized) return itemized;
+  if (typeof a.isa === 'number') return +a.isa || 0;
+  return +(a.isa?.value) || 0;
 }
 
 /**
@@ -163,17 +172,22 @@ export function isaTotal(entity) {
  */
 export function giaTotal(entity) {
   const a = entity?.assets || {};
-  let total = 0;
-  if (a.portfolio?.value != null) total += +a.portfolio.value || 0;
+  // Same denormalization as isaTotal: `a.portfolio.value` is a SUMMARY of the
+  // itemized GIA holdings in investments[]; adding both double-counted (mrT-core:
+  // portfolio.value £24,800 + itemized £24,800 = £49,600). Prefer itemized; fall
+  // back to the summary when there are no itemized GIA entries. (Task #16.)
+  let itemized = 0, hasItemized = false;
   if (Array.isArray(a.investments)) {
     for (const inv of a.investments) {
       const t = (inv.type || '').toLowerCase();
       if (t === 'gia' || t.includes('general-investment')) {
-        total += +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0) || 0;
+        itemized += +(inv.balance_gbp ?? inv.balance ?? inv.value ?? 0) || 0;
+        hasItemized = true;
       }
     }
   }
-  return total;
+  if (hasItemized) return itemized;
+  return +(a.portfolio?.value) || 0;
 }
 
 /**

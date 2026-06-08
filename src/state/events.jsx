@@ -49,6 +49,7 @@ export { EV, validateEvent } from './events-validator.js'
 // never exercised end-to-end until the L3-2 leaf-edit shipped.)
 import { EV, validateEvent as _validateEvent } from './events-validator.js'
 import { resolveExistingId, applyFieldCorrection, applyLifeEvent, LIFE_EVENT_LABELS } from './events-fold-helpers.js'
+import { persistEvent, hydrateEvents } from '../lib/event-store.js'
 
 // ─── Pure reducer ───────────────────────────────────────────────────────────
 // events[personaId] = [{ type, ts, payload }, ...]
@@ -91,6 +92,16 @@ function reducer(state, action) {
     }
     case 'RESET_ALL':
       return {}
+    case 'HYDRATE': {
+      // F2: seed a persona's log from persisted core_events on first load.
+      // Only seeds when the persona has no in-memory log yet, so it never
+      // clobbers session edits made before hydration resolves. Inert in demo
+      // (hydrateEvents returns [] without auth, so this action never fires).
+      const { personaId, events: hydrated } = action
+      if (!Array.isArray(hydrated) || !hydrated.length) return state
+      if ((state[personaId] || []).length) return state
+      return { ...state, [personaId]: hydrated }
+    }
     default:
       return state
   }
@@ -797,6 +808,10 @@ export function EventsProvider({ children }) {
 
   const commit = useCallback((personaId, event) => {
     dispatch({ type: 'COMMIT', personaId, event })
+    // F2: append to the Supabase event store. Fire-and-forget — persistEvent
+    // resolves the entity, no-ops without auth (demo), and never throws into
+    // React. The in-memory dispatch above stays the source of truth for the UI.
+    persistEvent({ ...event, ts: event.ts || Date.now() })
   }, [])
 
   const resetPersona = useCallback((personaId) => {
@@ -807,9 +822,18 @@ export function EventsProvider({ children }) {
     dispatch({ type: 'RESET_ALL' })
   }, [])
 
+  // F2: hydrate a persona's committed log from core_events. Call once per active
+  // persona when real-user auth lands (App passes the persona key). No-op in demo
+  // — hydrateEvents() returns [] without a resolvable entity, so nothing dispatches.
+  const hydrate = useCallback(async (personaId) => {
+    if (!personaId) return
+    const hydrated = await hydrateEvents()
+    if (hydrated.length) dispatch({ type: 'HYDRATE', personaId, events: hydrated })
+  }, [])
+
   const value = useMemo(
-    () => ({ events, commit, resetPersona, resetAll }),
-    [events, commit, resetPersona, resetAll]
+    () => ({ events, commit, resetPersona, resetAll, hydrate }),
+    [events, commit, resetPersona, resetAll, hydrate]
   )
 
   return (
@@ -828,6 +852,7 @@ export function useEvents() {
       commit: () => {},
       resetPersona: () => {},
       resetAll: () => {},
+      hydrate: async () => {},
     }
   }
   return ctx

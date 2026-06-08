@@ -487,6 +487,14 @@ function NRINotice() {
 // TAX SUB-TAB
 // ═════════════════════════════════════════════════════════════════════════════
 
+// Plain tax-year label derived from the active rules bundle (no internal
+// version code shown to users). 'UK-2026.1' → '2026/27'.
+function taxYearLabelFromBundle() {
+  const m = /(\d{4})/.exec(BRAND.rulesVersion || '')
+  const y = m ? +m[1] : 2026
+  return `${y}/${String((y + 1) % 100).padStart(2, '0')}`
+}
+
 // §5.3 + §5.4 — tax summary tile + this-year breakdown
 function TaxSummary({ entity }) {
   const txY = safe(() => te_taxThisYear(entity), null)
@@ -502,7 +510,7 @@ function TaxSummary({ entity }) {
       <SectionHead
         title="This year — tax position"
         sub={`Gross ${fmt(grossInc)} · adjusted net income ${fmt(ani.ani)} · Effective rate ${fmtPct(effRate)}`}
-        accessory={<ProvenanceChip sources={['HMRC bands UK-2026.1', 'entity.income', 'entity.assets.portfolio']} />}
+        accessory={<ProvenanceChip sources={[`HMRC ${taxYearLabelFromBundle()} rates`, 'your income', 'your investments']} />}
       />
       <div style={{
         display: 'grid',
@@ -562,13 +570,16 @@ function IncomeTaxDetail({ entity }) {
   const maxTax = bands.reduce((m, b) => Math.max(m, b.tax || 0), 1)
 
   const displayBands = (sco.applies ? sco.bands : bands)
+  // Issue 4 (founder 2026-06-08): the card rendered as a near-blank tile when no
+  // income tax was due — empty chart + a single £0 row. Graceful empty state.
+  const totalBandTax = displayBands.reduce((s, b) => s + (b.tax ?? b.amount ?? 0), 0)
 
   return (
     <div className="card sw-card-elevated">
       <SectionHead
         title="Income tax detail"
         sub={`Marginal ${fmtPct(itd.marginal_rate)} · ${
-          sco.applies ? 'Scottish bands' : wel.applies ? 'Welsh (rUK rates)' : 'rest-of-UK bands'
+          sco.applies ? 'Scottish rates' : wel.applies ? 'Welsh rates' : 'UK rates (excluding Scotland)'
         }`}
         accessory={<ExplainerChip id="TE-1" />}
       />
@@ -587,33 +598,47 @@ function IncomeTaxDetail({ entity }) {
         </FadeInOnMount>
       )}
 
-      {/* Stepped vertical-bar chart */}
-      <SteppedBandsChart bands={displayBands} maxTax={maxTax} />
+      {totalBandTax <= 0 ? (
+        <div style={{
+          padding: 'var(--space-md)',
+          fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.55,
+        }}>
+          <strong style={{ color: 'var(--c-success)' }}>No income tax is showing for this year.</strong>{' '}
+          Your taxable income currently sits within your tax-free allowances and the basic-rate band.
+          As your income rises, this chart fills in to show exactly which slice of it is taxed at each rate —
+          basic (20%), higher (40%) and additional (45%).
+        </div>
+      ) : (
+        <>
+          {/* Stepped vertical-bar chart */}
+          <SteppedBandsChart bands={displayBands} maxTax={maxTax} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 'var(--space-md)' }}>
-        {displayBands.map((b, i) => {
-          const rate = b.rate ?? 0
-          const amount = b.tax ?? b.amount ?? 0
-          const w = Math.round((amount / maxTax) * 100)
-          const label = b.name || b.type || `Band ${i + 1}`
-          return (
-            <div key={i} style={{ fontSize: 12 }}>
-              <div style={{
-                display: 'flex', justifyContent: 'space-between',
-                marginBottom: 3,
-              }}>
-                <span style={{ color: 'var(--c-text2)' }}>
-                  {String(label).replace(/_/g, ' ')} · {fmtPct(rate)}
-                </span>
-                <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                  {fmt(amount)}
-                </span>
-              </div>
-              <GaugeBar pct={w} colour={'linear-gradient(90deg, var(--c-accent), var(--c-success))'} height={5} delay={i * 60} />
-            </div>
-          )
-        })}
-      </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 'var(--space-md)' }}>
+            {displayBands.map((b, i) => {
+              const rate = b.rate ?? 0
+              const amount = b.tax ?? b.amount ?? 0
+              const w = Math.round((amount / maxTax) * 100)
+              const label = b.name || b.type || `Band ${i + 1}`
+              return (
+                <div key={i} style={{ fontSize: 12 }}>
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    marginBottom: 3,
+                  }}>
+                    <span style={{ color: 'var(--c-text2)' }}>
+                      {String(label).replace(/_/g, ' ')} · {fmtPct(rate)}
+                    </span>
+                    <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                      {fmt(amount)}
+                    </span>
+                  </div>
+                  <GaugeBar pct={w} colour={'linear-gradient(90deg, var(--c-accent), var(--c-success))'} height={5} delay={i * 60} />
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -667,8 +692,8 @@ function ANIStepwise({ entity }) {
   return (
     <div className="card sw-card-elevated">
       <SectionHead
-        title="Adjusted Net Income (ANI)"
-        sub="The income figure HMRC uses for the £100k allowance taper — worked step by step"
+        title="Adjusted net income"
+        sub="The income figure HMRC uses to decide your £100k allowance taper — worked out step by step"
       />
       <RevealStagger interval={50} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {rows.map(r => (
@@ -838,7 +863,7 @@ function AllowancesStrip({ entity }) {
   ].filter(x => x.d)
   return (
     <div className="card sw-card-elevated">
-      <SectionHead title="Allowance utilisation" sub={`Composite ${at.utilization || 0}% used`} />
+      <SectionHead title="Allowances — what's left to use" sub={`${100 - (at.utilization || 0)}% of your allowances still available`} />
       <RevealStagger interval={50} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
         {items.map(({ id, label, d }, i) => {
           const pctv = d.pctUsed ?? (d.limit ? Math.round((d.used || 0) / d.limit * 100) : 0)
@@ -2773,7 +2798,6 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
   )
 }
 
-import MoneyXDrawer from '../components/shared/MoneyXDrawer.jsx'
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
 
 export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey, onOpenDecision }) {
@@ -2914,8 +2938,8 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
              : null },
       b: { label: 'Adj. net income', value: fmt(ani || 0),
            sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band' : '' },
-      c: { label: 'Allowances', value: `${allow?.utilization || 0}%`,
-           sub: 'composite usage' },
+      c: { label: 'Allowances left', value: `${100 - (allow?.utilization || 0)}%`,
+           sub: 'still free to use' },
     }
   }, [entity, totalTaxNow, taxSince])
 
@@ -2968,6 +2992,10 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     return <CGTDrillPanel entity={entity} onClose={() => setDrillView(null)} />
   }
 
+  // Plain tax-year label (issue 1, founder 2026-06-08): "Live · UK-2026.1" +
+  // money sub-nav are not appropriate on Tax. Derived from the active bundle.
+  const taxYearLabel = taxYearLabelFromBundle()
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="screen">
@@ -2987,14 +3015,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         >
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
-        <span className="sw-chip sw-chip-sm sw-chip-mint sw-chip-outline" title={`${BRAND.rulesVersion} · ${BRAND.dataDate}`}>
+        <span className="sw-chip sw-chip-sm sw-chip-mint sw-chip-outline" title={`Tax year ${taxYearLabel} · rules current as at ${BRAND.dataDate}`}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-          Live · {BRAND.rulesVersion}
+          {taxYearLabel} tax year
         </span>
       </div>
-
-      {/* MoneyX 8-chip drawer — every screen the same (2026-05-28). */}
-      <MoneyXDrawer entity={entity} activeRoute="tax" onNav={onNav} />
 
       {/* ── X28 top-bar (per §X28-PATCH-1 / D-X28-OPTION-D) ─────────────── */}
       <X28TopBar
@@ -3054,6 +3079,12 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
 
       {/* ── NRI notice ────────────────────────────────────────────────────── */}
       {nri && <NRINotice />}
+
+      {/* ── Choices — moved to the TOP (founder issue 7, 2026-06-08): the
+            "what you can do here" levers used to sit at the very bottom of the
+            screen. They now sit directly under the sub-anchors so the user can
+            act before scrolling the full read-out. ───────────────────────── */}
+      <DecisionDrawers screen="tax" onOpen={onOpenDecision} />
 
       {/* ── TAX SUB-TAB ───────────────────────────────────────────────────── */}
       {subTab === 'tax' && (
@@ -3224,11 +3255,9 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         </div>
       )}
 
-      <DecisionDrawers screen="tax" onOpen={onOpenDecision} />
-
       <p className="disclaimer">
         {BRAND.disclaimer}<br />
-        {BRAND.rulesVersion} · {BRAND.dataDate}
+        {taxYearLabel} tax year · rules current as at {BRAND.dataDate}
       </p>
     </div>
   )

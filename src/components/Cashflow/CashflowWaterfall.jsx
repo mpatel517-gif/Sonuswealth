@@ -80,7 +80,10 @@ export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{
-            fontSize: 22, fontWeight: 880, color: 'var(--c-acc)',
+            fontSize: 22, fontWeight: 880,
+            // Sign-aware: a negative "surplus" is a shortfall — never paint it in
+            // the positive accent (issue: Bruce's −£7k showed as green "SURPLUS").
+            color: running >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)',
             letterSpacing: -0.3, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
           }}>
             {fmt(running)}
@@ -89,7 +92,7 @@ export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
             fontSize: 9, fontWeight: 800, color: 'var(--c-text3)',
             letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 3,
           }}>
-            Surplus
+            {running >= 0 ? 'Surplus' : 'Shortfall'}
           </div>
         </div>
       </div>
@@ -167,7 +170,7 @@ export default function CashflowWaterfall({ steps = DEFAULT_STEPS }) {
                   <div style={{
                     fontSize: 13, fontWeight: 800,
                     color: s.kind === 'income' ? 'var(--c-text)'
-                         : s.kind === 'surplus' ? 'var(--c-acc)'
+                         : s.kind === 'surplus' ? (s.value >= 0 ? 'var(--c-acc)' : 'var(--c-coral, #FF6F7D)')
                          : 'var(--c-coral, #FF6F7D)',
                     letterSpacing: -0.2,
                     fontVariantNumeric: 'tabular-nums',

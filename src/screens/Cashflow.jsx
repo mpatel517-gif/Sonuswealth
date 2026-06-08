@@ -1643,6 +1643,10 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   const [swrRegime, setSwrRegime] = useState('bengen')
   // L3 drill panel — 'surplus' | 'income' | 'health'
   const [drillView, setDrillView] = useState(null)
+  // Hero-lens drill (ON TRACK / RESILIENCE "Dig in") lifted from PurposeStatement
+  // so HeroLensDrill can return at Cashflow root level — same full-screen pattern
+  // as SurplusDrillPanel, bypassing the S.shell overflow:hidden container.
+  const [heroLensDrill, setHeroLensDrill] = useState(null)
   // Seed banner state — set when a scenario seed lands from the TappableNumber
   // bus. Cleared once user dismisses or after 30s. Keeps the visible "I see
   // your what-if" affordance even after Dashboard's seed-state clears.
@@ -1799,7 +1803,19 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
   )
 
   // ── Render ─────────────────────────────────────────────────────────────
-  // L3 drill overlay — takes full screen priority
+  // L3 drill overlay — takes full screen priority (all returned before S.shell
+  // so position:fixed children are relative to viewport, not S.shell's overflow:hidden)
+  if (heroLensDrill) {
+    return (
+      <HeroLensDrill
+        data={heroLensDrill}
+        onClose={() => setHeroLensDrill(null)}
+        backToMyMoney={heroLensDrill.backToMyMoney && typeof onNav === 'function'
+          ? () => { setHeroLensDrill(null); onNav('money') }
+          : null}
+      />
+    )
+  }
   if (drillView === 'surplus') {
     return <SurplusDrillPanel entity={entity} onClose={() => setDrillView(null)} />
   }
@@ -1812,24 +1828,6 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
 
   return (
     <div style={S.shell}>
-      {/* ── Header bar ──────────────────────────────────────────────── */}
-      <div style={S.header}>
-        <button
-          onClick={goBackOrHome}
-          className="sw-press"
-          style={S.backBtn}
-          aria-label={onBack ? 'Back to previous screen' : 'Back to home'}
-        >
-          <span style={{ fontSize: 16 }}>←</span> Back
-        </button>
-        <div style={S.headerTitle}>Cashflow</div>
-        {/* P&L view toggle REMOVED (founder 2026-06-04 — "redundant"): the
-            accountant view is auto-inferred (inferAccountantMode) and the
-            waterfall already shows its own Simple/Accountant indicator, so a
-            floating top-level toggle was redundant chrome. */}
-        <div style={{ width: 1 }} />
-      </div>
-
       {/* ── Scrollable body — STORY-FIRST ORDER (R3v2 founder direction 2026-05-26) ─
            Chrome contract: NW/Wealth/Risk pills live in the GLOBAL HEADER (Dashboard.jsx).
            Body order: Today/Future/Plan/What if PRIMARY → Story banner ANSWER →
@@ -1903,6 +1901,7 @@ export default function Cashflow({ entity, onHome, onBack, onNav, onOpenRisk, on
             ms={ms}
             decSolve={decSolve}
             onNav={onNav}
+            onLensDrill={setHeroLensDrill}
           />
         </FadeInOnMount>
 
@@ -2299,8 +2298,7 @@ function HeroLensDrill({ data, onClose, backToMyMoney }) {
   )
 }
 
-function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve, onNav }) {
-  const [lensDrill, setLensDrill] = useState(null) // 'A' | 'B' | null
+function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve, onNav, onLensDrill }) {
   // Runway months — prefer the liquidityBuffer engine answer; fall back to
   // cash ÷ essentials if needed.
   let runwayMo = +(lb?.months_covered ?? lb?.months ?? 0)
@@ -2458,16 +2456,9 @@ function PurposeStatement({ entity, lb, fr, pos, fi, ms, decSolve, onNav }) {
           names WHY the two views differ (the secure income), so they read as
           complements, not the old self-contradicting "stretch ... but 48%". */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <HeroLens {...lensA} onDrill={lensA.drill ? () => setLensDrill('A') : undefined} />
-        <HeroLens {...lensB} onDrill={lensB.drill ? () => setLensDrill('B') : undefined} />
+        <HeroLens {...lensA} onDrill={lensA.drill && onLensDrill ? () => onLensDrill(lensA.drill) : undefined} />
+        <HeroLens {...lensB} onDrill={lensB.drill && onLensDrill ? () => onLensDrill(lensB.drill) : undefined} />
       </div>
-      {lensDrill && (
-        <HeroLensDrill
-          data={lensDrill === 'A' ? lensA.drill : lensB.drill}
-          onClose={() => setLensDrill(null)}
-          backToMyMoney={(lensDrill === 'A' ? lensA.drill?.backToMyMoney : lensB.drill?.backToMyMoney) && typeof onNav === 'function' ? () => { setLensDrill(null); onNav('money') } : null}
-        />
-      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <span className="sw-chip sw-chip-sm" data-tieout="cashflow.life-stage" style={{ fontWeight: 600 }}>
           {stageChip}
@@ -3022,7 +3013,7 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, flow, accountantMo
           note: 'Housing + bills + transport' },
         { id: 'debt',       label: 'Debt service',         value: -debtAnn,         kind: 'deduction',
           note: 'Loans + cards' },
-        { id: 'surplus',    label: 'Net surplus',          value: surplusAnn,       kind: 'surplus' },
+        { id: 'surplus',    label: surplusAnn >= 0 ? 'Net surplus' : 'Net shortfall', value: surplusAnn, kind: 'surplus' },
       ]
     : [
         { id: 'income',     label: 'Gross income',         value: gross,            kind: 'income' },
@@ -3034,7 +3025,7 @@ function CashflowWaterfallReconciled({ entity, incomeAll, ms, flow, accountantMo
           note: 'Housing + bills + transport' },
         { id: 'debt',       label: 'Debt service',         value: -debtAnn,         kind: 'deduction',
           note: 'Loans + cards' },
-        { id: 'surplus',    label: 'Annual surplus',       value: surplusAnn,       kind: 'surplus' },
+        { id: 'surplus',    label: surplusAnn >= 0 ? 'Annual surplus' : 'Annual shortfall', value: surplusAnn, kind: 'surplus' },
       ]
   const steps = protAnn > 0
     ? [

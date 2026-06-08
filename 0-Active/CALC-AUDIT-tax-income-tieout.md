@@ -48,5 +48,25 @@ Each function reads income differently:
 - `npm run regression:check` 180/180 0 drift (these functions feed MyMoney/Cashflow/Risk — must not regress their tie-outs).
 - Golden hand-computed vectors for ≥2 personas (a salaried higher-rate payer + a dividend-heavy director) checked against HMRC band maths.
 
+## Golden vector — Mr T (mrT-core), 2026/27 — hand-computed target
+
+Canonical decomposition (✅ built + verified in `src/engine/taxable-income.js`):
+`nsnd £22,370` (salary £12,570 + net rental £9,800; **state pension £0 — age 35 < 67**) · `savings £1,850` · `dividends £38,000` · **`total £62,220`** · `ani £62,220` (< £100k → full PA).
+
+Correct tax (PA→NSND first; savings stacked w/ PSA £500; dividends stacked, allowance £500, rates 10.75/35.75/39.35):
+- Income tax (NSND): (22,370 − 12,570) × 20% = **£1,960**  *(was £0)*
+- Savings tax: £500 PSA @0%, £1,350 @20% = **£270**
+- Dividend tax: £500 @0%; ~£13,830 in basic @10.75% ≈ £1,487; ~£23,670 in higher @35.75% ≈ £8,462 = **≈ £9,949**  *(was £4k)*
+- NIC ≈ £0 (salary at primary threshold) · CGT £0
+- **Total ≈ £12,179 · effective ≈ 19.6% · marginal 40%**  *(screen showed £4k / 0.0% / 20%)*
+
+(Recompute precisely against live `TAX` bundle constants when wiring; treat the band splits above as the target shape, not the penny.) The implemented `incomeTaxStacked()` must reproduce these for Mr T AND a salaried higher-rate persona before rewiring the screen.
+
+## Progress (2026-06-08)
+- ✅ `taxableIncomeBreakdown(entity)` built + node-verified (Mr T total £62,220).
+- ⬜ `incomeTaxStacked(entity)` — proper UK band stacking (NEXT).
+- ⬜ Rewire incomeTaxDetail / dividendTaxDetail / taxThisYear / display + ANI to the canonical source; remove the masking fallback.
+- ⬜ Tie-out gate green on all personas + `regression:check` 180/180 + golden vectors.
+
 ## Discipline change (the actual founder ask)
 The tie-out gate above must run on every money screen before "done" — not "does each card render a number" but "do the numbers agree with each other and across screens". Promote it to an automated test in `src/tests/`.

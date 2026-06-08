@@ -24,8 +24,9 @@ import {
   // basics
   fmt, daysLeft, sippIhtCountdownDays, costOfInaction, calcAge, lifeStageFor, TAX, guardrail,
   calcRisk, fqBand, riskBand,
-  // legacy IHT (still used as a robust fallback for ihtDynamic-shape data)
-  ihtDynamic,
+  // IHT on this screen now flows exclusively through te_ihtExposure (the
+  // liability-deducting tax-estate engine); the legacy fq-calculator ihtDynamic
+  // is no longer imported here so the whole tab reports ONE IHT figure.
   // tax sub-tab (calcANI migrated above)
   calcAllIncome, calcDividendTax, calcPersonalAllowance,
   welshIncomeTax, scottishIncomeTax,
@@ -2110,8 +2111,14 @@ function BeneficiaryChain({ entity }) {
 function RNRBPlanning({ entity }) {
   const baseTaper = safe(() => rnrbTaper(entity), null)
   const elig  = safe(() => rnrbEligibility(entity), null)
-  const grossIht = safe(() => ihtDynamic(entity, true), { gross: 0 })
-  const baseGross = grossIht.gross || 0
+  // RNRB taper is tested on the NET estate (value after liabilities, before
+  // reliefs) — HMRC reduces RNRB by £1 per £2 the *net* estate exceeds £2m. This
+  // previously read ihtDynamic(...).gross (gross ASSETS, pre-liability), which
+  // would falsely trip the taper for a mortgaged estate whose net value is under
+  // £2m. Now reads the screen's canonical te_ihtExposure.net_estate, so the gauge
+  // and the IHT engine agree and the cliff sits in the right place.
+  const estate = safe(() => te_ihtExposure(entity), { net_estate: 0 })
+  const baseGross = estate.net_estate || 0
   const taperStart = TAX.rnrbTaper                 // £2,000,000 taper threshold
   const rnrbCap = TAX.rnrb
   const taperEnd = taperStart + 2 * rnrbCap        // RNRB fully tapered £1 per £2 over the threshold
@@ -2147,14 +2154,14 @@ function RNRBPlanning({ entity }) {
           borderRadius: 10,
           fontSize: 12, color: 'var(--c-warning)',
         }}>
-          <strong>£{(taperStart / 1e6).toFixed(0)}m taper</strong> · For each £2 gross estate exceeds £{taperStart.toLocaleString()},
+          <strong>£{(taperStart / 1e6).toFixed(0)}m taper</strong> · For each £2 your net estate exceeds £{taperStart.toLocaleString()},
           RNRB falls by £1. Lost in full at £{(taperEnd).toLocaleString()}.
         </div>
       )}
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
           <span style={{ color: 'var(--c-text3)' }}>
-            Gross estate{dirty && <span style={{ color: 'var(--c-acc)', fontWeight: 700 }}> · modelled</span>}
+            Net estate{dirty && <span style={{ color: 'var(--c-acc)', fontWeight: 700 }}> · modelled</span>}
           </span>
           <span style={{ color: 'var(--c-text)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }} data-tieout="rnrb.gross-estate">{fmt(grossEstate)}</span>
         </div>
@@ -2165,7 +2172,7 @@ function RNRBPlanning({ entity }) {
           step={25000}
           onChange={(v) => setOverride(v)}
           colour={inTaper ? 'var(--c-warning)' : 'var(--c-success)'}
-          ariaLabel={`Gross estate value — currently ${fmt(grossEstate)}. Drag to model a different estate; the residence nil-rate band and the tax lost to the £${taperStart.toLocaleString()} taper update live.`}
+          ariaLabel={`Net estate value — currently ${fmt(grossEstate)}. Drag to model a different estate; the residence nil-rate band and the tax lost to the £${taperStart.toLocaleString()} taper update live.`}
           valueText={fmt(grossEstate)}
         />
         {dirty && (

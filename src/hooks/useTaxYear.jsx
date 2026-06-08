@@ -42,41 +42,49 @@ function _bundleIdFor(startYear) {
   return `UK-${startYear}.1`
 }
 
-function _readWindow() {
-  try {
-    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(STORE_KEY) : null
-    if (!raw) return 'current-period'
-    const parsed = JSON.parse(raw)
-    return parsed?.window || 'current-period'
-  } catch { return 'current-period' }
+// The tax year whose RULES are currently in force (today's). Deterministic
+// default for the rule-year stepper when the user hasn't stepped.
+function _currentTaxYear() {
+  return _taxYearForDate(new Date())
 }
 
-function _resolve(windowId) {
-  const today = new Date()
+function _readStore() {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(STORE_KEY) : null
+    if (!raw) return {}
+    return JSON.parse(raw) || {}
+  } catch { return {} }
+}
+
+// Rule-year ownership (founder 2026-06-08): the global YearStepper owns WHICH
+// tax year's rules apply via `ruleYear` in the store. The horizon dropdown
+// (`window`) owns the projection horizon ONLY and no longer drives the rule
+// bundle. So `taxYear`/`ruleBundle` here come from `ruleYear`; `window`/
+// `yearsOffset` remain horizon descriptors.
+function _resolve(store) {
+  const windowId = store?.window || 'current-period'
+  const ruleYear = store?.ruleYear || _currentTaxYear()
+  const startYear = parseInt(String(ruleYear).split('/')[0], 10)
+  const asOfDate = new Date()
+  asOfDate.setFullYear(startYear) // a date inside the chosen rule year
   let offset = 0
   if (windowId === 'last-period') offset = -1
   else if (windowId === 'next-period') offset = 1
-  // Other windows (five-year, ten-year, twenty-year, lifetime) carry their
-  // own forward horizon — but for *tax-year selection* they all default to
-  // current-period since the underlying rule bundle only exists for present.
-  const asOfDate = new Date(today)
-  asOfDate.setFullYear(today.getFullYear() + offset)
-  const taxYear = _taxYearForDate(asOfDate)
-  const startYear = parseInt(taxYear.split('/')[0], 10)
   return {
-    taxYear,
+    taxYear: ruleYear,
     asOfDate,
     ruleBundle: _bundleIdFor(startYear),
+    ruleYear,
     window: windowId,
     yearsOffset: offset,
   }
 }
 
 export default function useTaxYear() {
-  const [state, setState] = useState(() => _resolve(_readWindow()))
+  const [state, setState] = useState(() => _resolve(_readStore()))
 
   useEffect(() => {
-    const reread = () => setState(_resolve(_readWindow()))
+    const reread = () => setState(_resolve(_readStore()))
     if (typeof window === 'undefined') return undefined
     window.addEventListener('storage', reread)
     window.addEventListener('sonus:taxyear', reread)
@@ -91,5 +99,11 @@ export default function useTaxYear() {
 
 // Imperative read for non-React contexts (engine wrappers etc.)
 export function readTaxYearSync() {
-  return _resolve(_readWindow())
+  return _resolve(_readStore())
 }
+
+// Ordered list of tax years with a real (non-draft) rule bundle, for the
+// global YearStepper. Kept here so the hook and the stepper share one source.
+export const RULE_YEARS = ['2021/22', '2022/23', '2023/24', '2024/25', '2025/26', '2026/27']
+
+export { _currentTaxYear as currentTaxYear }

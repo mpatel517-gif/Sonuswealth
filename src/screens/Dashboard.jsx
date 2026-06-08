@@ -96,6 +96,7 @@ import Sidebar         from '../components/Shell/Sidebar.jsx'
 // Cashflow / MyMoney / TaxEstate / Timeline via X28TopBar; missing on
 // Home, Risk, and the MoneyX sub-routes' chrome row).
 import { TIME_WINDOWS } from '../components/shared/X28TopBar.jsx'
+import YearStepper from '../components/shared/YearStepper.jsx'
 import useTaxYear        from '../hooks/useTaxYear.jsx'
 // P12-1 (2026-05-28) AppShell migration: centralised FCA disclaimer footer +
 // canonical chrome slot for future ChromeBar (tax-year filter, mode strip).
@@ -166,11 +167,11 @@ function GlobalTaxYearChip() {
         color: 'var(--c-text3)', cursor: 'pointer',
       }}>
         <span aria-hidden="true">⏱</span>
-        <span className="sw-eyebrow" style={{ fontSize: 10, letterSpacing: 0.5 }}>Tax year</span>
+        <span className="sw-eyebrow" style={{ fontSize: 10, letterSpacing: 0.5 }}>Horizon</span>
         <select
           value={current.id}
           onChange={e => handleChange(e.target.value)}
-          aria-label="Tax year selector"
+          aria-label="Projection horizon selector"
           style={{
             background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
             color: 'var(--c-text)', borderRadius: 999,
@@ -184,12 +185,10 @@ function GlobalTaxYearChip() {
           ))}
         </select>
       </label>
-      <span style={{
-        fontSize: 10, color: 'var(--c-text3)', letterSpacing: 0.4,
-        textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums',
-      }}>
-        {ty.ruleBundle} · {ty.taxYear}
-      </span>
+      {/* Rule-year stepper owns WHICH tax year's rules apply (founder 2026-06-08),
+          separate from the horizon dropdown on the left. The raw bundle id stays
+          internal — the stepper surfaces only the friendly year. */}
+      <YearStepper />
     </div>
   )
 }
@@ -566,6 +565,8 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
     setShowSettings(false)
     setShowSwitcher(false)
     setShowAsk(false)
+    setMoreScreen(null)
+    setDePayload(null)
   }, [])
 
   // PP-3 drill stack handlers — every screen receives `onDrillMetric` and
@@ -693,9 +694,9 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
               coiTotal = +(totalCoI?.(entity)?.total ?? 0)
             } catch (_e) { /* engine may not be ready on first paint */ }
             const coiShort = shortGBP(coiTotal)
-            const pill = (label, value, color) => (
+            const pill = (label, value, color, titleText) => (
               <div
-                title={label}
+                title={titleText || label}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   minWidth: 50, padding: '4px 9px',
@@ -714,7 +715,9 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
                 {pill('NW', nwShort, 'var(--c-text)')}
                 {pill('Wealth', fqShort, 'var(--c-acc)')}
                 {pill('Risk', rkShort, rkColour)}
-                {pill('CoI', coiShort, 'var(--c-coral, #FF6F7D)')}
+                {/* Founder 2026-06-08: kill the bare "CoI" acronym (basics rule).
+                    Header total is the all-domain costOfInaction — label reflects scope. */}
+                {pill('Cost of inaction', coiShort, 'var(--c-coral, #FF6F7D)', 'Cost of inaction · all domains')}
               </div>
             )
           })()}
@@ -764,7 +767,8 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             {cell('NW', sg(headerNW), 'var(--c-text)')}
             {cell('Wealth', fq?.total != null ? `${fq.total}` : '—', 'var(--c-acc)')}
             {cell('Risk', headerRisk?.total != null ? `${headerRisk.total}` : '—', headerRiskBand?.colour || 'var(--c-gold)')}
-            {cell('CoI', sg(coi), 'var(--c-coral, #FF6F7D)')}
+            {/* Founder 2026-06-08: bare "CoI" acronym killed here too (mobile strip). */}
+            {cell('Cost of inaction', sg(coi), 'var(--c-coral, #FF6F7D)')}
           </div>
         )
       })()}

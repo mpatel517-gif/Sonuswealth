@@ -69,20 +69,13 @@ export function installBundleAutoSync() {
     try {
       const raw = window.localStorage.getItem(STORE_KEY)
       const parsed = raw ? JSON.parse(raw) : null
-      const windowId = parsed?.window || 'current-period'
-      // Map window selector → asOfDate offset, then back to tax year. The
-      // X28 selector carries calendar offsets (last-period = -1y, next-period
-      // = +1y, current-period = 0y); all other windows (5y, 10y, lifetime)
-      // surface forward projections but for *rules selection* default to
-      // current-period since future bundles don't exist yet.
-      const today = new Date()
-      let offset = 0
-      if (windowId === 'last-period') offset = -1
-      else if (windowId === 'next-period') offset = 1
-      const asOf = new Date(today)
-      asOf.setFullYear(today.getFullYear() + offset)
-      return _taxYearForDate(asOf)
-    } catch { return '2026/27' }
+      // Rule-year ownership (founder 2026-06-08): the global YearStepper writes
+      // an explicit `ruleYear` that solely decides which bundle is in force. The
+      // horizon dropdown (`window`) is projection-only and no longer swaps rules.
+      // Default to today's tax year when the user hasn't stepped.
+      if (parsed?.ruleYear) return parsed.ruleYear
+      return _taxYearForDate(new Date())
+    } catch { return _taxYearForDate(new Date()) }
   }
 
   function _taxYearForDate(d) {

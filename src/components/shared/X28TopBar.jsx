@@ -265,7 +265,11 @@ export default function X28TopBar({
             chip ("Next year") sitting right next to it. Now the chip slides
             forward/back with the selected tax year. */}
         {(() => {
-          const m = rulesVersion?.match(/^UK-(\d{4})\.(\d+)$/)
+          // Accept 2-part ("UK-2026.1") AND 3-part build ids ("UK-2026.1.1" =
+          // TAX.ver). Without the optional 3rd segment a build id fails the match
+          // and falls through to rendering the raw internal version (founder
+          // 2026-06-08 — no internal rules-bundle code may surface to users).
+          const m = rulesVersion?.match(/^UK-(\d{4})\.(\d+)(?:\.\d+)?$/)
           const baseYear = m ? +m[1] : null
           // Shift the displayed tax year by the window's `years` offset.
           // For multi-year horizons (5y/10y/20y/Lifetime) keep the base

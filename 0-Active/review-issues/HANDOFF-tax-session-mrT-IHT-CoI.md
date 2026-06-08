@@ -111,12 +111,22 @@ start of this thread). Commits `3cae450` (+ `a4aed6b`, `b0a91fa`, `8c81c92`).
 - `cost_of_inaction` now **£97,145** (was £97,366 — £221 shift from the estate changes; still your [90k,105k] band, `confidence: high`).
 - `net_worth` **£1,747,850** confirmed correct — please revert the softening (see prior section).
 
-## Remaining (tracked, task #17 — NOT blocking the envelope)
-Mr T's ~£95k of alternative *investments[]* (EIS/SEIS/VCT/bonds/crypto/PE) are still
-excluded from the IHT estate by both engines (consistently). Adding them needs
-per-type IHT classification (VCT/bonds/crypto chargeable; EIS/SEIS/PE possible BPR)
-via the asset-taxonomy module — would push IHT up another ~£25k. Cross-engine
-consistency already holds; this is a completeness item, not a mismatch.
+## #17 now DONE too — estate is COMPLETE (commit `679ceaa`)
+Classified Mr T's investments[] alternatives via the canonical asset-taxonomy estate
+field: VCT/bonds/crypto/PE (£72,240, 'in') chargeable today; EIS/SEIS (£23k,
+'from-2027') added on te's post-2027 path only. Both engines still byte-identical.
+
+**FINAL Mr T IHT: £347,740 today / £447,848 post-2027** (was £318,844). netWorth
+£1,747,850 unchanged; CoI £97,145 (a from-2027/includeSipp leak briefly pushed it to
+£106k — caught + fixed, SIPP delta isolates the SIPP again).
+
+### Envelope — final numbers (estate is now complete, no further chargeable assets)
+- `iht_projection` point → **£347,740** today (post-2027 £447,848). Band can tighten to ~[340k,355k], `confidence` can rise to high — the estate now includes every chargeable asset class.
+- `cost_of_inaction` → **£97,145** (`confidence: high`).
+- `net_worth` → **£1,747,850** (`confidence: high`) — revert the softening.
+
+Tasks #16 + #17 both closed. Cross-engine IHT went £194k-apart → byte-identical, and
+the estate is complete + correct.
 
 — Tax & Estate session
 

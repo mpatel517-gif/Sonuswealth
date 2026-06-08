@@ -495,6 +495,71 @@ function taxYearLabelFromBundle() {
   return `${y}/${String((y + 1) % 100).padStart(2, '0')}`
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 1B categorisation (founder issue 2/5, 2026-06-08): the Tax sub-tab was a flat
+// wall of ~10 cards. It is now a grid of category TILES; tapping a tile opens a
+// full-screen DRAWER that re-houses the existing cards. Drawer chrome mirrors the
+// existing L3 drill panels (fixed · te-slide-up · sticky ← Back) for consistency.
+// ─────────────────────────────────────────────────────────────────────────────
+function CategoryDrawer({ title, subtitle, onClose, children }) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape' && typeof onClose === 'function') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="screen" style={{
+      position: 'fixed', inset: 0, zIndex: 300, overflowY: 'auto',
+      background: 'var(--c-bg)',
+      animation: 'te-slide-up .28s cubic-bezier(0.16,1,0.3,1)',
+      padding: '0 0 120px',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '12px 16px 8px', borderBottom: '1px solid var(--c-sep)',
+        position: 'sticky', top: 0, background: 'var(--c-bg)', zIndex: 10,
+      }}>
+        <button onClick={onClose} className="sw-press" style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--c-acc)', fontSize: 13, fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          <span style={{ fontSize: 16 }}>←</span> Back
+        </button>
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)' }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 1 }}>{subtitle}</div>}
+        </div>
+        <div style={{ width: 56 }} />
+      </div>
+      <div style={{ padding: '12px 16px 0' }}>{children}</div>
+    </div>
+  )
+}
+
+// Category tile — compact entry point: title · headline · sub · chevron.
+function CatTile({ title, value, sub, tone = 'neutral', onClick }) {
+  const valColour = tone === 'danger' ? 'var(--c-danger)'
+    : tone === 'warning' ? 'var(--c-warning)'
+    : tone === 'success' ? 'var(--c-success)' : 'var(--c-text)'
+  return (
+    <button onClick={onClick} className="sw-press" style={{
+      textAlign: 'left', cursor: 'pointer', width: '100%',
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)', borderRadius: 16,
+      padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span className="sw-eyebrow">{title}</span>
+        <span style={{ color: 'var(--c-acc)', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>›</span>
+      </div>
+      {value != null && (
+        <div style={{ fontSize: 22, fontWeight: 700, color: valColour, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      )}
+      {sub && <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.4 }}>{sub}</div>}
+    </button>
+  )
+}
+
 // §5.3 + §5.4 — tax summary tile + this-year breakdown
 function TaxSummary({ entity }) {
   const txY = safe(() => te_taxThisYear(entity), null)
@@ -2844,6 +2909,9 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   // 'iht' → IHTDrillPanel  |  'allowances' → AllowanceDrillPanel  |  'bpr' → BPRDrillPanel  |  'cgt' → CGTDrillPanel
   const [drillView, setDrillView] = useState(null)
 
+  // ── 1B category-drawer state (founder issue 2/5) — which Tax tile is open ──
+  const [openTile, setOpenTile] = useState(null)
+
   // ── X28 top-bar state (window + view mode) ───────────────────────────────
   const [x28Window, setX28Window] = useState('current-tax-year')
   const [viewMode, setViewMode] = useState('actual')
@@ -2926,6 +2994,27 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
 
   const lifeStage = lifeStageString(entity)
   const nri = isNRI(entity)
+
+  // ── 1B Tax category-tile headlines (founder issue 2/5) ────────────────────
+  const taxTiles = useMemo(() => {
+    const txY  = safe(() => te_taxThisYear(entity), null) || {}
+    const comp = txY.components || {}
+    const allow = safe(() => allowanceTracker(entity), null)
+    // Same gross fallback TaxSummary uses — te_taxThisYear may omit `gross`.
+    const gross = txY.gross || safe(() => calcAllIncome(entity)?.total, 0) || 0
+    const invGain = +(entity?.assets?.investments?.unrealisedGain || 0)
+    const giaGain = +(entity?.assets?.gia?.unrealisedGain || 0)
+    return {
+      totalTax: txY.total_tax || 0,
+      gross,
+      effRate: txY.effective_rate || 0,
+      allowLeft: 100 - (allow?.utilization || 0),
+      dividendTax: comp.dividend_tax || 0,
+      cgt: comp.cgt || 0,
+      hasDividend: (comp.dividend_tax || 0) > 0 || (allow?.dividend && (allow.dividend.used || 0) > 0),
+      hasCGT: (invGain + giaGain) > 0 || (comp.cgt || 0) > 0,
+    }
+  }, [entity, bv])
 
   // ── Sub-anchor strip — different for tax vs estate ────────────────────────
   const subAnchorTax = useMemo(() => {
@@ -3086,49 +3175,119 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
             act before scrolling the full read-out. ───────────────────────── */}
       <DecisionDrawers screen="tax" onOpen={onOpenDecision} />
 
-      {/* ── TAX SUB-TAB ───────────────────────────────────────────────────── */}
+      {/* ── TAX SUB-TAB — 1B category tiles → drawers (founder issue 2/5) ───── */}
       {subTab === 'tax' && (
         <div key="tax" className="sw-tab-slide">
-          <TaxSummary entity={entity} />
-          <IncomeTaxDetail entity={entity} />
-          <ANIStepwise entity={entity} />
-          <SalarySacrifice entity={entity} />
-          <div style={{ position: 'relative' }}>
-            <CGTDetail entity={entity} />
-            {/* L3 drill affordance — opens CGTDrillPanel */}
-            <button
-              onClick={() => setDrillView('cgt')}
-              className="sw-chip sw-chip-sm sw-press"
-              style={{
-                position: 'absolute', top: 14, right: 14,
-                cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                color: 'var(--c-acc)',
-              }}
-            >
-              Detail ›
-            </button>
+          <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '2px 2px 10px' }}>
+            Tap a card to open its detail.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <CatTile
+              title="Income & tax this year"
+              value={fmt(taxTiles.totalTax)}
+              sub={`Effective rate ${fmtPct(taxTiles.effRate)} · gross ${fmt(taxTiles.gross)}`}
+              tone="warning"
+              onClick={() => setOpenTile('income')}
+            />
+            <CatTile
+              title="Allowances — what's left"
+              value={`${taxTiles.allowLeft}% free`}
+              sub="ISA, dividend, capital-gains, savings & personal allowance"
+              tone="success"
+              onClick={() => setOpenTile('allowances')}
+            />
+            <CatTile
+              title="Pension relief & drawdown"
+              sub="Model take-home vs pension vs NI saving, and your drawdown"
+              onClick={() => setOpenTile('pension')}
+            />
+            {taxTiles.hasDividend && (
+              <CatTile
+                title="Dividends & savings"
+                value={fmt(taxTiles.dividendTax)}
+                sub="Dividend allowance, rates and the ISA shelter"
+                tone="warning"
+                onClick={() => setOpenTile('dividends')}
+              />
+            )}
+            {taxTiles.hasCGT && (
+              <CatTile
+                title="Capital gains"
+                value={fmt(taxTiles.cgt)}
+                sub="Realised gains vs your tax-free amount"
+                tone="danger"
+                onClick={() => setOpenTile('cgt-cat')}
+              />
+            )}
+            <CatTile
+              title="Self-assessment & residency"
+              sub="Filing deadline, balance due and non-domicile status"
+              onClick={() => setOpenTile('selfassessment')}
+            />
           </div>
-          <DividendDetail entity={entity} />
-          <div style={{ position: 'relative' }}>
-            <AllowancesStrip entity={entity} />
-            {/* L3 drill affordance — opens AllowanceDrillPanel */}
-            <button
-              onClick={() => setDrillView('allowances')}
-              className="sw-chip sw-chip-sm sw-press"
-              style={{
-                position: 'absolute', top: 14, right: 14,
-                cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                color: 'var(--c-acc)',
-              }}
-            >
-              Detail ›
-            </button>
-          </div>
-          <SelfAssessment entity={entity} />
-          <DrawdownMatrix entity={entity} />
-          <NonDomCard entity={entity} />
+
+          {openTile === 'income' && (
+            <CategoryDrawer title="Income & tax this year" onClose={() => setOpenTile(null)}>
+              <TaxSummary entity={entity} />
+              <IncomeTaxDetail entity={entity} />
+              <ANIStepwise entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'allowances' && (
+            <CategoryDrawer title="Allowances — what's left to use" onClose={() => setOpenTile(null)}>
+              <div style={{ position: 'relative' }}>
+                <AllowancesStrip entity={entity} />
+                <button
+                  onClick={() => setDrillView('allowances')}
+                  className="sw-chip sw-chip-sm sw-press"
+                  style={{
+                    position: 'absolute', top: 14, right: 14,
+                    cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                    color: 'var(--c-acc)',
+                  }}
+                >
+                  Detail ›
+                </button>
+              </div>
+            </CategoryDrawer>
+          )}
+          {openTile === 'pension' && (
+            <CategoryDrawer title="Pension relief & drawdown" onClose={() => setOpenTile(null)}>
+              <SalarySacrifice entity={entity} />
+              <DrawdownMatrix entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'dividends' && (
+            <CategoryDrawer title="Dividends & savings" onClose={() => setOpenTile(null)}>
+              <DividendDetail entity={entity} />
+            </CategoryDrawer>
+          )}
+          {openTile === 'cgt-cat' && (
+            <CategoryDrawer title="Capital gains" onClose={() => setOpenTile(null)}>
+              <div style={{ position: 'relative' }}>
+                <CGTDetail entity={entity} />
+                <button
+                  onClick={() => setDrillView('cgt')}
+                  className="sw-chip sw-chip-sm sw-press"
+                  style={{
+                    position: 'absolute', top: 14, right: 14,
+                    cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                    color: 'var(--c-acc)',
+                  }}
+                >
+                  Detail ›
+                </button>
+              </div>
+            </CategoryDrawer>
+          )}
+          {openTile === 'selfassessment' && (
+            <CategoryDrawer title="Self-assessment & residency" onClose={() => setOpenTile(null)}>
+              <SelfAssessment entity={entity} />
+              <NonDomCard entity={entity} />
+            </CategoryDrawer>
+          )}
         </div>
       )}
 

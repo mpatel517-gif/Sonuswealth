@@ -74,6 +74,14 @@ function safe(fn, fallback) {
   try { return fn() ?? fallback } catch { return fallback }
 }
 
+/* Basics rule (CLAUDE.md §checklist 5): every monthly £ shows its annual
+   beside it so the two visibly reconcile. `moAnnual(944)` → "£944/mo · £11k/yr".
+   Pass the MONTHLY magnitude (already absolute); returns a ready-to-render string. */
+function moAnnual(monthly) {
+  const m = Math.abs(+monthly || 0)
+  return `${fmt(m)}/mo · ${fmt(m * 12)}/yr`
+}
+
 function fmtDate(d) {
   if (!d) return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   try {
@@ -517,7 +525,7 @@ function AnchorRow({ nw, fqData, riskData, entity, onDrillMetric, onOpenBreakdow
             {coiTotal > 0 && (
               <div style={{ marginTop: 2 }}>
                 {sippDelta > 0
-                  ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', whiteSpace: 'nowrap' }}>{fmt(sippDelta)} SIPP · {days} days</span>
+                  ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)', whiteSpace: 'nowrap' }} title="Personal pension value newly exposed to Inheritance Tax from April 2027">{fmt(sippDelta)} pension exposed · {days} days</span>
                   : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-acc3)' }}>{days} days to act</span>
                 }
               </div>
@@ -607,14 +615,16 @@ function SippIhtCountdown({ entity, onNav }) {
           color: 'var(--c-gold)',
           textTransform: 'uppercase', letterSpacing: 0.8,
         }}>
-          SIPP joins IHT estate
+          Pension savings join your taxable estate
         </div>
         <div style={{
           fontSize: 'var(--fs-body)', color: 'var(--c-text)',
           fontWeight: 600, marginTop: 2, lineHeight: 1.4,
         }}>
+          From 6 April 2027 your personal pension (SIPP) counts towards
+          Inheritance Tax (IHT).{' '}
           <strong style={{ color: 'var(--c-gold)' }}>{days} days</strong>{' '}
-          until 6 April 2027
+          left
           {sippCoi > 0 && (
             <span style={{ color: 'var(--c-text3)' }}>
               {' · '}exposure {fmt(sippCoi)}
@@ -865,7 +875,7 @@ function PlanProgressStrip({ entity, onNav }) {
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--c-text3)', marginBottom: 2 }}>Plan progress</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
             {planName}
-            {monthlyTarget > 0 && ` · ${fmt(monthlyTarget)}/month target`}
+            {monthlyTarget > 0 && ` · ${moAnnual(monthlyTarget)} target`}
             {!monthlyTarget && targetValue > 0 && ` · ${fmt(targetValue)} target`}
           </div>
         </div>
@@ -1189,13 +1199,13 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
         if (prot.band === 'partial') return 'Life cover done · no power of attorney'
         return 'No life insurance — your family is financially exposed'
       case 'cashflow':
-        if (cfMonthly > 0) return `${fmt(cfMonthly)}/mo surplus — adding to wealth`
-        if (cfMonthly < 0) return `${fmt(Math.abs(cfMonthly))}/mo planned drawdown — on track`
+        if (cfMonthly > 0) return `${moAnnual(cfMonthly)} surplus — adding to wealth`
+        if (cfMonthly < 0) return `${moAnnual(cfMonthly)} planned drawdown — on track`
         return 'Income covers spending — in balance'
       case 'debt':
         if (debt.band === 'none') return 'No debt — all your income is yours to keep'
-        if (pct >= 65) return `${fmt(debt.monthlyService)}/mo debt service — well managed`
-        if (pct >= 45) return `${fmt(debt.monthlyService)}/mo debt service — manageable`
+        if (pct >= 65) return `${moAnnual(debt.monthlyService)} debt service — well managed`
+        if (pct >= 45) return `${moAnnual(debt.monthlyService)} debt service — manageable`
         return `${Math.round((debt.ratio || 0) * 100)}p in every £1 goes on debt — worth reviewing`
       case 'estate':
         if (est.band === 'excellent') return 'Estate well planned — wealth passes efficiently'
@@ -2253,10 +2263,10 @@ function WhatIfSection({ viewMode, onSelectScenario, onFreeform, entity }) {
 
 function severityBadge(action) {
   const p = action?.priority
-  if (p === 1) return { label: 'CRIT', bg: 'rgba(255,89,89,0.18)', color: '#ff5959' }
-  if (p === 2) return { label: 'HIGH', bg: 'rgba(255,189,89,0.18)', color: 'var(--c-gold)' }
-  if (p === 3) return { label: 'MED', bg: 'rgba(93,219,194,0.15)', color: 'var(--c-acc)' }
-  return { label: 'LOW', bg: 'rgba(255,255,255,0.06)', color: 'var(--c-text3)' }
+  if (p === 1) return { label: 'Critical', bg: 'rgba(255,89,89,0.18)', color: '#ff5959' }
+  if (p === 2) return { label: 'High', bg: 'rgba(255,189,89,0.18)', color: 'var(--c-gold)' }
+  if (p === 3) return { label: 'Medium', bg: 'rgba(93,219,194,0.15)', color: 'var(--c-acc)' }
+  return { label: 'Low', bg: 'rgba(255,255,255,0.06)', color: 'var(--c-text3)' }
 }
 
 function ActionsCard({ entity, viewMode, onNav, onDrillMetric }) {

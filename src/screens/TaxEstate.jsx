@@ -762,6 +762,42 @@ function WhatIfLevers({ pay, setPay, sellHome, setSellHome }) {
     </div>
   )
 }
+// Plan view (#23 slice 2). Mr T's "plans" are GOAL TARGETS (zero IHT in 5 years
+// via BPR positioning; retire at 60 / £2.5m), whose ACTIONS (gifts, BPR, pension
+// relief) are not snapshot levers — so Plan honestly shows where the plans AIM
+// versus today + the gap to close, routing the "how" to Choices, rather than
+// fabricating a donut recompute the available levers can't produce.
+function PlanBanner({ plans = [], ihtToday }) {
+  const active = (plans || []).filter(p => p?.status !== 'archived')
+  const estate = active.find(p => p?.type === 'estate')
+  const retire = active.find(p => p?.type === 'retirement')
+  if (!active.length) return null
+  const ihtTarget = estate?.target?.ihtCap
+  const gap = (ihtTarget != null) ? Math.max(0, (ihtToday || 0) - ihtTarget) : null
+  return (
+    <div style={{
+      marginBottom: 12, padding: '9px 12px', borderRadius: 10,
+      background: 'rgba(94,219,194,.12)', border: '1px solid rgba(94,219,194,.30)',
+      fontSize: 11.5, color: 'var(--c-text2)', lineHeight: 1.55,
+    }}>
+      <strong>Plan view — where your plans aim.</strong>
+      {estate && ihtTarget != null && (
+        <div style={{ marginTop: 3 }}>
+          • <em>{estate.label}</em>: target IHT {fmt(ihtTarget)} · today {fmt(ihtToday)}
+          {gap > 0 ? <> · <strong>{fmt(gap)}</strong> to close</> : <> · <strong>on target</strong></>}.
+        </div>
+      )}
+      {retire?.target?.netWorth != null && (
+        <div style={{ marginTop: 3 }}>
+          • <em>{retire.label}</em>: target {fmt(retire.target.netWorth)} net worth{retire.target.age ? ` by age ${retire.target.age}` : ''}.
+        </div>
+      )}
+      <div style={{ marginTop: 4, color: 'var(--c-text3)', fontSize: 10.5 }}>
+        The actions to get there (gifts, BPR positioning, pension relief) live in Choices.
+      </div>
+    </div>
+  )
+}
 function TaxVsHMRC({ incomeGross, incomeTax, incomeComponents, estateGross, iht, family, banner, onDrill }) {
   const incKeep = Math.max(0, incomeGross - incomeTax)
   return (
@@ -3828,12 +3864,12 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
           estateGross={donut.estateGross}
           iht={donut.iht}
           family={donut.family}
-          banner={viewMode !== 'actual'
-            ? (scenario
-                ? <WhatIfLevers pay={wiPay} setPay={setWiPay} sellHome={wiSellHome} setSellHome={setWiSellHome} />
-                : <ProjectionBanner viewMode={viewMode}
-                    ihtToday={exposureToday?.iht_due || 0} ihtForecast={exposureForMode?.iht_due || 0} />)
-            : null}
+          banner={
+            viewMode === 'actual' ? null
+            : scenario ? <WhatIfLevers pay={wiPay} setPay={setWiPay} sellHome={wiSellHome} setSellHome={setWiSellHome} />
+            : viewMode === 'plan' ? <PlanBanner plans={entity?.plans} ihtToday={exposureToday?.iht_due || 0} />
+            : <ProjectionBanner viewMode={viewMode}
+                ihtToday={exposureToday?.iht_due || 0} ihtForecast={exposureForMode?.iht_due || 0} />}
           onDrill={(target) => { setSubTab(target.startsWith('est') ? 'estate' : 'tax'); setOpenTile(target) }}
         />
       )}

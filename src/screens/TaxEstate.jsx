@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
+import { parseDocument } from '../services/parser.js'
 // S1 selector migration (Phase 2)
 import {
   netWorth,
@@ -1071,6 +1072,105 @@ function SelfAssessment({ entity }) {
         <StatTile label="Balance due" value={fmt(due)} colour={due > 0 ? 'var(--c-danger)' : 'var(--c-text)'} />
         <StatTile label="Filing required?" value={sa.required ? 'Yes' : 'No'} sub={sa.reason || ''} />
       </div>
+    </div>
+  )
+}
+
+// Document home (founder review #7: "Self-assessment does nothing"). Upload or
+// scan a tax document → the parser service extracts the figures → an FP-5 verify
+// list shows each field with its confidence so the user confirms before anything
+// is used. Runs against the mock parser today (values are invented + clearly
+// flagged); swapping in real OCR is one provider change in services/parser.js.
+function SelfAssessmentDocs() {
+  const [status, setStatus] = useState('idle')   // idle | parsing | done | error
+  const [result, setResult] = useState(null)
+  const [fileName, setFileName] = useState('')
+  const [err, setErr] = useState('')
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFileName(file.name); setStatus('parsing'); setErr(''); setResult(null)
+    try {
+      const r = await parseDocument(file, { docTypeHint: 'self-assessment' })
+      setResult(r); setStatus('done')
+    } catch (ex) { setErr(ex?.message || 'Could not read this document'); setStatus('error') }
+  }
+
+  const fmtField = (f) => f.unit === 'gbp' ? fmt(f.value)
+    : f.unit === 'pct' ? `${(f.value * 100).toFixed(2)}%`
+    : String(f.value)
+
+  const confident = (result?.fields || []).filter(f => f.confidence >= 0.75)
+  const needsReview = (result?.fields || []).filter(f => f.confidence < 0.75)
+
+  return (
+    <div className="card sw-card-elevated">
+      <SectionHead title="Documents — upload & pre-fill" sub="SA302 · P60 · P11D · SIPP / ISA statements" />
+
+      <label className="sw-press" style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+        border: '1.5px dashed var(--c-border)', borderRadius: 14, padding: '20px 16px',
+        cursor: 'pointer', textAlign: 'center', background: 'var(--c-surface2)',
+      }}>
+        <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={onFile} style={{ display: 'none' }} />
+        <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">⬆</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Upload or scan a document</span>
+        <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>PDF or photo — we read the figures and pre-fill your return</span>
+      </label>
+
+      {status === 'parsing' && (
+        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--c-text2)' }}>
+          Reading <strong>{fileName}</strong>…
+        </div>
+      )}
+      {status === 'error' && (
+        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--c-danger)' }}>{err}</div>
+      )}
+
+      {status === 'done' && result && (
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {result.warnings?.length > 0 && (
+            <div style={{
+              fontSize: 11, color: 'var(--c-warning)', background: 'rgba(255,180,71,0.10)',
+              border: '1px solid rgba(255,180,71,0.3)', borderRadius: 10, padding: '8px 10px',
+            }}>
+              ⚠ {result.warnings[0]}
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>
+            Detected <strong style={{ color: 'var(--c-text2)' }}>{result.docType}</strong> · {confident.length} field{confident.length === 1 ? '' : 's'} ready to pre-fill · {needsReview.length} need{needsReview.length === 1 ? 's' : ''} your review
+          </div>
+
+          {result.fields.map(f => {
+            const low = f.confidence < 0.75
+            return (
+              <div key={f.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10,
+                borderTop: '1px solid var(--c-sep)', paddingTop: 8,
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>{f.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)' }}>{f.source}</div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{fmtField(f)}</div>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase',
+                    color: low ? 'var(--c-warning)' : 'var(--c-success)',
+                  }}>
+                    {low ? `Review · ${Math.round(f.confidence * 100)}%` : `Confident · ${Math.round(f.confidence * 100)}%`}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+
+          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
+            Confirm each value, then it pre-fills the matching field in your profile. Nothing is saved until you confirm.
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -3239,7 +3339,7 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         </CategoryDrawer>
       case 'selfassessment':
         return <CategoryDrawer title="Self-assessment & residency" onClose={closeTile}>
-          <SelfAssessment entity={entity} /><NonDomCard entity={entity} />
+          <SelfAssessment entity={entity} /><SelfAssessmentDocs /><NonDomCard entity={entity} />
         </CategoryDrawer>
       // ── Estate drawers ──
       case 'est-iht':

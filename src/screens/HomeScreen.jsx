@@ -35,6 +35,7 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 import { useMemo, useState } from 'react'
+import useBundleVersion from '../hooks/useBundleVersion.jsx'
 import { useTemporalMode } from '../state/temporalMode.jsx'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
@@ -62,6 +63,7 @@ import {
   debtRatio, estateReadiness, taxEfficiency,
   monthlySurplus,
   daysLeft as engineDaysLeft,
+  TAX,
 } from '../engine/fq-calculator.js'
 import Drillable from '../components/shared/Drillable.jsx'
 import RadarAnchor from '../components/Home/RadarAnchor.jsx'
@@ -1132,13 +1134,17 @@ function Sparkline({ values = [], color = 'var(--c-acc)', width = 56, height = 2
 }
 
 function StateTilesCard({ entity, onNav, onDrillDim }) {
-  // Engine values for sub-labels only — scores come from calcFQ().dims
-  const fq = useMemo(() => safe(() => calcFQ(entity), { dims: {} }), [entity])
-  const ms = useMemo(() => safe(() => monthlySurplus(entity), { surplus: 0, deficit: 0, income: 0 }), [entity])
-  const debt = useMemo(() => safe(() => debtRatio(entity), { ratio: 0, monthlyService: 0, band: 'none' }), [entity])
-  const prot = useMemo(() => safe(() => protectionScore(entity), { total: 0, band: 'critical' }), [entity])
-  const est = useMemo(() => safe(() => estateReadiness(entity), { total: 0, components: {}, band: 'gaps' }), [entity])
-  const tax = useMemo(() => safe(() => taxEfficiency(entity), { total: 0, components: {} }), [entity])
+  // Engine values for sub-labels only — scores come from calcFQ().dims.
+  // bv (bundle version) is in every dep so the dimension scores recompute when
+  // the global YearStepper swaps the rule bundle — otherwise Home keeps showing
+  // last year's tax efficiency after the user steps the year (founder 2026-06-08).
+  const bv = useBundleVersion()
+  const fq = useMemo(() => safe(() => calcFQ(entity), { dims: {} }), [entity, bv])
+  const ms = useMemo(() => safe(() => monthlySurplus(entity), { surplus: 0, deficit: 0, income: 0 }), [entity, bv])
+  const debt = useMemo(() => safe(() => debtRatio(entity), { ratio: 0, monthlyService: 0, band: 'none' }), [entity, bv])
+  const prot = useMemo(() => safe(() => protectionScore(entity), { total: 0, band: 'critical' }), [entity, bv])
+  const est = useMemo(() => safe(() => estateReadiness(entity), { total: 0, components: {}, band: 'gaps' }), [entity, bv])
+  const tax = useMemo(() => safe(() => taxEfficiency(entity), { total: 0, components: {} }), [entity, bv])
 
   const dims = fq.dims || {}
   const traj = entity?.trajectories || {}
@@ -1191,9 +1197,12 @@ function StateTilesCard({ entity, onNav, onDrillDim }) {
       case 'capital': return pct >= 80 ? 'Your savings and investments are on track for retirement'
         : pct >= 60 ? 'Building well — closing in on your retirement target'
           : 'Gap between what you have saved and what you will need at retirement'
-      case 'tax': return (tax.total || 0) >= 70 ? 'Tax allowances well used this year'
-        : (tax.total || 0) >= 50 ? 'Check your £20k ISA each April'
-          : '£20k ISA and pension gap — use before 5 Apr 2027'
+      case 'tax': {
+        const isaK = Math.round((TAX.isaAllowance ?? 20000) / 1000)
+        return (tax.total || 0) >= 70 ? 'Tax allowances well used this year'
+          : (tax.total || 0) >= 50 ? `Check your £${isaK}k ISA each April`
+            : `£${isaK}k ISA and pension gap — use before 5 April`
+      }
       case 'protection':
         if (prot.band === 'good' || prot.band === 'excellent') return 'Life insurance and illness cover in place'
         if (prot.band === 'partial') return 'Life cover done · no power of attorney'

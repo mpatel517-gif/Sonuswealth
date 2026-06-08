@@ -603,7 +603,7 @@ function CatTile({ title, value, sub, tone = 'neutral', onClick, chart }) {
 // One ring = one "you keep vs the taxman takes" split. Two arcs on a part-to-whole
 // donut (same SVG-arc technique as FundDonut), positive % kept as the centre hero,
 // the £ split below as two tappable legend rows that drill to the underlying tile.
-function VsDonut({ title, centreSub, keepLabel, keepVal, takeLabel, takeVal, keepColour, onKeep, onTake }) {
+function VsDonut({ title, centreSub, keepLabel, keepVal, takeLabel, takeVal, keepColour, onKeep, onTake, footer }) {
   const keep = Math.max(0, keepVal)
   const take = Math.max(0, takeVal)
   const total = keep + take
@@ -660,10 +660,45 @@ function VsDonut({ title, centreSub, keepLabel, keepVal, takeLabel, takeVal, kee
           <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums' }}>{fmt(take)}</span>
         </button>
       </div>
+      {footer}
     </div>
   )
 }
-function TaxVsHMRC({ incomeGross, incomeTax, estateGross, iht, family, onDrill }) {
+// The breakdown of the annual "To HMRC" slice — so the user sees the single red
+// figure is actually FIVE taxes stacked, including the ones that are genuinely
+// nil this year (shown greyed, not hidden — "covered, currently £0").
+function HMRCComposition({ components = [], onOpen }) {
+  const shown = components.filter(c => c && c.label)
+  if (!shown.length) return null
+  return (
+    <button onClick={onOpen} className="sw-press" style={{
+      marginTop: 10, width: '100%', textAlign: 'left', cursor: 'pointer',
+      border: '1px dashed var(--c-sep)', borderRadius: 10, background: 'transparent',
+      padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5,
+    }}>
+      <span style={{ fontSize: 9.5, color: 'var(--c-text3)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        That HMRC slice is five taxes ›
+      </span>
+      <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {shown.map((c, i) => {
+          const nil = !(c.value > 0)
+          return (
+            <span key={i} style={{
+              fontSize: 10.5, padding: '2px 7px', borderRadius: 99,
+              background: nil ? 'transparent' : 'var(--c-danger-bg, rgba(255,59,48,.10))',
+              border: `1px solid ${nil ? 'var(--c-sep)' : 'transparent'}`,
+              color: nil ? 'var(--c-text3)' : 'var(--c-text)', whiteSpace: 'nowrap',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {c.label} {nil ? '£0' : fmt(c.value)}
+            </span>
+          )
+        })}
+      </span>
+    </button>
+  )
+}
+function TaxVsHMRC({ incomeGross, incomeTax, incomeComponents, estateGross, iht, family, onDrill }) {
   const incKeep = Math.max(0, incomeGross - incomeTax)
   return (
     <div className="card sw-card-elevated">
@@ -678,6 +713,7 @@ function TaxVsHMRC({ incomeGross, incomeTax, estateGross, iht, family, onDrill }
           keepLabel="You keep" keepVal={incKeep} keepColour="var(--c-success)"
           takeLabel="To HMRC" takeVal={incomeTax}
           onKeep={() => onDrill('income')} onTake={() => onDrill('income')}
+          footer={<HMRCComposition components={incomeComponents} onOpen={() => onDrill('income')} />}
         />
         <VsDonut
           title="Your estate when you die"
@@ -3524,6 +3560,13 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         <TaxVsHMRC
           incomeGross={taxTiles.gross}
           incomeTax={taxTiles.totalTax}
+          incomeComponents={[
+            { label: 'Income tax', value: taxTiles.incomeTax },
+            { label: 'Dividend tax', value: taxTiles.dividendTax },
+            { label: 'Savings tax', value: taxTiles.savingsTax },
+            { label: 'National Insurance', value: taxTiles.nics },
+            { label: 'Capital gains', value: taxTiles.cgt },
+          ]}
           estateGross={exposureToday?.gross_estate || 0}
           iht={exposureToday?.iht_due || 0}
           family={exposureToday?.beneficiary_value || 0}

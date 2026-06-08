@@ -2899,11 +2899,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   })
   useEffect(() => { try { localStorage.setItem(SUBTAB_KEY, subTab) } catch { /* silent */ } }, [subTab])
 
-  // Ref to IHTDualNumber card so the Pension-IHT chip can scroll to it (F-STUB-02)
+  // Pension-IHT chip / "See impact" now OPEN the IHT drawer (the dual-number
+  // moved into a tile drawer in the 2026-06-08 Estate restructure, so the old
+  // scroll-to-ref no longer has an on-page target).
   const ihtDualRef = useRef(null)
-  const scrollToIHTDual = () => {
-    try { ihtDualRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) } catch { /* silent */ }
-  }
+  const scrollToIHTDual = () => { setSubTab('estate'); setOpenTile('est-iht') }
 
   // ── L3 drill panel state ─────────────────────────────────────────────────
   // 'iht' → IHTDrillPanel  |  'allowances' → AllowanceDrillPanel  |  'bpr' → BPRDrillPanel  |  'cgt' → CGTDrillPanel
@@ -2911,6 +2911,9 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
 
   // ── 1B category-drawer state (founder issue 2/5) — which Tax tile is open ──
   const [openTile, setOpenTile] = useState(null)
+  // ── Choices tab (founder finding #1, 2026-06-08): the "Choices" levers live
+  //    as a tab next to What-if in X28TopBar, matching Cashflow, not a block. ──
+  const [showChoices, setShowChoices] = useState(false)
 
   // ── X28 top-bar state (window + view mode) ───────────────────────────────
   const [x28Window, setX28Window] = useState('current-tax-year')
@@ -3021,14 +3024,19 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     const ani = safe(() => calcANI(entity).ani, 0)
     const allow = safe(() => allowanceTracker(entity), null)
     return {
+      // Founder finding #2 (2026-06-08): each pill must drill to source + plain
+      // English. Tapping opens the matching drawer (the breakdown + the ANI
+      // 6-step worked example + the allowance detail all live there).
       a: { label: 'Tax this year', value: fmt(totalTaxNow || 0), colour: 'var(--c-danger)',
-           accessory: taxSince != null && taxSince !== totalTaxNow
-             ? <DiffBadge value={(totalTaxNow || 0) - taxSince} since={null} format="currency" />
-             : null },
+           eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
+           sub: 'tap for the breakdown', onTap: () => setOpenTile('income') },
       b: { label: 'Adj. net income', value: fmt(ani || 0),
-           sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band' : '' },
+           eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
+           sub: ani >= TAX.adjustedNetIncomeCliff && ani <= TAX.art ? '⚠ 60% taper band · tap to see why' : 'tap for the 6-step working',
+           onTap: () => setOpenTile('income') },
       c: { label: 'Allowances left', value: `${100 - (allow?.utilization || 0)}%`,
-           sub: 'still free to use' },
+           eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
+           sub: 'tap to see what’s free', onTap: () => setOpenTile('allowances') },
     }
   }, [entity, totalTaxNow, taxSince])
 
@@ -3052,12 +3060,18 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       </span>
     )
     return {
-      a: { label: 'IHT today', value: fmt(ihtNow), colour: 'var(--c-danger)', tieout: 'tax.iht-today', tieoutRaw: ihtNow },
-      b: { label: 'Family receives', value: fmt(beneficiaryNet), colour: 'var(--c-success)', tieout: 'tax.beneficiary-net', tieoutRaw: beneficiaryNet },
+      // Founder finding #2 (2026-06-08): pills drill to source. a + b open the
+      // IHT drawer (full breakdown + plain-English story live there).
+      a: { label: 'IHT today', value: fmt(ihtNow), colour: 'var(--c-danger)', tieout: 'tax.iht-today', tieoutRaw: ihtNow,
+           eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
+           sub: 'tap for the breakdown', onTap: () => setOpenTile('est-iht') },
+      b: { label: 'Family receives', value: fmt(beneficiaryNet), colour: 'var(--c-success)', tieout: 'tax.beneficiary-net', tieoutRaw: beneficiaryNet,
+           eyebrowAccessory: <span style={{ color: 'var(--c-acc)', fontSize: 13 }}>›</span>,
+           sub: 'after IHT & deductions · tap to see', onTap: () => setOpenTile('est-iht') },
       c: {
         label: 'Pension-IHT',
         value: `${daysToPensionIHT} days`,
-        sub: 'Until 6 Apr 2027 · Finance Act 2026',
+        sub: 'Until 6 Apr 2027 · tap for impact',
         colour: countdownColour,
         statusChip: enactedChip,
         onTap: scrollToIHTDual,
@@ -3081,6 +3095,92 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     return <CGTDrillPanel entity={entity} onClose={() => setDrillView(null)} />
   }
 
+  // ── Category drawers render here as TOP-LEVEL early-returns (founder finding
+  //    #5, 2026-06-08). Rendering them inside the sub-tab body broke because
+  //    `.sw-tab-slide` has a CSS transform, which makes `position:fixed` resolve
+  //    against that container (not the viewport) — the drawer landed below the
+  //    fold and its content was unreadable. As a top-level return it covers the
+  //    viewport like the L3 drill panels above. ─────────────────────────────
+  if (openTile) {
+    const closeTile = () => setOpenTile(null)
+    const detailBtn = (view, label) => (
+      <button
+        onClick={() => setDrillView(view)}
+        className="sw-chip sw-chip-sm sw-press"
+        style={{
+          position: 'absolute', top: 14, right: 14, cursor: 'pointer',
+          fontSize: 11, fontWeight: 700, background: 'var(--c-surface2)',
+          border: '1px solid var(--c-sep)', color: 'var(--c-acc)',
+        }}
+      >{label}</button>
+    )
+    switch (openTile) {
+      // ── Tax drawers ──
+      case 'income':
+        return <CategoryDrawer title="Income & tax this year" onClose={closeTile}>
+          <TaxSummary entity={entity} /><IncomeTaxDetail entity={entity} /><ANIStepwise entity={entity} />
+        </CategoryDrawer>
+      case 'allowances':
+        return <CategoryDrawer title="Allowances — what's left to use" onClose={closeTile}>
+          <div style={{ position: 'relative' }}><AllowancesStrip entity={entity} />{detailBtn('allowances', 'Detail ›')}</div>
+        </CategoryDrawer>
+      case 'pension':
+        return <CategoryDrawer title="Pension relief & drawdown" onClose={closeTile}>
+          <SalarySacrifice entity={entity} /><DrawdownMatrix entity={entity} />
+        </CategoryDrawer>
+      case 'dividends':
+        return <CategoryDrawer title="Dividends & savings" onClose={closeTile}>
+          <DividendDetail entity={entity} />
+        </CategoryDrawer>
+      case 'cgt-cat':
+        return <CategoryDrawer title="Capital gains" onClose={closeTile}>
+          <div style={{ position: 'relative' }}><CGTDetail entity={entity} />{detailBtn('cgt', 'Detail ›')}</div>
+        </CategoryDrawer>
+      case 'selfassessment':
+        return <CategoryDrawer title="Self-assessment & residency" onClose={closeTile}>
+          <SelfAssessment entity={entity} /><NonDomCard entity={entity} />
+        </CategoryDrawer>
+      // ── Estate drawers ──
+      case 'est-iht':
+        return <CategoryDrawer title="Inheritance tax — today & April 2027" onClose={closeTile}>
+          <IHTDeltaCard entity={entity} />
+          <div style={{ position: 'relative' }}><IHTDualNumber entity={entity} />{detailBtn('iht', 'Breakdown ›')}</div>
+          <IHTWaterfall entity={entity} /><IHTYearByYear entity={entity} />
+        </CategoryDrawer>
+      case 'est-story':
+        return <CategoryDrawer title="Your inheritance story" onClose={closeTile}>
+          <InheritanceStory entity={entity} onDrillMetric={onDrillMetric} />
+        </CategoryDrawer>
+      case 'est-coi':
+        return <CategoryDrawer title="Cost of inaction & your estate plan" onClose={closeTile}>
+          <EstateCoIOdometer entity={entity} /><EstatePlanBadge entity={entity} />
+          {plans.length > 0 && <PlanStalenessAccordion plans={plans} onReview={(p) => onDrillMetric?.(`plan:${p.type}`)} />}
+        </CategoryDrawer>
+      case 'est-gifts':
+        return <CategoryDrawer title="Gifts & the 7-year clock" onClose={closeTile}>
+          <GiftClock entity={entity} />
+        </CategoryDrawer>
+      case 'est-bpr':
+        return <CategoryDrawer title="Business & agricultural relief (BPR / APR)" onClose={closeTile}>
+          <div style={{ position: 'relative' }}><BPRAPRMechanics entity={entity} />{detailBtn('bpr', 'Asset detail ›')}</div>
+        </CategoryDrawer>
+      case 'est-rnrb':
+        return <CategoryDrawer title="Your home & the residence band" onClose={closeTile}>
+          <RNRBPlanning entity={entity} />
+        </CategoryDrawer>
+      case 'est-wills':
+        return <CategoryDrawer title="Wills, power of attorney & who inherits" onClose={closeTile}>
+          <WillLPACard entity={entity} onDrillMetric={onDrillMetric} /><NominationsManager entity={entity} /><BeneficiaryChain entity={entity} />
+        </CategoryDrawer>
+      case 'est-trust':
+        return <CategoryDrawer title="Trusts" onClose={closeTile}>
+          <TrustSimulator entity={entity} />
+        </CategoryDrawer>
+      default:
+        break
+    }
+  }
+
   // Plain tax-year label (issue 1, founder 2026-06-08): "Live · UK-2026.1" +
   // money sub-nav are not appropriate on Tax. Derived from the active bundle.
   const taxYearLabel = taxYearLabelFromBundle()
@@ -3088,9 +3188,11 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="screen">
-      {/* ── Header ────────────────────────────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────────
+            Founder finding #4 (2026-06-08): the per-tab tax-year pill duplicated
+            the GLOBAL header tax-year chip — removed. Just the Back affordance. */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center',
         padding: '8px 16px 4px',
       }}>
         <button
@@ -3104,10 +3206,6 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         >
           <span style={{ fontSize: 16 }}>←</span> Back
         </button>
-        <span className="sw-chip sw-chip-sm sw-chip-mint sw-chip-outline" title={`Tax year ${taxYearLabel} · rules current as at ${BRAND.dataDate}`}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-          {taxYearLabel} tax year
-        </span>
       </div>
 
       {/* ── X28 top-bar (per §X28-PATCH-1 / D-X28-OPTION-D) ─────────────── */}
@@ -3119,6 +3217,9 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         rulesVersion={BRAND.rulesVersion}
         dataDate={BRAND.dataDate}
         showWindowRow={false}
+        showDecisions={true}
+        decisionsActive={showChoices}
+        onDecisions={() => setShowChoices(s => !s)}
       />
 
       {/* P13-6 (2026-05-28, IFA hardening): SIPP-IHT April 2027 countdown banner.
@@ -3169,11 +3270,17 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       {/* ── NRI notice ────────────────────────────────────────────────────── */}
       {nri && <NRINotice />}
 
-      {/* ── Choices — moved to the TOP (founder issue 7, 2026-06-08): the
-            "what you can do here" levers used to sit at the very bottom of the
-            screen. They now sit directly under the sub-anchors so the user can
-            act before scrolling the full read-out. ───────────────────────── */}
-      <DecisionDrawers screen="tax" onOpen={onOpenDecision} />
+      {/* ── Choices — driven by the X28TopBar "Choices" tab (next to What-if),
+            matching other screens (founder finding #1, 2026-06-08). Renders the
+            decision chips only when the tab is toggled on. ─────────────────── */}
+      {showChoices && (
+        <DecisionDrawers
+          screen="tax"
+          variant="chips"
+          onOpen={onOpenDecision}
+          heading="Choices you can make here"
+        />
+      )}
 
       {/* ── TAX SUB-TAB — 1B category tiles → drawers (founder issue 2/5) ───── */}
       {subTab === 'tax' && (
@@ -3225,128 +3332,36 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
               onClick={() => setOpenTile('selfassessment')}
             />
           </div>
-
-          {openTile === 'income' && (
-            <CategoryDrawer title="Income & tax this year" onClose={() => setOpenTile(null)}>
-              <TaxSummary entity={entity} />
-              <IncomeTaxDetail entity={entity} />
-              <ANIStepwise entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'allowances' && (
-            <CategoryDrawer title="Allowances — what's left to use" onClose={() => setOpenTile(null)}>
-              <div style={{ position: 'relative' }}>
-                <AllowancesStrip entity={entity} />
-                <button
-                  onClick={() => setDrillView('allowances')}
-                  className="sw-chip sw-chip-sm sw-press"
-                  style={{
-                    position: 'absolute', top: 14, right: 14,
-                    cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                    color: 'var(--c-acc)',
-                  }}
-                >
-                  Detail ›
-                </button>
-              </div>
-            </CategoryDrawer>
-          )}
-          {openTile === 'pension' && (
-            <CategoryDrawer title="Pension relief & drawdown" onClose={() => setOpenTile(null)}>
-              <SalarySacrifice entity={entity} />
-              <DrawdownMatrix entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'dividends' && (
-            <CategoryDrawer title="Dividends & savings" onClose={() => setOpenTile(null)}>
-              <DividendDetail entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'cgt-cat' && (
-            <CategoryDrawer title="Capital gains" onClose={() => setOpenTile(null)}>
-              <div style={{ position: 'relative' }}>
-                <CGTDetail entity={entity} />
-                <button
-                  onClick={() => setDrillView('cgt')}
-                  className="sw-chip sw-chip-sm sw-press"
-                  style={{
-                    position: 'absolute', top: 14, right: 14,
-                    cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                    color: 'var(--c-acc)',
-                  }}
-                >
-                  Detail ›
-                </button>
-              </div>
-            </CategoryDrawer>
-          )}
-          {openTile === 'selfassessment' && (
-            <CategoryDrawer title="Self-assessment & residency" onClose={() => setOpenTile(null)}>
-              <SelfAssessment entity={entity} />
-              <NonDomCard entity={entity} />
-            </CategoryDrawer>
-          )}
         </div>
       )}
 
-      {/* ── ESTATE SUB-TAB ────────────────────────────────────────────────── */}
+      {/* ── ESTATE SUB-TAB — compact tiles, not a long hero (founder finding
+            #3, 2026-06-08). The always-visible read is the 3 sub-anchor pills
+            above (IHT today · family receives · pension-IHT countdown); every
+            former hero card (signature delta, inheritance story, CoI, dual
+            number) is now a tile → drawer, matching the Tax sub-tab. ───────── */}
       {subTab === 'estate' && (
         <div key="estate" className="sw-tab-slide">
-          {/* v0.3 R4 §3 SIGNATURE — IHT pre/post-April-2027 delta card.
-              Lands at position 2 (above the legacy InheritanceStory + plan
-              cards) per route-4-tax-estate.md §3. The card uses the canonical
-              `ihtDeltaPrePost2027(entity)` helper from canonical-metrics, so
-              `Today` and `From April 2027` numbers are consistent with every
-              other R4 surface. Countdown ticks once per UTC day (no pulse) per
-              compliance B6. */}
-          <IHTDeltaCard entity={entity} />
-          {/* §13.9 magic — Inheritance Story leads the Estate sub-tab.
-              Replaces IHT waterfall as primary. Waterfall available on scroll. */}
-          <InheritanceStory entity={entity} onDrillMetric={onDrillMetric} />
-          <EstatePlanBadge entity={entity} />
-          <EstateCoIOdometer entity={entity} />
-          <div ref={ihtDualRef} style={{ position: 'relative' }}>
-            <IHTDualNumber entity={entity} />
-            {/* L3 drill affordance — opens IHTDrillPanel */}
-            <button
-              onClick={() => setDrillView('iht')}
-              className="sw-chip sw-chip-sm sw-press"
-              style={{
-                position: 'absolute', top: 14, right: 14,
-                cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                color: 'var(--c-acc)',
-              }}
-            >
-              Breakdown ›
-            </button>
-          </div>
-
-          {/* Mobile: render the staleness accordion AFTER the dual-number so
-              the substance the spec promises stays above the fold. Desktop
-              renders the same accordion above the sub-tab selector. */}
-          {isMobile && plans.length > 0 && (
-            <PlanStalenessAccordion
-              plans={plans}
-              onReview={(p) => onDrillMetric?.(`plan:${p.type}`)}
-            />
-          )}
-
-          {/* ── DEEPER — category tiles → drawers (founder issue 2/5, 1B).
-                Hero above stays always-visible (numbers + narrative + CoI);
-                the long tail is categorised so the user taps in for depth. ── */}
-          <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '14px 2px 10px' }}>
-            Explore the detail — tap a card.
+          <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '2px 2px 10px' }}>
+            Tap a card to open its detail.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
             <CatTile
-              title="Inheritance tax — what reduces the bill"
+              title="Inheritance tax — today & April 2027"
               value={fmt(exposureToday?.iht_due || 0)}
-              sub="The full waterfall and the year-by-year projection"
+              sub="Today vs the April-2027 change, the waterfall & year-by-year"
               tone="danger"
               onClick={() => setOpenTile('est-iht')}
+            />
+            <CatTile
+              title="Your inheritance story"
+              sub="Plain English: what happens to your estate if you died today"
+              onClick={() => setOpenTile('est-story')}
+            />
+            <CatTile
+              title="Cost of inaction & estate plan"
+              sub="What waiting costs, and whether your plan needs a review"
+              onClick={() => setOpenTile('est-coi')}
             />
             <CatTile
               title="Gifts & the 7-year clock"
@@ -3385,54 +3400,6 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
               />
             )}
           </div>
-
-          {openTile === 'est-iht' && (
-            <CategoryDrawer title="Inheritance tax — what reduces the bill" onClose={() => setOpenTile(null)}>
-              <IHTWaterfall entity={entity} />
-              <IHTYearByYear entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'est-gifts' && (
-            <CategoryDrawer title="Gifts & the 7-year clock" onClose={() => setOpenTile(null)}>
-              <GiftClock entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'est-bpr' && (
-            <CategoryDrawer title="Business & agricultural relief (BPR / APR)" onClose={() => setOpenTile(null)}>
-              <div style={{ position: 'relative' }}>
-                <BPRAPRMechanics entity={entity} />
-                <button
-                  onClick={() => setDrillView('bpr')}
-                  className="sw-chip sw-chip-sm sw-press"
-                  style={{
-                    position: 'absolute', top: 14, right: 14,
-                    cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                    color: 'var(--c-acc)',
-                  }}
-                >
-                  Asset detail ›
-                </button>
-              </div>
-            </CategoryDrawer>
-          )}
-          {openTile === 'est-rnrb' && (
-            <CategoryDrawer title="Your home & the residence band" onClose={() => setOpenTile(null)}>
-              <RNRBPlanning entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'est-wills' && (
-            <CategoryDrawer title="Wills, power of attorney & who inherits" onClose={() => setOpenTile(null)}>
-              <WillLPACard entity={entity} onDrillMetric={onDrillMetric} />
-              <NominationsManager entity={entity} />
-              <BeneficiaryChain entity={entity} />
-            </CategoryDrawer>
-          )}
-          {openTile === 'est-trust' && (
-            <CategoryDrawer title="Trusts" onClose={() => setOpenTile(null)}>
-              <TrustSimulator entity={entity} />
-            </CategoryDrawer>
-          )}
 
           {/* Diff badge: IHT today vs last visit */}
           {ihtSince != null && exposureToday && Math.abs((exposureToday.iht_due || 0) - ihtSince) > 100 && (

@@ -599,27 +599,64 @@ function CatTile({ title, value, sub, tone = 'neutral', onClick, chart }) {
 // what goes to HMRC (now + at death) vs what you keep / pass on. Each segment
 // drills to its tile. Figures PROVISIONAL, pending the independent calc audit.
 // ─────────────────────────────────────────────────────────────────────────────
-function VsBar({ label, keepLabel, keepVal, takeLabel, takeVal, total, onKeep, onTake }) {
-  const takePct = total > 0 ? Math.max(3, Math.min(97, Math.round((takeVal / total) * 100))) : 0
+// One ring = one "you keep vs the taxman takes" split. Two arcs on a part-to-whole
+// donut (same SVG-arc technique as FundDonut), positive % kept as the centre hero,
+// the £ split below as two tappable legend rows that drill to the underlying tile.
+function VsDonut({ title, centreSub, keepLabel, keepVal, takeLabel, takeVal, keepColour, onKeep, onTake }) {
+  const keep = Math.max(0, keepVal)
+  const take = Math.max(0, takeVal)
+  const total = keep + take
+  const keepPct = total > 0 ? Math.round((keep / total) * 100) : 0
+  const takePct = total > 0 ? 100 - keepPct : 0
+
+  const size = 132, thickness = 15
+  const r = (size - thickness) / 2
+  const cx = size / 2, cy = size / 2
+  const circ = 2 * Math.PI * r
+  const keepFrac = total > 0 ? keep / total : 0
+  const keepDash = keepFrac * circ
+  const takeDash = circ - keepDash
+
+  const legendRow = {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+    width: '100%', padding: '7px 10px', borderRadius: 10, cursor: 'pointer',
+    border: '1px solid var(--c-sep)', background: 'var(--c-surface2, transparent)',
+  }
+  const dot = (c) => ({ width: 8, height: 8, borderRadius: 99, background: c, flexShrink: 0 })
+
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div className="sw-eyebrow" style={{ marginBottom: 6 }}>{label}</div>
-      <div style={{ display: 'flex', height: 46, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--c-border)' }}>
-        <button onClick={onKeep} className="sw-press" style={{
-          flex: `1 1 ${100 - takePct}%`, minWidth: 0, background: 'var(--c-success-bg, rgba(52,199,89,.14))',
-          border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
-          alignItems: 'flex-start', justifyContent: 'center', padding: '0 10px', overflow: 'hidden',
-        }}>
-          <span style={{ fontSize: 10, color: 'var(--c-text3)', whiteSpace: 'nowrap' }}>{keepLabel}</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-success)' }}>{fmt(keepVal)}</span>
+    <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <div className="sw-eyebrow" style={{ alignSelf: 'flex-start' }}>{title}</div>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img"
+        aria-label={`${keepLabel} ${keepPct} percent versus ${takeLabel} ${takePct} percent`} style={{ display: 'block' }}>
+        <g transform={`rotate(-90 ${cx} ${cy})`}>
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--c-sep)" strokeWidth={thickness} opacity="0.3" />
+          {total > 0 && (
+            <>
+              <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--c-danger)" strokeWidth={thickness}
+                strokeDasharray={`${takeDash.toFixed(2)} ${(circ - takeDash).toFixed(2)}`} strokeDashoffset={(-keepDash).toFixed(2)} />
+              <circle cx={cx} cy={cy} r={r} fill="none" stroke={keepColour} strokeWidth={thickness}
+                strokeDasharray={`${keepDash.toFixed(2)} ${(circ - keepDash).toFixed(2)}`} strokeDashoffset="0" />
+            </>
+          )}
+        </g>
+        <text x={cx} y={cy - 3} textAnchor="middle" fontSize="28" fontWeight="800" fill="var(--c-text)" fontVariantNumeric="tabular-nums">{keepPct}%</text>
+        <text x={cx} y={cy + 14} textAnchor="middle" fontSize="9.5" fill="var(--c-text3)">{centreSub}</text>
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+        <button onClick={onKeep} className="sw-press" style={legendRow}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+            <span style={dot(keepColour)} />
+            <span style={{ fontSize: 11, color: 'var(--c-text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{keepLabel}</span>
+          </span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{fmt(keep)}</span>
         </button>
-        <button onClick={onTake} className="sw-press" style={{
-          flex: `1 1 ${takePct}%`, minWidth: 68, background: 'var(--c-danger-bg, rgba(255,59,48,.13))',
-          border: 'none', borderLeft: '1px solid var(--c-border)', cursor: 'pointer', display: 'flex',
-          flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', padding: '0 10px', overflow: 'hidden',
-        }}>
-          <span style={{ fontSize: 10, color: 'var(--c-text3)', whiteSpace: 'nowrap' }}>{takeLabel}</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-danger)' }}>{fmt(takeVal)}</span>
+        <button onClick={onTake} className="sw-press" style={legendRow}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+            <span style={dot('var(--c-danger)')} />
+            <span style={{ fontSize: 11, color: 'var(--c-text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{takeLabel} · {takePct}%</span>
+          </span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--c-danger)', fontVariantNumeric: 'tabular-nums' }}>{fmt(take)}</span>
         </button>
       </div>
     </div>
@@ -627,27 +664,29 @@ function VsBar({ label, keepLabel, keepVal, takeLabel, takeVal, total, onKeep, o
 }
 function TaxVsHMRC({ incomeGross, incomeTax, estateGross, iht, family, onDrill }) {
   const incKeep = Math.max(0, incomeGross - incomeTax)
-  const incPct = incomeGross > 0 ? Math.round((incomeTax / incomeGross) * 100) : 0
-  const estPct = estateGross > 0 ? Math.round((iht / estateGross) * 100) : 0
   return (
     <div className="card sw-card-elevated">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
         <div className="sw-eyebrow">You vs the taxman</div>
-        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>tap a bar to see how</div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>tap a figure to see how</div>
       </div>
-      <VsBar
-        label="Your income this year"
-        keepLabel="You keep" keepVal={incKeep}
-        takeLabel={`To HMRC · ${incPct}%`} takeVal={incomeTax} total={incomeGross}
-        onKeep={() => onDrill('income')} onTake={() => onDrill('income')}
-      />
-      <VsBar
-        label="Your estate when you die"
-        keepLabel="Family receives" keepVal={family}
-        takeLabel={`Inheritance tax · ${estPct}%`} takeVal={iht} total={estateGross}
-        onKeep={() => onDrill('est-iht')} onTake={() => onDrill('est-iht')}
-      />
-      <p style={{ fontSize: 10, color: 'var(--c-text3)', margin: '2px 2px 0' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+        <VsDonut
+          title="Your income this year"
+          centreSub="you keep"
+          keepLabel="You keep" keepVal={incKeep} keepColour="var(--c-success)"
+          takeLabel="To HMRC" takeVal={incomeTax}
+          onKeep={() => onDrill('income')} onTake={() => onDrill('income')}
+        />
+        <VsDonut
+          title="Your estate when you die"
+          centreSub="to family"
+          keepLabel="Family receives" keepVal={family} keepColour="var(--c-acc)"
+          takeLabel="Inheritance tax" takeVal={iht}
+          onKeep={() => onDrill('est-iht')} onTake={() => onDrill('est-iht')}
+        />
+      </div>
+      <p style={{ fontSize: 10, color: 'var(--c-text3)', margin: '12px 2px 0' }}>
         Figures are provisional, pending review.
       </p>
     </div>

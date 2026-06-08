@@ -561,61 +561,61 @@ function CatTile({ title, value, sub, tone = 'neutral', onClick }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tax & Estate radar — the SIGNATURE visual (founder 2026-06-08, parallels the
-// Home radar). 6 spokes scored 0–100; tap a spoke to drill into its tile.
-// Scores are v1 heuristics — PROVISIONAL, pending the independent calc audit.
+// "You vs the taxman" — the SIGNATURE visual, bespoke to Tax & Estate (founder
+// 2026-06-08, replacing the borrowed radar). Answers the tab's own question:
+// what goes to HMRC (now + at death) vs what you keep / pass on. Each segment
+// drills to its tile. Figures PROVISIONAL, pending the independent calc audit.
 // ─────────────────────────────────────────────────────────────────────────────
-const RADAR_ANGLES = [-90, -30, 30, 90, 150, 210]
-function TaxEstateRadar({ spokes, onSpoke }) {
-  const cx = 160, cy = 150, maxR = 94
-  const rad = d => d * Math.PI / 180
-  const pts = spokes.map((s, i) => {
-    const frac = Math.max(0.06, Math.min(1, (s.score || 0) / 100))
-    const a = rad(RADAR_ANGLES[i] || 0)
-    return `${(cx + frac * maxR * Math.cos(a)).toFixed(1)},${(cy + frac * maxR * Math.sin(a)).toFixed(1)}`
-  }).join(' ')
-  const overall = Math.round(spokes.reduce((t, s) => t + (s.score || 0), 0) / Math.max(1, spokes.length))
-  const rings = [0.25, 0.5, 0.75, 1]
+function VsBar({ label, keepLabel, keepVal, takeLabel, takeVal, total, onKeep, onTake }) {
+  const takePct = total > 0 ? Math.max(3, Math.min(97, Math.round((takeVal / total) * 100))) : 0
   return (
-    <div className="card sw-card-elevated" style={{ padding: '12px 8px 4px' }}>
-      <div className="sw-eyebrow" style={{ textAlign: 'center', marginBottom: 2 }}>Your tax &amp; estate health</div>
-      <div style={{ position: 'relative', width: '100%', maxWidth: 340, margin: '0 auto' }}>
-        <svg viewBox="0 0 320 300" width="100%" style={{ overflow: 'visible' }} aria-label="Tax and estate health radar">
-          {rings.map((r, i) => (
-            <circle key={i} cx={cx} cy={cy} r={r * maxR} fill="none" stroke="var(--c-radar-ring, var(--c-sep))" strokeWidth={1} />
-          ))}
-          {spokes.map((s, i) => {
-            const a = rad(RADAR_ANGLES[i])
-            return <line key={s.key} x1={cx} y1={cy} x2={(cx + maxR * Math.cos(a)).toFixed(1)} y2={(cy + maxR * Math.sin(a)).toFixed(1)} stroke="var(--c-radar-axis, var(--c-border))" strokeWidth={1} />
-          })}
-          <polygon points={pts} fill="var(--c-radar-fill, rgba(94,124,226,.18))" stroke="var(--c-radar-stroke, var(--c-acc))" strokeWidth={2} strokeLinejoin="round"
-            style={{ filter: 'drop-shadow(0 0 8px var(--c-radar-glow, rgba(94,124,226,.4)))' }} />
-        </svg>
-        <div style={{ position: 'absolute', left: '50%', top: `${cy / 300 * 100}%`, transform: 'translate(-50%,-50%)', textAlign: 'center', pointerEvents: 'none' }}>
-          <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--c-text3)' }}>Overall</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--c-acc)', lineHeight: 1 }}>{overall}</div>
-        </div>
-        {spokes.map((s, i) => {
-          const a = rad(RADAR_ANGLES[i]); const nr = maxR + 24
-          const lx = (cx + nr * Math.cos(a)) / 320 * 100
-          const ly = (cy + nr * Math.sin(a)) / 300 * 100
-          const danger = (s.score || 0) < 34
-          return (
-            <button key={s.key} onClick={() => onSpoke?.(s)} className="sw-press"
-              aria-label={`${s.label}: ${s.score} of 100 — open`}
-              style={{
-                position: 'absolute', left: `${lx}%`, top: `${ly}%`, transform: 'translate(-50%,-50%)',
-                width: 64, padding: '5px 4px', borderRadius: 12, cursor: 'pointer', textAlign: 'center', lineHeight: 1.1,
-                border: `1px solid ${danger ? 'var(--c-danger)' : 'var(--c-border)'}`, background: 'var(--c-surface)',
-              }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: danger ? 'var(--c-danger)' : 'var(--c-acc)' }}>{s.score}</div>
-              <div style={{ fontSize: 9, color: 'var(--c-text2)', fontWeight: 700 }}>{s.label}</div>
-            </button>
-          )
-        })}
+    <div style={{ marginBottom: 12 }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', height: 46, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--c-border)' }}>
+        <button onClick={onKeep} className="sw-press" style={{
+          flex: `1 1 ${100 - takePct}%`, minWidth: 0, background: 'var(--c-success-bg, rgba(52,199,89,.14))',
+          border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+          alignItems: 'flex-start', justifyContent: 'center', padding: '0 10px', overflow: 'hidden',
+        }}>
+          <span style={{ fontSize: 10, color: 'var(--c-text3)', whiteSpace: 'nowrap' }}>{keepLabel}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-success)' }}>{fmt(keepVal)}</span>
+        </button>
+        <button onClick={onTake} className="sw-press" style={{
+          flex: `1 1 ${takePct}%`, minWidth: 68, background: 'var(--c-danger-bg, rgba(255,59,48,.13))',
+          border: 'none', borderLeft: '1px solid var(--c-border)', cursor: 'pointer', display: 'flex',
+          flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', padding: '0 10px', overflow: 'hidden',
+        }}>
+          <span style={{ fontSize: 10, color: 'var(--c-text3)', whiteSpace: 'nowrap' }}>{takeLabel}</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-danger)' }}>{fmt(takeVal)}</span>
+        </button>
       </div>
-      <p style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'center', margin: '2px 8px 6px' }}>
-        Tap a point to drill in · scores are provisional, pending review
+    </div>
+  )
+}
+function TaxVsHMRC({ incomeGross, incomeTax, estateGross, iht, family, onDrill }) {
+  const incKeep = Math.max(0, incomeGross - incomeTax)
+  const incPct = incomeGross > 0 ? Math.round((incomeTax / incomeGross) * 100) : 0
+  const estPct = estateGross > 0 ? Math.round((iht / estateGross) * 100) : 0
+  return (
+    <div className="card sw-card-elevated">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+        <div className="sw-eyebrow">You vs the taxman</div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>tap a bar to see how</div>
+      </div>
+      <VsBar
+        label="Your income this year"
+        keepLabel="You keep" keepVal={incKeep}
+        takeLabel={`To HMRC · ${incPct}%`} takeVal={incomeTax} total={incomeGross}
+        onKeep={() => onDrill('income')} onTake={() => onDrill('income')}
+      />
+      <VsBar
+        label="Your estate when you die"
+        keepLabel="Family receives" keepVal={family}
+        takeLabel={`Inheritance tax · ${estPct}%`} takeVal={iht} total={estateGross}
+        onKeep={() => onDrill('est-iht')} onTake={() => onDrill('est-iht')}
+      />
+      <p style={{ fontSize: 10, color: 'var(--c-text3)', margin: '2px 2px 0' }}>
+        Figures are provisional, pending review.
       </p>
     </div>
   )
@@ -3080,60 +3080,6 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
     }
   }, [entity, bv])
 
-  // ── Signature radar scoring (founder 2026-06-08). 6 spokes 0–100. v1
-  //    heuristics — PROVISIONAL, pending the independent calc audit. ──────────
-  const taxRadar = useMemo(() => {
-    const clamp = n => Math.max(0, Math.min(100, Math.round(n)))
-    const txY = safe(() => te_taxThisYear(entity), null) || {}
-    const comp = txY.components || {}
-    const effRate = txY.effective_rate || 0
-    const aniV = safe(() => calcANI(entity).ani, 0)
-    const allow = safe(() => allowanceTracker(entity), null) || {}
-    const expo = exposureToday || {}
-    const wl = safe(() => willLpaStatus(entity), null) || {}
-    const ns = safe(() => nominationStatus(entity), null)
-    const nsList = Array.isArray(ns?.pensions) ? ns.pensions : Array.isArray(ns) ? ns : []
-
-    // 1 Income-tax efficiency — penalise the 60% taper band + additional rate
-    let income = 100
-    if (aniV >= TAX.adjustedNetIncomeCliff && aniV <= TAX.art) income -= 35
-    if (aniV > TAX.art) income -= 20
-    if (effRate > 0.4) income -= 15
-
-    // 2 Allowances used — beneficial-allowance utilisation (higher = better)
-    const allowS = clamp(allow.utilization || 0)
-
-    // 3 Capital gains — 100 if no CGT due, scale down with the bill
-    const cgt = comp.cgt || 0
-    const cgtS = cgt <= 0 ? 100 : clamp(100 - Math.min(100, cgt / 100))
-
-    // 4 IHT exposure — 100 = no IHT due; falls as iht/estate rises
-    const estate = expo.gross_estate || 0
-    const iht = expo.iht_due || 0
-    const ihtS = estate > 0 ? clamp(100 * (1 - iht / estate)) : 100
-
-    // 5 Estate readiness — will current + LPA registered + ≥1 nomination set
-    const willOk = !!wl.will?.current
-    const lpaOk = !!(wl.lpa?.status && wl.lpa.status !== 'none')
-    const nomOk = nsList.some(p => p.nominee || p.beneficiary || p.has_nomination)
-    const readyS = clamp(([willOk, lpaOk, nomOk].filter(Boolean).length / 3) * 100)
-
-    // 6 Gift planning — proxy: are gifts being used at all (refined in Phase 2)
-    const hasGifts = !!(entity?.gifts?.length || entity?.estate?.gifts?.length || expo.reliefs?.gifts)
-    const giftS = hasGifts ? 70 : 35
-
-    return {
-      spokes: [
-        { key: 'income', label: 'Income tax',  score: clamp(income), tab: 'tax',    tile: 'income' },
-        { key: 'allow',  label: 'Allowances',  score: allowS,        tab: 'tax',    tile: 'allowances' },
-        { key: 'cgt',    label: 'Capital gains', score: cgtS,        tab: 'tax',    tile: 'cgt-cat' },
-        { key: 'iht',    label: 'Inheritance', score: ihtS,          tab: 'estate', tile: 'est-iht' },
-        { key: 'estate', label: 'Estate ready', score: readyS,       tab: 'estate', tile: 'est-wills' },
-        { key: 'gifts',  label: 'Gifts',       score: giftS,         tab: 'estate', tile: 'est-gifts' },
-      ],
-    }
-  }, [entity, bv, exposureToday])
-
   // ── Sub-anchor strip — different for tax vs estate ────────────────────────
   const subAnchorTax = useMemo(() => {
     const ani = safe(() => calcANI(entity).ani, 0)
@@ -3371,13 +3317,17 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         />
       )}
 
-      {/* ── Signature radar — the at-a-glance "how am I doing across tax &
-            estate" hero (founder 2026-06-08). Hidden when Choices is active.
-            Tapping a spoke jumps to that sub-tab and opens its drawer. ─────── */}
+      {/* ── Signature visual — "You vs the taxman" (founder 2026-06-08). The
+            tab's own question made visual: what goes to HMRC now + at death vs
+            what you keep / pass on. Hidden when Choices is active. ─────────── */}
       {!showChoices && (
-        <TaxEstateRadar
-          spokes={taxRadar.spokes}
-          onSpoke={(s) => { setSubTab(s.tab); setOpenTile(s.tile) }}
+        <TaxVsHMRC
+          incomeGross={taxTiles.gross}
+          incomeTax={taxTiles.totalTax}
+          estateGross={exposureToday?.gross_estate || 0}
+          iht={exposureToday?.iht_due || 0}
+          family={exposureToday?.beneficiary_value || 0}
+          onDrill={(target) => { setSubTab(target.startsWith('est') ? 'estate' : 'tax'); setOpenTile(target) }}
         />
       )}
 

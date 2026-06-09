@@ -794,3 +794,10 @@ body {
 @media (max-width: 380px) {
   .sw-reports-pill-label { display: none; }
 }
+
+/* Reports SP-1 — at narrow mobile, drop the two backward (Last month/Last year)
+   columns so the line-item label keeps room; forward columns + drill stay. */
+@media (max-width: 480px) {
+  .sw-stmt-back { display: none !important; }
+  .sw-stmt-row { grid-template-columns: 1fr repeat(3, minmax(52px, max-content)) !important; }
+}

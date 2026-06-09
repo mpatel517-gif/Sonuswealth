@@ -46,7 +46,7 @@ function Row({ node, depth, personaId, snapshotKey }) {
 
   return (
     <>
-      <div style={{
+      <div className="sw-stmt-row" style={{
         display: 'grid',
         gridTemplateColumns: '1fr repeat(5, minmax(56px, max-content))',
         alignItems: 'center', gap: 8,
@@ -71,7 +71,7 @@ function Row({ node, depth, personaId, snapshotKey }) {
           <DrillableNumber metric={node.label} value={money(node.value)} confidence={node.confidence || 'high'} onDrill={drill} />
         </span>
         {/* Last month (honest-absence unless captured) */}
-        <span style={{ textAlign: 'right' }}>
+        <span className="sw-stmt-back" style={{ textAlign: 'right' }}>
           {priorVal(priorMonth) != null
             ? <span style={{ fontSize: 11, color: 'var(--c-text3)' }} title="captured">{deltaStr(node.value, priorVal(priorMonth))}</span>
             : <AbsenceCell first={depth === 0} />}
@@ -79,7 +79,7 @@ function Row({ node, depth, personaId, snapshotKey }) {
         {/* This year (LIVE) */}
         <span style={{ fontSize: 12, textAlign: 'right', color: 'var(--c-text2)', fontVariantNumeric: 'tabular-nums' }}>{money(node.value)}</span>
         {/* Last year (honest-absence unless captured) */}
-        <span style={{ textAlign: 'right' }}>
+        <span className="sw-stmt-back" style={{ textAlign: 'right' }}>
           {priorVal(priorYear) != null
             ? <span style={{ fontSize: 11, color: 'var(--c-text3)' }} title="captured">{deltaStr(node.value, priorVal(priorYear))}</span>
             : <AbsenceCell first={depth === 0} />}
@@ -102,16 +102,16 @@ export default function StatementTree({ statement, personaId }) {
   return (
     <div data-statement={statement.key}>
       {/* Column header */}
-      <div style={{
+      <div className="sw-stmt-row sw-stmt-header" style={{
         display: 'grid', gridTemplateColumns: '1fr repeat(5, minmax(56px, max-content))',
         gap: 8, padding: '4px 0', borderBottom: '1px solid var(--c-border)',
         fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--c-text3)', fontWeight: 700,
       }}>
         <span>{statement.periodNote || 'Line item'}</span>
         <span style={{ textAlign: 'right' }}>This month</span>
-        <span style={{ textAlign: 'right' }}>Last month</span>
+        <span className="sw-stmt-back" style={{ textAlign: 'right' }}>Last month</span>
         <span style={{ textAlign: 'right' }}>This year</span>
-        <span style={{ textAlign: 'right' }}>Last year</span>
+        <span className="sw-stmt-back" style={{ textAlign: 'right' }}>Last year</span>
         <span style={{ textAlign: 'right' }}>Next 5y</span>
       </div>
       {statement.nodes.map(n => (

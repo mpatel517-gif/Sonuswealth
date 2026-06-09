@@ -20,6 +20,7 @@ export const EV = {
   SCENARIO_SAVED:        'SCENARIO_SAVED',
   PREFERENCE_SET:        'PREFERENCE_SET', // user preference override (e.g. lifeStageOverride) → folds into entity.preferences
   LIFE_EVENT:            'LIFE_EVENT', // X29/Timeline §F: a real-life change (inheritance, redundancy, …) → folds into the entity + reopens risk dims
+  PRIOR_YEAR_SA_CAPTURED:'PRIOR_YEAR_SA_CAPTURED', // M2: a prior-year Self-Assessment record entered/imported → folds derived carry-forward into the entity (durable copy lives in localStorage sonuswealth.taxhistory)
   document_captured:     'document_captured', // legacy lowercase alias from DataCapture
 }
 

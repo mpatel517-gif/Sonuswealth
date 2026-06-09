@@ -71,6 +71,9 @@ import { ihtProjection } from '../engine/selectors/index.js'
 // Spec: 0-Active/route-specs/route-4-tax-estate.md §3 — signature is the
 // IHT pre/post-April-2027 delta card at position 2 (above all allowance bars).
 import IHTDeltaCard from '../components/charts/IHTDeltaCard.jsx'
+import SAComputationView from '../components/TaxEstate/SAComputationView.jsx'
+import { saComputation } from '../engine/sa-computation.js'
+import { deriveCarryForwardFromHistory, upsertPriorYear } from '../state/tax-history.js'
 import {
   TaperedAATile,
   CohabIHTCliffTile,
@@ -1373,30 +1376,53 @@ function AllowancesStrip({ entity }) {
   )
 }
 
-// §5.10 — Self Assessment + SA100 deadline
-function SelfAssessment({ entity }) {
+// §5.10 — Self Assessment. Single source of truth = the SA computation card at
+// the top of the Tax sub-tab (saComputation). This drawer used to derive its OWN
+// "balance via SA" (dividend+savings+CGT) which contradicted the card's balancing
+// payment (T1 audit fix, 2026-06-09). It now reads the SAME canonical computation
+// (with the same prior-year store the card uses) so the two surfaces always agree,
+// and points the user to the full estimate rather than duplicating it.
+function SelfAssessment({ entity, personaId, onSeeFull }) {
   const sa = safe(() => te_selfAssessment(entity), null)
   if (!sa) return null
-  // Engine returns needs_sa / deadline_online — the component previously read the
-  // wrong keys (required / online_filing_deadline), so a landlord-director with
-  // £38k dividends wrongly showed "Filing required? No". (tax-tab audit fix.)
-  const deadline = sa.deadline_online || sa.online_filing_deadline || sa.deadline || '2027-01-31'
   const required = sa.needs_sa ?? sa.required ?? false
-  // Balance via SA = the tax NOT collected at source (dividends, savings, CGT) —
-  // the engine doesn't return a figure, so derive it from the canonical components.
-  const comp = safe(() => te_taxThisYear(entity)?.components, {}) || {}
-  const due = (comp.dividend_tax || 0) + (comp.savings_tax || 0) + (comp.cgt || 0)
   const src = sa.income_sources || []
   const reason = !required ? 'Tax settled at source — no return needed'
     : src.some(s => /divid/i.test(s)) ? 'Dividends / rental / untaxed income above SA thresholds'
     : 'Income above a Self-Assessment threshold'
+
+  // Canonical balance + deadline from the SA computation (same prior-year store
+  // as the card → ties out exactly, including after a prior year is captured).
+  const store = personaId ? safe(() => deriveCarryForwardFromHistory(personaId, '2026/27'), null) : null
+  const saC = safe(() => saComputation(entity, 'tax-2026-27', 'UK-2026.1', {
+    priorYearStore: store, priorYearLiability: store?._priorYearLiability,
+  }), null)
+  const balancing = saC?.computation?.balancing_payment ?? 0
+  const provisional = saC?.confidence === 'low'
+  // Next 31 Jan filing deadline (UTC-stable), consistent with the Timeline.
+  const now = new Date()
+  const jan31 = new Date(Date.UTC(now.getUTCFullYear(), 0, 31))
+  if (jan31 <= now) jan31.setUTCFullYear(now.getUTCFullYear() + 1)
+  const deadline = jan31.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
   return (
     <div className="card sw-card-elevated">
-      <SectionHead title="Self Assessment" sub={`SA100 deadline: ${deadline}`} />
+      <SectionHead title="Self Assessment" sub={`Next deadline: ${deadline}`} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <StatTile label="Est. balance via SA" value={fmt(due)} colour={due > 0 ? 'var(--c-danger)' : 'var(--c-text)'} />
+        <StatTile
+          label="Estimated balance due"
+          value={`${fmt(balancing)}${provisional ? ' (est.)' : ''}`}
+          colour={balancing > 0 ? 'var(--c-danger)' : 'var(--c-text)'}
+        />
         <StatTile label="Filing required?" value={required ? 'Yes' : 'No'} sub={reason} />
       </div>
+      <button
+        onClick={() => { onSeeFull?.(); requestAnimationFrame(() => document.querySelector('[data-sa-computation]')?.scrollIntoView({ block: 'start', behavior: 'smooth' })) }}
+        className="sw-chip"
+        style={{ marginTop: 10, cursor: 'pointer', fontSize: 12, padding: '6px 12px' }}
+      >
+        See your full Self-Assessment estimate ↑
+      </button>
     </div>
   )
 }
@@ -1406,11 +1432,47 @@ function SelfAssessment({ entity }) {
 // list shows each field with its confidence so the user confirms before anything
 // is used. Runs against the mock parser today (values are invented + clearly
 // flagged); swapping in real OCR is one provider change in services/parser.js.
-function SelfAssessmentDocs() {
+function SelfAssessmentDocs({ entity, personaId, onCommit, onClose }) {
   const [status, setStatus] = useState('idle')   // idle | parsing | done | error
   const [result, setResult] = useState(null)
   const [fileName, setFileName] = useState('')
   const [err, setErr] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  // T4 (2026-06-09): the parsed figures now SAVE to the prior-year SA store, so an
+  // uploaded SA302 firms up the Self-Assessment estimate (was a dead "pre-fill"
+  // promise). Heuristic field→record mapping (mock parser; clearly flagged).
+  const saveToHistory = () => {
+    const fields = result?.fields || []
+    const pick = (re) => { const f = fields.find(x => re.test(`${x.label} ${x.id}`)); return f ? Math.round(+f.value || 0) : undefined }
+    const taxYear = (() => {
+      const yf = fields.find(x => /tax year|year/i.test(`${x.label} ${x.id}`))
+      const m = yf && String(yf.value).match(/(20\d{2})/)
+      if (m) { const y = +m[1]; return `${y}/${String(y + 1).slice(-2)}` }
+      const now = new Date(); const py = now.getUTCFullYear() - 1
+      return `${py}/${String(py + 1).slice(-2)}`
+    })()
+    const record = {
+      taxYear, source: 'upload', filed: true,
+      confidence: Math.min(...fields.map(f => f.confidence ?? 1), 1),
+      figures: {
+        totalIncome: pick(/total income|income received/i) ?? 0,
+        payeTaxPaid: pick(/paye|tax (deducted|taken)/i) ?? 0,
+        incomeTaxPlusClass4: pick(/income tax.*class 4|total tax due|tax due/i) ?? (pick(/income tax/i) ?? 0),
+        pensionAaUnused: pick(/unused|carry.?forward|annual allowance/i) ?? 0,
+        lossesCarried: { capital: pick(/capital loss/i) ?? 0, rental: 0, trading: pick(/trading loss/i) ?? 0 },
+        gifts: [],
+      },
+      provenance: { channel: 'upload', documentRef: fileName },
+    }
+    upsertPriorYear(personaId, record)
+    const derived = safe(() => deriveCarryForwardFromHistory(personaId, '2026/27'), null)
+    if (derived && onCommit && personaId) {
+      const { _priorYearLiability, ...cf } = derived
+      onCommit(personaId, { type: 'PRIOR_YEAR_SA_CAPTURED', payload: { taxYear: record.taxYear, carryForward: cf } })
+    }
+    setSaved(true)
+  }
 
   const onFile = async (e) => {
     const file = e.target.files?.[0]
@@ -1491,9 +1553,25 @@ function SelfAssessmentDocs() {
             )
           })}
 
-          <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
-            Confirm each value, then it pre-fills the matching field in your profile. Nothing is saved until you confirm.
-          </div>
+          {saved ? (
+            <div style={{ fontSize: 12, color: 'var(--c-success)', fontWeight: 600, marginTop: 2 }}>
+              ✓ Saved to your tax history — your Self-Assessment estimate is updated.{' '}
+              {onClose && <button onClick={onClose} className="sw-chip" style={{ marginLeft: 6, cursor: 'pointer', fontSize: 11, padding: '3px 10px' }}>View estimate ↑</button>}
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2 }}>
+                Check the figures above, then save them to your tax history — they firm up your Self-Assessment estimate. Nothing is saved until you tap Save.
+              </div>
+              <button
+                onClick={saveToHistory}
+                className="sw-chip sw-chip-mint"
+                style={{ cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '7px 14px', alignSelf: 'flex-start' }}
+              >
+                Save these figures to my tax history
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -3394,7 +3472,7 @@ function SippIhtCountdownBanner({ entity, onScrollToIHT }) {
 
 import useBundleVersion from '../hooks/useBundleVersion.jsx'
 
-export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey, onOpenDecision }) {
+export default function TaxEstate({ entity, personaId, onCommit, onHome, onBack, onNav, onOpenRisk, onDrillMetric, hash, seed, ihtForceKey, onOpenDecision }) {
   // Back-routing (2026-05-28): respect previous screen rather than jumping home.
   const goBackOrHome = onBack || onHome
   // ── Viewport detection (for mobile reordering — F-CAT-03 / F-VIS-01) ──────
@@ -3750,7 +3828,9 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
         </CategoryDrawer>
       case 'selfassessment':
         return <CategoryDrawer title="Self-assessment & residency" onClose={closeTile}>
-          <SelfAssessment entity={entity} /><SelfAssessmentDocs /><NonDomCard entity={entity} />
+          <SelfAssessment entity={entity} personaId={personaId} onSeeFull={closeTile} />
+          <SelfAssessmentDocs entity={entity} personaId={personaId} onCommit={onCommit} onClose={closeTile} />
+          <NonDomCard entity={entity} />
         </CategoryDrawer>
       case 'situational':
         return <CategoryDrawer title="Other taxes in your situation" onClose={closeTile}>
@@ -3928,8 +4008,14 @@ export default function TaxEstate({ entity, onHome, onBack, onNav, onOpenRisk, o
       {/* ── TAX SUB-TAB — 1B category tiles → drawers (founder issue 2/5) ───── */}
       {!showChoices && subTab === 'tax' && (
         <div key="tax" className="sw-tab-slide">
-          <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '2px 2px 10px' }}>
-            Tap a card to open its detail.
+          {/* Self-Assessment filing-format estimate (M1·1D) — the headline tax
+              capability, so it sits ABOVE the category tiles (was buried below
+              the grid, 2+ screens down — founder couldn't see it 2026-06-09).
+              Full computation + accountant-verifiable explanation per line +
+              prior-year capture (M2) + print export. */}
+          <SAComputationView entity={entity} personaId={personaId} onCommit={onCommit} />
+          <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '16px 2px 10px' }}>
+            Or tap a card below for a focused view.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
             <CatTile

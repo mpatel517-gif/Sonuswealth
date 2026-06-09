@@ -15,6 +15,7 @@
 
 import { allowanceTracker, TAX } from '../fq-calculator.js'
 import { daysToTaxYearEnd, daysToSippIht, ageAt } from '../../lenses/_base.js'
+import { buildCarryForwardLedger } from '../carry-forward-state.js'
 
 function num(v) {
   if (v == null) return 0
@@ -41,6 +42,17 @@ function currentTaxYearLabel(asOfDate = new Date()) {
 export function buildTaxYearState(entity, asOfDate = new Date()) {
   if (!entity) return null
 
+  // Carry-forward state ledger (M1·1B) — the ONE source for path-dependent
+  // prior-year state (pension AA carry-forward, MPAA, gift clock, losses).
+  // Replaces the old single-number `pension_carry_forward_unused` stub and the
+  // "carry-forward modelled as year-1 only" approximation: we now sum the real
+  // 3-year array, exactly as uk-pension carryForward() does (slice(0,3) → sum).
+  const ledger = buildCarryForwardLedger(entity)
+  const carryForwardUnused = ledger.fields.pension_aa_unused
+    .slice(0, 3)
+    .reduce((s, x) => s + (+x || 0), 0)
+  const carryForwardProvisional = ledger.provenance.pension_aa_unused.provisional
+
   // Allowance tracker — canonical engine function, do not duplicate
   let tracker = {}
   try {
@@ -65,23 +77,33 @@ export function buildTaxYearState(entity, asOfDate = new Date()) {
     aaEffective = Math.max(10000, aaLimit - reduction)
     aaTapered = true
   }
+  // Total AA available this year = effective AA + carry-forward from the prior
+  // 3 years (UK-PEN-04). `remaining` now reflects carry-forward, so the
+  // headroom shown is honest rather than understated by the standard AA alone.
+  const aaTotalAvailable = aaEffective + carryForwardUnused
   const aa = {
     limit: aaLimit,
     effective: aaEffective,
+    carryForward: Math.round(carryForwardUnused),
+    carryForwardProvisional,
+    totalAvailable: Math.round(aaTotalAvailable),
     used: Math.round(pensionContribs),
-    remaining: Math.max(0, aaEffective - pensionContribs),
+    remaining: Math.max(0, aaTotalAvailable - pensionContribs),
     tapered: aaTapered,
     pctUsed: Math.round((pensionContribs / aaEffective) * 100),
   }
 
-  // MPAA — once triggered, only £10k AA. Look for marker field.
-  const mpaaTriggered = !!entity.mpaa_triggered || !!entity.mpaaTriggered
+  // MPAA — once triggered, only £10k AA. Sourced from the carry-forward ledger
+  // (honest-absence: unknown ⇒ not-triggered + provisional, never silent zero).
+  const mpaaTriggered = ledger.fields.mpaa.triggered
   const mpaaRemaining = mpaaTriggered ? Math.max(0, 10000 - pensionContribs) : null
 
-  // Gifts in 7-year IHT window — sum dated gifts
+  // Gifts in 7-year IHT window — sum dated gifts. History comes from the
+  // carry-forward ledger (maps entity.estate.gifts), current-year from the
+  // explicit field.
   const giftsInWindow = num(entity.gifts_current_tax_year)
-                     + (Array.isArray(entity.gifts_history)
-                        ? entity.gifts_history.reduce((s, g) => {
+                     + (Array.isArray(ledger.fields.gifts_history)
+                        ? ledger.fields.gifts_history.reduce((s, g) => {
                             const giftDate = g.date ? new Date(g.date) : null
                             if (!giftDate) return s
                             const yrs = (asOfDate - giftDate) / (1000 * 60 * 60 * 24 * 365.25)
@@ -101,10 +123,6 @@ export function buildTaxYearState(entity, asOfDate = new Date()) {
   const spa = 66  // State Pension Age (current default; check rules bundle for exact)
   const yearsToSpa = Math.max(0, spa - age)
 
-  // Carry-forward of unused pension AA — last 3 years
-  // Demo: derive from entity.pension_carry_forward_unused if set
-  const carryForwardUnused = num(entity.pension_carry_forward_unused)
-
   return {
     // Allowances — what's USED and REMAINING this tax year
     isa:                tracker.isa      || { limit: 20000, used: 0, remaining: 20000, pctUsed: 0 },
@@ -116,6 +134,7 @@ export function buildTaxYearState(entity, asOfDate = new Date()) {
     mpaa_triggered:     mpaaTriggered,
     mpaa_remaining:     mpaaRemaining,
     pension_carry_forward_unused: carryForwardUnused,
+    pension_carry_forward_provisional: carryForwardProvisional,
 
     // 7-year IHT clock
     gifts_in_7yr_window: Math.round(giftsInWindow),

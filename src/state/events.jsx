@@ -198,6 +198,23 @@ export function applyEvents(baseEntity, events = []) {
         break
       }
 
+      case EV.PRIOR_YEAR_SA_CAPTURED: {
+        // M2 — a prior-year Self-Assessment record. Payload carries the derived
+        // carry-forward partial (losses c/f, gifts, pension AA unused) which we
+        // merge into entity.carryForward so buildCarryForwardLedger picks it up
+        // on the next fold. The authoritative copy lives in localStorage
+        // (sonuswealth.taxhistory) — this event is the in-session audit trail.
+        const cf = ev.payload?.carryForward
+        if (cf && typeof cf === 'object') {
+          e.carryForward = {
+            ...(e.carryForward || {}),
+            ...cf,
+            losses: { ...(e.carryForward?.losses || {}), ...(cf.losses || {}) },
+          }
+        }
+        break
+      }
+
       case EV.LIFE_EVENT: {
         // X29 / Timeline §F — a real-life change. Asset-moving subtypes
         // (inheritance, redundancy, business/property sale) fold a balance-sheet
@@ -875,6 +892,7 @@ const _DIFF_EVENT_LABELS = {
   [EV.DRAWDOWN_SCHEDULE_SET]: 'Set a drawdown plan',
   [EV.NOMINATION_REVIEWED]:   'Reviewed nominations',
   [EV.PREFERENCE_SET]:        'Changed a preference',
+  [EV.PRIOR_YEAR_SA_CAPTURED]:'Added a prior-year tax return',
 }
 
 // Distinct causality labels from a committed event log, applied to every

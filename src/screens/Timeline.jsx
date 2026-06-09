@@ -56,8 +56,9 @@ import {
 import {
   calcAPQTimeline, calcMilestones, calcGoalProgress,
   calcScoreHistory, calcRiskHistory,
-  listScenarios,
+  listScenarios, calcTaxLiabilities,
 } from '../engine/timeline-engine.js'
+import { saComputation } from '../engine/sa-computation.js'
 import {
   X28TopBar,
   DiffBadge, CausalityStripe,
@@ -907,8 +908,9 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
   // P1-4 (2026-05-28): gate on real SA obligation — dividends, self-employment,
   // rental income, higher-rate employment, or directorship. Personas with only
   // PAYE basic-rate employment do NOT need to file SA.
-  const saDate = new Date(yr + 1, 0, 31)
-  const saDay  = Math.round((saDate - now) / 86400000)
+  // Self-Assessment tax liabilities (M3) — dated payments with REAL amounts from
+  // the SA estimate (balancing + the two payments on account), plus 60-day CGT
+  // property reports. Replaces the old amount-less "SA deadline" row.
   const hasSAObligation = (
     (+entity?.income?.dividends || 0) > 0
     || (+entity?.income?.selfEmploymentNet || 0) > 0
@@ -917,15 +919,27 @@ export function buildCalendarEntries(entity, windowMonths = 12) {
     || !!entity?.company
     || (entity?.income?.employment || 0) > (TAX?.brt || 50270)
   )
-  if (saDay > 0 && saDay < 400 && saDay <= horizonDays && hasSAObligation) {
-    entries.push({
-      id:'sa-deadline', date:`31 Jan ${yr + 1}`, daysAway:saDay,
-      category:'statutory',
-      title:'Self-assessment submission deadline',
-      detail:'File SA100 and pay any balance due.',
-      colour:'var(--c-accent)',
-      sources: ['HMRC Self-Assessment deadline'],
-    })
+  if (hasSAObligation) {
+    let _sa = null
+    try { _sa = saComputation(entity) } catch { _sa = null }
+    const taxLiabs = calcTaxLiabilities(entity, { sa: _sa, now })
+    for (const t of taxLiabs) {
+      const d = new Date(t.dateISO)
+      const dAway = Math.round((d - now) / 86400000)
+      if (dAway > 0 && dAway <= horizonDays) {
+        entries.push({
+          id: t.id,
+          date: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          daysAway: dAway,
+          category: t.category,
+          title: t.title,
+          detail: t.detail,
+          colour: 'var(--c-accent)',
+          sources: t.sources,
+          ...(t.amount ? { coiTotal: t.amount } : {}),
+        })
+      }
+    }
   }
 
   // Personal: State Pension start date — only if within the window

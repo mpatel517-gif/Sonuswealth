@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
-  TAX, calcFQ, calcAPQ, calcRisk, netWorth, ihtSippDelta, daysLeft,
+  TAX, calcFQ, calcAPQ, calcRisk, netWorth, ihtSippDelta, daysLeft, fmt,
 } from './fq-calculator.js';
 
 const TL_ENGINE_VERSION = 'TL-1.0';
@@ -36,6 +36,82 @@ const UK_MILESTONE_CATALOGUE = [
 function _isoDuration(days) {
   const y = Math.floor(days / 365); const m = Math.floor((days % 365) / 30);
   return `P${y > 0 ? y + 'Y' : ''}${m > 0 ? m + 'M' : ''}`;
+}
+
+// ── FUTURE TAX LIABILITIES (M3) ───────────────────────────────────────────────
+// Dated tax payments for the Timeline calendar: Self-Assessment balancing + the
+// two payments on account, and the 60-day CGT property report. Amounts come from
+// the SA computation (passed via opts.sa so this stays free of a sa-computation
+// import — no engine cycle). ISO-pure: the screen formats dates + computes
+// daysAway. The SIPP-IHT countdown is owned by the existing `sipp-iht` calendar
+// row, so it is deliberately NOT emitted here (no duplicate).
+//
+// Dates are the NEXT occurrence from `now` (a forward "money coming due" view),
+// with amounts from the current-year estimate — so a long horizon surfaces
+// "31 Jan: file & pay ~£X + first POA ~£Y". Flagged as estimates when provisional.
+//
+// @param {object} entity
+// @param {object} [opts] — { sa: saComputation(entity) result, now?: Date }
+// @returns {Array<{id,dateISO,amount,category,title,detail,sources}>}
+export function calcTaxLiabilities(entity, opts = {}) {
+  const now = opts.now instanceof Date ? opts.now : new Date();
+  const sa = opts.sa;
+  const items = [];
+  if (!entity) return items;
+
+  if (sa && sa.computation) {
+    const c = sa.computation;
+    const est = sa.confidence === 'low' ? ' (estimate)' : '';
+    // Build in UTC so toISOString() doesn't shift the calendar day on a machine
+    // east of UTC (BST → 31 Jul local midnight = 30 Jul UTC).
+    const y = now.getUTCFullYear();
+    const nextJan31 = new Date(Date.UTC(y, 0, 31)); if (nextJan31 <= now) nextJan31.setUTCFullYear(y + 1);
+    const nextJul31 = new Date(Date.UTC(y, 6, 31)); if (nextJul31 <= now) nextJul31.setUTCFullYear(y + 1);
+    const iso = (d) => d.toISOString().slice(0, 10);
+
+    if (c.balancing_payment > 0) {
+      items.push({
+        id: 'sa-balancing', dateISO: iso(nextJan31), amount: c.balancing_payment, category: 'statutory',
+        title: 'Self-assessment — file & pay balance',
+        detail: `Estimated balance due ${fmt(c.balancing_payment)}${est} · file SA100`,
+        sources: ['Your Self-Assessment estimate', 'HMRC SA deadline 31 Jan'],
+      });
+    }
+    const poa = c.poa_next_year || [];
+    if (poa[0]?.amount > 0) {
+      items.push({
+        id: 'sa-poa-1', dateISO: iso(nextJan31), amount: poa[0].amount, category: 'statutory',
+        title: 'First payment on account', detail: `~${fmt(poa[0].amount)} towards next year's tax${est}`,
+        sources: ['Your Self-Assessment estimate', 'TMA 1970 s59A'],
+      });
+    }
+    if (poa[1]?.amount > 0) {
+      items.push({
+        id: 'sa-poa-2', dateISO: iso(nextJul31), amount: poa[1].amount, category: 'statutory',
+        title: 'Second payment on account', detail: `~${fmt(poa[1].amount)} towards next year's tax${est}`,
+        sources: ['Your Self-Assessment estimate', 'TMA 1970 s59A'],
+      });
+    }
+  }
+
+  // 60-day CGT property report — per realised property disposal this year.
+  const disposals = entity?.assets?.cgt?.realisedThisYear || [];
+  for (const r of disposals) {
+    const label = String(r.asset || r.assetType || r.type || '');
+    const isProperty = /propert|land|residential|btl|buy.?to.?let|second home/i.test(label);
+    if (isProperty && r.saleDate && (r.gain || 0) > 0) {
+      const due = new Date(new Date(r.saleDate).getTime() + 60 * 86400000);
+      items.push({
+        id: `cgt-60-${(r.asset || 'property').toString().slice(0, 24)}`,
+        dateISO: due.toISOString().slice(0, 10), amount: null, category: 'statutory',
+        title: 'Capital gains tax — 60-day property report',
+        detail: 'Report and pay CGT within 60 days of completion.',
+        sources: ['Your property disposal', 'HMRC 60-day CGT reporting rule'],
+      });
+    }
+  }
+
+  return items;
 }
 
 // ── PRIVATE: synthetic achieved-at from today's NW + estimated growth rate ───

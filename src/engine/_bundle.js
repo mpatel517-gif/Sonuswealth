@@ -94,6 +94,10 @@ function _buildTAX(b) {
     redundancyTaxFree:      b.income?.redundancyTaxFreeLimit ?? b.employment?.redundancyTaxFreeLimit ?? 30000, // ITEPA 2003 s403 — £30k termination exemption
     hicbcFloor:             b.income?.hicbcFloor               ?? 60000,         // Spring Budget 2024
     hicbcCeiling:           b.income?.hicbcCeiling             ?? 80000,         // Spring Budget 2024 (taper width 20k)
+    // Self-Assessment payments on account (TMA 1970 s59A) + Class 2 NIC.
+    poaThreshold:           b.selfAssessment?.paymentsOnAccountThreshold ?? 1000, // TMA 1970 s59A — POA not due if prior-year SA liability < £1,000
+    poaPercentage:          b.selfAssessment?.paymentsOnAccountPercentage ?? 0.5,  // s59A — each POA = 50% of prior-year liability
+    nicClass2Annual:        b.nationalInsurance?.class2AnnualFlatRate  ?? 0,        // Class 2 voluntary from 2024/25 — no mandatory charge above the threshold (SSCBA 1992 s11, FA 2024)
 
     // Dividends — Budget 2025 (rates take effect from April 2026) -----------
     dividendAllowance:      b.income?.dividendAllowance        ?? 500,           // FA — dividend nil-rate allowance

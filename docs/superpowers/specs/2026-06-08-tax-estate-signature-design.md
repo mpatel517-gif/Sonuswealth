@@ -50,7 +50,7 @@ Tiles show the chart small; the drawer shows it full + the proof drill.
 
 ## Controls
 
-- **Year-stepper** — a small inline `◀ 2024/25 · 2026/27 · 2027/28 ▸` control on the tab. Reads the historical rule bundles already in `src/rules/` (UK-2021…UK-2027) via `setBundle`. Distinct from the global horizon dropdown. (Engine already supports bundle-swap; this is the UI affordance. Prior-year *user* figures = Phase 2.)
+- **Year-stepper (GLOBAL — all screens, founder 2026-06-08)** — a small inline `◀ 2024/25 · 2026/27 · 2027/28 ▸` control. It is **not** tax-only; it lives in the app header next to the global tax-year chip (`Dashboard.jsx` `GlobalTaxYearChip`) so it appears on every screen. Steps the active rule bundle (`src/rules/` UK-2021…UK-2027) via `setBundle` / the existing `useTaxYear` store, so every screen re-renders for the chosen year. Distinct from the horizon dropdown (which keeps Current/Last/Next/horizons — no big historical list added to it, per the founder). New shared component `src/components/shared/YearStepper.jsx`. (Engine already supports bundle-swap; prior-year *user* figures = Phase 2.)
 - **Choices** — when the Choices tab is active, render `DecisionDrawers` **instead of** the tile grid; pass a prop to suppress the `DE-*` codes.
 
 ## Self-assessment → document home

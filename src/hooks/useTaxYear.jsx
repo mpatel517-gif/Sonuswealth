@@ -77,6 +77,10 @@ function _resolve(store) {
     ruleYear,
     window: windowId,
     yearsOffset: offset,
+    // viewMode is owned by X28TopBar (Today/Future/Plan/What-if). Surfaced here
+    // so the RULES stepper can demote itself to read-only outside scenario/plan
+    // (founder 2026-06-08 — rules-sweeping belongs in the what-if context).
+    viewMode: store?.viewMode || 'actual',
   }
 }
 

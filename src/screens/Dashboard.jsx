@@ -162,7 +162,9 @@ function GlobalTaxYearChip() {
       background: 'var(--c-surface)',
       fontSize: 12,
     }}>
-      <label style={{
+      <label
+        title="HORIZON — where in time you're looking (a projection viewpoint). Does not change which year's tax law applies; that's the RULES year on the right."
+        style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         color: 'var(--c-text3)', cursor: 'pointer',
       }}>
@@ -187,8 +189,12 @@ function GlobalTaxYearChip() {
       </label>
       {/* Rule-year stepper owns WHICH tax year's rules apply (founder 2026-06-08),
           separate from the horizon dropdown on the left. The raw bundle id stays
-          internal — the stepper surfaces only the friendly year. */}
-      <YearStepper />
+          internal — the stepper surfaces only the friendly year. A divider makes
+          the two controls read as distinct, not a single time-axis. */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--c-sep)' }} />
+        <YearStepper />
+      </div>
     </div>
   )
 }
@@ -877,7 +883,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         {/* v0.3 route-9 §5 deep-link wiring — hash + seed + forceKey for the
             IHT pre/post-2027 delta card. R1 SIPP-IHT chip seeds the hash;
             R7 SCENARIO_SAVED back_flow bumps ihtForceKey for live recompute. */}
-        {tab === 'tax'   && <TaxEstate   entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} onOpenDecision={openDecision} />}
+        {tab === 'tax'   && <TaxEstate   entity={entity} personaId={persona} onCommit={handleCommit} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} onOpenDecision={openDecision} />}
         {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} onOpenDecision={openDecision} />}
         {tab === 'timeline'  && <Timeline     entity={sessionDecisions.length ? { ...entity, decisions: [...sessionDecisions, ...(entity?.decisions || [])] } : entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
         </ErrorBoundary>

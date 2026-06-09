@@ -195,12 +195,18 @@ export default function X28TopBar({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, minHeight: 30,
       }}>
+        {/* "Viewing" eyebrow — names this control as the projection viewpoint
+            (HORIZON), distinct from the RULES year. Founder 2026-06-08. */}
+        <span className="sw-eyebrow" style={{ fontSize: 10, letterSpacing: 0.5, color: 'var(--c-text3)' }}>
+          Viewing
+        </span>
         {/* Window pill — refined ghost chip with chevron */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setOpen(o => !o)}
             aria-haspopup="listbox"
             aria-expanded={open}
+            title="HORIZON — where in time you're looking (a projection viewpoint). Does not change which year's tax law applies; that's the RULES year."
             className="sw-chip"
             style={{
               padding: '5px 10px',

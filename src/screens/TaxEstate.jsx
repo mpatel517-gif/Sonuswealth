@@ -53,6 +53,14 @@ import {
   // → card silently unmounted). Fixed 2026-06-07.
   ihtProjection as te_ihtProjectionSeries,
 } from '../engine/fq-calculator.js'
+// Pension Annual Allowance + 3-year carry-forward is NOT in the fq-calculator
+// allowanceTracker (which returns isa/psa/cgt/dividend/pa only). The estate-engine
+// tracker carries the correctly-shaped pension_aa.{current_year, carry_forward};
+// buildCarryForwardLedger adds honest-absence (provisional vs genuine-zero) so the
+// "what you haven't used yet" surface never asserts a silent zero. (Founder T-j +
+// TE-DOMAIN-RESEARCH §3 headline: surface the carry-forward headroom.)
+import { allowanceTracker as teAllowanceTracker } from '../engine/tax-estate-engine.js'
+import { buildCarryForwardLedger } from '../engine/carry-forward-state.js'
 
 import { BRAND } from '../config/brand.js'
 import {
@@ -1329,6 +1337,27 @@ function DividendDetail({ entity }) {
 function AllowancesStrip({ entity }) {
   const at = safe(() => allowanceTracker(entity), null)
   if (!at) return null
+  // Pension Annual Allowance + 3-year carry-forward — the biggest carry-forward
+  // lever, and the one most users miss (TE-DOMAIN-RESEARCH §3 headline · founder
+  // T-j "what about what I haven't used yet"). Estate-engine tracker carries the
+  // correct pension_aa shape; the M1 ledger flags provisional so an unknown prior
+  // year reads "estimated", never a silent £0.
+  const pen = safe(() => teAllowanceTracker(entity).pension_aa, null)
+  const cfLedger = safe(() => buildCarryForwardLedger(entity), null)
+  const cfArr = cfLedger?.fields?.pension_aa_unused || []
+  const cfTotal = cfArr.reduce((s, v) => s + Math.max(0, v || 0), 0)
+  const cfProvisional = !!cfLedger?.provenance?.pension_aa_unused?.provisional
+  const cyTotal = pen?.current_year?.total || 0
+  const cyUsed = Math.min(pen?.current_year?.used || 0, cyTotal)
+  const cyRemaining = pen?.current_year?.remaining ?? Math.max(0, cyTotal - cyUsed)
+  const penTotalAvail = cyRemaining + cfTotal
+  // Honest-absence: current-year contributions are read from a canonical field
+  // (entity.pensionContributions / .contributionsThisYear). Many personas don't
+  // populate it (they model per-pot monthlyContribution instead), so a £0 here is
+  // a silent-zero, not a confirmed zero — present it as provisional rather than
+  // asserting "£60k available". See the pension-contribution plumbing note.
+  const cyProvisional = cyUsed === 0
+  const penProvisional = cyProvisional || cfProvisional
   const items = [
     { id: 'isa',       label: 'ISA (tax-free savings)',          d: at.isa },
     { id: 'psa',       label: 'Personal savings allowance (PSA)', d: at.psa },
@@ -1339,6 +1368,41 @@ function AllowancesStrip({ entity }) {
   return (
     <div className="card sw-card-elevated">
       <SectionHead title="Allowances — what's left to use" sub={`${100 - (at.utilization || 0)}% of your allowances still available`} />
+      {/* Pension AA carry-forward — the headline "what you haven't used" insight,
+          surfaced first because it's the only large allowance that carries forward. */}
+      {pen && cyTotal > 0 && (
+        <div style={{
+          marginBottom: 12, padding: '11px 13px',
+          background: 'var(--c-surface2)',
+          borderLeft: '3px solid var(--c-mint-text)',
+          border: '1px solid var(--c-sep)',
+          borderLeftWidth: 3, borderLeftColor: 'var(--c-mint-text)',
+          borderRadius: 10,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: 13 }}>Pension annual allowance</span>
+            <span className="sw-chip sw-chip-sm sw-chip-mint sw-chip-outline" style={{ whiteSpace: 'nowrap' }}>Carries forward 3 yrs</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 5, lineHeight: 1.5 }}>
+            {cyProvisional
+              ? <>This year: we don&rsquo;t have your pension contributions yet — your full <strong>{fmt(cyTotal)}</strong> allowance may be available.</>
+              : <>This year: {fmt(cyUsed)} used of {fmt(cyTotal)} · <strong>{fmt(cyRemaining)}</strong> still available.</>}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 2, lineHeight: 1.5 }}>
+            {cfProvisional
+              ? <>Carried forward (last 3 years): not yet known — add your last three years&rsquo; pension contributions to see what you can still use.</>
+              : <>Carried forward (last 3 years): <strong style={{ color: 'var(--c-mint-text)' }}>{fmt(cfTotal)}</strong> still usable.</>}
+          </div>
+          {!penProvisional && (
+            <div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 7 }}>
+              Up to {fmt(penTotalAvail)} you could still pay in with full tax relief.
+            </div>
+          )}
+          <div style={{ fontSize: 10.5, color: 'var(--c-text3)', marginTop: 5, lineHeight: 1.45 }}>
+            Unlike your ISA, dividend and capital-gains allowances — which reset and are lost each 5 April — unused pension allowance carries forward three tax years.{penProvisional ? ' Add your pension details to turn this estimate into your real figures.' : ''}
+          </div>
+        </div>
+      )}
       <RevealStagger interval={50} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
         {items.map(({ id, label, d }, i) => {
           const pctv = d.pctUsed ?? (d.limit ? Math.round((d.used || 0) / d.limit * 100) : 0)

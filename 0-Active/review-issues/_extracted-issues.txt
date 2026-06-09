@@ -1,0 +1,7 @@
+Issues found 28-06-26 at 0934 review
+Move choices next to money sections. It looks bare.
+2) These 2 are just information and should be drillable3) Should be able to go back to my money to see the details. When I drill on any item
+4) There are only 6 tiles related to cashflow this seems to be light you need to find others via research
+Are these tiles sequenced in the correct order of importance – should there be spark lines on all them if its possible to show the trend.You used the phrase dig in – when on the balance sheet is view detail – I like dig in as its shorter we should make it the same for all the screens
+5)  Monhtly flow says -11k  where the cashflow says -7k
+The numbers don’t match. The bottom half is not in sync with the data. I have 4 options from earn a bit more to ease your pension but I will have on fine tune it yourself

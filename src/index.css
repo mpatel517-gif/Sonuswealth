@@ -784,3 +784,13 @@ body {
   }
 }
 
+
+/* ── Reports SP-1 — responsive index rail + pill label ── */
+@media (max-width: 640px) {
+  .sw-reports-body { flex-direction: column !important; }
+  .sw-reports-body > nav { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--c-sep); display: flex; flex-wrap: wrap; }
+  .sw-reports-body > nav > div { flex: 1 1 auto; }
+}
+@media (max-width: 380px) {
+  .sw-reports-pill-label { display: none; }
+}

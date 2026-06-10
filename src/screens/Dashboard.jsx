@@ -132,7 +132,7 @@ const TABS = [
 // the same selection automatically via the 'sonus:taxyear' event bus.
 const TY_STORE_KEY = 'sonuswealth.temporal'
 
-function GlobalTaxYearChip() {
+function GlobalTaxYearChip({ onOpenReports }) {
   const ty = useTaxYear()
   const current = TIME_WINDOWS.find(w => w.id === ty.window) || TIME_WINDOWS[0]
 
@@ -192,7 +192,27 @@ function GlobalTaxYearChip() {
           internal — the stepper surfaces only the friendly year. A divider makes
           the two controls read as distinct, not a single time-axis. */}
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--c-sep)' }} />
+        {onOpenReports && (
+          <>
+            <button
+              type="button"
+              onClick={onOpenReports}
+              aria-label="Open reports and financial statements"
+              title="Reports & financial statements"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+                color: 'var(--c-text2)', borderRadius: 999, padding: '4px 10px',
+                minHeight: 28, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <span aria-hidden="true">📊</span>
+              <span className="sw-reports-pill-label">Reports</span>
+            </button>
+            <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--c-sep)' }} />
+          </>
+        )}
         <YearStepper />
       </div>
     </div>
@@ -782,7 +802,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       {/* ── Global Tax Year chip ────────────────────────────────────────
           Founder direction 2026-05-28: TY must be visible on every page.
           Rendered here so every routed screen inherits it. */}
-      <GlobalTaxYearChip />
+      <GlobalTaxYearChip onOpenReports={() => setMoreScreen('reports')} />
 
       {/* ── Whisper ribbon (§13.7) — ambient ticker, currently surfaces
            §13.8 Drill Memory resume on mount when applicable. ────────────────── */}
@@ -1088,10 +1108,12 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       {moreScreen === 'reports' && (
         <OverlayShell title="Reports" onBack={() => setMoreScreen(null)} onHome={goHome} contentStyle={{ padding: 0 }}>
           <Reports
+            entity={entity}
+            personaId={persona}
+            activeTab={tab}
+            onCommit={handleCommit}
             onBack={() => setMoreScreen(null)}
-            // Phase 2 stub — Reports.jsx ignores this while buttons are
-            // disabled, but the prop contract is now visible. FIX-14.
-            onGenerate={(id, mode) => console.log('TODO Generate', id, mode)}
+            onHome={goHome}
           />
         </OverlayShell>
       )}

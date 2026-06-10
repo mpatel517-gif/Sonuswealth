@@ -784,3 +784,20 @@ body {
   }
 }
 
+
+/* ── Reports SP-1 — responsive index rail + pill label ── */
+@media (max-width: 640px) {
+  .sw-reports-body { flex-direction: column !important; }
+  .sw-reports-body > nav { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--c-sep); display: flex; flex-wrap: wrap; }
+  .sw-reports-body > nav > div { flex: 1 1 auto; }
+}
+@media (max-width: 380px) {
+  .sw-reports-pill-label { display: none; }
+}
+
+/* Reports SP-1 — at narrow mobile, drop the two backward (Last month/Last year)
+   columns so the line-item label keeps room; forward columns + drill stay. */
+@media (max-width: 480px) {
+  .sw-stmt-back { display: none !important; }
+  .sw-stmt-row { grid-template-columns: 1fr repeat(3, minmax(52px, max-content)) !important; }
+}

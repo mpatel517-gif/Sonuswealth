@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { classify }                from './classifier.js'
+import { detectExplainer }         from './glossary.js'
 import { matchPlays, pickLead }    from './matcher.js'
 import { nextQuestion }            from './planner.js'
 import { synthesize }              from './synthesizer.js'
@@ -278,6 +279,21 @@ export async function askSonu(query, persona, opts = {}) {
   const forceAnswer    = !!opts.forceAnswer
   const useLLM         = opts.useLLM !== false  // default on
   const asOfDate       = opts.asOfDate || new Date()
+
+  // ── GLOSSARY SHORT-CIRCUIT ───────────────────────────────────────────
+  // Definitional questions ("what is an annuity?") are deterministic facts —
+  // answer them from the glossary BEFORE the LLM/play path. Removes the LLM
+  // dependency for the most common beginner questions and never goes
+  // off-ontology on a term we know. (Coverage gap #1, 2026-06-10.)
+  const ex = detectExplainer(query)
+  if (ex) {
+    return {
+      status: 'READY',
+      source: 'glossary',
+      _fallback_used: false,
+      answer: { hasAnswer: true, explainer: ex.explainer, explainer_second: ex.second || null, is_comparison: !!ex.comparison },
+    }
+  }
 
   // ── ONE-TIME INPUTS — computed once, threaded everywhere ─────────────
   const taxYearState = safe(() => buildTaxYearState(persona, asOfDate))

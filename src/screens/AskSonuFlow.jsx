@@ -492,6 +492,61 @@ function OffOntologyState({ answer, onPick }) {
   )
 }
 
+// Definitional answer (glossary). Plain-English "what is X", then deep-links
+// from understand → decide. Deterministic; no LLM needed.
+function ExplainerCard({ explainer: ex, onPick }) {
+  if (!ex) return null
+  return (
+    <div style={{
+      padding: 18, borderRadius: 14,
+      background: 'var(--c-surface)', border: '1px solid var(--c-sep)',
+    }}>
+      <div className="sw-eyebrow" style={{ color: 'var(--c-acc)', marginBottom: 6 }}>What it means</div>
+      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', marginBottom: 6 }}>{ex.term}</div>
+      <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6, marginBottom: 12 }}>{ex.short}</div>
+      <div style={{ fontSize: 13, color: 'var(--c-text2)', lineHeight: 1.6 }}>{ex.how}</div>
+
+      {ex.variants && ex.variants.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 6 }}>The main flavours</div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 5 }}>
+            {ex.variants.map((v, i) => (
+              <li key={i} style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>{v}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {ex.watch && (
+        <div style={{
+          marginTop: 12, padding: '9px 11px', borderRadius: 10,
+          background: 'rgba(255,179,71,.08)', border: '1px solid rgba(255,179,71,.30)',
+          fontSize: 12, color: 'var(--c-warning)', lineHeight: 1.5,
+        }}>
+          <strong>Worth knowing.</strong> {ex.watch}
+        </div>
+      )}
+
+      {ex.links && ex.links.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 6 }}>Now decide</div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {ex.links.map((l, i) => (
+              <button key={i} onClick={() => onPick(l.q)} className="sw-press" style={{
+                padding: '9px 12px', borderRadius: 10, textAlign: 'left',
+                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                color: 'var(--c-text)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              }}>{l.label} <span style={{ color: 'var(--c-acc)' }}>→</span></button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 14, fontSize: 10.5, color: 'var(--c-text3)', lineHeight: 1.45 }}>{ex.fca}</div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main flow
 // ─────────────────────────────────────────────────────────────────────────────
@@ -578,8 +633,27 @@ export default function AskSonuFlow({ entity }) {
     )
   }
 
-  // READY — off-ontology
+  // READY — glossary / explainer (definitional "what is X?" — deterministic)
   const a = response.answer
+  if (a.explainer) {
+    return (
+      <div>
+        {header}
+        <div style={{ maxWidth: MAX_W, margin: '8px auto 0', padding: '0 16px' }}>
+          <div className="sw-eyebrow" style={{ marginBottom: 4 }}>You asked</div>
+          <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--c-text2)', marginBottom: 12 }}>"{query}"</div>
+          <ExplainerCard explainer={a.explainer} onPick={submitQuery} />
+          {a.explainer_second && (
+            <div style={{ marginTop: 12 }}>
+              <ExplainerCard explainer={a.explainer_second} onPick={submitQuery} />
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // READY — off-ontology
   if (a.off_ontology || !a.lead) {
     return (
       <div>

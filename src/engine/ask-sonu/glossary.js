@@ -172,10 +172,18 @@ const ALIAS_TO_KEY = (() => {
   return m
 })()
 
-// Definitional intent: "what is/are X", "what's X", "explain X", "what does X
-// mean", "how does X work", "tell me about X", "meaning of X", "difference
-// between X and Y". Bare term lookups ("annuity?") also count if short + matches.
-const DEFINITIONAL = /\b(what(?:'?s| is| are| does)|what do you mean by|explain|meaning of|define|how (?:does|do)\b.{0,40}\bwork|tell me about|difference between)\b/i
+// Definitional intent — STRONG forms only: "what is/are X", "what's X",
+// "explain X", "define X", "what does X mean", "meaning of X", "tell me about X",
+// "difference between X and Y". Deliberately NOT "how does X work" — that's
+// usually asking about a technique (e.g. "how does bed-and-ISA work") which the
+// play engine answers better than a bare term definition.
+const DEFINITIONAL = /\b(what(?:'?s| is| are)|what does\b.{0,40}\bmean|what do you mean by|explain|meaning of|define|tell me about|difference between)\b/i
+
+// Decision / technique / action intent — if present, the user wants a PLAY
+// (what to DO), not a definition. Don't hijack these to the glossary, even when
+// they contain a known term. ("difference between" is exempt — it's comparative,
+// handled below.)
+const ACTION_INTENT = /\b(should i|shall i|best way|better to|worth it|how (?:do|can|should) i|how to|reduce|save tax|or (?:wait|stay|drawdown|invest)|vs\b|versus)\b/i
 
 /**
  * Detect a definitional query and return the matching explainer(s).
@@ -187,10 +195,15 @@ export function detectExplainer(query) {
   const lower = q.toLowerCase()
 
   const isDefinitional = DEFINITIONAL.test(q)
-  // also treat a very short bare-term query ("annuity", "what's a SIPP") as definitional
+  // a very short bare-term query ("annuity?", "what's a SIPP") also counts
   const isShort = q.split(/\s+/).length <= 4
 
   if (!isDefinitional && !isShort) return null
+
+  // Decision/technique intent wins over a bare term match — let the play engine
+  // answer "should I buy an annuity" / "bed-and-ISA — how does it work" rather
+  // than returning a generic definition. ("difference between" stays glossary.)
+  if (ACTION_INTENT.test(q) && !/difference between/i.test(q)) return null
 
   // Find which known term(s) the query references (longest alias wins).
   const hits = []

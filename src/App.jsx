@@ -39,6 +39,11 @@ import personaD from './rules/personas/persona-d.json'
 import personaE from './rules/personas/persona-e.json'
 import personaF from './rules/personas/persona-f.json'
 import personaG from './rules/personas/persona-g.json'
+// Family persona (founder, 2026-06-11: "in our demo personas we don't have a
+// family at all"). UI-shape lift of the mrT-family engine fixture — couple +
+// 2 children, HICBC taper band, JISA, education funding, protection gap,
+// no will / no guardian. Live-UI schema, renders everywhere.
+import personaFamily from './rules/personas/persona-family.json'
 
 // Mr T fixture family — only mrT-core was rewritten to live-UI schema (v2.0,
 // "Bruce app schema with spec-array overlays"). The other 12 mrT-* fixtures
@@ -75,6 +80,7 @@ import mrTUkTh         from './rules/personas/mrT-uk-th.json'
 const _annaDefault = (personaF.snapshots && personaF.snapshots[0]) || personaF
 const ENTITIES = {
   a: personaA, b: personaB, c: personaC, d: personaD, e: personaE, f: _annaDefault, 'f-wrapper': personaF, g: personaG,
+  family: personaFamily,
   // Mr T routing fix (P0-14): every mrT variant resolves to its own object so
   // the URL ?demo=mrt-X is no longer a lie. mrT-core is the only one with
   // live-UI shape; the other 12 are nested-shape and the renderer surfaces
@@ -113,6 +119,7 @@ const PERSONA_LIST = [
   { id:'mrt-core', badge:'T', label:'Mr T Core', sub:'35 · Director · all-domain', type:'individual' },
   { id:'a',    badge:'A', label:'Bruce Wayne',        sub:'62 · Decumulation',      type:'individual' },
   { id:'b',    badge:'B', label:'Fred & Wilma',       sub:'64/61 · Transition',     type:'couple'     },
+  { id:'family', badge:'P', label:'Bob & Helen Parr', sub:'42/40 · Family · 2 kids', type:'couple'    },
   { id:'c',    badge:'C', label:'Tony Stark',         sub:'48 · Business owner',    type:'business'   },
   { id:'d',    badge:'D', label:'Hermione Granger',   sub:'IFA · 28',               type:'ifa'        },
   { id:'e',    badge:'E', label:'Willy Wonka',        sub:'78 · Preservation',      type:'individual' },

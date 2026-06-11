@@ -1,0 +1,371 @@
+{
+  "id": "family",
+  "name": "Bob & Helen Parr",
+  "displayName": "Bob & Helen Parr · 42/40 · 2 children",
+  "type": "couple",
+  "isIFA": false,
+  "lifeStage": 2,
+  "lifeStageName": "Accumulation",
+  "lifeStageAge": "35–50",
+  "hasBusiness": false,
+  "isCouple": true,
+  "hasTrust": false,
+  "hasDBPension": false,
+  "isHigherRateTaxpayer": true,
+  "age": 42,
+  "agePartner": 40,
+  "targetIncome": 55200,
+  "dataLastUpdated": "2026-06-11",
+  "rulesVersion": "UK-2026.1",
+  "jurisdictionContext": {
+    "primary": "UK-2026.1",
+    "secondary": null
+  },
+  "fixtureLineage": "UI-shape lift of mrT-family.json v1.1 (archetype 16, uk-family-accumulation). Exercises HICBC taper, JISA, education funding, life-cover-in-trust, family protection gap, no-will/no-guardian risk.",
+  "drawdown": 0,
+  "assets": {
+    "sipp": {
+      "total": 113500,
+      "growth": 0.05,
+      "crystalised": 0,
+      "tfcTaken": 0,
+      "pensions": [
+        {
+          "name": "Nutmeg SIPP",
+          "value": 95000,
+          "type": "SIPP",
+          "provider": "Nutmeg",
+          "owner": "primary",
+          "charge": 0.0075,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": "2020-05-08",
+          "growth_rate_assumption": 0.05,
+          "contribution_monthly": { "personal": 450, "employer": 340 }
+        },
+        {
+          "name": "Nest workplace pension",
+          "value": 18500,
+          "type": "Workplace DC",
+          "provider": "Nest",
+          "owner": "partner",
+          "charge": 0.003,
+          "chargeIsEstimate": false,
+          "transferEligible": true,
+          "nominationDate": null,
+          "growth_rate_assumption": 0.045,
+          "contribution_monthly": { "personal": 0, "employer": 85 }
+        }
+      ]
+    },
+    "isa": {
+      "value": 46500,
+      "stocksSharesISA": 46500,
+      "cashISA": 0,
+      "jisa": 17800,
+      "usedThisYear": 11000
+    },
+    "residence": {
+      "value": 485000,
+      "ownership": "joint",
+      "ownershipShare": 1.0,
+      "address": "14 Syndrome Close, Reading RG1",
+      "purchasePrice": 385000,
+      "purchaseDate": "2015-04-12"
+    },
+    "portfolio": {
+      "value": 8400,
+      "growth": 0.05,
+      "bpr": false,
+      "costBase": 6200
+    },
+    "cash": {
+      "total": 37700,
+      "own": 37700,
+      "rate": 0.038,
+      "earmarked": [
+        { "label": "Education fund (Violet's university)", "amount": 18000 }
+      ]
+    },
+    "protection": {
+      "lifeInsurance": {
+        "exists": true,
+        "amount": 350000,
+        "inTrust": true,
+        "premium": 38,
+        "provider": "Legal & General",
+        "type": "joint_first_death",
+        "expiryAge": 51,
+        "note": "A second £200k single-life policy (2022) claims to be in trust but the trust deed was never provided — treated as inside the estate until verified."
+      },
+      "criticalIllness": {
+        "exists": true,
+        "amount": 150000,
+        "premium": 45,
+        "provider": "Legal & General",
+        "expiryAge": 60
+      },
+      "incomeProtection": {
+        "exists": false,
+        "monthlyBenefit": 0,
+        "premium": 0
+      },
+      "relevantLifePlan": { "exists": false, "amount": 0 },
+      "keyPerson": { "exists": false, "amount": 0 },
+      "shareholderProtection": { "exists": false }
+    }
+  },
+  "liabilities": {
+    "mortgage": {
+      "outstanding": 278000,
+      "monthlyPayment": 1720,
+      "rate": 0.039,
+      "rateType": "fixed",
+      "remainingYears": 19,
+      "fixedRateExpiry": "2029-04-01",
+      "lender": "Halifax"
+    },
+    "otherLoans": [
+      {
+        "name": "Santander personal loan",
+        "type": "personal_loan",
+        "outstanding": 4200,
+        "monthlyPayment": 165,
+        "rate": 0.068,
+        "rateType": "fixed",
+        "remainingYears": 2.3,
+        "secured": false
+      }
+    ]
+  },
+  "dependants": [
+    {
+      "type": "child",
+      "name": "Violet",
+      "age": 19,
+      "financiallyDependent": true,
+      "educationStage": "university-year-1",
+      "universityAnnualCost": 15500,
+      "universityYearsRemaining": 3
+    },
+    {
+      "type": "child",
+      "name": "Dash",
+      "age": 13,
+      "financiallyDependent": true,
+      "educationStage": "secondary-state",
+      "universityTargetYear": 2030
+    }
+  ],
+  "willStatus": "none",
+  "lpaStatus": "neither",
+  "guardianNamed": false,
+  "income": {
+    "statePension": { "annual": 11973, "startAge": 67 },
+    "statePensionPartner": { "annual": 8200, "startAge": 67 },
+    "employment": 68500,
+    "employmentPartner": 22000,
+    "dividends": 0,
+    "rentalIncome": 0,
+    "overseasIncome": 0,
+    "selfEmployed": 0,
+    "other": 0,
+    "childBenefitAnnual": 2230
+  },
+  "pensionContributions": 9480,
+  "monthlyExpenditure": 4600,
+  "riskQuestionnaire": {
+    "q11_liquidity_months": "over-6",
+    "q12_income_protection": "no",
+    "q13_income_sources": "two",
+    "d6_nominations_complete": "some",
+    "d6_will_current": "no",
+    "d4_debt_service_pct": 25,
+    "confidenceLevel": "medium"
+  },
+  "alerts": [
+    {
+      "level": "critical",
+      "colour": "#FF3B30",
+      "badge": "CRITICAL",
+      "days": "No date",
+      "headline": "No will and no guardian named — with a 13-year-old at home",
+      "context": "If you both died tonight, the law (not you) decides who raises Dash and how £427k is split. Intestacy gives cohabiting relatives nothing automatically.",
+      "action": "Start a will + name a guardian",
+      "screen": "tax",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "This tax year",
+      "headline": "Child benefit charge is clawing back £1,739 a year",
+      "context": "Bob's income (£68.5k) sits in the £60k–£80k claw-back band: 78% of your child benefit is taken back. Pension contributions lower the income HMRC counts.",
+      "action": "See the child benefit charge",
+      "screen": "tax",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "No date",
+      "headline": "£200k of life cover may sit inside your estate",
+      "context": "The 2022 policy claims to be in trust but no trust deed was ever provided. Until verified, it pays into the estate — slower, and potentially taxed.",
+      "action": "Verify the trust paperwork",
+      "screen": "risk",
+      "lifeStage": 2
+    },
+    {
+      "level": "high",
+      "colour": "#FF9500",
+      "badge": "HIGH",
+      "days": "3 years left",
+      "headline": "University costs £46.5k — the fund holds £18k",
+      "context": "Violet has 3 years of university remaining at ~£15.5k/yr. The earmarked education fund covers under half; the gap is £28.5k.",
+      "action": "Review the education fund",
+      "screen": "flow",
+      "lifeStage": 2
+    },
+    {
+      "level": "medium",
+      "colour": "#007AFF",
+      "badge": "OPPORTUNITY",
+      "days": "This tax year",
+      "headline": "£4,800 of Dash's JISA allowance unused",
+      "context": "The Junior ISA has £4,200 in of a £9,000 yearly allowance. It resets on 5 April and unused allowance is lost.",
+      "action": "Top up the JISA",
+      "screen": "money",
+      "lifeStage": 2
+    }
+  ],
+  "timeline": [
+    {
+      "dot": "🎓",
+      "bg": "#FFF8E8",
+      "date": "Sept 2026 – June 2029",
+      "title": "Violet at university",
+      "sub": "~£15.5k/yr · education fund covers £18k of £46.5k remaining"
+    },
+    {
+      "dot": "🏠",
+      "bg": "#FFF3F3",
+      "date": "April 2029",
+      "title": "Mortgage fixed rate ends",
+      "sub": "£278k at 3.9% — remortgage decision due early 2029"
+    },
+    {
+      "dot": "🎓",
+      "bg": "#E8F7EF",
+      "date": "Sept 2030",
+      "title": "Dash starts university (projected)",
+      "sub": "Projected ~£19k/yr · JISA is the funding vehicle"
+    }
+  ],
+  "aiSuggestions": [
+    "Why am I losing most of my child benefit and how do I stop it?",
+    "What happens to the kids and the house if we both die without a will?",
+    "How do we close the £28.5k university funding gap for Violet?",
+    "Should Helen pay more into her pension while working part-time?",
+    "Is our life insurance actually in trust — and why does that matter?"
+  ],
+  "dimensionNarrative": {
+    "behaviour": {
+      "risk": "Good saving habits — regular pension and ISA contributions, a dedicated education pot, and a JISA running for Dash.",
+      "action": "Set a yearly money date: JISA top-up before 5 April, nominations check, and a premium review.",
+      "future": "Steady contributions through your 40s do more for this family than any clever product ever will."
+    },
+    "capital": {
+      "risk": "Net worth around £427k, but £485k of gross value sits in the home — your accessible investments are a small slice of the total.",
+      "action": "Keep building the ISA and pensions so wealth grows outside the front door as well as behind it.",
+      "future": "At current contribution rates the invested pot roughly doubles by the time Dash finishes university."
+    },
+    "tax": {
+      "risk": "Bob's £68.5k income sits in the child-benefit claw-back band — £1,739 a year is being taken back, an effective tax spike most families never spot.",
+      "action": "Extra pension contributions reduce the income HMRC counts; enough contribution takes you below £60k and keeps the full child benefit.",
+      "future": "Helen's unused basic-rate band and allowances are the family's cheapest tax lever as her hours grow."
+    },
+    "protection": {
+      "risk": "£350k joint cover is properly in trust — but the £200k 2022 policy is unverified, there's no income protection, and no will or guardian for Dash.",
+      "action": "Three fixes in order: write wills + name a guardian, verify the 2022 trust paperwork, price income protection for Bob.",
+      "future": "A family with one main earner and a 13-year-old depends more on paperwork than on portfolio returns."
+    },
+    "cashflow": {
+      "risk": "Roughly £700/mo surplus after essentials, pension saving and the loan — healthy, but university costs are about to bite for 3 years.",
+      "action": "Direct surplus to the education gap first; it has a hard deadline the pension doesn't.",
+      "future": "When the personal loan clears (~2 years) another £165/mo frees up automatically."
+    },
+    "debt": {
+      "risk": "£278k mortgage at 3.9% fixed to 2029 plus a small £4.2k personal loan at 6.8% — manageable at 25% of gross income.",
+      "action": "Clear the 6.8% loan ahead of schedule if surplus allows; diary the remortgage for early 2029.",
+      "future": "On the current path the mortgage clears around Bob's 61st birthday — before retirement, which is the test that matters."
+    },
+    "estate": {
+      "risk": "No will means intestacy rules decide everything — and with no guardian named, a court chooses who raises Dash.",
+      "action": "Wills and guardianship first; they cost less than a family holiday and remove the single biggest risk on this page.",
+      "future": "Once wills exist, the £200k trust verification and pension nominations finish the job."
+    }
+  },
+  "plans": [
+    {
+      "id": "plan-wills",
+      "type": "estate",
+      "label": "Wills + guardian for Dash + LPA",
+      "target": { "willStatus": "current", "guardianNamed": true, "lpaStatus": "both" },
+      "target_display": "Wills written · guardian named · LPAs in place",
+      "lastReviewedAt": null,
+      "status": "not_started",
+      "createdAt": "2026-06-11"
+    },
+    {
+      "id": "plan-education",
+      "type": "education",
+      "label": "Close the £28.5k university gap for Violet",
+      "target": { "educationFundTarget": 46500, "educationFundCurrent": 18000 },
+      "target_display": "£46.5k funded by 2029",
+      "monthlyContribution": 500,
+      "lastReviewedAt": "2026-05-01",
+      "status": "active",
+      "createdAt": "2025-09-01"
+    },
+    {
+      "id": "plan-protection",
+      "type": "protection",
+      "label": "Verify 2022 trust + price income protection",
+      "target": { "trustVerified": true, "incomeProtection": true },
+      "target_display": null,
+      "lastReviewedAt": "2026-04-10",
+      "status": "active",
+      "createdAt": "2026-04-10"
+    },
+    {
+      "id": "plan-hicbc",
+      "type": "tax",
+      "label": "Pension contributions to escape the child-benefit claw-back",
+      "target": { "adjustedNetIncomeTarget": 59999 },
+      "target_display": "Income HMRC counts below £60k",
+      "lastReviewedAt": "2026-05-20",
+      "status": "active",
+      "createdAt": "2026-05-20"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "scen-helen-fulltime",
+      "name": "Helen returns full-time from 2027 (£44k)",
+      "createdAt": "2026-05-15",
+      "changedFields": { "employmentPartner": 44000 },
+      "deltaResults": { "surplusMonthly": 1350, "educationGapClosedBy": "2028-06", "probabilityOfSuccess": 0.93 },
+      "status": "saved"
+    },
+    {
+      "id": "scen-hicbc-escape",
+      "name": "Bob salary-sacrifices £9k to escape the claw-back",
+      "createdAt": "2026-05-20",
+      "changedFields": { "pensionContributions": 18480 },
+      "deltaResults": { "childBenefitKept": 2230, "takeHomeChange": -4980, "pensionGain": 9000 },
+      "status": "saved"
+    }
+  ]
+}

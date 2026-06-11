@@ -4,16 +4,20 @@
 
 ## Status
 
+**ALL DONE (verified 2026-06-11 — every drill imports DrillStackProvider).** This table
+was stale for weeks and misled two audit agents into reporting "5 drills TODO";
+keep it current when drills change.
+
 | Drill | Status | File |
 |---|---|---|
 | Pension | ✓ DONE (canonical example) | PensionDrillDown.jsx |
 | Investments | ✓ DONE | InvestmentsDrillDown.jsx |
 | Property | ✓ DONE | PropertyDrillDown.jsx |
-| Cash | ☐ TODO | CashDrillDown.jsx |
-| Alternatives | ☐ TODO | AlternativesDrillDown.jsx |
-| Liabilities | ☐ TODO | LiabilitiesDrillDown.jsx |
-| Protection | ☐ TODO | ProtectionDrillDown.jsx |
-| Business | ☐ TODO | BusinessDrillDown.jsx |
+| Cash | ✓ DONE | CashDrillDown.jsx |
+| Alternatives | ✓ DONE | AlternativesDrillDown.jsx |
+| Liabilities | ✓ DONE | LiabilitiesDrillDown.jsx |
+| Protection | ✓ DONE | ProtectionDrillDown.jsx |
+| Business | ✓ DONE | BusinessDrillDown.jsx |
 
 ## The pattern (copy-paste from PensionDrillDown.jsx)
 

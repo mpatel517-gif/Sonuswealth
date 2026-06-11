@@ -4,8 +4,8 @@
  */
 
 const SUPABASE_URL = 'https://yknnfglfbpcyxcllrvmd.supabase.co';
-// PASTE YOUR COPIED SERVICE_ROLE KEY SECURELY BETWEEN THE QUOTES BELOW:
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlrbm5mZ2xmYnBjeXhjbGxydm1kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg2NzE4MiwiZXhwIjoyMDkwNDQzMTgyfQ.0ukjERDYgRDB6aFhdKc2-HiC6PNLiztZ10tBlYkYYug';
+// Key comes from the environment — NEVER hardcode it (service_role bypasses RLS).
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; if (!SUPABASE_KEY) { console.error('Set SUPABASE_SERVICE_ROLE_KEY in your environment (never hardcode it).'); process.exit(1); }
 
 const ukMacroTimeline = [
     { year: 2021, cpi_inflation: 2.6, boe_base_rate: 0.10, gdp_growth: 7.6, ftse_return: 14.3, personal_allowance: 12570 },

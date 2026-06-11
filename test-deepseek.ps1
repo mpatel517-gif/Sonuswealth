@@ -1,5 +1,5 @@
 $headers = @{
-    "x-api-key" = "sk-db275c4c339b431189833fb2d2d7e8b1"
+    "x-api-key" = $env:DEEPSEEK_API_KEY  # set via: setx DEEPSEEK_API_KEY "..." — never hardcode
     "anthropic-version" = "2024-01-01"
     "content-type" = "application/json"
 }

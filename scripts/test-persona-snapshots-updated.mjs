@@ -13,7 +13,7 @@ import { randomUUID } from 'crypto';
 // WARNING: Do not push this file to GitHub once these are filled in!
 // ============================================================================
 const SUPABASE_URL = "https://yknnfglfbpcyxcllrvmd.supabase.co"
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlrbm5mZ2xmYnBjeXhjbGxydm1kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg2NzE4MiwiZXhwIjoyMDkwNDQzMTgyfQ.0ukjERDYgRDB6aFhdKc2-HiC6PNLiztZ10tBlYkYYug';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; if (!SUPABASE_KEY) { console.error('Set SUPABASE_SERVICE_ROLE_KEY in your environment.'); process.exit(1); }
 // ============================================================================
 
 if (SUPABASE_URL.includes("paste_your")) {

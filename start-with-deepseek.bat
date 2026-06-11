@@ -5,7 +5,7 @@ REM Cost: ~90-100x cheaper than Claude Opus
 REM ========================================
 
 REM Set your DeepSeek API key below (get from platform.deepseek.com)
-set ANTHROPIC_AUTH_TOKEN=sk-db275c4c339b431189833fb2d2d7e8b1
+set ANTHROPIC_AUTH_TOKEN=%DEEPSEEK_API_KEY%
 
 REM DeepSeek endpoint
 set ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic

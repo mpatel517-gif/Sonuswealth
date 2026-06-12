@@ -65,7 +65,13 @@
 - **5d (persistence)** — already closed in W3 (F-419 localStorage mirror).
 **Founder-gated remainder (cannot be done in code):** set the Anthropic key + deploy parse-document; sign OB commercials. Both are activation steps, not unbuilt code.
 
-**Untouched waves:** W7 (redesign + charts sweep), W8 (closeout). Deferred engine consolidation: F-309/F-311 IHT (high regression-risk vs the green £287k tie-out baseline — needs the canonical-reader refactor + baseline re-verification).
+**W7 — COMPLETE (2026-06-12).** Commit `df1e43a`.
+- **F-010 (perf/D4)** route-level code-splitting: `lazy()` the 9 heavy tab screens behind one `<Suspense>` in the Dashboard tab switch. Index chunk **1.56MB → 1.01MB (−35%)**; TaxEstate/Cashflow/Timeline/MyMoney chunks now fetched on first visit only. Verified LIVE (Home eager + Cashflow + TaxEstate lazy all render, no stuck spinner, clean hard-reload boot).
+- **F-011 (P3)** couple avatar initials "Bob & Helen Parr" → was "B&", now "BH" (aligned Dashboard to the Sidebar `/[\s&]/` split).
+- **chart-or-table-decider sweep:** verdict CLEAN. Only 4 files use `<table>` — the SA100/SA110 tax computation (statutory format, must stay tabular), Legal terms (text), Cashflow, Risk. No mis-applied text-table that should be a chart; the app is already chart-dense (radar/sankey/marimekko/sparklines). Forcing chart conversions would be cosmetic churn + regression risk on a working statutory computation — not done deliberately.
+- **brand consistency (D10):** CLEAN — zero `Caelixa`/`Finio` strings in any user-facing JSX.
+
+**W8 — COMPLETE (2026-06-12).** Closeout + 10-ask evidence map at `audit-findings/W8-CLOSEOUT-EVIDENCE-MAP.md`. Final gate green: build (397 modules), reports-sp1 27/0, tax-income (24 personas), sa-computation (24 personas), Ask Sonu 94/122 (77%). **The W0→W8 program is code-complete.** Founder activation items remain (🔴 rotate exposed secrets; activate parse-document with the Anthropic key; sign OB commercials) and two engine consolidations are deliberately deferred against the green tie-out (F-309/F-311 IHT; F-001/F-004 household/pension reconciliation).
 
 ---
 

@@ -81,6 +81,16 @@ const CHANNELS = [
     status: 'live',
   },
   {
+    id: 'household',
+    icon: '👪',
+    title: 'Household & income details',
+    body: 'The figures that drive your tax and protection but aren’t a balance on a statement: this year’s pension contributions, a partner’s income, dependent children. Stored at full confidence and fed straight into your allowances.',
+    badge: 'Tax · Allowances',
+    accept: null,
+    capture: null,
+    status: 'live',
+  },
+  {
     id: 'connect',
     icon: '🔗',
     title: 'Connect bank / broker',
@@ -191,6 +201,7 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
   const [parsing, setParsing] = useState(false)
   const [parsed, setParsed] = useState(null)        // FP-5 modal payload
   const [manualOpen, setManualOpen] = useState(false)
+  const [householdOpen, setHouseholdOpen] = useState(false)
   const fileInputRef = useRef(null)
   const channelRef = useRef(null)
 
@@ -236,6 +247,7 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
     onChannelOpen?.(c.id)
     channelRef.current = c
     if (c.id === 'manual') { setManualOpen(true); return }
+    if (c.id === 'household') { setHouseholdOpen(true); return }
     // Trigger native file picker (with camera capture for scan on mobile).
     if (fileInputRef.current) {
       fileInputRef.current.accept = c.accept || ''
@@ -629,6 +641,109 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
           }}
         />
       )}
+
+      {/* Household & income — non-asset captures that drive allowances (W5-5a) */}
+      {householdOpen && (
+        <HouseholdEntryForm
+          onCancel={() => { setHouseholdOpen(false); setActive(null) }}
+          onSubmit={async (entries) => {
+            if (!entries.length) { setHouseholdOpen(false); setActive(null); return }
+            const stepUp = await requireStepUp({
+              reason: `Confirm to record ${entries.length} household detail${entries.length === 1 ? '' : 's'}.`,
+            })
+            if (!stepUp.ok) return
+            // One PROFILE_FIELD_SET envelope per entered field — each folds to a
+            // canonical engine-read field (verified LIVE: pension contribs →
+            // AA headroom, partner income → Risk survivor, child → HICBC/RNRB).
+            entries.forEach(en => {
+              onCommit?.(buildEnvelope({
+                type: 'PROFILE_FIELD_SET',
+                payload: en,
+                mode: 'manual',
+                parsedField: { id: en.field },
+              }))
+            })
+            setHouseholdOpen(false); setActive(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Household & income form (non-asset captures → canonical allowance fields) ─
+// Each field maps to a PROFILE_FIELD_SET event the reducer folds to the exact
+// field the engine already reads — no dead paths. Only fields with a confirmed
+// live reader are offered (NI-record + itemised expenses need an engine reader
+// first and are deliberately NOT here yet).
+function HouseholdEntryForm({ onCancel, onSubmit }) {
+  const [pension, setPension] = useState('')
+  const [partner, setPartner] = useState('')
+  const [childAge, setChildAge] = useState('')
+
+  function submit() {
+    const entries = []
+    if (pension !== '' && Number(pension) >= 0)
+      entries.push({ field: 'pensionContributions', value: Number(pension) })
+    if (partner !== '' && Number(partner) >= 0)
+      entries.push({ field: 'partnerIncome', value: Number(partner) })
+    if (childAge !== '')
+      entries.push({ field: 'dependantChild', value: 1, age: Number(childAge) })
+    onSubmit(entries)
+  }
+
+  const hasAny = pension !== '' || partner !== '' || childAge !== ''
+
+  return (
+    <div className="sheet-overlay">
+      <div className="sheet-backdrop" onClick={onCancel} />
+      <div className="sheet-panel" style={{ maxHeight: '82vh', overflowY: 'auto' }}>
+        <div className="sheet-handle" />
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-text)', marginBottom: 4 }}>
+          Household & income details
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 14, lineHeight: 1.5 }}>
+          Fill in whatever you know — leave the rest blank. Each figure feeds a
+          specific allowance and is stored at full confidence (1.0).
+        </div>
+
+        <Label>Pension contributions this tax year</Label>
+        <input value={pension} onChange={(e) => setPension(e.target.value)}
+          type="number" placeholder="£ across all pensions (incl. employer)" style={inputStyle} />
+        <FieldNote>Sets your Annual Allowance headroom (£60k AA, tapered for high earners).</FieldNote>
+
+        <Label>Partner / spouse gross income</Label>
+        <input value={partner} onChange={(e) => setPartner(e.target.value)}
+          type="number" placeholder="£ per year" style={inputStyle} />
+        <FieldNote>Used for the survivor-income picture in your Risk cover analysis.</FieldNote>
+
+        <Label>Add a dependent child — age</Label>
+        <input value={childAge} onChange={(e) => setChildAge(e.target.value)}
+          type="number" placeholder="age in years" style={inputStyle} />
+        <FieldNote>Unlocks the High-Income Child Benefit Charge and the £175k residence nil-rate band on your estate.</FieldNote>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button onClick={submit} className="sw-press"
+            disabled={!hasAny}
+            style={{
+              ...btnPrimary, flex: 1, padding: '12px 16px', fontSize: 14, fontWeight: 800,
+              opacity: hasAny ? 1 : 0.5, cursor: hasAny ? 'pointer' : 'not-allowed',
+            }}>
+            Save details
+          </button>
+          <button onClick={onCancel} className="sw-press" style={{
+            ...btnGhost, padding: '12px 16px', fontSize: 14,
+          }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FieldNote({ children }) {
+  return (
+    <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.45, marginTop: 4, marginBottom: 4 }}>
+      {children}
     </div>
   )
 }

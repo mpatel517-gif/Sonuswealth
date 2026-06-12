@@ -215,6 +215,46 @@ export function applyEvents(baseEntity, events = []) {
         break
       }
 
+      case EV.PROFILE_FIELD_SET: {
+        // W5-5a — non-asset household/income captures. Each writes to the
+        // canonical field(s) engine readers ALREADY consume, so the capture is
+        // a LIVE path (verified per-field), never a dead store. Payload:
+        //   { field: 'pensionContributions' | 'partnerIncome' | 'dependantChild',
+        //     value, age? }
+        const pf = ev.payload || {}
+        if (pf.field === 'pensionContributions') {
+          // Read by canonical-metrics (AA used), fq-calculator, tax-year-state
+          // (entity.pensionContributions root) AND tax-estate-engine
+          // (entity.pension.contributionsThisYear). Write BOTH so every AA
+          // headroom reader agrees (ends the F-004 silent-zero for this user).
+          const amt = Math.max(0, +pf.value || 0)
+          e.pensionContributions = amt
+          e.pension = { ...(e.pension || {}), contributionsThisYear: amt }
+        } else if (pf.field === 'partnerIncome') {
+          // Read by uk-risk survivor-income calc (partner.income.annualGross).
+          const amt = Math.max(0, +pf.value || 0)
+          e.partner = {
+            ...(e.partner || {}),
+            income: { ...(e.partner?.income || {}), annualGross: amt },
+          }
+        } else if (pf.field === 'dependantChild') {
+          // Appends to entity.dependants[] in the canonical shape the array
+          // readers use (canonical-metrics `.relationship==='child'`,
+          // fq-calculator `.type==='child'`). Write both keys so HICBC, RNRB
+          // and protection-need all see the child.
+          if (!Array.isArray(e.dependants)) e.dependants = []
+          const age = pf.age != null ? Math.max(0, +pf.age || 0) : null
+          e.dependants.push({
+            id: `dep-${e.dependants.length + 1}`,
+            type: 'child',
+            relationship: 'child',
+            age,
+            financiallyDependent: true,
+          })
+        }
+        break
+      }
+
       case EV.LIFE_EVENT: {
         // X29 / Timeline §F — a real-life change. Asset-moving subtypes
         // (inheritance, redundancy, business/property sale) fold a balance-sheet

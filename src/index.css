@@ -201,10 +201,12 @@ input, textarea { font-family:'Inter',ui-sans-serif,system-ui,-apple-system,'Seg
 body {
   display:flex;
   justify-content:center;
-  background:#000;
+  /* Brand ground, never #000 (DESIGN.md). On wide/4K monitors the area around
+     the centred app frame must read as the brand surface, not a black void. */
+  background: var(--c-bg, #051424);
   transition: background var(--dur-normal, 350ms) ease;
 }
-[data-theme="light"] body { background:#e8eef6; }
+[data-theme="light"] body { background: var(--c-bg, #e8eef6); }
 
 #root {
   width:100%;
@@ -347,8 +349,8 @@ body {
   /* Phase 2 Batch B.5 — desktop sidebar layout.
      Width opens up to 1280px and content sits next to a 240px sidebar.
      Bottom-tab nav hides at desktop (sidebar replaces it). */
-  body { background: #050b14; }
-  [data-theme="light"] body { background: #eef2f7; }
+  body { background: var(--c-bg, #051424); }
+  [data-theme="light"] body { background: var(--c-bg, #eef2f7); }
   #root {
     max-width: 1280px;
     flex-direction: row;

@@ -367,7 +367,13 @@ function AppInner() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    document.body.style.background = theme === 'dark' ? '#000' : '#F2F2F7'
+    // Brand ground, never #000 (DESIGN.md). This inline style is the area around
+    // the centred app frame on wide/4K monitors — it must read as the brand
+    // surface, so use the theme token rather than a hardcoded black/grey. The
+    // previous '#000' (dark) framed the whole product in a black void on large
+    // displays. var(--c-bg) resolves to the active theme's ground after the
+    // data-theme attribute is set above.
+    document.body.style.background = 'var(--c-bg)'
     // Persist the user's choice so subsequent visits honour it ahead of OS pref.
     try { window.localStorage?.setItem('sw_theme', theme) } catch (_e) { /* noop */ }
   }, [theme])

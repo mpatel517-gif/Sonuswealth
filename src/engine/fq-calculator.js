@@ -3289,7 +3289,6 @@ export function calcIncomeTax(entity, bundle) {
   const BRL = TAX_JSON.income.basicRateBand;            // 37700  (basic-rate band width, taxable space)
   const BRT = TAX_JSON.income.basicRateThreshold;       // 50270
   const ART = TAX_JSON.income.additionalRateThreshold;  // 125140
-  const ADDL = BRL + (ART - BRT);                       // 112570 — additional-rate start in taxable space
   const SR  = TAX_JSON.income.startingRateForSavingsBand || 5000;
   const da  = TAX_JSON.income.dividendAllowance || 500;
   const dbr = TAX_JSON.income.dividendBasicRate || 0.1075;
@@ -3298,6 +3297,13 @@ export function calcIncomeTax(entity, bundle) {
 
   // Personal allowance (tapered on ANI), allocated non-savings → savings → dividends.
   let pa = calcPersonalAllowance(ani, bundle);
+  // GOLDEN-VECTOR FIX (P6): the additional-rate boundary in TAXABLE space is
+  // £125,140 − the (tapered) personal allowance — NOT a fixed £112,570. Using a
+  // constant over-taxed high earners whose PA is partly/fully tapered: at
+  // £125,140 income (PA=0) the boundary must be £125,140 taxable, else ~£12,570
+  // gets charged 45% instead of 40% (a ~£629 overcharge, growing above). With a
+  // full £12,570 PA this still equals £112,570, so normal earners are unchanged.
+  const ADDL = Math.max(BRL, ART - pa);
   const nsT = Math.max(0, ns0 - pa); pa = Math.max(0, pa - ns0);
   const svT = Math.max(0, sv0 - pa); pa = Math.max(0, pa - sv0);
   const dvT = Math.max(0, dv0 - pa);

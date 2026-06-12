@@ -18,8 +18,11 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta?.env?.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
 
+// F-201: no Supabase env is the EXPECTED demo/offline path (makeOfflineStub
+// below handles it), not an error. Logging console.error here spammed the
+// console red on every demo load. Emit one quiet informational line instead.
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Check .env.local');
+  console.info('[supabase] No env configured — running in demo/offline mode (localStorage persistence).');
 }
 
 /**

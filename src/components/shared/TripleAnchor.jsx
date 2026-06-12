@@ -174,7 +174,7 @@ function ArcGauge({ value = 0, colour = 'var(--c-acc)' }) {
           style={{ filter: `drop-shadow(0 0 6px ${colour})` }} />
         {/* Score label */}
         <text x={cx} y={cy - 4} textAnchor="middle" fill={colour}
-          fontSize="18" fontWeight="800" fontVariantNumeric="tabular-nums"
+          fontSize="18" fontWeight="800"
           style={{ fontVariantNumeric: 'tabular-nums' }}>
           {value}
         </text>

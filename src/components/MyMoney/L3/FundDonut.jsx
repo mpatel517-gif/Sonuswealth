@@ -34,7 +34,7 @@ export function FundDonut({ funds = [], colors = PALETTE, size = 116, thickness 
             strokeDasharray={`${a.dash.toFixed(2)} ${a.gap.toFixed(2)}`} strokeDashoffset={(-a.off).toFixed(2)} opacity="0.85" />
         ))}
       </g>
-      <text x={cx} y={cy - 2} textAnchor="middle" fontSize="13" fontWeight="800" fill="var(--c-text)" fontVariantNumeric="tabular-nums">{fmt(total)}</text>
+      <text x={cx} y={cy - 2} textAnchor="middle" fontSize="13" fontWeight="800" fill="var(--c-text)" style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(total)}</text>
       <text x={cx} y={cy + 11} textAnchor="middle" fontSize="7" fill="var(--c-text3,#8895a7)">{items.length} holdings</text>
     </svg>
   )

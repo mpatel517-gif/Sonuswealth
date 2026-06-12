@@ -663,7 +663,7 @@ function VsDonut({ title, centreSub, keepLabel, keepVal, takeLabel, takeVal, kee
             </>
           )}
         </g>
-        <text x={cx} y={cy - 3} textAnchor="middle" fontSize="28" fontWeight="800" fill="var(--c-text)" fontVariantNumeric="tabular-nums">{keepPct}%</text>
+        <text x={cx} y={cy - 3} textAnchor="middle" fontSize="28" fontWeight="800" fill="var(--c-text)" style={{ fontVariantNumeric: 'tabular-nums' }}>{keepPct}%</text>
         <text x={cx} y={cy + 14} textAnchor="middle" fontSize="9.5" fill="var(--c-text3)">{centreSub}</text>
       </svg>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>

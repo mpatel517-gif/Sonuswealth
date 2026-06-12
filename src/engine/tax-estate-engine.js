@@ -640,6 +640,24 @@ export function drawdownMatrix(entity, range = { from: 0, to: 150000, step: 5000
   };
 }
 
+// ── F-309 — canonical effective RNRB ─────────────────────────────────────────
+// ONE residence-nil-rate-band computation: couple doubling, taper above the
+// £2m threshold, direct-descendant gating, and (optionally) transferable RNRB
+// from a deceased spouse. Five sites previously each computed RNRB their own way
+// (ihtExposure, ihtWaterfall, rnrbTaper, decumulation-solver, canonical-metrics
+// fallback) and disagreed. `estateForTaper` is the estate value the taper bites
+// on (gross for the static exposure; post-delta for the waterfall).
+export function rnrbEffective(estateForTaper, entity, opts = {}) {
+  let rnrb = RNRB;
+  if (readIsCouple(entity)) rnrb *= 2;
+  if (opts.includeTransfer && entity?.spouse?.unusedRNRB) rnrb += +entity.spouse.unusedRNRB || 0;
+  const taperAt = IHT.residenceNilRateBandTaperStart || 2000000;
+  if (estateForTaper > taperAt) rnrb = Math.max(0, rnrb - (estateForTaper - taperAt) / 2);
+  // RNRB only applies if a residence passes to a direct descendant.
+  if (entity?.estate?.directDescendant === false) rnrb = 0;
+  return Math.round(rnrb);
+}
+
 // ── §8.9 ihtExposure (v1.1 patched — charity-pensions + PR-liability) ─────────
 
 export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
@@ -673,13 +691,9 @@ export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
   const deductions  = { debts: debtTotal, funeral };
   const net_estate  = Math.max(0, gross - debtTotal - funeral);
 
-  // NRB / RNRB
+  // NRB / RNRB — RNRB via the canonical reader (F-309)
   let nrb  = NRB;  if (readIsCouple(entity)) nrb  *= 2;
-  let rnrb = RNRB; if (readIsCouple(entity)) rnrb *= 2;
-  const rnrbTaperThreshold = IHT.residenceNilRateBandTaperStart || 2000000;
-  if (gross > rnrbTaperThreshold) rnrb = Math.max(0, rnrb - (gross - rnrbTaperThreshold) / 2);
-  const hasDirectDesc = entity.estate?.directDescendant !== false;
-  if (!hasDirectDesc) rnrb = 0;
+  const rnrb = rnrbEffective(gross, entity);
   const transferableNRB = readIsCouple(entity) && (entity.spouse?.unusedNRB || 0);
   nrb += transferableNRB;
 
@@ -736,6 +750,9 @@ export function ihtExposure(entity, bundle = 'UK-2026.1', scenario = null) {
     nrb:  { available: nrb,  used: Math.min(nrb,  net_estate), transferable_from_spouse: transferableNRB },
     rnrb: { available: rnrb, used: Math.min(rnrb, Math.max(0, net_estate - nrb)), transferable_from_spouse: 0 },
     taxable_estate,
+    bpr_total,   // F-311: scalar combined BPR/APR relief the baseline applies, so
+                 // ihtWaterfall can inherit it (it previously only counted slider-
+                 // claimed BPR → "after" dropped £700k+ of relief vs baseline).
     iht_before_reliefs:  Math.round(Math.max(0, net_estate - nrb - rnrb) * effectiveIHTRate),
     reliefs: {
       apr_bpr:   aprRelief,
@@ -775,13 +792,23 @@ export function ihtWaterfall(entity, deltas = {}, bundle = 'UK-2026.1') {
   const aprBprClaimed     = Math.min(deltas.apr_bpr_allowance_claimed || 0, APR_BPR_ALLOWANCE);
   const charityPensionPct = deltas.charity_pension_pct || 0;
 
-  const gross = baseline.gross_estate;
+  // F-311 FIX: anchor on the baseline's NET estate (liabilities + funeral already
+  // deducted) and inherit the baseline's BPR/APR relief, so an un-delta'd
+  // waterfall returns EXACTLY baseline.iht_due. Previously the waterfall started
+  // from gross_estate, skipped the deduction, and counted only slider-claimed
+  // BPR — so "after" overshot baseline by (deductions + baseline BPR), the
+  // £287k-vs-£571k discrepancy. The slider's aprBprClaimed now ADDS relief on
+  // top of what already qualifies, rather than being the only BPR counted.
+  const gross         = baseline.gross_estate;
+  const deductionAmt  = Math.max(0, gross - (baseline.net_estate ?? gross));
+  const baselineBpr   = baseline.bpr_total || 0;
 
-  const afterDrawdown = gross - drawdownConsumed;
+  const afterDrawdown = baseline.net_estate ?? (gross - deductionAmt);
   const giftTaperPct  = giftDate ? _taperPct(_yearsElapsed(giftDate.toISOString())) : 1.0;
   const effectiveGift = Math.round(giftAmt * (1 - giftTaperPct));
 
-  const afterGift     = afterDrawdown - giftAmt;
+  const afterDrawdown2 = afterDrawdown - drawdownConsumed;
+  const afterGift     = afterDrawdown2 - giftAmt;
   const afterDownsize = afterGift - propertyDelta;
   const afterTrust    = afterDownsize - trustAmt;
 
@@ -794,12 +821,13 @@ export function ihtWaterfall(entity, deltas = {}, bundle = 'UK-2026.1') {
   const ten_pct_test = charityPct >= CHARITY_TEST;
   const effectiveRate = ten_pct_test ? IHT_CHARITY : IHT_RATE;
 
-  const bprRelief   = aprBprClaimed;
+  const bprRelief   = baselineBpr + aprBprClaimed;
   const afterReliefs = Math.max(0, afterTrust - nrb - rnrb - bprRelief - charityValue);
   const iht_due     = Math.round(afterReliefs * effectiveRate);
 
   const components = [
     { stage: 'gross_estate',             value: gross },
+    { stage: 'minus_liabilities_funeral',value: -deductionAmt },
     { stage: 'minus_drawdown_consumed',  value: -drawdownConsumed },
     { stage: 'minus_gift_PET',           value: -giftAmt, taper_status: giftDate ? 'within-7-year' : null },
     { stage: 'minus_property_downsize',  value: -propertyDelta },

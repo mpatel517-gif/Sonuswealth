@@ -36,7 +36,7 @@ import { pensionContributionsThisYear } from './income-readers.js';
 // Single-source-of-truth IHT engine — referenced by ihtProjection / ihtDeltaPrePost2027
 // so the v0.3 R4 signature card never diverges from the canonical legacy figure.
 // (Task #99 fix, 2026-05-26.)
-import { ihtExposure as _canonicalIhtExposure } from './tax-estate-engine.js';
+import { ihtExposure as _canonicalIhtExposure, rnrbEffective as _rnrbEffective } from './tax-estate-engine.js';
 import { maritalStatus } from './persona-helpers.js';
 
 // IFA audit HIGH-16 fix (2026-05-26): cohabiting couples were charitably
@@ -406,21 +406,19 @@ export function ihtProjection(entity, asOfDate = '2026-04-06') {
 
   const married = isLegalSpouse(entity);
   let nrb = TAX.nrb ?? 325000;
-  let rnrbBase = TAX.rnrb ?? 175000;
-  if (married) { nrb *= 2; rnrbBase *= 2; }
+  if (married) { nrb *= 2; }
 
-  const taperStart = TAX.rnrbTaper ?? 2_000_000;
+  // RNRB via the canonical reader (F-309) — couple-doubling + taper + descendant
+  // gate in ONE place. The fallback's extra conservative gate (a residence that
+  // passes to children) wraps it; rnrbEffective returns 0 if directDescendant is
+  // explicitly false.
   const residenceUsed = entity?.residence_to_descendants !== false;
   const hasChildren = (entity?.dependants || []).some(d => d.relationship === 'child')
     || (entity?.family_obligations || []).some(d => d.relationship === 'child')
     || entity?.estate?.directDescendant !== false;
-  let rnrb = 0;
-  if (residenceUsed && hasChildren && propVal > 0) {
-    rnrb = rnrbBase;
-    if (grossPre > taperStart) {
-      rnrb = Math.max(0, rnrb - (grossPre - taperStart) / 2);
-    }
-  }
+  const rnrb = (residenceUsed && hasChildren && propVal > 0)
+    ? _rnrbEffective(grossPre, entity)
+    : 0;
 
   const bprCap = TAX.bprCombinedCap ?? 2_500_000;
   const bprShelter = Math.min(

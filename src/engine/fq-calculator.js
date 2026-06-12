@@ -9,6 +9,13 @@ import { TAX, onBundleChange } from './_bundle.js';
 import { taxableIncomeBreakdown } from './taxable-income.js';
 import { propertyDecisionsCoI as _propertyDecisionsCoI } from './canonical-metrics.js';
 import { netWorthAtHorizon as _netWorthAtHorizon } from './projection.js';
+// F-310 FIX: the canonical IHT waterfall (rich shape: iht_due, delta_vs_baseline,
+// waterfall_components, reads ihtExposure base). fq's own ihtWaterfall below now
+// delegates to this so the UI — which was written for THIS shape but imported
+// fq's older {stages,after,savings} shape and so read iht_due=undefined→£0 —
+// gets a real, slider-responsive figure. Imported as an alias; used only at
+// call-time (the fq↔tax-estate-engine cycle is runtime-safe).
+import { ihtWaterfall as _canonicalIhtWaterfall } from './tax-estate-engine.js';
 import {
   pensionTotal      as _pensionTotal,
   investmentsTotal  as _investmentsTotal,
@@ -3509,30 +3516,25 @@ export function calcAllIncome(entity, bundle) {
  * @returns {{ stages:Array, baseline:number, after:number, savings:number }}
  */
 export function ihtWaterfall(entity, deltas, bundle) {
-  const baseline = ihtDynamic(entity, true).iht;
-  const stages = [{ label: 'Baseline IHT', value: baseline, cumulative: baseline }];
-  let cur = { ...entity };
-  let cumIht = baseline;
-  if (deltas?.sippDraw) {
-    cur = { ...cur, drawdown: (+cur.drawdown || 0) + (+deltas.sippDraw) };
-    const ih = ihtDynamic(cur, true).iht;
-    stages.push({ label: 'After SIPP drawdown', value: ih, cumulative: ih, delta: ih - cumIht });
-    cumIht = ih;
-  }
-  if (deltas?.gift) {
-    cur = { ...cur, assets: { ...cur.assets, trustGifts: { total: (+cur.assets?.trustGifts?.total || 0) + (+deltas.gift), date: new Date().toISOString().split('T')[0] } } };
-    const ih = ihtDynamic(cur, true).iht;
-    stages.push({ label: 'After gifts to trust', value: ih, cumulative: ih, delta: ih - cumIht });
-    cumIht = ih;
-  }
-  if (deltas?.bpr) {
-    // Mark portfolio as BPR-qualifying
-    cur = { ...cur, assets: { ...cur.assets, portfolio: { ...cur.assets?.portfolio, bpr: true } } };
-    const ih = ihtDynamic(cur, true).iht;
-    stages.push({ label: 'After BPR positioning', value: ih, cumulative: ih, delta: ih - cumIht });
-    cumIht = ih;
-  }
-  return { stages, baseline, after: cumIht, savings: baseline - cumIht };
+  // F-310 FIX (2026-06-12): delegate to the canonical tax-estate-engine
+  // ihtWaterfall (single source — kills the duplicate IHT-waterfall computation,
+  // the meta-finding). It reads the canonical ihtExposure base and returns the
+  // rich { iht_due, delta_vs_baseline, waterfall_components } shape the UI reads.
+  // The old fq body returned { stages, after, savings } and re-derived IHT via
+  // ihtDynamic, so the UI's `wf.iht_due ?? 0` was permanently £0 regardless of
+  // sliders. The delta keys differ between shapes; the caller (TaxEstate
+  // IHTWaterfall) already maps its sliders to the canonical keys
+  // (drawdown_per_year / gift_amount / apr_bpr_allowance_claimed).
+  const r = _canonicalIhtWaterfall(entity, deltas || {}, bundle || 'UK-2026.1');
+  // Legacy aliases so any consumer still reading the old shape keeps working.
+  const baselineIht = (r.iht_due || 0) - (r.delta_vs_baseline || 0);
+  return {
+    ...r,
+    baseline: baselineIht,
+    after: r.iht_due,
+    savings: Math.max(0, -(r.delta_vs_baseline || 0)),
+    stages: r.waterfall_components,
+  };
 }
 
 /**

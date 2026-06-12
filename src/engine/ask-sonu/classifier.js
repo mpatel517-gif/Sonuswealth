@@ -185,6 +185,48 @@ const RULES = [
     resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
   },
 
+  // ── Business exit (sub-intent routed; specific terms before generic sale) ──
+  {
+    match: /investors?.?relief\b|investor's relief/i,
+    concerns: { [CONCERNS.BUS_IR]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.5, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /\beot\b|employee ownership|sell to (?:my )?(?:employees|staff|team)/i,
+    concerns: { [CONCERNS.BUS_EOT]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.5, [CONCERNS.TAX]: 0.5 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /wind(?:ing)? (?:down|up)|members.{0,5}voluntary liquidation|\bmvl\b|close (?:my |the )?company|strike off|dissolv/i,
+    concerns: { [CONCERNS.BUS_MVL]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.5, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /earn.?out|deferred consideration|loan note/i,
+    concerns: { [CONCERNS.BUS_EARNOUT]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.5, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /\bbadr\b|business asset disposal|entrepreneurs.?relief/i,
+    concerns: { [CONCERNS.BUS_BADR]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.5, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /(?:extract|take).{0,15}(?:dividend|cash).{0,15}(?:or|vs).{0,15}(?:share|sell|capital)|dividend.{0,10}(?:or|vs).{0,10}(?:share|sell|capital)|dividends? or (?:sell |selling )?shares/i,
+    concerns: { [CONCERNS.BUS_DIVCAP]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.4, [CONCERNS.TAX]: 0.7 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /exit.{0,15}(?:gradual|gradually|stage|phase|all at once|one go)|gradually or all|sell.{0,15}(?:gradual|stage|phase)/i,
+    concerns: { [CONCERNS.BUS_EXIT_SEQ]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.6, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /sell (?:my |the )?business|exit (?:my )?business|business sale|company sale|sell.{0,10}(?:my )?(?:company|shares).{0,10}(?:structure|best)|best structure/i,
+    concerns: { [CONCERNS.BUS_SALE]: 1.0, [CONCERNS.BUSINESS_EXIT]: 0.7, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.BUSINESS],
+  },
+
   // ── Investment / portfolio (educational framing — never a recommendation) ──
   {
     match: /esg|ethical (?:fund|invest)|sustainab|responsible invest|impact invest/i,

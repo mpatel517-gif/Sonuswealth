@@ -45,6 +45,14 @@ export const CONCERNS = {
   INV_REBALANCE:  'inv_rebalance',       // Rebalancing discipline
   INV_EM:         'inv_emerging_markets',// Emerging-markets exposure
   INV_ESG:        'inv_esg',             // ESG / ethical / sustainable funds
+  BUS_SALE:       'bus_sale_structure',  // Asset vs share sale
+  BUS_BADR:       'bus_badr',            // Business Asset Disposal Relief eligibility
+  BUS_EXIT_SEQ:   'bus_exit_sequence',   // Exit gradually vs all at once
+  BUS_EARNOUT:    'bus_earnout',         // Earn-out vs lump sum
+  BUS_EOT:        'bus_eot',             // Employee Ownership Trust
+  BUS_MVL:        'bus_mvl',             // Winding down / members' voluntary liquidation
+  BUS_DIVCAP:     'bus_dividend_capital',// Extract via dividend vs sell shares
+  BUS_IR:         'bus_investors_relief',// Investors' Relief
 }
 
 export const RESOURCES = {

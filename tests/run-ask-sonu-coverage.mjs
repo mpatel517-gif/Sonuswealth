@@ -160,6 +160,15 @@ function themeKeywordMap(theme) {
   if (t.includes('rebalanc')) return ['rebalanc', 'rebalance', 'on track', 'keeping your mix']
   if (t.includes('em_allocation') || t.includes('emerging')) return ['emerging market', 'emerging markets', 'emerging']
   if (t.includes('esg')) return ['esg', 'sustainable', 'ethical']
+  // Business exit domain (W6)
+  if (t.includes('asset_vs_share') || t.includes('share_sale')) return ['share sale', 'asset sale', 'selling up']
+  if (t.includes('badr_eligibility') || t === 'badr') return ['badr', 'business asset disposal']
+  if (t.includes('exit_sequencing')) return ['exit', 'gradually', 'all at once', 'staged']
+  if (t.includes('earnout')) return ['earn-out', 'earnout', 'deferred', 'lump sum']
+  if (t.includes('eot')) return ['eot', 'employee ownership']
+  if (t.includes('mvl')) return ['mvl', 'winding down', 'liquidation', 'capital treatment']
+  if (t.includes('dividend_vs_capital') || t.includes('dividend')) return ['dividend', 'sell the shares', 'capital']
+  if (t.includes('investors_relief')) return ['investors', 'investor', 'relief']
   // Fallback — split underscores
   return t.split('_').filter(w => w.length >= 4)
 }

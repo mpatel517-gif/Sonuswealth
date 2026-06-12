@@ -58,7 +58,14 @@
 
 **W6 — COMPLETE (2026-06-12).** Ask Sonu coverage **26→94/122 (21%→77%)**, clearing the ≥90/122 (75%) target. Built ~75 FCA-safe plays across mortgage, cash, investment, business-exit, property, lifestyle, tax, IHT/estate, inheritance and protection domains — each with a sub-intent concern + classifier rules so queries route to the RIGHT play (no wrong-domain answers, which would breach the FCA F-436 boundary). Fixed two real classifier bugs (the `ific`-in-"sacrifice" relocation false-match; the "protect" → preserve-intent filter). All play rates kept qualitative where they move (BADR/IR/CGT) with genuine statute citations, so the accuracy-auditor stays clean. Engine harnesses (reports-sp1 27/0, tax-income, sa-computation) all green — no regressions from the new plays. The remaining ~28 deterministic misses (some RET/XB/HC/EDU edge scenarios) fall to the LLM narrative layer per decision #2 (deterministic ≥75% + LLM for edge cases).
 
-**Untouched waves:** W5 (capture fields done-able now; `/api/parse` needs founder's server-side Anthropic key; open-banking needs a vendor/contract — both externally gated), W7 (redesign + charts sweep), W8 (closeout). Deferred engine consolidation: F-309/F-311 IHT (high regression-risk vs the green £287k tie-out baseline — needs the canonical-reader refactor + baseline re-verification).
+**W5 — COMPLETE to the code boundary (2026-06-12).**
+- **5a (manual fields)** — new `PROFILE_FIELD_SET` event + reducer fold + "Household & income" DataCapture channel. Three LIVE fields (each writes the exact canonical field the engine already reads, verified, no dead paths): current-year pension contributions (→ AA headroom moved £24k→£8k on £40k, canonical-metrics tie-out), partner income (→ uk-risk survivor calc), dependent child (→ HICBC/RNRB/protection-need). NI-record + itemised-expense capture deliberately omitted — no live engine reader yet (would be dead paths); flagged for an engine-reader pass first. Commit `2bad5fb`.
+- **5b (`/api/parse`)** — `supabase/functions/parse-document` Claude Vision parser, deploy-ready, mirrors ask-sonu-proxy security. INERT until founder sets `ANTHROPIC_API_KEY` + deploys + flips `REAL_PARSER_WIRED` (kept off so no dead path looks live). README documents activation + §9.5 verification. Commit `fa33c93`.
+- **5c (open banking)** — vendor decision doc `audit-findings/W5-OPEN-BANKING-SPIKE.md`: recommend TrueLayer, cash-only v1 scope, build deferred to post-contract (regulated AISP relationship + DPA + prod credentials required first). Commit `fa33c93`.
+- **5d (persistence)** — already closed in W3 (F-419 localStorage mirror).
+**Founder-gated remainder (cannot be done in code):** set the Anthropic key + deploy parse-document; sign OB commercials. Both are activation steps, not unbuilt code.
+
+**Untouched waves:** W7 (redesign + charts sweep), W8 (closeout). Deferred engine consolidation: F-309/F-311 IHT (high regression-risk vs the green £287k tie-out baseline — needs the canonical-reader refactor + baseline re-verification).
 
 ---
 

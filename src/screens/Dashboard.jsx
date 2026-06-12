@@ -7,16 +7,20 @@
 //   · FQBreakdown now gets initialTab='actions' when activeDim is set (D04)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
 import { TemporalModeProvider } from '../state/temporalMode.jsx'
 import HomeScreen    from './HomeScreen.jsx'
 import FQBreakdown   from './FQBreakdown.jsx'
-import MyMoney       from './MyMoney.jsx'
-import Cashflow      from './Cashflow.jsx'
-import TaxEstate     from './TaxEstate.jsx'
-import Risk          from './Risk.jsx'
+// F-010 (W7) — route-level code-splitting. The heavy tab screens are the bulk
+// of the 1.56MB index chunk; each renders exactly once inside the single
+// <Suspense> boundary in the <main> tab switch, so lazy() splits them into
+// their own chunks (fetched on first visit) with zero render-site risk.
+const MyMoney       = lazy(() => import('./MyMoney.jsx'))
+const Cashflow      = lazy(() => import('./Cashflow.jsx'))
+const TaxEstate     = lazy(() => import('./TaxEstate.jsx'))
+const Risk          = lazy(() => import('./Risk.jsx'))
 import RiskOverlay   from './RiskOverlay.jsx'
-import Timeline      from './Timeline.jsx'
+const Timeline      = lazy(() => import('./Timeline.jsx'))
 import Ask           from './Ask.jsx'
 import Settings      from './Settings.jsx'
 import OverlayShell    from '../components/shared/OverlayShell.jsx'
@@ -35,12 +39,31 @@ import MagicShowcase   from './MagicShowcase.jsx'
 // MyMoney sub-routes — section-nav chip targets (founder direction 2026-05-26):
 // each chip is a full-page route, not a scroll anchor. These render in the
 // money/* tab id namespace alongside the existing single-letter tabs.
-import MoneyIncome     from './MoneyIncome.jsx'
+const MoneyIncome     = lazy(() => import('./MoneyIncome.jsx'))
 import ErrorBoundary   from '../components/shared/ErrorBoundary.jsx'
 
 // L1-3: per-route fallback that preserves outer chrome (TopBar, Sidebar,
 // FCA footer) when a single tab crashes. The user can switch tabs and
 // continue rather than seeing the full-page boundary.
+// Suspense fallback while a lazily-loaded tab chunk is fetched (F-010, W7).
+// Deliberately minimal + theme-aware — the chunk loads in well under a second
+// on a warm connection, so this is a brief shimmer, not a full skeleton screen.
+function TabLoading() {
+  return (
+    <div role="status" aria-live="polite" aria-label="Loading" style={{
+      flex: 1, display: 'grid', placeItems: 'center', padding: '64px 20px',
+      color: 'var(--c-text3)',
+    }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%',
+        border: '3px solid var(--c-border)', borderTopColor: 'var(--c-acc)',
+        animation: 'sw-spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes sw-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 function inlineTabFallback({ error, scope, onRetry, onReload }) {
   return (
     <div role="alert" aria-live="assertive" style={{
@@ -87,9 +110,9 @@ function inlineTabFallback({ error, scope, onRetry, onReload }) {
     </div>
   )
 }
-import MoneyProtection from './MoneyProtection.jsx'
-import MoneyBusiness   from './MoneyBusiness.jsx'
-import MoneyTrusts     from './MoneyTrusts.jsx'
+const MoneyProtection = lazy(() => import('./MoneyProtection.jsx'))
+const MoneyBusiness   = lazy(() => import('./MoneyBusiness.jsx'))
+const MoneyTrusts     = lazy(() => import('./MoneyTrusts.jsx'))
 import Sidebar         from '../components/Shell/Sidebar.jsx'
 // Founder feedback 2026-05-28: TY chip should be present on every page.
 // Hoist to Dashboard top-chrome so all routes inherit it (was only on
@@ -688,7 +711,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
               ? '0 2px 6px rgba(28,63,231,.30), 0 1px 2px rgba(35,48,68,.10)'
               : '0 2px 6px rgba(0,0,0,.20)',
           }}>
-            {(entity?.displayName || entity?.name || 'B').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+            {(entity?.displayName || entity?.name || 'B').split(/[\s&]/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase()}
           </button>
 
           {/* HeaderAnchor RESTORED (founder direction 2026-05-26 evening):
@@ -822,6 +845,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       <main id="main-content" role="main" tabIndex={-1} style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex',
         flexDirection:'column', WebkitOverflowScrolling:'touch' }}>
         <ErrorBoundary key={tab} scope={`Tab:${tab}`} fallback={inlineTabFallback}>
+        <Suspense fallback={<TabLoading />}>
         {tab === 'home'  && (
           <HomeScreen
             entity={wireEntity}
@@ -906,6 +930,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
         {tab === 'tax'   && <TaxEstate   entity={entity} personaId={persona} onCommit={handleCommit} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} onOpenDecision={openDecision} />}
         {tab === 'risk'  && <Risk        entity={entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} onOpenDecision={openDecision} />}
         {tab === 'timeline'  && <Timeline     entity={sessionDecisions.length ? { ...entity, decisions: [...sessionDecisions, ...(entity?.decisions || [])] } : entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
+        </Suspense>
         </ErrorBoundary>
         {/* P12-1 (2026-05-28) — canonical FCA disclaimer footer per AppShell
             slot contract. Rendered at Dashboard scope so every screen inherits

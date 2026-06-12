@@ -183,6 +183,33 @@ const RULES = [
     resources: [RESOURCES.PENSION, RESOURCES.EARNED_INCOME],
   },
 
+  // ── Protection (sub-intent routed) ────────────────────────────────────────
+  {
+    match: /key.?person|key.?man|business.{0,10}(?:protection|insurance)|shareholder protection|partnership protection/i,
+    concerns: { [CONCERNS.PROT_KEYPERSON]: 1.0, [CONCERNS.PROTECTION]: 0.6, [CONCERNS.BUSINESS_EXIT]: 0.3 },
+    resources: [RESOURCES.BUSINESS],
+  },
+  {
+    match: /write.{0,10}(?:in|into).{0,10}trust|policy.{0,10}in trust|life (?:cover|policy|insurance).{0,12}trust|put.{0,10}(?:my )?(?:life )?(?:policy|cover).{0,10}(?:in )?trust/i,
+    concerns: { [CONCERNS.PROT_TRUST]: 1.0, [CONCERNS.PROTECTION]: 0.6, [CONCERNS.IHT_LEGACY]: 0.4 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /critical illness.{0,20}income protection|income protection.{0,20}critical illness|\bci\b.{0,8}(?:or|vs).{0,8}\bip\b|ci vs ip|critical illness (?:or|vs)|(?:or|vs) (?:income )?protection/i,
+    concerns: { [CONCERNS.PROT_CI_IP]: 1.2, [CONCERNS.PROTECTION]: 0.5 },
+    resources: [RESOURCES.EARNED_INCOME],
+  },
+  {
+    match: /self.?employed.{0,12}(?:income protection|ip|cover|sick)|income protection.{0,10}self.?employed|cover.{0,10}(?:if|when) i.?m self/i,
+    concerns: { [CONCERNS.PROT_SE_IP]: 1.0, [CONCERNS.PROTECTION]: 0.7 },
+    resources: [RESOURCES.EARNED_INCOME],
+  },
+  {
+    match: /whole.?of.?life|whole life|wol\b|term.{0,10}(?:or|vs).{0,10}whole|whole.{0,10}(?:or|vs).{0,10}term|level term|decreasing term/i,
+    concerns: { [CONCERNS.PROT_WOL_TERM]: 1.0, [CONCERNS.PROTECTION]: 0.6, [CONCERNS.IHT_LEGACY]: 0.3 },
+    resources: [RESOURCES.PROPERTY],
+  },
+
   // ── IHT / estate + inheritance (sub-intent routed) ────────────────────────
   {
     match: /deed of variation|redirect.{0,12}inherit|vary (?:the |my )?will|change.{0,10}(?:the )?will after/i,
@@ -413,7 +440,7 @@ const RULES = [
     resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA, RESOURCES.CASH],
   },
   {
-    match: /retire.{0,15}(?:early|earlier|\d+ years? earlier|5 years? earlier|at \d+)|early retirement|stop working.{0,10}(?:early|earlier|sooner)|bridge.{0,15}(?:to|until).{0,10}(?:pension|state pension|57|55)/i,
+    match: /retire.{0,15}(?:early|earlier|\d+ years? earlier|5 years? earlier)|\d+ years? earlier|early retirement|retire.{0,10}sooner|stop working.{0,10}(?:early|earlier|sooner)|bridge.{0,15}(?:to|until).{0,10}(?:pension|state pension|57|55)/i,
     concerns: { [CONCERNS.LIFE_EARLY_RET]: 1.0, [CONCERNS.RETIREMENT]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.6 },
     resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA, RESOURCES.CASH],
   },
@@ -552,6 +579,11 @@ export const PLAY_INTENT = {
   inheritance_wrapper_sequencing:['plan', 'restructure'],
   gift_inheritance_on:           ['plan', 'preserve'],
   deed_of_variation:             ['plan', 'preserve'],
+  ci_vs_ip:                      ['plan', 'preserve'],
+  write_policy_in_trust:         ['plan', 'preserve'],
+  self_employed_ip:              ['plan', 'preserve'],
+  key_person_cover:              ['plan', 'preserve'],
+  whole_of_life_vs_term:         ['plan', 'preserve'],
 }
 
 /**

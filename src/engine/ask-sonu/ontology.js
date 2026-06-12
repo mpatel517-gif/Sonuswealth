@@ -86,6 +86,11 @@ export const CONCERNS = {
   INH_WRAPPER:    'inh_wrapper_seq',     // Wrapper sequencing for inheritance
   INH_GENSKIP:    'inh_gen_skip',        // Gift inheritance on / generation skip
   INH_DEED:       'inh_deed_variation',  // Deed of variation
+  PROT_CI_IP:     'prot_ci_vs_ip',       // Critical illness vs income protection
+  PROT_TRUST:     'prot_write_in_trust', // Writing life cover in trust
+  PROT_SE_IP:     'prot_self_emp_ip',    // Self-employed income protection
+  PROT_KEYPERSON: 'prot_key_person',     // Key-person cover for a business
+  PROT_WOL_TERM:  'prot_wol_vs_term',    // Whole-of-life vs term
 }
 
 export const RESOURCES = {

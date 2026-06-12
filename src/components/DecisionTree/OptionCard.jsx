@@ -15,6 +15,45 @@ const IRR_LABEL = {
   low: 'Reversible', medium: 'Semi-reversible', high: 'Hard to reverse',
 }
 
+// Confidence may arrive as a 0–1 number (Claude-validated trees) OR as a
+// 'high'/'medium'/'low' string (canned demo-fallback trees that bypass the
+// validator). Coerce both to a 0–1 number so `× 100` never produces NaN%.
+const CONFIDENCE_WORD = { high: 0.9, medium: 0.7, med: 0.7, low: 0.5 }
+function normalizeConfidence(c) {
+  if (typeof c === 'number' && Number.isFinite(c)) return c
+  if (typeof c === 'string') {
+    const w = CONFIDENCE_WORD[c.trim().toLowerCase()]
+    if (w != null) return w
+    const n = parseFloat(c)
+    if (Number.isFinite(n)) return n > 1 ? n / 100 : n
+  }
+  return 0
+}
+
+// F-205: consequence chips were rendering raw engine keys (cashflow_30yr,
+// iht_year25, wealth_score_12m) at the top surface. Map known keys to plain
+// English; humanise anything unmapped (snake_case → Title Case, trailing
+// horizon tokens → "(Nyr / Nmo)") so an internal code never reaches the user.
+const METRIC_LABELS = {
+  cashflow_30yr:   '30-yr cashflow',
+  cashflow_10yr:   '10-yr cashflow',
+  iht_year25:      'IHT at year 25',
+  iht_now:         'IHT today',
+  wealth_score_12m:'Wealth Score (12mo)',
+  net_worth_10yr:  'Net worth (10yr)',
+  retire_age:      'Retirement age',
+  tax_year1:       'Tax (year 1)',
+}
+function metricLabel(key) {
+  if (!key) return ''
+  if (METRIC_LABELS[key]) return METRIC_LABELS[key]
+  return String(key)
+    .replace(/_(\d+)yr\b/g, ' ($1yr)')
+    .replace(/_(\d+)m\b/g, ' ($1mo)')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+}
+
 function ConfidenceChip({ confidence, engineValidated }) {
   if (engineValidated) return (
     <span style={{
@@ -23,8 +62,9 @@ function ConfidenceChip({ confidence, engineValidated }) {
       border: '1px solid rgba(93,219,194,.25)', marginLeft: 6,
     }}>engine ✓</span>
   )
-  const pct = Math.round((confidence ?? 0) * 100)
-  const col = confidence >= 0.8 ? 'var(--c-acc)' : confidence >= 0.6 ? 'var(--c-gold)' : 'var(--c-acc3)'
+  const conf = normalizeConfidence(confidence)
+  const pct = Math.round(conf * 100)
+  const col = conf >= 0.8 ? 'var(--c-acc)' : conf >= 0.6 ? 'var(--c-gold)' : 'var(--c-acc3)'
   return (
     <span style={{
       fontSize: 10, padding: '1px 6px', borderRadius: 999,
@@ -122,7 +162,7 @@ export default function OptionCard({
               background: 'var(--c-surface3, rgba(39,54,71,.6))',
               border: '1px solid var(--c-sep)',
             }}>
-              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 1 }}>{c.metric}</div>
+              <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 1 }}>{metricLabel(c.metric)}</div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{c.value}</span>
                 <ConfidenceChip confidence={c.confidence} engineValidated={c.engineValidated} />

@@ -8,7 +8,7 @@ export function buildCashflowStatement(entity, bundle = 'UK-2026.1') {
   const e = entity || {}
   const ms = monthlySurplus(e, bundle)
   const net = ms.surplus - ms.deficit
-  const outflows = ms.essential + ms.committed + ms.debtService + ms.tax
+  const outflows = ms.essential + ms.committed + ms.debtService + ms.tax + (ms.protection || 0)
 
   return {
     key: 'cashflow-statement',
@@ -24,13 +24,14 @@ export function buildCashflowStatement(entity, bundle = 'UK-2026.1') {
       },
       {
         key: 'outflows', label: 'Outflows', value: outflows,
-        formula: 'Essential + committed + debt service + tax & NI (monthly).',
+        formula: 'Essential + committed + debt service + tax & NI + protection (monthly).',
         source: 'Engine monthlySurplus()', confidence: 'high',
         children: [
           { key: 'out-essential', label: 'Essential living', value: ms.essential, source: 'monthlySurplus()', confidence: 'high' },
           { key: 'out-committed', label: 'Committed (pension/ISA)', value: ms.committed, source: 'monthlySurplus()', confidence: 'high' },
           { key: 'out-debt', label: 'Debt service', value: ms.debtService, source: 'monthlySurplus()', confidence: 'high' },
           { key: 'out-tax', label: 'Tax & NI', value: ms.tax, source: 'monthlySurplus()', confidence: 'high' },
+          { key: 'out-protection', label: 'Protection premiums', value: ms.protection || 0, source: 'monthlySurplus()', confidence: 'high' },
         ].filter(n => n.value !== 0),
       },
       {

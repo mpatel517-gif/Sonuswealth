@@ -10,7 +10,7 @@ export function buildIncomeStatement(entity, bundle = 'UK-2026.1') {
   const ms = monthlySurplus(e, bundle)
   const it = calcIncomeTax(e, bundle)
   const net = ms.surplus - ms.deficit
-  const expenditure = ms.essential + ms.committed + ms.debtService
+  const expenditure = ms.essential + ms.committed + ms.debtService + (ms.protection || 0)
 
   return {
     key: 'income-statement',
@@ -38,12 +38,13 @@ export function buildIncomeStatement(entity, bundle = 'UK-2026.1') {
       },
       {
         key: 'expenditure', label: 'less Expenditure', value: expenditure,
-        formula: 'Essential + committed + debt service (monthly).',
+        formula: 'Essential + committed + debt service + protection (monthly).',
         source: 'Engine monthlySurplus()', confidence: 'high',
         children: [
           { key: 'exp-essential', label: 'Essential living', value: ms.essential, source: 'monthlySurplus()', confidence: 'high' },
           { key: 'exp-committed', label: 'Committed (pension/ISA)', value: ms.committed, source: 'monthlySurplus()', confidence: 'high' },
           { key: 'exp-debt', label: 'Debt service', value: ms.debtService, source: 'monthlySurplus()', confidence: 'high' },
+          { key: 'exp-protection', label: 'Protection premiums', value: ms.protection || 0, source: 'monthlySurplus()', confidence: 'high' },
         ].filter(n => n.value !== 0),
       },
       {

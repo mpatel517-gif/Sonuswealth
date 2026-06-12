@@ -63,7 +63,7 @@ function _buildTAX(b) {
     taperedAAFloor:b.taperedAAFloor?? b.pension?.taperedAnnualAllowanceMinimum        ?? 10000,
     swr:           b.swr           ?? b.pension?.safeWithdrawalRate      ?? 0.04,
     deadline:      new Date(b.deadline ?? b.iht?.sippsEnterEstateDate    ?? b.inheritanceTax?.pensionIHTInclusionDate ?? '2027-04-06'),
-    giftExemption: b.giftAnnualExemption ?? b.iht?.giftAnnualExemption   ?? b.inheritanceTax?.giftAnnualExemption ?? 3000,
+    giftExemption: b.giftAnnualExemption ?? b.inheritanceTax?.annualGiftExemption ?? b.iht?.giftAnnualExemption ?? 3000,
     psaBasic:      b.income?.savingsAllowanceBasicRate                   ?? 1000,
     psaHigher:     b.income?.savingsAllowanceHigherRate                  ?? 500,
     psaAdditional: b.income?.savingsAllowanceAdditionalRate              ?? 0,
@@ -118,23 +118,39 @@ function _buildTAX(b) {
     s455Rate:               b.businessOwnerPersonal?.directorsLoan?.s455TaxRate ?? b.corp?.s455Rate ?? 0.3375,
 
     // IHT / Estate -------------------------------------------------------
-    bprCombinedCap:         b.iht?.bprCombinedCap              ?? 2500000,       // FA 2026 — combined BPR+APR cap per individual
-    aimBPRRate:             b.iht?.aimBPRRate                  ?? 0.50,          // FA 2026 — AIM BPR rate
+    // F-518 wiring fix (2026-06-12): the bundle uses `inheritanceTax` (not `iht`).
+    // Every `b.iht?.*` path below was dead, so the whole BPR/AIM/gift block ran
+    // on literals for all tax years. Now reads the real bundle keys (note the
+    // bundle's slightly different names: smallGiftExemption singular,
+    // weddingGiftParent/Grandparent, annualGiftExemption). bprCombinedCap maps
+    // to the bundle's `aprBprCombinedAllowance` (the canonical combined-cap key).
+    bprCombinedCap:         b.inheritanceTax?.aprBprCombinedAllowance ?? b.iht?.bprCombinedCap ?? 2500000, // FA 2026 — combined BPR+APR cap per individual
+    aimBPRRate:             b.inheritanceTax?.aimBPRRate       ?? b.iht?.aimBPRRate ?? 0.50,  // FA 2026 — AIM BPR rate
+    // petTaperByYear stays a literal array: the bundle expresses taper as an
+    // object (taperRelief.years3to4 …) keyed by RATE reduction, a different shape
+    // from this 0–7yr fraction array. Mapping the two is a semantic change, not a
+    // wiring fix — tracked separately so this commit can't regress PET maths.
     petTaperByYear:         b.iht?.petTaperByYear              ?? [0, 0, 0, 0.2, 0.4, 0.6, 0.8, 1.0], // IHTA 1984 s7 PET taper 0-7 yrs
     // Gift exemptions split — v0.3 BLOCK-3 fix (was fabricated `srsAllowance`)
-    smallGiftsExemption:    b.iht?.smallGiftsExemption         ?? 250,           // IHTA 1984 s20
-    weddingGiftToChild:     b.iht?.weddingGiftToChild          ?? 5000,          // IHTA 1984 s22
-    weddingGiftToGrandchild:b.iht?.weddingGiftToGrandchild     ?? 2500,          // IHTA 1984 s22
-    weddingGiftOther:       b.iht?.weddingGiftOther            ?? 1000,          // IHTA 1984 s22
-    annualGiftExemption:    b.iht?.annualGiftExemption ?? b.iht?.giftAnnualExemption ?? b.inheritanceTax?.giftAnnualExemption ?? 3000, // IHTA 1984 s19
+    smallGiftsExemption:    b.inheritanceTax?.smallGiftExemption  ?? b.iht?.smallGiftsExemption ?? 250,   // IHTA 1984 s20
+    weddingGiftToChild:     b.inheritanceTax?.weddingGiftParent      ?? b.iht?.weddingGiftToChild ?? 5000,      // IHTA 1984 s22
+    weddingGiftToGrandchild:b.inheritanceTax?.weddingGiftGrandparent ?? b.iht?.weddingGiftToGrandchild ?? 2500, // IHTA 1984 s22
+    weddingGiftOther:       b.inheritanceTax?.weddingGiftOther       ?? b.iht?.weddingGiftOther ?? 1000,        // IHTA 1984 s22
+    annualGiftExemption:    b.inheritanceTax?.annualGiftExemption ?? b.iht?.annualGiftExemption ?? b.inheritanceTax?.giftAnnualExemption ?? 3000, // IHTA 1984 s19
     normalExpenditureFromIncome: b.iht?.normalExpenditureFromIncome ?? true,     // IHTA 1984 s21 flag
 
     // CGT / Property / VCT -------------------------------------------------
-    cgtBasic:               b.cgt?.basicRate                   ?? 0.18,          // Post-Autumn Budget 2024
-    cgtHigher:              b.cgt?.higherRate                  ?? 0.24,          // Post-Autumn Budget 2024
-    badrRate:               b.cgt?.badrRate                    ?? 0.18,          // FA 2026 — Business Asset Disposal Relief (was 14% pre-2026)
-    badrLifetimeLimit:      b.cgt?.badrLifetimeLimit           ?? 1000000,       // TCGA 1992 s169N — BADR £1m lifetime gains cap
-    sdltAdditionalProperty: b.sdlt?.additionalPropertySurcharge ?? 0.05,         // FA 2024 — from 31 Oct 2024 (+5%, was +3%)
+    // F-518 wiring fix (2026-06-12): the bundle uses `capitalGains` (not `cgt`)
+    // and a `property.sdlt` block (no top-level `sdlt`). The old `b.cgt?.*` /
+    // `b.sdlt?.*` paths NEVER resolved, so these silently used the literal for
+    // EVERY tax year — the RULES year-switcher was inert for the whole CGT block.
+    // Values for 2026/27 are unchanged (literal == bundle), so harnesses stay
+    // green; the difference is they now track the active bundle.
+    cgtBasic:               b.capitalGains?.basicRate          ?? b.cgt?.basicRate ?? 0.18,
+    cgtHigher:              b.capitalGains?.higherRate         ?? b.cgt?.higherRate ?? 0.24,
+    badrRate:               b.capitalGains?.badrRate ?? b.businessOwnerPersonal?.badrRate ?? b.cgt?.badrRate ?? 0.18,   // FA 2026 — Business Asset Disposal Relief (was 14% pre-2026)
+    badrLifetimeLimit:      b.capitalGains?.badrLifetimeLimit  ?? b.cgt?.badrLifetimeLimit ?? 1000000,  // TCGA 1992 s169N — BADR £1m lifetime gains cap
+    sdltAdditionalProperty: b.property?.sdlt?.additionalPropertySurcharge ?? b.sdlt?.additionalPropertySurcharge ?? 0.05, // FA 2024 — from 31 Oct 2024 (+5%, was +3%)
     vctITRate:              b.vct?.incomeTaxReliefRate ?? b.taxEfficientInvestments?.vct?.incomeTaxRelief ?? 0.20,  // FA 2026 — VCT IT relief (was 30% pre-April 2026)
     eisITRate:              b.taxEfficientInvestments?.eis?.incomeTaxRelief  ?? 0.30,  // ITA 2007 — EIS IT relief (unchanged by FA 2026)
     seisITRate:             b.taxEfficientInvestments?.seis?.incomeTaxRelief ?? 0.50,  // ITA 2007 — SEIS IT relief

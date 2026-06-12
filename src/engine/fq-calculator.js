@@ -2789,6 +2789,7 @@ export function monthlySurplus(entity, bundle) {
     essential:    Math.round(f.essentials / 12),
     committed:    Math.round(f.committed / 12),
     debtService:  Math.round(f.debtService / 12),
+    protection:   Math.round((f.protection || 0) / 12),
     tax:          Math.round(f.taxAndNI / 12),
     surplus:      surplus > 0 ? surplus : 0,
     deficit:      surplus < 0 ? Math.abs(surplus) : 0,

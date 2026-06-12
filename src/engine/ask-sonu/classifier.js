@@ -127,6 +127,29 @@ const RULES = [
     resources: [RESOURCES.PROPERTY, RESOURCES.CASH, RESOURCES.GIA],
   },
 
+  // ── Mortgage / debt (sub-intent routed so each query lands on the right play) ─
+  {
+    // Equity release FIRST — most specific (else "release equity" hits 'borrow')
+    match: /equity release|lifetime mortgage|release equity|release.{0,10}cash.{0,10}home/i,
+    concerns: { [CONCERNS.DEBT]: 0.6, [CONCERNS.DEBT_EQUITY]: 1.0, [CONCERNS.IHT_LEGACY]: 0.3 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+  {
+    match: /offset mortgage|offset.{0,15}(?:savings|cash|account)|\boffset\b/i,
+    concerns: { [CONCERNS.DEBT]: 0.6, [CONCERNS.DEBT_OFFSET]: 1.0, [CONCERNS.LIQUIDITY]: 0.4 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+  {
+    match: /overpay|pay off.{0,20}(?:mortgage|loan|debt)|clear.{0,15}(?:mortgage|debt)|mortgage.{0,10}or invest|invest.{0,10}(?:or|vs).{0,15}mortgage/i,
+    concerns: { [CONCERNS.DEBT]: 0.6, [CONCERNS.DEBT_OVERPAY]: 1.0, [CONCERNS.LIQUIDITY]: 0.3 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH, RESOURCES.GIA],
+  },
+  {
+    match: /remortgage|re-mortgage|fixed rate|fixed or tracker|tracker|interest.only|repayment|how much can i borrow|borrow.{0,15}(?:with|on|income)|rate.{0,10}(?:ending|ends|expir)/i,
+    concerns: { [CONCERNS.DEBT]: 0.6, [CONCERNS.DEBT_RATE]: 1.0 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+
   // ── Time freedom / FIRE ──────────────────────────────────────────────────
   {
     match: /sabbatical|career break|fire(?:\s|$)|financial independence|part.time|four.day|stop working early/i,

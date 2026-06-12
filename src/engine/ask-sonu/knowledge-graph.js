@@ -809,6 +809,108 @@ const PLAYS = [
     ],
     fca_boundary: FCA,
   },
+
+  // ── Mortgage / debt domain (W6 — closes the 0%-coverage MORT scenarios) ─────
+  {
+    id: 'overpay_vs_invest',
+    title: 'Weigh overpaying the mortgage against investing the surplus',
+    one_liner: 'Overpaying is a guaranteed, tax-free return equal to your mortgage rate; investing might beat it but carries risk.',
+    detail: 'A mortgage overpayment "earns" you your mortgage interest rate, guaranteed and tax-free. Investing the same money (e.g. into a pension or ISA) might return more over the long run, but it is not guaranteed and the timing matters. The comparison turns on your mortgage rate versus a realistic after-tax expected return, your appetite for risk, and whether pension tax relief tips the balance. Many people split the surplus across both rather than choosing one.',
+    triggers: [CONCERNS.DEBT_OVERPAY, CONCERNS.DEBT, CONCERNS.LIQUIDITY],
+    weight: { [CONCERNS.DEBT_OVERPAY]: 1.0, [CONCERNS.DEBT]: 0.5, [CONCERNS.LIQUIDITY]: 0.4 },
+    prerequisites: {},
+    counter_indications: {},
+    needs_fact: [],
+    compute_impact: (p) => {
+      const cash = num(p?.assets?.cash) || 0
+      return {
+        gbp_saved: 0,
+        time_horizon: 'ongoing',
+        certainty: 'depends',
+        why: 'There is no single right answer — overpaying gives a guaranteed return equal to your mortgage rate, while investing trades that certainty for the chance of a higher (or lower) return. Pension contributions add tax relief to the investing side. Compare your mortgage rate against a realistic after-tax return for your risk level.',
+      }
+    },
+    citation: 'FCA MCOB 7 (overpayment terms); general financial-planning principle (no specific statute)',
+    category: 'mortgage',
+    alternatives: [
+      { value_shift: 'guaranteed return over upside', alt_play: 'remortgage_review' },
+    ],
+    fca_boundary: FCA,
+  },
+  {
+    id: 'remortgage_review',
+    title: 'Review your mortgage before the fixed rate ends',
+    one_liner: 'Shop the whole market a few months before your fix expires so you never roll onto the lender\'s standard variable rate by default.',
+    detail: 'When a fixed rate ends you usually move to the lender\'s standard variable rate (SVR), which is typically much higher. Reviewing 3-6 months ahead lets you secure a new deal — fixed for rate certainty, or a tracker if you expect rates to fall and can absorb rises. The repayment-vs-interest-only choice is separate: interest-only keeps payments low but the capital still has to be repaid. A whole-of-market mortgage broker can compare deals you cannot see directly.',
+    triggers: [CONCERNS.DEBT_RATE, CONCERNS.DEBT],
+    weight: { [CONCERNS.DEBT_RATE]: 1.0, [CONCERNS.DEBT]: 0.5 },
+    prerequisites: {},
+    counter_indications: {},
+    needs_fact: [],
+    compute_impact: (p) => ({
+      gbp_saved: 0,
+      time_horizon: 'at each rate review',
+      certainty: 'depends',
+      why: 'Rolling onto an SVR by default is usually the most expensive outcome. The saving from switching depends on your balance and the gap between the SVR and the best available deal — often meaningful on a sizeable balance. Fixed vs tracker is a question of how much rate certainty you want.',
+    }),
+    citation: 'FCA MCOB 11 (responsible lending); FCA Mortgage Charter',
+    category: 'mortgage',
+    alternatives: [
+      { value_shift: 'rate certainty over flexibility', alt_play: 'offset_mortgage' },
+    ],
+    fca_boundary: FCA,
+  },
+  {
+    id: 'offset_mortgage',
+    title: 'Consider an offset mortgage against your savings',
+    one_liner: 'An offset sets your cash savings against the mortgage balance, so you pay interest only on the difference — useful when you hold meaningful cash.',
+    detail: 'With an offset, savings held alongside the mortgage reduce the balance you pay interest on, without you spending the cash — it stays accessible. The "return" on that cash equals your mortgage rate, tax-free (unlike taxable savings interest), which can beat a normal savings account for a higher-rate taxpayer. The trade-off is that offset deals sometimes carry a slightly higher headline rate, so it pays most when your offset cash is a large share of the balance.',
+    triggers: [CONCERNS.DEBT_OFFSET, CONCERNS.DEBT, CONCERNS.LIQUIDITY],
+    weight: { [CONCERNS.DEBT_OFFSET]: 1.0, [CONCERNS.DEBT]: 0.5, [CONCERNS.LIQUIDITY]: 0.5 },
+    prerequisites: {},
+    counter_indications: {},
+    needs_fact: [],
+    compute_impact: (p) => {
+      const cash = num(p?.assets?.cash) || 0
+      return {
+        gbp_saved: 0,
+        time_horizon: 'ongoing',
+        certainty: 'depends',
+        why: cash > 0
+          ? `Offsetting cash against the mortgage earns your mortgage rate tax-free on that cash, instead of taxable savings interest. With around £${cash.toLocaleString()} in cash that can be a worthwhile, low-risk use of it — provided the offset deal's rate is competitive.`
+          : 'An offset earns your mortgage rate, tax-free, on whatever cash you hold against it — most worthwhile when that cash is a large share of the balance.',
+      }
+    },
+    citation: 'FCA MCOB (mortgage conduct); savings interest taxed under ITTOIA 2005',
+    category: 'mortgage',
+    alternatives: [
+      { value_shift: 'flexibility over lowest rate', alt_play: 'overpay_vs_invest' },
+    ],
+    fca_boundary: FCA,
+  },
+  {
+    id: 'equity_release_caution',
+    title: 'Equity release — understand the trade-offs before committing',
+    one_liner: 'A lifetime mortgage frees cash from your home without moving, but interest rolls up and compounds, reducing what your family inherits.',
+    detail: 'Equity release (usually a lifetime mortgage) lets you take tax-free cash from your home with no required monthly payments — but the interest is added to the loan and compounds, so the debt can grow quickly and erode the estate. Modern plans carry a "no-negative-equity" guarantee and many now allow voluntary interest payments to slow the roll-up. It is a regulated advice area: alternatives — downsizing, a retirement-interest-only mortgage, or using other assets — should be weighed first.',
+    triggers: [CONCERNS.DEBT_EQUITY, CONCERNS.DEBT, CONCERNS.IHT_LEGACY],
+    weight: { [CONCERNS.DEBT_EQUITY]: 1.0, [CONCERNS.DEBT]: 0.5, [CONCERNS.IHT_LEGACY]: 0.4 },
+    prerequisites: { min_age: 55 },
+    counter_indications: {},
+    needs_fact: [],
+    compute_impact: (p) => ({
+      gbp_saved: 0,
+      time_horizon: 'lifetime',
+      certainty: 'depends',
+      why: 'Equity release solves a cash-access need but the compounding interest is a real long-term cost to your estate. Whether it is right depends on the alternatives available to you (downsizing, other assets) and how much leaving an inheritance matters. It requires regulated advice.',
+    }),
+    citation: 'FCA MCOB 8/9 (equity release); Equity Release Council no-negative-equity standard',
+    category: 'mortgage',
+    alternatives: [
+      { value_shift: 'stay put over downsize', alt_play: 'overpay_vs_invest' },
+    ],
+    fca_boundary: FCA,
+  },
 ]
 
 export { PLAYS }

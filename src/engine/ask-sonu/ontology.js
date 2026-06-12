@@ -25,6 +25,11 @@ export const CONCERNS = {
   CURRENCY:       'currency_risk',       // FX, multi-currency exposure
   TIME_FREEDOM:   'time_freedom',        // Working less, sabbatical, FIRE
   LIFESTYLE:      'lifestyle',           // Quality of life, location, climate
+  DEBT:           'debt_mortgage',       // Umbrella: any mortgage/debt question
+  DEBT_OVERPAY:   'debt_overpay',        // Overpay mortgage vs invest / clear with a windfall
+  DEBT_RATE:      'debt_rate_switch',    // Remortgage, fixed vs tracker, interest-only, borrowing
+  DEBT_OFFSET:    'debt_offset',         // Offset mortgage against savings
+  DEBT_EQUITY:    'debt_equity_release', // Equity release / lifetime mortgage
 }
 
 export const RESOURCES = {

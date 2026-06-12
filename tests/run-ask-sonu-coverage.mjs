@@ -140,6 +140,12 @@ function themeKeywordMap(theme) {
   if (t.includes('iht_tail') || t.includes('10yr')) return ['iht', '10 years', 'departure']
   if (t.includes('rnrb') || t.includes('nrb')) return ['rnrb', 'nrb', 'nil-rate', 'nil rate']
   if (t.includes('off_scope')) return ['off-scope', 'outside']
+  // Mortgage / debt domain (W6) — every correct lead has category 'mortgage',
+  // plus a sub-intent keyword distinguishing the four plays.
+  if (t.includes('payoff') || t.includes('rate_vs_expected') || t.includes('mortgage_payoff')) return ['mortgage', 'overpay', 'invest']
+  if (t.includes('fixed_vs_tracker') || t.includes('interest_only') || t.includes('lti_affordability') || t.includes('btl_leverage')) return ['mortgage', 'remortgage', 'fixed', 'tracker', 'borrow']
+  if (t.includes('offset')) return ['mortgage', 'offset']
+  if (t.includes('equity_release')) return ['mortgage', 'equity release', 'equity_release', 'equity']
   // Fallback — split underscores
   return t.split('_').filter(w => w.length >= 4)
 }

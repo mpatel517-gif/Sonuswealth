@@ -110,7 +110,7 @@ const QUESTIONS = [
   {
     id:'riskAppetite', step:9, type:'single',
     q:'How comfortable are you with investment risk?',
-    hint:'Used to set your Sonuswealth Risk Score baseline and recommend portfolios.',
+    hint:'Used to set your Sonuswealth Risk Score baseline and frame the options we show you. Sonuswealth gives information and guidance, not personal investment advice.',
     opts:[
       { id:'cautious',   ico:'🛡',  lbl:'Cautious',   sub:'Capital preservation first — small steady returns' },
       { id:'balanced',   ico:'⚖',  lbl:'Balanced',   sub:'Mix of growth and stability — moderate volatility' },

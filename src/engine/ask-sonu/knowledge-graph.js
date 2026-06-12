@@ -88,7 +88,7 @@ const PLAYS = [
     id: 'split_sipp_spouse',
     title: 'Split drawdown with your spouse',
     one_liner: 'Use both your personal allowances and basic-rate bands instead of one — typically saves £6-12k a year.',
-    detail: 'If your spouse has unused personal allowance and basic-rate band, drawing some income through their pension or via spousal ISA transfers doubles the tax-free zone (£25,140) and the 20% band.',
+    detail: 'If your spouse has unused personal allowance and basic-rate band, drawing some income through their pension — or moving income-producing assets into their name (transfers between spouses are exempt from capital gains tax) — uses both sets of allowances instead of one, roughly doubling the tax-free zone (£25,140) and the 20% band.',
     triggers: [CONCERNS.RETIREMENT, CONCERNS.TAX],
     weight:   { [CONCERNS.RETIREMENT]: 0.85, [CONCERNS.TAX]: 0.95 },
     prerequisites: { marital_status: ['married', 'civil_partnership'] },
@@ -108,7 +108,7 @@ const PLAYS = [
         why: `Splitting income across both allowances uses ${fmt(25140)} of tax-free + basic-rate band that would otherwise be wasted. About ${fmt(annualSaving)} a year saved.`,
       }
     },
-    citation: 'ITA 2007 s.35-36 (personal allowance); FA 1996 s.156 (spousal ISA transfer)',
+    citation: 'ITA 2007 s.35 (personal allowance); independent taxation of spouses; TCGA 1992 s.58 (no gain/no loss on inter-spouse transfers)',
     category: 'tax_pension',
     alternatives: [
       { value_shift: 'control over splitting', alt_play: 'solo_drawdown_with_carry' },

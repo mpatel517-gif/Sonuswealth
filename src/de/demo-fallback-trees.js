@@ -53,7 +53,7 @@ const RETIRE_5_EARLIER = {
       rationale: 'Draw entirely from SIPP (including taxable portion) until ISA is needed. Maximises IHT-protected ISA wrapper for legacy. Pushes you into 20% band but most income stays below 40%.',
       pros: [
         'ISA wrapper grows tax-free for 25+ years — legacy compounds',
-        '£500K+ available for surviving spouse via spousal ISA transfer',
+        'Surviving spouse inherits the ISA and can keep it sheltered via the Additional Permitted Subscription (APS)',
         'Simpler to administer',
       ],
       cons: [

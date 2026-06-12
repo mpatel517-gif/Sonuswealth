@@ -18,7 +18,7 @@ export const ACTION_STEPS = {
   split_sipp_spouse: [
     'Confirm your spouse\'s pension pot and unused personal allowance',
     'Open a SIPP for them if they don\'t already have one; carry-forward up to 3 years of unused annual allowance',
-    'Route part of your annual drawdown through their pension or via spousal ISA transfer to use both bands',
+    'Route part of your annual drawdown through their pension, or move income-producing assets into their name (inter-spouse transfers are CGT-exempt), to use both bands',
   ],
   isa_topup_during_drawdown: [
     'After each year\'s pension drawdown, subscribe up to £20,000 of net proceeds into your ISA',

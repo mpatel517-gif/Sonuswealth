@@ -37,15 +37,20 @@ function pickLeadByIntent(rankedPlays, intent) {
 }
 
 // Build a one-sentence direct answer that ECHOES the user's intent.
+// FCA boundary (F-427-429): frame as an OPTION to consider, not a personal
+// recommendation. Definitive single-answer phrasing ("THE most tax-efficient
+// path: X") is a personal recommendation under FCA COBS / RAO Art 53. Option
+// framing ("a route people in your position often consider") keeps Sonuswealth
+// on the information-and-guidance side of the boundary.
 function buildDirectAnswer(lead, intent) {
   if (!lead) return null
   const openerByIntent = {
-    draw:        'The most tax-efficient path:',
-    preserve:    'The biggest lever to pull:',
-    restructure: 'The highest-impact move:',
-    plan:        'Where I\'d start:',
+    draw:        'One tax-efficient route people in your position often consider:',
+    preserve:    'A common lever to weigh here:',
+    restructure: 'A high-impact option worth looking at:',
+    plan:        'A common starting point:',
   }
-  const opener = openerByIntent[intent] || 'Where I\'d start:'
+  const opener = openerByIntent[intent] || 'A common starting point:'
   return `${opener} ${lead.play.title}.`
 }
 

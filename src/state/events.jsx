@@ -19,7 +19,7 @@
 // over-committing the data model before its design session.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { createContext, useContext, useReducer, useCallback, useMemo } from 'react'
+import { createContext, useContext, useReducer, useCallback, useMemo, useEffect } from 'react'
 import { ADD_ID_TO_TYPE } from '../engine/liability-taxonomy.js'
 import { classifyAsset } from '../engine/asset-taxonomy.js'
 import { engineSnapshot } from '../engine/fq-calculator.js'
@@ -49,7 +49,7 @@ export { EV, validateEvent } from './events-validator.js'
 // never exercised end-to-end until the L3-2 leaf-edit shipped.)
 import { EV, validateEvent as _validateEvent } from './events-validator.js'
 import { resolveExistingId, applyFieldCorrection, applyLifeEvent, LIFE_EVENT_LABELS } from './events-fold-helpers.js'
-import { persistEvent, hydrateEvents } from '../lib/event-store.js'
+import { persistEvent, hydrateEvents, persistEventLocal, hydrateEventsLocal, clearEventsLocal } from '../lib/event-store.js'
 
 // ─── Pure reducer ───────────────────────────────────────────────────────────
 // events[personaId] = [{ type, ts, payload }, ...]
@@ -824,19 +824,25 @@ export function EventsProvider({ children }) {
   const [events, dispatch] = useReducer(reducer, {})
 
   const commit = useCallback((personaId, event) => {
-    dispatch({ type: 'COMMIT', personaId, event })
+    const stamped = { ...event, ts: event.ts || Date.now() }
+    dispatch({ type: 'COMMIT', personaId, event: stamped })
     // F2: append to the Supabase event store. Fire-and-forget — persistEvent
     // resolves the entity, no-ops without auth (demo), and never throws into
     // React. The in-memory dispatch above stays the source of truth for the UI.
-    persistEvent({ ...event, ts: event.ts || Date.now() })
+    persistEvent(stamped)
+    // F-419: mirror to localStorage (demo-grade persistence) so the commit
+    // survives a page reload even when there is no Supabase entity.
+    persistEventLocal(personaId, stamped)
   }, [])
 
   const resetPersona = useCallback((personaId) => {
     dispatch({ type: 'RESET_PERSONA', personaId })
+    clearEventsLocal(personaId)  // F-419: drop the local mirror so reset truly resets
   }, [])
 
   const resetAll = useCallback(() => {
     dispatch({ type: 'RESET_ALL' })
+    clearEventsLocal()
   }, [])
 
   // F2: hydrate a persona's committed log from core_events. Call once per active
@@ -848,9 +854,18 @@ export function EventsProvider({ children }) {
     if (hydrated.length) dispatch({ type: 'HYDRATE', personaId, events: hydrated })
   }, [])
 
+  // F-419: seed a persona's log from the localStorage mirror. Synchronous and
+  // demo-safe. The HYDRATE reducer only seeds when the in-memory log is empty,
+  // so this never clobbers edits made in the current session.
+  const hydrateLocal = useCallback((personaId) => {
+    if (!personaId) return
+    const mirrored = hydrateEventsLocal(personaId)
+    if (mirrored.length) dispatch({ type: 'HYDRATE', personaId, events: mirrored })
+  }, [])
+
   const value = useMemo(
-    () => ({ events, commit, resetPersona, resetAll, hydrate }),
-    [events, commit, resetPersona, resetAll, hydrate]
+    () => ({ events, commit, resetPersona, resetAll, hydrate, hydrateLocal }),
+    [events, commit, resetPersona, resetAll, hydrate, hydrateLocal]
   )
 
   return (
@@ -870,6 +885,7 @@ export function useEvents() {
       resetPersona: () => {},
       resetAll: () => {},
       hydrate: async () => {},
+      hydrateLocal: () => {},
     }
   }
   return ctx
@@ -915,7 +931,15 @@ function diffSourcesFromLog(log = []) {
 // browser-native, no persistence required. Cross-visit diffs (real users) layer
 // on top via the persisted last-visit snapshot (F2).
 export function useEffectiveEntity(baseEntity, personaId) {
-  const log = useEventsFor(personaId)
+  const { events, hydrateLocal } = useEvents()
+  const log = events[personaId] || []
+  // F-419: on first mount for this persona, seed its committed log from the
+  // localStorage mirror so captures survive a reload. HYDRATE only seeds an
+  // empty log, so re-running this (multiple consumers, re-renders) is a no-op
+  // once the session has any events.
+  useEffect(() => {
+    if (personaId) hydrateLocal(personaId)
+  }, [personaId, hydrateLocal])
   const baseline = useMemo(() => engineSnapshot(baseEntity), [baseEntity])
   return useMemo(() => {
     const eff = applyEvents(baseEntity, log)

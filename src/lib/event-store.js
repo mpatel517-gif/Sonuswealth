@@ -61,6 +61,50 @@ export async function persistEvent(event) {
   }
 }
 
+// ── Local mirror (F-419) ─────────────────────────────────────────────────────
+// Demo + signed-out users have no Supabase entity, so the Supabase path above
+// no-ops and committed events lived only in React state — they vanished on
+// reload (users captured real figures, refreshed, lost them, no warning). Mirror
+// every committed event to localStorage, namespaced per persona, so captures
+// survive a refresh. This is demo-grade persistence; the Supabase path remains
+// the system of record once auth + entity mapping land. Best-effort throughout:
+// never throws into React, no-ops where storage is unavailable (SSR / quota).
+const LOCAL_PREFIX = 'sonuswealth.events.'
+
+export function persistEventLocal(personaId, event) {
+  if (!personaId || !event || typeof event.type !== 'string') return
+  try {
+    if (typeof localStorage === 'undefined') return
+    const key = LOCAL_PREFIX + personaId
+    const prior = JSON.parse(localStorage.getItem(key) || '[]')
+    const arr = Array.isArray(prior) ? prior : []
+    arr.push({ type: event.type, ts: event.ts || Date.now(), payload: event.payload || {} })
+    // Cap to the most recent 500 events to stay well under the storage quota.
+    const capped = arr.length > 500 ? arr.slice(arr.length - 500) : arr
+    localStorage.setItem(key, JSON.stringify(capped))
+  } catch { /* quota / unavailable — best-effort */ }
+}
+
+export function hydrateEventsLocal(personaId) {
+  if (!personaId) return []
+  try {
+    if (typeof localStorage === 'undefined') return []
+    const raw = localStorage.getItem(LOCAL_PREFIX + personaId)
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr : []
+  } catch { return [] }
+}
+
+export function clearEventsLocal(personaId) {
+  try {
+    if (typeof localStorage === 'undefined') return
+    if (personaId) { localStorage.removeItem(LOCAL_PREFIX + personaId); return }
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(LOCAL_PREFIX)) localStorage.removeItem(k)
+    }
+  } catch { /* ignore */ }
+}
+
 // Hydrate the committed user-event log for the signed-in user's entity, mapped
 // back to the in-memory shape { type, ts, payload } the reducer folds. Returns
 // [] in demo / signed-out (inert) so callers can dispatch unconditionally.

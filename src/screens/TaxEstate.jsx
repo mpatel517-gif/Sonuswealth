@@ -80,6 +80,7 @@ import { ihtProjection } from '../engine/selectors/index.js'
 // IHT pre/post-April-2027 delta card at position 2 (above all allowance bars).
 import IHTDeltaCard from '../components/charts/IHTDeltaCard.jsx'
 import SAComputationView from '../components/TaxEstate/SAComputationView.jsx'
+import TaxYearHistory from '../components/TaxEstate/TaxYearHistory.jsx'
 import { saComputation } from '../engine/sa-computation.js'
 import { deriveCarryForwardFromHistory, upsertPriorYear } from '../state/tax-history.js'
 import {
@@ -4090,6 +4091,10 @@ export default function TaxEstate({ entity, personaId, onCommit, onHome, onBack,
               Full computation + accountant-verifiable explanation per line +
               prior-year capture (M2) + print export. */}
           <SAComputationView entity={entity} personaId={personaId} onCommit={onCommit} />
+          {/* Last 5 years, by year — the tax record the founder asked for. Reads
+              the durable tax-history store + seeds the current year from the same
+              SA computation above so the headline ties out. */}
+          <TaxYearHistory entity={entity} personaId={personaId} onCommit={onCommit} />
           <p style={{ fontSize: 12, color: 'var(--c-text3)', margin: '16px 2px 10px' }}>
             Or tap a card below for a focused view.
           </p>

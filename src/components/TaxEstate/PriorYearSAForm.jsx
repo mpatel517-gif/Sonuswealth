@@ -28,10 +28,16 @@ const inputStyle = {
   padding: '8px 10px', fontSize: 13, fontFamily: 'inherit',
 }
 
-export default function PriorYearSAForm({ currentYear = '2026/27', onSave, onCancel }) {
+export default function PriorYearSAForm({ currentYear = '2026/27', initialYear, onSave, onCancel }) {
   // Default to the year immediately before the current one.
   const priorYears = RULE_YEARS.filter((y) => y !== currentYear)
-  const [taxYear, setTaxYear] = useState(priorYears[priorYears.length - 1] || RULE_YEARS[0])
+  // When the caller targets a specific year (e.g. a row in the 5-year ledger),
+  // seed that year; otherwise default to the most recent prior year.
+  const [taxYear, setTaxYear] = useState(
+    (initialYear && priorYears.includes(initialYear))
+      ? initialYear
+      : (priorYears[priorYears.length - 1] || RULE_YEARS[0])
+  )
   const [vals, setVals] = useState({})
   const [giftAmount, setGiftAmount] = useState('')
   const [giftDate, setGiftDate] = useState('')

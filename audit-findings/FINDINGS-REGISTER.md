@@ -75,6 +75,29 @@
 
 ---
 
+## FIX-EVERYTHING PROGRAM — P1–P7 (2026-06-12, founder: "fix every single issue")
+
+Root-cause-first, canonical-reader approach (kills the meta-finding: one concept, many disagreeing paths). Each phase: fix → hand-verify vs statute/engine → re-baseline tie-out → snap → commit+push.
+
+**P1 — Income/household canonical layer · COMPLETE · `f3d29fa`**
+- F-004 silent-£0 AA: NEW `income-readers.js` `pensionContributionsThisYear()` — 4 consumers (canonical-metrics ×2, tax-estate-engine ×2, taxable-income, fq _contributionCoI) now read ONE reader. Verified agrees=40000 across all 4 previously-disagreeing field shapes.
+- F-001 partner income invisible: `partnerGrossIncome()` + `cashflowFlow` adds partner NET (taxed INDEPENDENTLY via synthetic entity — never into individual tax). Family deficit corrected −£14k→−£8.3k/yr; Home banner ties out (−£689/mo); single personas unchanged.
+
+**P2 — IHT/estate canonical layer · COMPLETE · `7a62b0d`**
+- F-311 (the alarming hero-vs-waterfall gap): waterfall returned £571,616 vs hero £287,240 because it re-derived from gross, skipped deductions, and counted only slider BPR. Rewrote to anchor on baseline.net_estate + inherit baseline BPR. Invariant holds: empty deltas → after == baseline. Three-way reconciliation PASS (hero == exposure == waterfall = £287,240); £200k gift → £207,240.
+- F-309: ONE exported `rnrbEffective()` (couple-double + £2m taper + descendant gate + spouse transfer); ihtExposure + canonical-metrics fallback routed through it. decumulation-solver inline estimate → P6.
+- F-114: verified BPR IS bounded (tier1 = min(assets, allowance); taxable clamps ≥0) — no wrong IHT; display-overstatement → P6.
+
+**P3 — Surplus/NW/CGT readers · VERIFIED (no code change needed)**
+- F-500/501 net-worth drift: VERIFIED CLOSED — hero 6-asset-sum − liabilities == engine `netWorth` across ALL 23 personas (consolidated 2026-06-02; the drift memory predates it).
+- F-502 IHT reader: done in P2. Surplus: single canonical path confirmed (`cashflowFlow`→`monthlySurplus`; all consumers read it).
+- F-003 NaN% card: VERIFIED CLOSED — `normalizeConfidence` (W3a) makes `conf×100` NaN-proof. Register row was stale.
+- F-308 CGT tile-vs-detail: both surfaces read the SAME canonical `assets.cgt.realisedThisYear` (tile=allowance-used, detail=CGT-due — different by design, not a data divergence). Exact repro → P6 golden vectors.
+
+**P4–P7:** capture tail + HICBC surface (P4), a11y/mobile sweep (P5), independent calc audit / golden vectors (P6), hygiene + closeout (P7) — in progress.
+
+---
+
 ## FINDINGS
 
 | ID | Screen/Area | Sev | Ask# | Finding | Status | Wave |

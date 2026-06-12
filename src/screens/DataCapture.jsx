@@ -144,6 +144,47 @@ function confLabel(c) {
   return 'Low — review'
 }
 
+// ── F-413 FIX: capture-payload → reducer-routable shape ──────────────────────
+// DataCapture (manual + parsed) produced events shaped { value, unit, wrapper,
+// label }. The event reducer's applyAssetEvent() routes by { category, itemType,
+// fields } and BAILS when category/itemType are absent — so every captured value
+// was silently dropped (nothing reached the entity, no error shown). This adapter
+// maps the capture shape onto the same { category, itemType, fields } envelope
+// that the proven AddItemSheet emitter uses, so captured figures actually land.
+const WRAPPER_ROUTE = {
+  SIPP:     { category: 'pensions',    itemType: 'SIPP',      valueKey: 'value' },
+  ISA:      { category: 'investments', itemType: 'ISA_SS',    valueKey: 'value' },
+  GIA:      { category: 'investments', itemType: 'GIA',       valueKey: 'value' },
+  CASH:     { category: 'cash',        itemType: 'SAVINGS',   valueKey: 'balance' },
+  PROPERTY: { category: 'property',    itemType: 'RESIDENCE', valueKey: 'value' },
+  BOND_ON:  { category: 'investments', itemType: 'BOND_ON',   valueKey: 'value' },
+  EIS:      { category: 'investments', itemType: 'EIS',       valueKey: 'value' },
+  VCT:      { category: 'investments', itemType: 'VCT',       valueKey: 'value' },
+}
+// No wrapper / unknown wrapper with a £ amount → treat as a cash savings balance
+// (the most conservative routing: no tax-wrapper semantics are asserted).
+const DEFAULT_ROUTE = { category: 'cash', itemType: 'SAVINGS', valueKey: 'balance' }
+
+export function toAssetEventPayload(field) {
+  // Only £ amounts become balance-sheet items. Dates / free text are metadata,
+  // not assets — the caller keeps those on the document_captured audit event.
+  if (!field || field.unit !== 'gbp') return null
+  const route = WRAPPER_ROUTE[field.wrapper] || DEFAULT_ROUTE
+  const provider = field.label || ''
+  const fields = { [route.valueKey]: Number(field.value) || 0 }
+  if (route.category === 'pensions' || route.category === 'investments') fields.provider = provider
+  else if (route.category === 'cash') fields.bank = provider
+  else if (route.category === 'property') fields.address = provider
+  return {
+    category: route.category,
+    itemType: route.itemType,
+    fields,
+    source: field.source || 'manual entry',
+    confidence: field.confidence ?? 1.0,
+    label: field.label,
+  }
+}
+
 export default function DataCapture({ onBack, onChannelOpen, onCommit, entity }) {
   const [active, setActive] = useState(null)
   const [file, setFile] = useState(null)
@@ -338,9 +379,11 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
     // Emit one envelope per accepted field so field_path / prior_event_id can
     // be tracked per-value downstream. Plus a summary document_captured event.
     acceptedFields.forEach(f => {
+      const assetPayload = toAssetEventPayload(f)
+      if (!assetPayload) return  // non-£ field — recorded on document_captured below
       onCommit?.(buildEnvelope({
         type: 'ASSET_VALUE_UPDATED',
-        payload: { value: f.value, unit: f.unit, wrapper: f.wrapper, source: f.source, confidence: f.confidence, label: f.label },
+        payload: assetPayload,
         mode,
         parsedField: f,
       }))
@@ -568,12 +611,15 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
               reason: `Confirm to record ${payload.label || 'this value'}.`,
             })
             if (!stepUp.ok) return
-            onCommit?.(buildEnvelope({
-              type: 'ASSET_VALUE_UPDATED',
-              payload: { value: payload.value, unit: payload.unit, wrapper: payload.wrapper, source: payload.source, confidence: payload.confidence, label: payload.label },
-              mode: 'manual',
-              parsedField: payload,
-            }))
+            const assetPayload = toAssetEventPayload(payload)
+            if (assetPayload) {
+              onCommit?.(buildEnvelope({
+                type: 'ASSET_VALUE_UPDATED',
+                payload: assetPayload,
+                mode: 'manual',
+                parsedField: payload,
+              }))
+            }
             onCommit?.(buildEnvelope({
               type: 'document_captured',
               payload: { channel: 'manual', file: null, fields: [payload] },

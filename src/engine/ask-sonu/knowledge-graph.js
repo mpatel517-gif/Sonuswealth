@@ -810,6 +810,74 @@ const PLAYS = [
     fca_boundary: FCA,
   },
 
+  // ── Lifestyle / time-freedom domain (W6) ────────────────────────────────────
+  {
+    id: 'sabbatical_funding',
+    title: 'Funding a sabbatical or career break',
+    one_liner: 'Bridge the income gap from accessible savings (cash, ISA, GIA) — not your pension — and mind the NI and pension-contribution pause.',
+    detail: 'A planned break is a cashflow problem: cover the months without salary from instant-access cash and ISA/GIA, keeping enough emergency buffer on top. Leave the pension untouched (it is locked until 55/57 anyway and you want it compounding). Two quiet costs: a gap in National Insurance years (check your State Pension forecast — a voluntary Class 3 top-up may be worth it) and pausing employer pension contributions. Model the exact gap before you commit.',
+    triggers: [CONCERNS.LIFE_SABBATICAL, CONCERNS.INCOME_SECURITY, CONCERNS.TIME_FREEDOM],
+    weight: { [CONCERNS.LIFE_SABBATICAL]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.5, [CONCERNS.TIME_FREEDOM]: 0.5 },
+    prerequisites: {}, counter_indications: {}, needs_fact: [],
+    compute_impact: (p) => ({ gbp_saved: 0, time_horizon: 'the break period', certainty: 'depends',
+      why: 'Fund the gap from accessible cash/ISA/GIA, keep an emergency buffer, and leave the pension compounding. Watch the NI-year gap (a voluntary top-up may help your State Pension) and the paused employer contributions.' }),
+    citation: 'NI voluntary contributions (Class 3); pension access age (FA 2004)',
+    category: 'lifestyle',
+    alternatives: [{ value_shift: 'part-time over full break', alt_play: 'part_time_transition' }],
+    fca_boundary: FCA,
+  },
+  {
+    id: 'fire_planning',
+    title: 'Planning for FIRE — and the 4% rule\'s limits',
+    one_liner: 'The 4% rule is a useful starting point, but UK taxes, sequence risk, and the pre-57 pension-access gap mean it needs adapting.',
+    detail: 'FIRE (financial independence, retire early) often anchors on the "4% rule" — roughly 25× your annual spend as a target pot. Treat it as a starting estimate, not a guarantee: it came from US data, ignores UK tax on withdrawals, and is vulnerable to a poor run of early returns (sequence risk). The UK-specific catch is access — pensions are locked until 55/57, so an early retiree needs an ISA/GIA "bridge" to live on until then. Build in flexibility to cut spending in bad years.',
+    triggers: [CONCERNS.LIFE_FIRE, CONCERNS.TIME_FREEDOM, CONCERNS.RETIREMENT],
+    weight: { [CONCERNS.LIFE_FIRE]: 1.0, [CONCERNS.TIME_FREEDOM]: 0.5, [CONCERNS.RETIREMENT]: 0.5 },
+    prerequisites: {}, counter_indications: {}, needs_fact: [FACTS.TARGET_INCOME],
+    compute_impact: (p) => {
+      const target = num(p?.targetIncome) || num(p?.target_income) || 0
+      const pot = target > 0 ? target * 25 : 0
+      return { gbp_saved: 0, time_horizon: 'multi-decade', certainty: 'depends',
+        why: target > 0
+          ? `As a rough FIRE anchor, ~25× your ${fmt(target)} target spend ≈ ${fmt(pot)} — but adjust for UK tax, sequence risk, and the need for an ISA/GIA bridge before pension access at 55/57.`
+          : 'The 4% rule (≈25× spend) is a starting estimate only — adjust for UK tax, sequence-of-returns risk, and the ISA/GIA bridge needed before pensions unlock at 55/57.' }
+    },
+    citation: 'Bengen / Trinity 4% studies (US-derived); pension access age FA 2004',
+    category: 'lifestyle',
+    alternatives: [{ value_shift: 'flexibility over fixed rule', alt_play: 'early_retirement_bridge' }],
+    fca_boundary: FCA,
+  },
+  {
+    id: 'part_time_transition',
+    title: 'Going part-time — modelling the cashflow',
+    one_liner: 'Dropping days lowers income but often your tax rate too; keep pension contributions going and check the net, not gross, drop.',
+    detail: 'Reducing hours is a softer alternative to stopping work. The income drop is partly cushioned because losing your top slice of pay removes income taxed at your highest rate — so the net fall is smaller than the gross. Keep some pension contribution flowing (employer match especially), check the reduced salary still clears your essential outgoings plus a buffer, and consider topping up income from ISA/GIA if there is a short gap.',
+    triggers: [CONCERNS.LIFE_PARTTIME, CONCERNS.INCOME_SECURITY, CONCERNS.TIME_FREEDOM],
+    weight: { [CONCERNS.LIFE_PARTTIME]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.5, [CONCERNS.TIME_FREEDOM]: 0.5 },
+    prerequisites: {}, counter_indications: {}, needs_fact: [],
+    compute_impact: (p) => ({ gbp_saved: 0, time_horizon: 'ongoing', certainty: 'depends',
+      why: 'The net income drop is smaller than the gross because you lose your most-highly-taxed slice first. Keep pension contributions (and the employer match) going, and check the reduced pay still covers essentials plus a buffer.' }),
+    citation: 'Income tax band structure (ITA 2007); auto-enrolment (Pensions Act 2008)',
+    category: 'lifestyle',
+    alternatives: [{ value_shift: 'full break over part-time', alt_play: 'sabbatical_funding' }],
+    fca_boundary: FCA,
+  },
+  {
+    id: 'early_retirement_bridge',
+    title: 'Retiring early — bridging the years before your pensions unlock',
+    one_liner: 'The hard part of early retirement is funding the gap before pension access (55/57) and State Pension (≈67) from ISAs, GIA and cash.',
+    detail: 'Retiring several years early is mainly a sequencing problem. Pensions are locked until normal minimum pension age (55, rising to 57 in 2028) and the State Pension starts around 67, so the bridge years must be funded from ISAs, a GIA, and cash. The plan: size the bridge (years × annual spend), hold it in accessible, lower-volatility assets so a market dip doesn\'t force selling at the worst time, then let pensions take over once they unlock. Test it against a poor-early-returns scenario.',
+    triggers: [CONCERNS.LIFE_EARLY_RET, CONCERNS.RETIREMENT, CONCERNS.INCOME_SECURITY],
+    weight: { [CONCERNS.LIFE_EARLY_RET]: 1.0, [CONCERNS.RETIREMENT]: 0.6, [CONCERNS.INCOME_SECURITY]: 0.6 },
+    prerequisites: {}, counter_indications: {}, needs_fact: [FACTS.TARGET_INCOME],
+    compute_impact: (p) => ({ gbp_saved: 0, time_horizon: 'the bridge years', certainty: 'depends',
+      why: 'Early retirement hinges on funding the years before pensions unlock (55/57) and State Pension (~67) from ISA/GIA/cash. Size the bridge (years × spend), hold it in accessible lower-volatility assets, then let pensions take over.' }),
+    citation: 'Pension access age (FA 2004, NMPA 57 from 2028); State Pension age (Pensions Act 2014)',
+    category: 'lifestyle',
+    alternatives: [{ value_shift: 'work longer over bridge', alt_play: 'part_time_transition' }],
+    fca_boundary: FCA,
+  },
+
   // ── Property domain (W6) — UK property tax, rates kept qualitative ──────────
   {
     id: 'downsize_home',

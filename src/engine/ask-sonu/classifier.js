@@ -309,10 +309,25 @@ const RULES = [
     resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
   },
 
-  // ── Time freedom / FIRE ──────────────────────────────────────────────────
+  // ── Time freedom / FIRE (sub-intent routed) ──────────────────────────────
   {
-    match: /sabbatical|career break|fire(?:\s|$)|financial independence|part.time|four.day|stop working early/i,
-    concerns: { [CONCERNS.TIME_FREEDOM]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.8, [CONCERNS.RETIREMENT]: 0.4 },
+    match: /sabbatical|career break|take.{0,10}(?:a )?(?:year|break) (?:off|out)|gap year/i,
+    concerns: { [CONCERNS.LIFE_SABBATICAL]: 1.0, [CONCERNS.TIME_FREEDOM]: 0.6, [CONCERNS.INCOME_SECURITY]: 0.6 },
+    resources: [RESOURCES.CASH, RESOURCES.ISA, RESOURCES.GIA],
+  },
+  {
+    match: /\bfire\b|financial independence|retire early.{0,10}(?:movement|fire)|4%\s*rule|four percent rule/i,
+    concerns: { [CONCERNS.LIFE_FIRE]: 1.0, [CONCERNS.TIME_FREEDOM]: 0.6, [CONCERNS.RETIREMENT]: 0.5 },
+    resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA],
+  },
+  {
+    match: /part.?time|four.?day week|go part|reduce.{0,10}(?:my )?hours|drop.{0,10}(?:a )?day/i,
+    concerns: { [CONCERNS.LIFE_PARTTIME]: 1.0, [CONCERNS.TIME_FREEDOM]: 0.6, [CONCERNS.INCOME_SECURITY]: 0.6 },
+    resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA, RESOURCES.CASH],
+  },
+  {
+    match: /retire.{0,15}(?:early|earlier|\d+ years? earlier|5 years? earlier|at \d+)|early retirement|stop working.{0,10}(?:early|earlier|sooner)|bridge.{0,15}(?:to|until).{0,10}(?:pension|state pension|57|55)/i,
+    concerns: { [CONCERNS.LIFE_EARLY_RET]: 1.0, [CONCERNS.RETIREMENT]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.6 },
     resources: [RESOURCES.PENSION, RESOURCES.ISA, RESOURCES.GIA, RESOURCES.CASH],
   },
 ]
@@ -411,6 +426,29 @@ export const PLAY_INTENT = {
   rebalancing_discipline:        ['plan', 'restructure'],
   emerging_markets_role:         ['plan', 'restructure'],
   esg_investing:                 ['plan', 'restructure'],
+  sabbatical_funding:            ['plan', 'draw'],
+  fire_planning:                 ['plan', 'draw'],
+  part_time_transition:          ['plan', 'draw'],
+  early_retirement_bridge:       ['plan', 'draw'],
+  // business + property W6 plays
+  sale_structure_asset_vs_share: ['plan', 'restructure'],
+  badr_eligibility:              ['plan', 'restructure'],
+  exit_sequencing:               ['plan', 'restructure'],
+  earnout_structure:             ['plan', 'restructure'],
+  eot_relief:                    ['plan', 'restructure'],
+  mvl_capital_treatment:         ['plan', 'restructure'],
+  dividend_vs_capital_extraction:['plan', 'restructure', 'draw'],
+  investors_relief_eligibility:  ['plan', 'restructure'],
+  downsize_home:                 ['plan', 'restructure', 'draw'],
+  upsize_home:                   ['plan', 'restructure'],
+  btl_buy_considerations:        ['plan', 'restructure'],
+  btl_after_s24:                 ['plan', 'restructure'],
+  btl_incorporation:             ['plan', 'restructure'],
+  fhl_post_abolition:            ['plan', 'restructure'],
+  ftb_sdlt_relief:               ['plan'],
+  second_home_sdlt:              ['plan', 'restructure'],
+  btl_disposal:                  ['plan', 'restructure', 'draw'],
+  btl_cgt_mechanics:             ['plan', 'restructure'],
 }
 
 /**

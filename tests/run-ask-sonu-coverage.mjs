@@ -180,6 +180,11 @@ function themeKeywordMap(theme) {
   if (t.includes('btl_disposal')) return ['selling a buy-to-let', 'sell', 'btl', 'disposal']
   if (t.includes('btl_cgt') || t.includes('cgt_residential')) return ['cgt', 'capital gains', 'when you sell']
   if (t.includes('btl_s24_sdlt_yield') || (t.includes('btl') && t.includes('yield'))) return ['buy-to-let', 'btl', 'numbers that decide']
+  // Lifestyle / time-freedom (W6)
+  if (t.includes('sabbatical')) return ['sabbatical', 'career break']
+  if (t.includes('fire')) return ['fire', '4%', 'financial independence']
+  if (t.includes('part_time')) return ['part-time', 'going part-time']
+  if (t.includes('early_retirement') || t.includes('early_ret')) return ['early', 'bridge', 'retiring early']
   // Fallback — split underscores
   return t.split('_').filter(w => w.length >= 4)
 }

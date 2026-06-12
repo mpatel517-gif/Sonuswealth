@@ -63,6 +63,10 @@ export const CONCERNS = {
   PROP_SECOND:    'prop_second_home',    // Second home / SDLT surcharge
   PROP_BTL_SELL:  'prop_btl_sell',       // Selling a BTL
   PROP_BTL_CGT:   'prop_btl_cgt',        // CGT mechanics on a BTL sale
+  LIFE_SABBATICAL:'life_sabbatical',     // Career break / sabbatical funding
+  LIFE_FIRE:      'life_fire',           // FIRE planning / 4% rule
+  LIFE_PARTTIME:  'life_part_time',      // Going part-time — cashflow
+  LIFE_EARLY_RET: 'life_early_retire',   // Retire earlier — bridging years
 }
 
 export const RESOURCES = {

@@ -158,6 +158,13 @@ const RULES = [
     resources: [RESOURCES.EARNED_INCOME],
   },
   {
+    // HICBC — specific-first (before generic child/family rules) so the
+    // child-benefit-charge question lands on the HICBC play, not a protection play.
+    match: /hicbc|child benefit charge|high.?income child benefit|child benefit.{0,20}(?:taper|claw|over £?60|lose)|£?60k?.{0,15}child benefit/i,
+    concerns: { [CONCERNS.TAX_HICBC]: 1.0, [CONCERNS.FAMILY_CHANGE]: 0.4, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.EARNED_INCOME],
+  },
+  {
     match: /bed.?and.?isa|bed.?&.?isa|bed and isa/i,
     concerns: { [CONCERNS.TAX_BEDISA]: 1.0, [CONCERNS.TAX]: 0.6 },
     resources: [RESOURCES.GIA, RESOURCES.ISA],
@@ -566,6 +573,7 @@ export const PLAY_INTENT = {
   salary_sacrifice_pension:      ['plan', 'restructure'],
   carry_forward_aa:              ['plan', 'restructure'],
   marriage_allowance:            ['plan', 'restructure'],
+  hicbc_child_benefit:           ['plan', 'restructure'],
   cgt_realisation:               ['plan', 'restructure'],
   eis_vct_relief:                ['plan', 'restructure'],
   dividend_vs_salary_owner:      ['plan', 'restructure'],

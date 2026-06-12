@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import React from 'react'
 // S1 selector migration (Phase 2)
-import { ani as calcANI, statePensionAnnual } from '../../engine/selectors/index.js'
+import { ani as calcANI, statePensionAnnual, hicbc as calcHICBC } from '../../engine/selectors/index.js'
 import { TAX } from '../../engine/fq-calculator.js'
 import { hasPersonaFlag } from '../../engine/_helpers.js'
 
@@ -292,10 +292,28 @@ export function HICBCTile({ entity, ani: aniProp }) {
   const floor = TAX?.hicbcFloor ?? 60000
   const ceil  = TAX?.hicbcCeiling ?? 80000
   if (!(ani >= floor && ani <= ceil)) return null
+
+  // F-002: gate on an ACTUAL child-benefit position (eligible children) and show
+  // the real charge + the lever that removes it — not generic band copy. A
+  // childless high earner in the band no longer sees an irrelevant tile.
+  let info = null
+  try { info = calcHICBC(entity) } catch { info = null }
+  if (!info || !info.eligible || (info.dependantsCount || 0) === 0) return null
+
+  const charge = Math.round(info.charge || 0)
+  // Pension/Gift-Aid contribution that brings ANI down to the £60k floor removes
+  // the charge entirely (reliefs reduce ANI £-for-£). Information, not advice.
+  const toClear = Math.max(0, Math.round(ani - floor))
+  const fmt = (n) => `£${n.toLocaleString()}`
   return (
     <InfoTile
+      warn
       eyebrow="HICBC — child benefit taper"
-      body="Child Benefit tapers between £60k and £80k of ANI."
+      body={
+        `At an adjusted net income of ${fmt(Math.round(ani))}, the High-Income Child Benefit Charge claws back about ${fmt(charge)} of your Child Benefit this year ` +
+        `(it tapers fully between ${fmt(floor)} and ${fmt(ceil)}). ` +
+        `A pension or Gift Aid contribution of about ${fmt(toClear)} would bring your ANI to ${fmt(floor)} and remove the charge — information only, not a recommendation.`
+      }
     />
   )
 }

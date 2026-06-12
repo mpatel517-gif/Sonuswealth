@@ -75,6 +75,7 @@ export const CONCERNS = {
   TAX_CGT_REALISE:'tax_cgt_realise',     // Crystallise/realise gains, use AEA
   TAX_EIS_VCT:    'tax_eis_vct',         // EIS / VCT tax-advantaged investing
   TAX_DIV_SALARY: 'tax_div_vs_salary',   // Dividend vs salary for company owners
+  TAX_HICBC:      'tax_hicbc',           // High-Income Child Benefit Charge taper
   IHT_REDUCE:     'iht_reduce',          // How do I reduce my IHT bill (overview)
   IHT_7YR:        'iht_seven_year',      // The 7-year gift rule
   IHT_TRUST:      'iht_trust',           // Setting up a trust

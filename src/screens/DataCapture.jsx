@@ -680,6 +680,8 @@ function HouseholdEntryForm({ onCancel, onSubmit }) {
   const [pension, setPension] = useState('')
   const [partner, setPartner] = useState('')
   const [childAge, setChildAge] = useState('')
+  const [niYears, setNiYears] = useState('')
+  const [expenses, setExpenses] = useState('')
 
   function submit() {
     const entries = []
@@ -689,10 +691,14 @@ function HouseholdEntryForm({ onCancel, onSubmit }) {
       entries.push({ field: 'partnerIncome', value: Number(partner) })
     if (childAge !== '')
       entries.push({ field: 'dependantChild', value: 1, age: Number(childAge) })
+    if (niYears !== '' && Number(niYears) >= 0)
+      entries.push({ field: 'niYears', value: Number(niYears) })
+    if (expenses !== '' && Number(expenses) >= 0)
+      entries.push({ field: 'monthlyExpenses', value: Number(expenses) })
     onSubmit(entries)
   }
 
-  const hasAny = pension !== '' || partner !== '' || childAge !== ''
+  const hasAny = pension !== '' || partner !== '' || childAge !== '' || niYears !== '' || expenses !== ''
 
   return (
     <div className="sheet-overlay">
@@ -721,6 +727,16 @@ function HouseholdEntryForm({ onCancel, onSubmit }) {
         <input value={childAge} onChange={(e) => setChildAge(e.target.value)}
           type="number" placeholder="age in years" style={inputStyle} />
         <FieldNote>Unlocks the High-Income Child Benefit Charge and the £175k residence nil-rate band on your estate.</FieldNote>
+
+        <Label>National Insurance qualifying years</Label>
+        <input value={niYears} onChange={(e) => setNiYears(e.target.value)}
+          type="number" placeholder="years (35 = full new State Pension)" style={inputStyle} />
+        <FieldNote>Drives your State Pension forecast — 35 qualifying years earns the full new State Pension.</FieldNote>
+
+        <Label>Essential monthly spending</Label>
+        <input value={expenses} onChange={(e) => setExpenses(e.target.value)}
+          type="number" placeholder="£ per month (rent/mortgage, bills, food)" style={inputStyle} />
+        <FieldNote>Replaces our estimate with your real essentials in the cashflow surplus/deficit.</FieldNote>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <button onClick={submit} className="sw-press"

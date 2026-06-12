@@ -237,6 +237,16 @@ export function applyEvents(baseEntity, events = []) {
             ...(e.partner || {}),
             income: { ...(e.partner?.income || {}), annualGross: amt },
           }
+        } else if (pf.field === 'niYears') {
+          // Read by calcStateP (individual.state_pension_accrued_years) → drives
+          // the State Pension forecast + qualifying-years-needed.
+          if (!e.individual) e.individual = {}
+          e.individual.state_pension_accrued_years = Math.max(0, Math.min(60, +pf.value || 0))
+        } else if (pf.field === 'monthlyExpenses') {
+          // Read by cashflowFlow._currentEssentialsAnnual (expenses.monthly) →
+          // replaces the 60%-of-income proxy with the user's real essentials.
+          if (!e.expenses) e.expenses = {}
+          e.expenses.monthly = Math.max(0, +pf.value || 0)
         } else if (pf.field === 'dependantChild') {
           // Appends to entity.dependants[] in the canonical shape the array
           // readers use (canonical-metrics `.relationship==='child'`,

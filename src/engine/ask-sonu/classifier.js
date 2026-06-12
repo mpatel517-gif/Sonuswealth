@@ -155,11 +155,56 @@ const RULES = [
     resources: [RESOURCES.PROPERTY, RESOURCES.PENSION, RESOURCES.CASH],
   },
 
-  // ── Property ─────────────────────────────────────────────────────────────
+  // ── Property (sub-intent routed; specific BTL/SDLT cases before generic) ───
   {
-    match: /buy (?:a )?(?:second |another |bigger )?(?:house|home|property|flat)|downsiz|second home|btl|buy.to.let/i,
-    concerns: { [CONCERNS.IHT_LEGACY]: 0.4, [CONCERNS.TAX]: 0.5, [CONCERNS.LIFESTYLE]: 0.7 },
-    resources: [RESOURCES.PROPERTY, RESOURCES.CASH, RESOURCES.GIA],
+    match: /furnished holiday let|\bfhl\b|holiday let/i,
+    concerns: { [CONCERNS.PROP_FHL]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /incorporat|btl.{0,15}(?:ltd|limited|company)|move.{0,15}(?:btl|properties|portfolio).{0,15}(?:ltd|company)|property.{0,10}company/i,
+    concerns: { [CONCERNS.PROP_BTL_INC]: 1.0, [CONCERNS.TAX]: 0.7 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /first.?time buyer|\bftb\b|first home.{0,10}sdlt/i,
+    concerns: { [CONCERNS.PROP_FTB]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+  {
+    match: /cgt.{0,15}(?:btl|property|rental|sell)|how.{0,10}(?:does )?cgt.{0,10}work|capital gains.{0,15}(?:btl|property|rental)/i,
+    concerns: { [CONCERNS.PROP_BTL_CGT]: 1.0, [CONCERNS.TAX]: 0.7 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /sell.{0,15}(?:my )?btl|sell.{0,15}(?:my )?(?:rental|investment propert)|btl.{0,10}(?:hassle|too much)|get out of.{0,10}(?:btl|property)|dispose.{0,10}(?:btl|propert)/i,
+    concerns: { [CONCERNS.PROP_BTL_SELL]: 1.0, [CONCERNS.TAX]: 0.5 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /(?:still )?profitable.{0,15}(?:after )?s24|s24|section 24|btl.{0,15}(?:still )?(?:profit|worth|viable)|mortgage interest.{0,10}relief/i,
+    concerns: { [CONCERNS.PROP_BTL_S24]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /buy (?:a )?(?:buy.?to.?let|btl|rental propert|investment propert)|should i buy.{0,10}btl/i,
+    concerns: { [CONCERNS.PROP_BTL_BUY]: 1.0, [CONCERNS.TAX]: 0.5, [CONCERNS.LIFESTYLE]: 0.4 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+  {
+    match: /second home|holiday home|another (?:house|home|propert)/i,
+    concerns: { [CONCERNS.PROP_SECOND]: 1.0, [CONCERNS.TAX]: 0.5, [CONCERNS.LIFESTYLE]: 0.5 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+  {
+    match: /downsiz|sell.{0,10}(?:my )?(?:home|house).{0,15}smaller|smaller (?:home|house|place)|trade down/i,
+    concerns: { [CONCERNS.PROP_DOWNSIZE]: 1.0, [CONCERNS.IHT_LEGACY]: 0.5, [CONCERNS.LIFESTYLE]: 0.6 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
+  },
+  {
+    match: /bigger (?:house|home|propert)|upsiz|upgrade.{0,10}(?:house|home)|move.{0,10}(?:to )?a bigger|trade up/i,
+    concerns: { [CONCERNS.PROP_UPSIZE]: 1.0, [CONCERNS.TAX]: 0.4, [CONCERNS.LIFESTYLE]: 0.6 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
   },
 
   // ── Mortgage / debt (sub-intent routed so each query lands on the right play) ─

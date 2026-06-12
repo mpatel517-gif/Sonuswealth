@@ -53,6 +53,16 @@ export const CONCERNS = {
   BUS_MVL:        'bus_mvl',             // Winding down / members' voluntary liquidation
   BUS_DIVCAP:     'bus_dividend_capital',// Extract via dividend vs sell shares
   BUS_IR:         'bus_investors_relief',// Investors' Relief
+  PROP_DOWNSIZE:  'prop_downsize',       // Downsizing the main home
+  PROP_UPSIZE:    'prop_upsize',         // Buying a bigger home
+  PROP_BTL_BUY:   'prop_btl_buy',        // Buying a buy-to-let
+  PROP_BTL_S24:   'prop_btl_s24',        // BTL profitability after S24
+  PROP_BTL_INC:   'prop_btl_incorporate',// Incorporating a BTL portfolio
+  PROP_FHL:       'prop_fhl',            // Furnished holiday lets post-abolition
+  PROP_FTB:       'prop_ftb',            // First-time buyer SDLT relief
+  PROP_SECOND:    'prop_second_home',    // Second home / SDLT surcharge
+  PROP_BTL_SELL:  'prop_btl_sell',       // Selling a BTL
+  PROP_BTL_CGT:   'prop_btl_cgt',        // CGT mechanics on a BTL sale
 }
 
 export const RESOURCES = {

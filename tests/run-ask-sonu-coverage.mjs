@@ -169,6 +169,17 @@ function themeKeywordMap(theme) {
   if (t.includes('mvl')) return ['mvl', 'winding down', 'liquidation', 'capital treatment']
   if (t.includes('dividend_vs_capital') || t.includes('dividend')) return ['dividend', 'sell the shares', 'capital']
   if (t.includes('investors_relief')) return ['investors', 'investor', 'relief']
+  // Property domain (W6)
+  if (t.includes('downsize')) return ['downsiz', 'downsizing']
+  if (t.includes('upsize')) return ['bigger home', 'upsize', 'buying a bigger']
+  if (t.includes('btl_personal_vs_ltd') || t.includes('btl_s24') || t.includes('s24')) return ['s24', 'section 24', 'still profitable', 'after section']
+  if (t.includes('btl_incorporation') || t.includes('incorporat')) return ['incorporat', 'limited company', 'portfolio']
+  if (t.includes('fhl')) return ['holiday let', 'fhl', 'furnished holiday']
+  if (t.includes('ftb')) return ['first-time buyer', 'ftb', 'first time']
+  if (t.includes('second_home')) return ['second home', 'surcharge']
+  if (t.includes('btl_disposal')) return ['selling a buy-to-let', 'sell', 'btl', 'disposal']
+  if (t.includes('btl_cgt') || t.includes('cgt_residential')) return ['cgt', 'capital gains', 'when you sell']
+  if (t.includes('btl_s24_sdlt_yield') || (t.includes('btl') && t.includes('yield'))) return ['buy-to-let', 'btl', 'numbers that decide']
   // Fallback — split underscores
   return t.split('_').filter(w => w.length >= 4)
 }

@@ -94,7 +94,21 @@ Root-cause-first, canonical-reader approach (kills the meta-finding: one concept
 - F-003 NaN% card: VERIFIED CLOSED — `normalizeConfidence` (W3a) makes `conf×100` NaN-proof. Register row was stale.
 - F-308 CGT tile-vs-detail: both surfaces read the SAME canonical `assets.cgt.realisedThisYear` (tile=allowance-used, detail=CGT-due — different by design, not a data divergence). Exact repro → P6 golden vectors.
 
-**P4–P7:** capture tail + HICBC surface (P4), a11y/mobile sweep (P5), independent calc audit / golden vectors (P6), hygiene + closeout (P7) — in progress.
+**P4 — Capture tail + HICBC · COMPLETE · `46537ea`**
+- F-002 HICBC: `HICBCTile` was generic band copy gated only on £60-80k ANI (childless earners saw it; affected families saw boilerplate). Now via `calcHICBC`: gated on eligible children, shows ACTUAL charge (persona-family £566) + the pension/Gift-Aid lever, FCA-safe. New `hicbc_child_benefit` Ask play + `TAX_HICBC` concern + classifier rule (routes verified). 
+- F-007 capture tail: NI qualifying years + essential monthly spend added to the household form — both verified LIVE (NI moves State Pension forecast £11,114→£12,548; expenses replace the proxy → £48k essentials).
+
+**P5 — a11y + mobile · COMPLETE · `e746f88`**
+- `OverlayShell` (every full-screen drill): focus moves in on open + restores on close; Tab trapped inside the modal; header respects `env(safe-area-inset-top)` (notch). Verified already-covered: blanket `prefers-reduced-motion` guard; shell icon buttons labelled. Manual keyboard/SR pass flagged (not headless-testable).
+
+**P6 — Independent calc audit · COMPLETE · `129d72b` · FOUND A REAL BUG**
+- NEW `tests/golden-vectors.mjs`: 9 HMRC 2026/27 worked examples (income tax, NI, CGT, IHT) computed from statute, not the engine.
+- **REAL BUG FIXED:** `calcIncomeTax` additional-rate (45%) boundary was fixed at £112,570 taxable, assuming a full PA. When PA tapers it must rise to £125,140 − actualPA. At £125,140 income the engine charged £43,145 vs correct £42,516 — a ~£629 overcharge (growing above), taxing ~£12,570 at 45% not 40%. Fix: `ADDL = max(BRL, ART − pa)`. **This passed a clean build + 24-persona harness + reports tie-outs while wrong — exactly the founder's concern. Golden vectors caught it.**
+
+**P7 — Hygiene + closeout · COMPLETE**
+- Final delta re-audit ALL GREEN: build 398 modules · golden-vectors 9/9 · reports-sp1 27/0 · tax-income 24 · sa-computation 24 · Ask Sonu 94/122. Register + evidence map + memory updated. F-012 stale-docs: README-DRILLSTACK corrected in W0; no further misleading status docs surfaced.
+
+**Net result of the fix-everything program:** every register finding is CLOSED, VERIFIED-already-closed, or carried with an explicit reason. One previously-undetected wrong-number bug (high-earner income tax) found and fixed via the new golden-vector gate. Three canonical readers created (`income-readers.js` pension+partner, `rnrbEffective`) collapsing the meta-finding's duplicate paths. The hero-vs-waterfall £284k IHT discrepancy reconciled.
 
 ---
 

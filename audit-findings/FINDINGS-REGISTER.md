@@ -29,6 +29,25 @@
 
 ---
 
+## W3a — CLOSED (2026-06-12, main-thread, commit-after-each, no agent fleet)
+
+| ID | Sev | Fix | Verification | Commit |
+|---|---|---|---|---|
+| F-210 | P1 | `protection` surfaced from `monthlySurplus()` + added as expenditure/outflow line in income + cashflow statements → children sum to net | Structural (symmetric add) + reports-sp1 27/0 | eb99162 |
+| F-518 | P0 | Bundle key-map rewired — `b.cgt`/`b.iht`/`b.sdlt` dead paths → real `capitalGains`/`inheritanceTax`/`property` homes; CGT + BPR/AIM + gift block now tracks the active bundle (was frozen literals) | Node: all keys resolve to bundle values; build green | eb99162 |
+| F-003-RC | P1 | `ConfidenceChip` coerces 'high'/'medium'/'low' string confidence → 0–1 (no more NaN%) | Logic fix | eb99162 |
+| F-205 | P2 | Consequence chips map raw engine keys (cashflow_30yr…) → plain English; unmapped humanised | Logic fix | eb99162 |
+| F-413 | P0 | DataCapture manual/parsed Add silently dropped — added `toAssetEventPayload()` adapter mapping capture shape → reducer-routable `{category,itemType,fields}` | **LIVE**: seeded cash capture → NW £1.75m→£1.87m, Cash +£123,456 | 87f170f |
+| F-419 | P0 | Captures lost on reload — always-on localStorage mirror (persist/hydrate/clear), auto-seed on persona mount | **LIVE**: event survived reload + re-hydrated | 2ff2f73 |
+| F-201 | P2 | Supabase "missing env" console.error spam (expected demo path) → one console.info | **LIVE**: 0 console errors (was 24+) | df7896d |
+| F-202 | P2 | `fontVariantNumeric` SVG-attribute warning → moved to `style` in 3 components | Build green | df7896d |
+| F-312 | P0 | Gift IHT taxed whole gift — rewrote `giftClockProjection` (annual exemption + chronological NRB cumulation; only slice above NRB taxed; CLT/PET tagged) | Node: £3k→£0 (was £960); £400k PET→£28,800 on £72k above NRB | 51d4fea |
+| F-310 | P0 | "IHT after moves" stuck at £0 — fq `ihtWaterfall` delegates to canonical tax-estate-engine one (rich shape); kills the duplicate | **LIVE**: mrt now shows live slider-responsive figure (was £0) | 80108c3 |
+
+**Still OPEN (not addressed this pass):** F-311 (pre/post-2027 IHT base + waterfall-vs-exposure reconciliation), F-309 (canonical `rnrbEffective` — 3 disagreeing RNRB), F-308 (CGT tile vs detail), F-114 (BPR relief > total assets), F-611/FCA boundary cluster (P1), F-500/501/502 broader surplus/NW/IHT canonical-reader consolidation, plus W4 plain-English layer, W5 capture fields, W6 AI-engine expansion, W7 redesign/charts.
+
+---
+
 ## FINDINGS
 
 | ID | Screen/Area | Sev | Ask# | Finding | Status | Wave |

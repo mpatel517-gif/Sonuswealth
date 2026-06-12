@@ -15,6 +15,7 @@ import {
   calcIncomeTax,
 } from './fq-calculator.js';
 import { taxableIncomeBreakdown } from './taxable-income.js';
+import { pensionContributionsThisYear } from './income-readers.js';  // F-004 canonical
 import { isCouple as readIsCouple, estateExtras, cgtChargeableHoldings } from './_helpers.js';
 
 // ── BUNDLE-DERIVED CONSTANTS ─────────────────────────────────────────────────
@@ -456,7 +457,7 @@ export function allowanceTracker(entity, year = 'tax-2026-27', bundle = 'UK-2026
   const cgtUsed      = (entity.assets?.cgt?.realisedThisYear || []).reduce((s, r) => s + Math.max(0, r.gain || 0), 0);
   const cgtExemption = CGT.annualExemptAmount;
   const pensionAA    = PEN.annualAllowance;
-  const pensionUsed  = entity.pension?.contributionsThisYear || 0;
+  const pensionUsed  = pensionContributionsThisYear(entity);  // F-004 canonical reader
   const pensionCF    = entity.pension?.carryForward || { 'tax-2023-24': 0, 'tax-2024-25': 0, 'tax-2025-26': 0 };
   const divUsed      = Math.min(INC.dividendAllowance, entity.income?.dividends || 0);
   const savingsUsed  = Math.min(INC.savingsAllowanceBasicRate, inc.savings || 0);
@@ -544,7 +545,7 @@ export function taxDrag(entity, bundle = 'UK-2026.1') {
 
   // Optimised drag: maximise pension + ISA wrappers
   const optimisedPensionContrib = Math.min(
-    Math.max(0, PEN.annualAllowance - (entity.pension?.contributionsThisYear || 0)),
+    Math.max(0, PEN.annualAllowance - pensionContributionsThisYear(entity)),
     Math.max(0, gross - PA)
   );
   const optimisedDrag = Math.round(Math.max(0, drag - (optimisedPensionContrib * HR / gross)) * 1000) / 1000;

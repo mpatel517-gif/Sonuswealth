@@ -29,6 +29,10 @@ import {
 // CLAUDE.md §6.2: never hardcode tax rates, allowances, or thresholds.
 import { TAX } from './fq-calculator.js';
 
+// F-004 — canonical current-year pension contribution (one reader, four
+// consumers). Replaces the local `+entity?.pensionContributions || sum(...)`.
+import { pensionContributionsThisYear } from './income-readers.js';
+
 // Single-source-of-truth IHT engine — referenced by ihtProjection / ihtDeltaPrePost2027
 // so the v0.3 R4 signature card never diverges from the canonical legacy figure.
 // (Task #99 fix, 2026-05-26.)
@@ -139,11 +143,8 @@ export function taxEfficiencyScore(entity, _bundle) {
     .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0);
   const isaPct = Math.min(100, (isaContrib / TAX.isaAllowance) * 100);
 
-  // AA usage
-  const pensionContrib = +entity?.pensionContributions
-    || +(a.pensionContributions || 0)
-    || ((Array.isArray(a.pensions) ? a.pensions : [])
-        .reduce((s, p) => s + (+p.annual_contribution || 0), 0));
+  // AA usage — canonical reader (F-004)
+  const pensionContrib = pensionContributionsThisYear(entity);
   const aaPct = Math.min(100, (pensionContrib / TAX.pensionAA) * 100);
 
   // AEA usage — assume 0 if no disposal data; cap if cgt_realised_current_year present
@@ -486,8 +487,7 @@ export function coiForDomain(entity, domain, bundle, marketAssumptions = default
       // they can only contribute up to £3,600 gross (the universal floor for
       // non-earners) and only get basic-rate relief.
       const aaRaw = TAX.pensionAA;
-      const used = +entity?.pensionContributions
-        || ((entity?.assets?.pensions || []).reduce((s, p) => s + (+p.annual_contribution || 0), 0));
+      const used = pensionContributionsThisYear(entity);
 
       // Relievable earnings cap (s189 FA 2004): contributions eligible for
       // relief are capped at the higher of (a) UK relevant earnings,

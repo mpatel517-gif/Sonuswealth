@@ -42,6 +42,7 @@ import {
 // P3-S3 wiring (2026-05-28): unified dependants reader resolves children[]
 // vs dependants[] schema drift. calcHICBC now sees mrT-family kids.
 import { dependants as _dependantsUnified } from './persona-normalizer.js';
+import { pensionContributionsThisYear, partnerGrossIncome } from './income-readers.js';  // F-004 / F-001 canonical
 
 // ── TAX OBJECT — derived from active bundle via _bundle.js ──────────────────
 // TAX is re-populated in place by _bundle.js whenever setBundle() fires, so
@@ -2298,7 +2299,7 @@ function _wrapperSequencingCoI(e) {
 function _contributionCoI(e) {
   // Higher-rate taxpayer not maxing pension AA: 20% relief lost on shortfall up to AA cap.
   if (!e.isHigherRateTaxpayer) return 0;
-  const pen = e.pensionContributions || (e.assets?.pensionContributions ?? 0);
+  const pen = pensionContributionsThisYear(e);  // F-004 canonical reader
   const cap = TAX.pensionAA;
   return Math.round(Math.max(0, (cap - pen)) * 0.20);
 }
@@ -2793,6 +2794,7 @@ export function monthlySurplus(entity, bundle) {
   const surplus = f.surplusMonthly;
   return {
     income:       Math.round(f.gross / 12),
+    partnerNet:   Math.round((f.partnerNet || 0) / 12),   // F-001 household partner take-home
     essential:    Math.round(f.essentials / 12),
     committed:    Math.round(f.committed / 12),
     debtService:  Math.round(f.debtService / 12),
@@ -2880,6 +2882,29 @@ export function inferLifeStage(entity) {
 export function cashflowFlow(entity, bundle) {
   const gross     = calcAllIncome(entity, bundle).total;
   const incomeTax = calcIncomeTax(entity, bundle).tax;
+  // F-001 — partner/spouse NET income belongs in the HOUSEHOLD spendable
+  // cashflow (a couple where the engine saw only one salary showed a false
+  // deficit). Partners are taxed INDEPENDENTLY, so we never fold partner income
+  // into the individual's `gross`/`incomeTax` above — we tax it on a synthetic
+  // single-earner entity and add the take-home to the surplus. 0 for singles, so
+  // no behaviour change for non-couples.
+  const partnerAge = entity?.partner ? (_personAge(entity.partner) || null) : null;
+  const partnerGross = partnerGrossIncome(entity, partnerAge);
+  let partnerNet = 0;
+  if (partnerGross > 0) {
+    const partnerEntity = { income: { employment: partnerGross }, age: entity?.partnerAge || entity?.age || 45 };
+    const partnerTax = calcIncomeTax(partnerEntity, bundle).tax;
+    const NICp   = (TAX_JSON && TAX_JSON.nationalInsurance) || {};
+    const pPT    = +(NICp.primaryThreshold ?? 12570);
+    const pUEL   = +(NICp.upperEarningsLimit ?? 50270);
+    const pRate  = +(NICp.class1EmployeeRate ?? 0.08);
+    const pUpper = +(NICp.class1EmployeeRateAboveUEL ?? 0.02);
+    const partnerNI = Math.round(
+      Math.max(0, Math.min(partnerGross, pUEL) - pPT) * pRate +
+      Math.max(0, partnerGross - pUEL) * pUpper
+    );
+    partnerNet = Math.max(0, partnerGross - partnerTax - partnerNI);
+  }
   // Employee Class 1 NI, computed inline from confirmed bundle keys (robust
   // salary read — MAX of aliases — unlike nicsDetail's single-field read).
   const NICb    = (TAX_JSON && TAX_JSON.nationalInsurance) || {};
@@ -2905,7 +2930,10 @@ export function cashflowFlow(entity, bundle) {
     .filter(i => (i.type || '').toLowerCase().includes('isa'))
     .reduce((s, i) => s + (+i.contribution_current_tax_year || 0), 0);
   const committed   = pensionContribAnnual + isaContribAnnual;
-  const essentials  = _currentEssentialsAnnual(entity, gross);
+  // Essentials proxy scales to HOUSEHOLD income when a partner contributes, so a
+  // couple's 60%-of-income fallback isn't understated (which would overstate
+  // surplus). Explicit per-persona essentials are unaffected.
+  const essentials  = _currentEssentialsAnnual(entity, gross + partnerGross);
   const debtService = _monthlyDebtService(entity) * 12;
   // Protection premiums (life / CI / IP / PMI) — a real recurring outflow, so it
   // belongs in the canonical surplus or the Cashflow waterfall and Sankey would
@@ -2917,9 +2945,12 @@ export function cashflowFlow(entity, bundle) {
     (+(prot.incomeProtection?.premium || 0)) +
     (+(prot.pmi?.premium              || 0))
   ) * 12;
-  const surplus = gross - incomeTax - ni - committed - essentials - debtService - protection;
+  const surplus = gross + partnerNet - incomeTax - ni - committed - essentials - debtService - protection;
   return {
     gross:          Math.round(gross),
+    partnerNet:     Math.round(partnerNet),
+    partnerGross:   Math.round(partnerGross),
+    householdGross: Math.round(gross + partnerGross),
     tax:            Math.round(incomeTax),
     ni:             Math.round(ni),
     taxAndNI:       Math.round(incomeTax + ni),

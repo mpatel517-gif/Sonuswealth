@@ -19,6 +19,8 @@
 
 // Current tax-year start year (2026/27). Deterministic — no Date() so snapshots
 // stay stable. Bump when the active bundle year changes.
+import { pensionContributionsThisYear } from './income-readers.js'  // F-004 canonical
+
 const TAX_YEAR_START = 2026
 
 function birthYear(entity) {
@@ -100,7 +102,9 @@ export function taxableIncomeBreakdown(entity) {
   const dividends = Math.max(0, Math.max(+(inc.dividends || 0), +(inc.directorDividends || 0)) - isaShield)
 
   // Reliefs that reduce adjusted net income (gross-up handled by caller if needed).
-  const reliefs = +(inc.pensionContribs || inc.pensionContributions || 0) + +(inc.giftAid || 0)
+  // Pension contributions via the canonical reader (F-004) so ANI agrees with the
+  // AA-headroom figure shown elsewhere; gift aid added on top.
+  const reliefs = pensionContributionsThisYear(entity) + +(inc.giftAid || 0)
 
   const total = nsnd + savings + dividends
   const ani = Math.max(0, total - reliefs)

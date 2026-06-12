@@ -146,6 +146,11 @@ function themeKeywordMap(theme) {
   if (t.includes('fixed_vs_tracker') || t.includes('interest_only') || t.includes('lti_affordability') || t.includes('btl_leverage')) return ['mortgage', 'remortgage', 'fixed', 'tracker', 'borrow']
   if (t.includes('offset')) return ['mortgage', 'offset']
   if (t.includes('equity_release')) return ['mortgage', 'equity release', 'equity_release', 'equity']
+  // Cash domain new sub-intents (W6)
+  if (t.includes('mmf_vs_cash_isa')) return ['money market', 'mmf', 'cash isa', 'where to hold cash']
+  if (t.includes('isa_full')) return ['isa is full', 'next pound', 'next steps', 'spouse', 'pension', 'gia']
+  if (t.includes('bed_and_sipp')) return ['bed-and-sipp', 'bed and sipp', 'sipp']
+  if (t.includes('cash_yield_drop') || t.includes('yield_drop')) return ['rates have dropped', 'savings rates', 'where your cash sits', 'cash sits']
   // Fallback — split underscores
   return t.split('_').filter(w => w.length >= 4)
 }

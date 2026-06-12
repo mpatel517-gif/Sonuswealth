@@ -30,6 +30,14 @@ export const CONCERNS = {
   DEBT_RATE:      'debt_rate_switch',    // Remortgage, fixed vs tracker, interest-only, borrowing
   DEBT_OFFSET:    'debt_offset',         // Offset mortgage against savings
   DEBT_EQUITY:    'debt_equity_release', // Equity release / lifetime mortgage
+  CASH_BUFFER:    'cash_buffer',         // Emergency fund / how much to hold liquid
+  CASH_DEPLOY:    'cash_deploy',         // Maturing deposits / what to do with sitting cash
+  CASH_SHELTER:   'cash_shelter',        // MMF vs cash ISA / where to hold cash
+  CASH_GILTS:     'cash_gilts',          // Buying gilts directly
+  CASH_PSA:       'cash_psa',            // Personal Savings Allowance / interest tax
+  CASH_BEYOND_ISA:'cash_beyond_isa',     // ISA full this year — what next
+  CASH_BEDSIPP:   'cash_bed_sipp',       // Bed-and-SIPP a cash holding
+  CASH_RATEDROP:  'cash_rate_drop',      // Savings rates have fallen — response
 }
 
 export const RESOURCES = {

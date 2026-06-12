@@ -94,10 +94,45 @@ const RULES = [
     resources: [],
   },
 
-  // ── Cash / deposits / savings ────────────────────────────────────────────
+  // ── Cash / deposits / savings (sub-intent routed) ─────────────────────────
   {
-    match: /fixed deposit|fd.{0,5}matur|term deposit|money market|cash account|savings account|cash.{0,15}(?:matur|reinvest|deploy|sitting)|maturing.{0,15}(?:deposit|cash|account)|deposits? matur|what.{0,10}do with.{0,15}(?:cash|deposit)|deploy.{0,15}cash/i,
-    concerns: { [CONCERNS.LIQUIDITY]: 1.0, [CONCERNS.TAX]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.4 },
+    match: /bed.?and.?sipp|bed.?&.?sipp|sipp.{0,10}my cash|move cash.{0,15}sipp/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.5, [CONCERNS.CASH_BEDSIPP]: 1.0, [CONCERNS.TAX]: 0.5 },
+    resources: [RESOURCES.CASH, RESOURCES.PENSION],
+  },
+  {
+    match: /isa.{0,10}(?:is )?full|full.{0,10}isa|used.{0,10}(?:my )?isa.{0,10}(?:allowance|this year)|isa.{0,10}allowance.{0,10}(?:used|full)|maxed.{0,10}isa/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.5, [CONCERNS.CASH_BEYOND_ISA]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.CASH, RESOURCES.GIA, RESOURCES.PENSION, RESOURCES.ISA],
+  },
+  {
+    match: /psa|personal savings allowance|interest.{0,10}tax(?:ed|able)?|tax.{0,10}on.{0,10}(?:savings|interest)/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.5, [CONCERNS.CASH_PSA]: 1.0, [CONCERNS.TAX]: 0.8 },
+    resources: [RESOURCES.CASH, RESOURCES.ISA],
+  },
+  {
+    match: /gilt|treasury (?:bond|stock)|government bond/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.5, [CONCERNS.CASH_GILTS]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.CASH, RESOURCES.GIA],
+  },
+  {
+    match: /money market|mmf|cash isa|where (?:should|to) (?:i )?(?:hold|keep|put).{0,15}cash|best.{0,10}(?:home|place).{0,10}(?:for )?cash/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.5, [CONCERNS.CASH_SHELTER]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.CASH, RESOURCES.ISA, RESOURCES.GIA],
+  },
+  {
+    match: /rates?.{0,15}(?:drop|fall|fell|fallen|cut|lower)|savings? rate.{0,15}(?:drop|fall|down|lower)|cash.{0,15}(?:yield|return).{0,10}(?:drop|fall|low)/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.5, [CONCERNS.CASH_RATEDROP]: 1.0, [CONCERNS.TAX]: 0.3 },
+    resources: [RESOURCES.CASH, RESOURCES.GIA],
+  },
+  {
+    match: /how much cash|cash.{0,10}(?:should|do) i (?:keep|hold)|emergency fund|rainy day|keep.{0,10}liquid|how.{0,10}liquid/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.6, [CONCERNS.CASH_BUFFER]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.5 },
+    resources: [RESOURCES.CASH],
+  },
+  {
+    match: /fixed deposit|fd.{0,5}matur|term deposit|cash account|savings account|cash.{0,15}(?:matur|reinvest|deploy|sitting)|maturing.{0,15}(?:deposit|cash|account)|deposits? matur|what.{0,10}do with.{0,15}(?:cash|deposit)|deploy.{0,15}cash/i,
+    concerns: { [CONCERNS.LIQUIDITY]: 0.6, [CONCERNS.CASH_DEPLOY]: 1.0, [CONCERNS.TAX]: 0.6 },
     resources: [RESOURCES.CASH, RESOURCES.ISA, RESOURCES.GIA],
   },
 

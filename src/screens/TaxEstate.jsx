@@ -2285,11 +2285,23 @@ function GiftClock({ entity }) {
                   Gifted {g.date} · {yrs.toFixed?.(1) ?? yrs}/7 years elapsed
                 </div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {g.kind && (
+                    <Chip tone="neutral" title={g.kind === 'CLT'
+                      ? 'Chargeable Lifetime Transfer — a gift into trust'
+                      : 'Potentially Exempt Transfer — a gift to an individual'}>
+                      {g.kind}
+                    </Chip>
+                  )}
                   <Chip tone={pct >= 100 ? 'good' : 'warn'}>
                     {pct >= 100 ? 'IHT-free' : `${fmtPct(g.taperPct || 0, 0)} taper`}
                   </Chip>
-                  {pct < 100 && (
-                    <Chip tone="neutral" title="If you died today">
+                  {pct < 100 && g.withinNRB && (
+                    <Chip tone="good" title="The gift is covered by the £325,000 nil-rate band (after the £3,000 annual exemption), so no IHT is due even within 7 years.">
+                      Within nil-rate band · £0 IHT
+                    </Chip>
+                  )}
+                  {pct < 100 && !g.withinNRB && (
+                    <Chip tone="neutral" title="IHT if you died today — charged only on the part above the nil-rate band, reduced by taper relief.">
                       Today: {fmt(g.ihtIfDieToday || 0)} IHT
                     </Chip>
                   )}

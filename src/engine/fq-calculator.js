@@ -3960,16 +3960,37 @@ export function scottishIncomeTax(entity) {
  */
 export function giftClockProjection(entity, today = new Date()) {
   const all = giftClockAll(entity);
-  const IHT_RATE = TAX.ihtRate;
-  return all.map(g => {
-    const taperPct = g.taperBand?.rate || 0;
-    const ihtIfDieToday = Math.round(g.amount * taperPct);
+  // F-312 FIX (2026-06-12): the old code charged `amount × taperBand.rate` on the
+  // WHOLE gift. That is tax-wrong on three counts and produced "£3k gift → £960
+  // IHT" (should be £0):
+  //   (a) the £3,000 annual gift exemption is never deducted;
+  //   (b) IHT on a failed PET/CLT only arises on the slice ABOVE the available
+  //       nil-rate band — a gift wholly within the NRB bears £0 regardless of age;
+  //   (c) taper relief reduces the TAX, and only applies once there IS tax (i.e.
+  //       the gift exceeds the NRB) — it never turns an exempt/within-NRB gift
+  //       into a charge.
+  // Correct model: sort chronologically; each gift absorbs one annual exemption
+  // (£3k — single gift/yr is the common case), then consumes the running NRB;
+  // only the excess over the NRB is taxed, at the per-gift effective taper rate
+  // (taperBand.rate already folds 40% × taper). Trust gifts are CLTs, others PETs.
+  const annualExemption = TAX.annualGiftExemption ?? TAX.giftExemption ?? 3000;
+  let runningNRB = TAX.nrb ?? 325000;
+  const chronological = [...all].sort((a, b) => new Date(a.date) - new Date(b.date));
+  return chronological.map(g => {
+    const taperPct = g.taperBand?.rate || 0;          // effective residual IHT rate
+    const netOfExemption = Math.max(0, (g.amount || 0) - annualExemption);
+    const taxableAboveNRB = Math.max(0, netOfExemption - runningNRB);
+    runningNRB = Math.max(0, runningNRB - netOfExemption);   // gift consumes NRB chronologically
+    const ihtIfDieToday = Math.round(taxableAboveNRB * taperPct);
     return {
       date: g.date,
       amount: g.amount,
       recipient: g.recipient,
       yrs: g.yearsElapsed,
       taperPct,
+      taxableAboveNRB,
+      withinNRB: taxableAboveNRB === 0,               // UI: explain why £0
+      kind: /trust/i.test(g.recipient || '') ? 'CLT' : 'PET',
       ihtIfDieToday,
       ihtFreeIn: g.freeIn,
     };

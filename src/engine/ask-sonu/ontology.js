@@ -67,6 +67,14 @@ export const CONCERNS = {
   LIFE_FIRE:      'life_fire',           // FIRE planning / 4% rule
   LIFE_PARTTIME:  'life_part_time',      // Going part-time — cashflow
   LIFE_EARLY_RET: 'life_early_retire',   // Retire earlier — bridging years
+  TAX_TAPER:      'tax_taper',           // £100k personal-allowance taper trap
+  TAX_SALSAC:     'tax_salary_sacrifice',// Salary sacrifice into pension
+  TAX_CARRYFWD:   'tax_carry_forward',   // Pension annual-allowance carry-forward
+  TAX_MARRIAGE:   'tax_marriage_allow',  // Marriage Allowance transfer
+  TAX_BEDISA:     'tax_bed_and_isa',     // Bed-and-ISA mechanics
+  TAX_CGT_REALISE:'tax_cgt_realise',     // Crystallise/realise gains, use AEA
+  TAX_EIS_VCT:    'tax_eis_vct',         // EIS / VCT tax-advantaged investing
+  TAX_DIV_SALARY: 'tax_div_vs_salary',   // Dividend vs salary for company owners
 }
 
 export const RESOURCES = {

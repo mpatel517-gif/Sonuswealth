@@ -52,7 +52,7 @@ const RULES = [
 
   // ── Relocation ───────────────────────────────────────────────────────────
   {
-    match: /relocat|emigrat|move (?:abroad|overseas)|moving (?:abroad|overseas)|leaving uk|leave (?:the )?uk|portugal|dubai|uae|spain|kenya|australia|nhr|ific|fig/i,
+    match: /relocat|emigrat|move (?:abroad|overseas)|moving (?:abroad|overseas)|leaving uk|leave (?:the )?uk|portugal|dubai|uae|spain|kenya|australia|\bnhr\b|ifici|\bfig\b/i,
     concerns: {
       [CONCERNS.RELOCATION]: 1.0,
       [CONCERNS.TAX]: 0.5,
@@ -143,8 +143,43 @@ const RULES = [
     resources: [RESOURCES.PENSION, RESOURCES.ISA],
   },
   {
-    match: /taper|tapered|losing (?:my )?personal allowance|60% marginal|(?:earn|income|salary).{0,20}(?:£?100k|£?100,000)/i,
-    concerns: { [CONCERNS.TAX]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.4 },
+    match: /salary sacrifice|sal.?sac|sacrifice.{0,10}(?:into|to).{0,10}pension/i,
+    concerns: { [CONCERNS.TAX_SALSAC]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.PENSION, RESOURCES.EARNED_INCOME],
+  },
+  {
+    match: /carry.?forward|carry forward.{0,10}allowance|unused.{0,10}annual allowance|previous years.{0,10}allowance/i,
+    concerns: { [CONCERNS.TAX_CARRYFWD]: 1.0, [CONCERNS.TAX]: 0.6, [CONCERNS.RETIREMENT]: 0.3 },
+    resources: [RESOURCES.PENSION],
+  },
+  {
+    match: /marriage allowance|married.{0,10}(?:tax )?allowance|transfer.{0,10}(?:personal )?allowance.{0,10}spouse/i,
+    concerns: { [CONCERNS.TAX_MARRIAGE]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.EARNED_INCOME],
+  },
+  {
+    match: /bed.?and.?isa|bed.?&.?isa|bed and isa/i,
+    concerns: { [CONCERNS.TAX_BEDISA]: 1.0, [CONCERNS.TAX]: 0.6 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA],
+  },
+  {
+    match: /crystallise (?:capital )?gains|realise.{0,10}gains|use.{0,10}(?:my )?(?:cgt|capital gains).{0,10}(?:exempt|allowance)|annual exempt amount|\baea\b/i,
+    concerns: { [CONCERNS.TAX_CGT_REALISE]: 1.0, [CONCERNS.TAX]: 0.7 },
+    resources: [RESOURCES.GIA],
+  },
+  {
+    match: /\beis\b|\bvct\b|\bseis\b|enterprise investment|venture capital trust|seed enterprise/i,
+    concerns: { [CONCERNS.TAX_EIS_VCT]: 1.0, [CONCERNS.TAX]: 0.7 },
+    resources: [RESOURCES.GIA],
+  },
+  {
+    match: /dividend.{0,10}(?:or|vs).{0,10}salary|salary.{0,10}(?:or|vs).{0,10}dividend|how.{0,10}(?:should|do).{0,10}i.{0,10}pay myself|extract.{0,10}(?:from )?(?:my )?(?:company|ltd)/i,
+    concerns: { [CONCERNS.TAX_DIV_SALARY]: 1.0, [CONCERNS.TAX]: 0.7, [CONCERNS.BUSINESS_EXIT]: 0.2 },
+    resources: [RESOURCES.BUSINESS, RESOURCES.EARNED_INCOME],
+  },
+  {
+    match: /taper|tapered|losing (?:my )?personal allowance|60% marginal|100k.{0,10}(?:trap|taper)|(?:earn|income|salary).{0,20}(?:£?100k|£?110k|£?100,000|£?110,000)/i,
+    concerns: { [CONCERNS.TAX_TAPER]: 1.0, [CONCERNS.TAX]: 0.7, [CONCERNS.INCOME_SECURITY]: 0.3 },
     resources: [RESOURCES.PENSION, RESOURCES.EARNED_INCOME],
   },
 
@@ -449,6 +484,12 @@ export const PLAY_INTENT = {
   second_home_sdlt:              ['plan', 'restructure'],
   btl_disposal:                  ['plan', 'restructure', 'draw'],
   btl_cgt_mechanics:             ['plan', 'restructure'],
+  salary_sacrifice_pension:      ['plan', 'restructure'],
+  carry_forward_aa:              ['plan', 'restructure'],
+  marriage_allowance:            ['plan', 'restructure'],
+  cgt_realisation:               ['plan', 'restructure'],
+  eis_vct_relief:                ['plan', 'restructure'],
+  dividend_vs_salary_owner:      ['plan', 'restructure'],
 }
 
 /**

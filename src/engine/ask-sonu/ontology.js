@@ -75,6 +75,17 @@ export const CONCERNS = {
   TAX_CGT_REALISE:'tax_cgt_realise',     // Crystallise/realise gains, use AEA
   TAX_EIS_VCT:    'tax_eis_vct',         // EIS / VCT tax-advantaged investing
   TAX_DIV_SALARY: 'tax_div_vs_salary',   // Dividend vs salary for company owners
+  IHT_REDUCE:     'iht_reduce',          // How do I reduce my IHT bill (overview)
+  IHT_7YR:        'iht_seven_year',      // The 7-year gift rule
+  IHT_TRUST:      'iht_trust',           // Setting up a trust
+  IHT_LEAVE_KIDS: 'iht_leave_kids',      // Leave everything to kids tax-free
+  IHT_HOME:       'iht_home',            // Is my home taxed on death
+  IHT_CHARITY:    'iht_charity',         // Charity reducing IHT
+  IHT_TRANSFER:   'iht_transfer_nrb',    // Spouse died — transferable NRB/RNRB
+  INH_DEPLOY:     'inh_deploy',          // Deploying an inheritance — priorities
+  INH_WRAPPER:    'inh_wrapper_seq',     // Wrapper sequencing for inheritance
+  INH_GENSKIP:    'inh_gen_skip',        // Gift inheritance on / generation skip
+  INH_DEED:       'inh_deed_variation',  // Deed of variation
 }
 
 export const RESOURCES = {

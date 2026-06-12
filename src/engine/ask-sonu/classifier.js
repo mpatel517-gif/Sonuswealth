@@ -183,6 +183,58 @@ const RULES = [
     resources: [RESOURCES.PENSION, RESOURCES.EARNED_INCOME],
   },
 
+  // ── IHT / estate + inheritance (sub-intent routed) ────────────────────────
+  {
+    match: /deed of variation|redirect.{0,12}inherit|vary (?:the |my )?will|change.{0,10}(?:the )?will after/i,
+    concerns: { [CONCERNS.INH_DEED]: 1.0, [CONCERNS.IHT_LEGACY]: 0.5, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.INHERITANCE],
+  },
+  {
+    match: /refuse.{0,10}inherit|skip.{0,10}(?:a )?generation|generation.?skip|gift.{0,12}(?:my )?inherit|pass.{0,10}(?:my )?inherit (?:on|down)|inherit.{0,12}on to (?:my )?(?:children|kids|grandchildren)/i,
+    concerns: { [CONCERNS.INH_GENSKIP]: 1.0, [CONCERNS.IHT_LEGACY]: 0.6, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.INHERITANCE],
+  },
+  {
+    match: /i inherited|inherited £|inherited (?:a |some )|deploy.{0,10}(?:my )?inherit|what.{0,12}do with.{0,10}(?:my )?inherit|invest.{0,10}(?:my )?inherit|inheritance.{0,10}after iht/i,
+    concerns: { [CONCERNS.INH_DEPLOY]: 1.0, [CONCERNS.LIQUIDITY]: 0.4, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.INHERITANCE, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+  {
+    match: /spouse died|partner died|wife died|husband died|widow|transferable nil|transferable nrb|unused nil.?rate|spouse.{0,10}(?:nil.?rate|nrb)/i,
+    concerns: { [CONCERNS.IHT_TRANSFER]: 1.0, [CONCERNS.IHT_LEGACY]: 0.7 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /charit/i,
+    concerns: { [CONCERNS.IHT_CHARITY]: 1.0, [CONCERNS.IHT_LEGACY]: 0.6, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.GIA],
+  },
+  {
+    match: /is my home.{0,10}taxed|home.{0,10}(?:taxed|on death)|house.{0,10}(?:taxed|on death)|what about my home/i,
+    concerns: { [CONCERNS.IHT_HOME]: 1.0, [CONCERNS.IHT_LEGACY]: 0.7 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /leave everything|leave.{0,10}(?:it |all )?to (?:my )?(?:kids|children)|everything to (?:my )?(?:kids|children)|kids inherit.{0,10}tax.?free|tax.?free.{0,10}to (?:my )?(?:kids|children)/i,
+    concerns: { [CONCERNS.IHT_LEAVE_KIDS]: 1.0, [CONCERNS.IHT_LEGACY]: 0.7 },
+    resources: [RESOURCES.PROPERTY],
+  },
+  {
+    match: /set up.{0,10}(?:a )?trust|should i.{0,10}(?:set up|use).{0,10}trust|put.{0,25}(?:in|into).{0,8}(?:a )?trust|inheritance.{0,15}(?:in|into).{0,8}trust|trust.{0,10}(?:for my|to (?:protect|shelter))/i,
+    concerns: { [CONCERNS.IHT_TRUST]: 1.0, [CONCERNS.IHT_LEGACY]: 0.6, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.TRUST],
+  },
+  {
+    match: /7.?year rule|seven.?year (?:rule|gift)|gift.{0,10}(?:7|seven).?year|how long.{0,10}(?:before )?(?:a )?gift/i,
+    concerns: { [CONCERNS.IHT_7YR]: 1.0, [CONCERNS.IHT_LEGACY]: 0.6 },
+    resources: [RESOURCES.INHERITANCE],
+  },
+  {
+    match: /reduce.{0,10}(?:my )?iht|reduce.{0,10}(?:my )?inherit|cut.{0,10}(?:my )?iht|lower.{0,10}(?:my )?iht|iht bill|reduce.{0,10}(?:my )?(?:death|estate) (?:tax|duty)/i,
+    concerns: { [CONCERNS.IHT_REDUCE]: 1.0, [CONCERNS.IHT_LEGACY]: 0.7, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.PROPERTY, RESOURCES.PENSION, RESOURCES.GIA],
+  },
+
   // ── Healthcare / care ────────────────────────────────────────────────────
   {
     match: /care home|nursing home|care fees|long-term care|dementia|care cost/i,
@@ -490,6 +542,16 @@ export const PLAY_INTENT = {
   cgt_realisation:               ['plan', 'restructure'],
   eis_vct_relief:                ['plan', 'restructure'],
   dividend_vs_salary_owner:      ['plan', 'restructure'],
+  iht_reduce_overview:           ['plan', 'preserve'],
+  seven_year_gift_rule:          ['plan', 'preserve'],
+  trust_basics:                  ['plan', 'preserve'],
+  leave_estate_to_children:      ['plan', 'preserve'],
+  home_iht_rnrb:                 ['plan', 'preserve'],
+  transferable_nrb_widowed:      ['plan', 'preserve'],
+  deploy_inheritance:            ['plan', 'restructure'],
+  inheritance_wrapper_sequencing:['plan', 'restructure'],
+  gift_inheritance_on:           ['plan', 'preserve'],
+  deed_of_variation:             ['plan', 'preserve'],
 }
 
 /**

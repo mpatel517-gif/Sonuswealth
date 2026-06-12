@@ -67,6 +67,11 @@ async function scoreQuery(s, persona) {
     if (!a || a.off_ontology) {
       status = 'FAIL'
       notes.push('off-ontology — no lead found')
+    } else if (!lead && a.explainer) {
+      // Glossary short-circuit: a recognised-term definitional answer ("what is X?")
+      // is a valid answer surface even without a play lead.
+      status = 'PASS'
+      notes.push('answered from glossary explainer')
     } else if (!lead) {
       status = 'FAIL'
       notes.push('no lead')
@@ -143,6 +148,16 @@ function themeKeywordMap(theme) {
   if (t.includes('care_fee') || t.includes('care_cap')) return ['care']
   if (t.includes('income_protection') || t.includes('ip_cover')) return ['income protection', 'ip']
   if (t.includes('iht_tail') || t.includes('10yr')) return ['iht', '10 years', 'departure']
+  if (t.includes('transferable_nrb') || t.includes('transfer')) return ['transferable', 'unused nil-rate', 'spouse died', 'late spouse', 'widowed']
+  if (t.includes('nrb_rnrb_gifts') || t.includes('iht_reduce') || t === 'reduce_iht') return ['levers to reduce', 'reduce an iht', 'nil-rate', 'iht']
+  if (t.includes('seven_year') || t.includes('7yr') || t === '7_year_rule') return ['7-year', 'seven', 'gift']
+  if (t.includes('trust_setup') || t === 'trust') return ['trust', 'set up a trust']
+  if (t.includes('leave_everything') || t.includes('leave_kids') || t.includes('kids_tax')) return ['children tax-free', 'leaving your estate', 'to your children']
+  if (t.includes('home_on_death') || t === 'home') return ['home', 'residence', 'rnrb']
+  if (t.includes('deploy_inheritance')) return ['inherited', 'deploy', 'windfall', 'priorities']
+  if (t.includes('wrapper_sequencing')) return ['wrapper', 'fill first', 'pension', 'isa']
+  if (t.includes('generation_skip') || t.includes('gen_skip')) return ['gifting an inheritance on', 'next generation', 'pass', 'gift']
+  if (t.includes('deed_of_variation') || t.includes('deed')) return ['deed of variation', 'redirecting', 'redirect']
   if (t.includes('rnrb') || t.includes('nrb')) return ['rnrb', 'nrb', 'nil-rate', 'nil rate']
   if (t.includes('off_scope')) return ['off-scope', 'outside']
   // Mortgage / debt domain (W6) — every correct lead has category 'mortgage',

@@ -44,7 +44,20 @@
 | F-312 | P0 | Gift IHT taxed whole gift — rewrote `giftClockProjection` (annual exemption + chronological NRB cumulation; only slice above NRB taxed; CLT/PET tagged) | Node: £3k→£0 (was £960); £400k PET→£28,800 on £72k above NRB | 51d4fea |
 | F-310 | P0 | "IHT after moves" stuck at £0 — fq `ihtWaterfall` delegates to canonical tax-estate-engine one (rich shape); kills the duplicate | **LIVE**: mrt now shows live slider-responsive figure (was £0) | 80108c3 |
 
-**Still OPEN (not addressed this pass):** F-311 (pre/post-2027 IHT base + waterfall-vs-exposure reconciliation), F-309 (canonical `rnrbEffective` — 3 disagreeing RNRB), F-308 (CGT tile vs detail), F-114 (BPR relief > total assets), F-611/FCA boundary cluster (P1), F-500/501/502 broader surplus/NW/IHT canonical-reader consolidation, plus W4 plain-English layer, W5 capture fields, W6 AI-engine expansion, W7 redesign/charts.
+**Still OPEN (not addressed this pass):** F-311 (pre/post-2027 IHT base + waterfall-vs-exposure reconciliation), F-309 (canonical `rnrbEffective` — 3 disagreeing RNRB), F-308 (CGT tile vs detail), F-114 (BPR relief > total assets), F-500/501/502 broader surplus/NW/IHT canonical-reader consolidation.
+
+---
+
+## W3-tail / W4 / W6 — CLOSED (2026-06-12, continued)
+
+| Wave | Item | Fix | Verification | Commit |
+|---|---|---|---|---|
+| W3-tail FCA | F-405/427-429/611 | Removed fabricated citations ("FA 1996 s.156 spousal ISA" → real ITA 2007 / TCGA 1992 s.58 basis; demo "spousal ISA transfer" → APS); onboarding no longer "recommend portfolios"; synthesizer lead reframed from definitive recommendation → option framing (RAO Art 53 boundary). Every play already renders FCA disclaimer. | Build green; coverage unchanged 26/122 | 7f1e8d0 |
+| W4 | Plain English (ask #6) | "Balance Sheet" → "What you own & owe (Balance Sheet)" + Income/Cashflow statements, across registry + builders + MoneyXDrawer; `<Term>` glossary extended (CGT, AEA, PSA, AA, decumulation, S24, BADR). | Build green; reports-sp1 27/0 | a77279f |
+| W6 | AI engine mortgage domain (ask #9) | New DEBT concern + 4 sub-intent concerns + 4 classifier rules + 4 FCA-safe plays (overpay/remortgage/offset/equity-release); harness themeKeywordMap extended. Precise sub-intent routing (no wrong-domain answers). | **Coverage 26→36/122 (21%→30%)**; all 8 MORT + INH-02 PASS; routing verified per-query | 4e1204d |
+
+**W6 remaining (pattern proven, same recipe):** cash, investment, business, property domains (each 0% — partial infra exists for cash). Lifting all to the ≥90/122 target is the one wave the plan scoped for parallel agents; main-thread it is multi-session.
+**Untouched waves:** W5 (capture fields/parse/open-banking), W7 (redesign + charts sweep), W8 (closeout). Deferred engine consolidation: F-309/F-311 IHT (high regression-risk vs the green £287k tie-out baseline — needs the canonical-reader refactor + baseline re-verification).
 
 ---
 

@@ -151,6 +151,15 @@ function themeKeywordMap(theme) {
   if (t.includes('isa_full')) return ['isa is full', 'next pound', 'next steps', 'spouse', 'pension', 'gia']
   if (t.includes('bed_and_sipp')) return ['bed-and-sipp', 'bed and sipp', 'sipp']
   if (t.includes('cash_yield_drop') || t.includes('yield_drop')) return ['rates have dropped', 'savings rates', 'where your cash sits', 'cash sits']
+  // Investment / portfolio domain (W6)
+  if (t.includes('allocation_age') || t === 'allocation') return ['allocation', 'asset', 'portfolio']
+  if (t.includes('ter') || t.includes('fee')) return ['fee', 'ter', 'cost', 'charge', 'what your funds cost']
+  if (t.includes('passive_vs_active') || t.includes('passive')) return ['passive', 'active', 'index']
+  if (t.includes('concentration')) return ['concentration', 'single holding', 'single-stock', 'single stock']
+  if (t.includes('cash_allocation')) return ['cash', 'liquid', 'emergency', 'allocation']
+  if (t.includes('rebalanc')) return ['rebalanc', 'rebalance', 'on track', 'keeping your mix']
+  if (t.includes('em_allocation') || t.includes('emerging')) return ['emerging market', 'emerging markets', 'emerging']
+  if (t.includes('esg')) return ['esg', 'sustainable', 'ethical']
   // Fallback — split underscores
   return t.split('_').filter(w => w.length >= 4)
 }

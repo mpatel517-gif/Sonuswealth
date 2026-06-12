@@ -38,6 +38,13 @@ export const CONCERNS = {
   CASH_BEYOND_ISA:'cash_beyond_isa',     // ISA full this year — what next
   CASH_BEDSIPP:   'cash_bed_sipp',       // Bed-and-SIPP a cash holding
   CASH_RATEDROP:  'cash_rate_drop',      // Savings rates have fallen — response
+  INV_ALLOCATION: 'inv_allocation',      // How to think about an asset allocation
+  INV_FEES:       'inv_fees',            // Fund fees / TER benchmarking
+  INV_PASSIVE:    'inv_passive_active',  // Passive vs active funds
+  INV_CONCENTRATION:'inv_concentration', // Single-stock / concentration risk
+  INV_REBALANCE:  'inv_rebalance',       // Rebalancing discipline
+  INV_EM:         'inv_emerging_markets',// Emerging-markets exposure
+  INV_ESG:        'inv_esg',             // ESG / ethical / sustainable funds
 }
 
 export const RESOURCES = {

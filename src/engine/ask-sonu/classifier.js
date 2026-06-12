@@ -52,7 +52,7 @@ const RULES = [
 
   // ── Relocation ───────────────────────────────────────────────────────────
   {
-    match: /relocat|emigrat|move (?:abroad|overseas|to)|leaving uk|leave (?:the )?uk|portugal|dubai|uae|spain|kenya|australia|nhr|ific|fig/i,
+    match: /relocat|emigrat|move (?:abroad|overseas)|moving (?:abroad|overseas)|leaving uk|leave (?:the )?uk|portugal|dubai|uae|spain|kenya|australia|nhr|ific|fig/i,
     concerns: {
       [CONCERNS.RELOCATION]: 1.0,
       [CONCERNS.TAX]: 0.5,
@@ -185,6 +185,43 @@ const RULES = [
     resources: [RESOURCES.PROPERTY, RESOURCES.CASH],
   },
 
+  // ── Investment / portfolio (educational framing — never a recommendation) ──
+  {
+    match: /esg|ethical (?:fund|invest)|sustainab|responsible invest|impact invest/i,
+    concerns: { [CONCERNS.INV_ESG]: 1.0, [CONCERNS.TAX]: 0.2 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+  {
+    match: /emerging market|developing market|\bem\b.{0,12}(?:alloc|risk|expos|worth)/i,
+    concerns: { [CONCERNS.INV_EM]: 1.0 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+  {
+    match: /\bter\b|fund (?:fee|cost|charge)|paying too much|fees? (?:on|too)|ongoing charge|ocf/i,
+    concerns: { [CONCERNS.INV_FEES]: 1.0, [CONCERNS.TAX]: 0.2 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+  {
+    match: /passive|index fund|active fund|actively managed|active manage|move to passive/i,
+    concerns: { [CONCERNS.INV_PASSIVE]: 1.0 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+  {
+    match: /concentrat|single stock|one stock|too much in one|all in one|overweight.{0,10}(?:stock|share)/i,
+    concerns: { [CONCERNS.INV_CONCENTRATION]: 1.0, [CONCERNS.TAX]: 0.4 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA],
+  },
+  {
+    match: /rebalanc|out of balance|drifted|portfolio.{0,10}drift/i,
+    concerns: { [CONCERNS.INV_REBALANCE]: 1.0 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+  {
+    match: /allocat|asset mix|asset.?allocation|how (?:should|do) i (?:invest|split).{0,20}(?:portfolio|£|money)|portfolio.{0,10}(?:mix|split)|invest (?:my )?£?\d/i,
+    concerns: { [CONCERNS.INV_ALLOCATION]: 1.0, [CONCERNS.INCOME_SECURITY]: 0.3 },
+    resources: [RESOURCES.GIA, RESOURCES.ISA, RESOURCES.PENSION],
+  },
+
   // ── Time freedom / FIRE ──────────────────────────────────────────────────
   {
     match: /sabbatical|career break|fire(?:\s|$)|financial independence|part.time|four.day|stop working early/i,
@@ -270,6 +307,23 @@ export const PLAY_INTENT = {
   // Healthcare / protection
   care_fee_buffer:               ['plan', 'preserve'],
   income_protection_gap:         ['plan'],
+  // W6 — mortgage / cash / investment plays (valid across the action intents so
+  // "switch to passive", "move into an offset" etc. aren't filtered out)
+  overpay_vs_invest:             ['plan', 'restructure'],
+  remortgage_review:             ['plan', 'restructure'],
+  offset_mortgage:               ['plan', 'restructure'],
+  equity_release_caution:        ['plan', 'restructure'],
+  mmf_vs_cash_isa:               ['plan', 'restructure'],
+  isa_full_next_steps:           ['plan', 'restructure'],
+  bed_and_sipp:                  ['plan', 'restructure', 'preserve'],
+  cash_yield_drop:               ['plan', 'restructure'],
+  portfolio_allocation_factors:  ['plan', 'restructure'],
+  fund_fee_review:               ['plan', 'restructure'],
+  passive_vs_active:             ['plan', 'restructure'],
+  concentration_risk:            ['plan', 'restructure', 'preserve'],
+  rebalancing_discipline:        ['plan', 'restructure'],
+  emerging_markets_role:         ['plan', 'restructure'],
+  esg_investing:                 ['plan', 'restructure'],
 }
 
 /**

@@ -28,7 +28,7 @@ const inputStyle = {
   padding: '8px 10px', fontSize: 13, fontFamily: 'inherit',
 }
 
-export default function PriorYearSAForm({ currentYear = '2026/27', initialYear, onSave, onCancel }) {
+export default function PriorYearSAForm({ currentYear = '2026/27', initialYear, initialValues, parsedSource, onSave, onCancel }) {
   // Default to the year immediately before the current one.
   const priorYears = RULE_YEARS.filter((y) => y !== currentYear)
   // When the caller targets a specific year (e.g. a row in the 5-year ledger),
@@ -38,7 +38,17 @@ export default function PriorYearSAForm({ currentYear = '2026/27', initialYear, 
       ? initialYear
       : (priorYears[priorYears.length - 1] || RULE_YEARS[0])
   )
-  const [vals, setVals] = useState({})
+  // initialValues lets an upload pre-fill the form (FP-5: parse → user verifies
+  // → commit). Keys match FIELDS ids. Empty object = blank manual entry.
+  const [vals, setVals] = useState(() => {
+    const seed = {}
+    if (initialValues && typeof initialValues === 'object') {
+      for (const k of Object.keys(initialValues)) {
+        if (initialValues[k] != null && initialValues[k] !== '') seed[k] = String(initialValues[k])
+      }
+    }
+    return seed
+  })
   const [giftAmount, setGiftAmount] = useState('')
   const [giftDate, setGiftDate] = useState('')
 
@@ -79,6 +89,17 @@ export default function PriorYearSAForm({ currentYear = '2026/27', initialYear, 
           From your SA302 / tax calculation. Firms up this year’s payments-on-account and carry-forward figures. Leave blank what you don’t have.
         </div>
       </div>
+
+      {parsedSource && (
+        <div style={{
+          fontSize: 11, lineHeight: 1.5, color: 'var(--c-text)',
+          background: 'var(--c-tint-warning, var(--c-surface))', border: '1px solid var(--c-warning)',
+          borderRadius: 10, padding: '8px 10px',
+        }}>
+          <strong>Read from your document.</strong> {parsedSource} Check each figure against the
+          paper and correct anything that’s off before saving — nothing is stored until you confirm.
+        </div>
+      )}
 
       <label style={{ display: 'grid', gap: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--c-text3)', letterSpacing: 0.3 }}>Tax year</span>

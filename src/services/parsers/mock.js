@@ -16,8 +16,24 @@ export const MOCK_PROVIDER_LABEL = 'mock-parser-dev-only'
 
 const SIMULATED_LATENCY_MS = 1400
 
-function fieldsFor(name) {
+function fieldsFor(name, hint) {
   const n = String(name || '').toLowerCase()
+  const h = String(hint || '').toLowerCase()
+  // SA302 / tax-return / tax-year-overview → prior-year SA figures. Drives the
+  // 5-year tax record's "Upload your return" path. Field ids map 1:1 to the
+  // PriorYearRecord figures the capture form expects.
+  if (h.includes('sa302') || h.includes('sa100') || n.includes('sa302') || n.includes('sa100') || n.includes('tax-return') || n.includes('tax return') || n.includes('taxcalc') || n.includes('tax-year')) {
+    return {
+      docType: 'sa302-tax-calculation',
+      fields: [
+        { id: 'totalIncome',         label: 'Total income',                value: 96500, unit: 'gbp', wrapper: null, confidence: 0.95, source: 'SA302 box 1' },
+        { id: 'incomeTaxPlusClass4', label: 'Income tax + Class 4 NIC',     value: 24180, unit: 'gbp', wrapper: null, confidence: 0.93, source: 'SA302 tax calculation' },
+        { id: 'payeTaxPaid',         label: 'Tax already paid (PAYE)',      value: 18420, unit: 'gbp', wrapper: null, confidence: 0.9,  source: 'SA302 tax deducted at source' },
+        { id: 'pensionAaUnused',     label: 'Unused pension allowance',     value: 14000, unit: 'gbp', wrapper: null, confidence: 0.7,  source: 'pension input vs annual allowance' },
+        { id: 'capitalLosses',       label: 'Capital losses carried fwd',   value: 0,     unit: 'gbp', wrapper: null, confidence: 0.8,  source: 'SA108 capital gains pages' },
+      ],
+    }
+  }
   if (n.includes('sipp') || n.includes('pension')) {
     return {
       docType: 'sipp-statement',
@@ -72,11 +88,11 @@ function fieldsFor(name) {
   }
 }
 
-export default async function mockProvider(file, _opts) {
+export default async function mockProvider(file, opts) {
   // Simulate vendor latency so the FP-5 review UX has a real "parsing…" state
   // to render. The real Vision call costs ~800–2500ms end-to-end.
   await new Promise(res => setTimeout(res, SIMULATED_LATENCY_MS))
-  const { docType, fields } = fieldsFor(file?.name)
+  const { docType, fields } = fieldsFor(file?.name, opts?.docTypeHint)
   return {
     docType,
     fields,

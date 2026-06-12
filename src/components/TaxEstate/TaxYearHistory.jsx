@@ -21,6 +21,7 @@
 import { useState, useMemo } from 'react'
 import { saComputation } from '../../engine/sa-computation.js'
 import { readTaxHistory, deriveCarryForwardFromHistory, upsertPriorYear, removePriorYear } from '../../state/tax-history.js'
+import { parseDocument } from '../../services/parser.js'
 import PriorYearSAForm from './PriorYearSAForm.jsx'
 
 // Last 5 tax years = the current (in-progress) year + the 4 completed years
@@ -79,6 +80,8 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
   const [expanded, setExpanded] = useState(false)
   const [openYear, setOpenYear] = useState(null)
   const [addYear, setAddYear] = useState(null)
+  const [parsingYear, setParsingYear] = useState(null)
+  const [prefill, setPrefill] = useState(null) // { year, values, note } — seeds the form (upload or edit)
   const [tick, setTick] = useState(0)
 
   const history = useMemo(
@@ -145,6 +148,7 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
       onCommit(personaId, { type: 'PRIOR_YEAR_SA_CAPTURED', payload: { taxYear: record.taxYear, carryForward: cf } })
     }
     setAddYear(null)
+    setPrefill(null)
     setOpenYear(record.taxYear)
     setTick((n) => n + 1)
   }
@@ -153,6 +157,57 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
     removePriorYear(personaId, year)
     setOpenYear(null)
     setTick((n) => n + 1)
+  }
+
+  // Upload a return into a specific year → parse → pre-fill the capture form so
+  // the user verifies before anything is stored (FP-5). Uses the vendor-agnostic
+  // parser; the active provider is mock in demo (figures clearly flagged as
+  // illustrative) and flips to Claude Vision once that provider is registered.
+  async function handleUpload(year, file) {
+    if (!file) return
+    setParsingYear(year)
+    try {
+      const res = await parseDocument(file, { docTypeHint: 'sa302' })
+      const byId = {}
+      for (const f of (res.fields || [])) byId[f.id] = f.value
+      const isMock = res.isMock || (res.warnings || []).some((w) => /demo parse|invented/i.test(w))
+      setPrefill({
+        year,
+        values: {
+          totalIncome: byId.totalIncome,
+          incomeTaxPlusClass4: byId.incomeTaxPlusClass4,
+          payeTaxPaid: byId.payeTaxPaid,
+          pensionAaUnused: byId.pensionAaUnused,
+          capitalLosses: byId.capitalLosses,
+        },
+        note: isMock
+          ? 'Demo parse — these figures are illustrative, not read from your file. Real document reading activates once the API key is set.'
+          : `Read from ${res.docType || 'your document'}.`,
+      })
+      setAddYear(year)
+      setOpenYear(year)
+    } catch {
+      setPrefill({ year, values: {}, note: 'Could not read that file — please enter the figures by hand.' })
+      setAddYear(year)
+    } finally {
+      setParsingYear(null)
+    }
+  }
+
+  // Edit an existing year → pre-fill the form from the stored record (no banner).
+  function handleEdit(r) {
+    setPrefill({
+      year: r.year,
+      values: {
+        totalIncome: r.totalIncome,
+        incomeTaxPlusClass4: r.incomeTaxPlusClass4,
+        payeTaxPaid: r.paye,
+        pensionAaUnused: r.pensionAaUnused,
+        capitalLosses: r.losses?.capital,
+      },
+      note: null,
+    })
+    setAddYear(r.year)
   }
 
   return (
@@ -229,8 +284,8 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
               return (
                 <div key={r.year} style={{ borderTop: '1px solid var(--c-sep)' }}>
                   <button
-                    onClick={() => { if (isEmpty) { setAddYear(r.year); setOpenYear(null) } else setOpenYear(isOpen ? null : r.year) }}
-                    aria-expanded={!isEmpty && isOpen}
+                    onClick={() => setOpenYear(isOpen ? null : r.year)}
+                    aria-expanded={isOpen}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       gap: 10, padding: '11px 2px', background: 'transparent', border: 'none', cursor: 'pointer',
@@ -245,7 +300,7 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       {isEmpty
-                        ? <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-acc)' }}>＋ Add</span>
+                        ? <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-acc)' }}>Add {isOpen ? '▲' : '▾'}</span>
                         : <>
                             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}
                               data-tieout={r.year === CURRENT ? 'tax-history.current-total' : undefined}>
@@ -286,11 +341,35 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
                             <Fact label="Gifts logged" value={money(r.gifts.reduce((s, g) => s + (+g.amount || 0), 0))} sub={`${r.gifts.length} · 7-year IHT clock`} />
                           )}
                           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                            <button onClick={() => setAddYear(r.year)} className="sw-chip" style={{ fontSize: 11, cursor: 'pointer', padding: '4px 10px' }}>Edit</button>
+                            <button onClick={() => handleEdit(r)} className="sw-chip" style={{ fontSize: 11, cursor: 'pointer', padding: '4px 10px' }}>Edit</button>
                             <button onClick={() => handleRemove(r.year)} className="sw-chip" style={{ fontSize: 11, cursor: 'pointer', padding: '4px 10px', color: 'var(--c-danger)' }}>Remove</button>
                           </div>
                         </>
                       )}
+                    </div>
+                  )}
+
+                  {/* Empty year, opened → choose how to add it: upload a return
+                      (parse → verify) or type it. Hidden until the form is open. */}
+                  {isEmpty && isOpen && addYear !== r.year && (
+                    <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: '10px 12px', margin: '0 2px 10px', display: 'grid', gap: 8 }}>
+                      <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.45 }}>
+                        Add <strong>{r.year}</strong> from your HMRC <strong>SA302</strong> / tax calculation —
+                        upload it and check the figures, or enter them by hand.
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <label className="sw-chip" style={{ fontSize: 12, cursor: parsingYear === r.year ? 'default' : 'pointer', padding: '6px 12px', opacity: parsingYear === r.year ? 0.6 : 1 }}>
+                          {parsingYear === r.year ? 'Reading…' : '⇧ Upload return'}
+                          <input
+                            type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
+                            disabled={parsingYear === r.year}
+                            onChange={(e) => handleUpload(r.year, e.target.files?.[0])}
+                          />
+                        </label>
+                        <button onClick={() => { setPrefill(null); setAddYear(r.year) }} className="sw-chip" style={{ fontSize: 12, cursor: 'pointer', padding: '6px 12px' }}>
+                          ✎ Enter manually
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -300,8 +379,10 @@ export default function TaxYearHistory({ entity, personaId, onCommit }) {
                       <PriorYearSAForm
                         currentYear={CURRENT}
                         initialYear={r.year}
+                        initialValues={prefill && prefill.year === r.year ? prefill.values : undefined}
+                        parsedSource={prefill && prefill.year === r.year ? prefill.note : undefined}
                         onSave={handleSave}
-                        onCancel={() => setAddYear(null)}
+                        onCancel={() => { setAddYear(null); setPrefill(null) }}
                       />
                     </div>
                   )}

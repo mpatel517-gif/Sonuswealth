@@ -1,0 +1,1607 @@
+{
+ "sweeps": [
+  {
+   "pid": "mrt-core",
+   "tab": "home",
+   "url": "http://localhost:5180/?demo=mrt-core&tab=home&theme=dark",
+   "tieouts": [
+    {
+     "key": "home.monthly-deficit",
+     "raw": "900",
+     "text": "−£900/mo"
+    },
+    {
+     "key": "home.nw",
+     "raw": "1747850",
+     "text": "£1.75m"
+    }
+   ],
+   "bodyLen": 3356,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 1747850,
+    "investable": 400640
+   },
+   "ctaCount": 68,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nMT\nMr T · 35 · all-domain canonical\nSwitch · mrt-core\n✓ mrt · 35\nMT\nNW\n£1.75m\nWEALTH\n86\nRISK\n79\nCOST OF INACTION\n£97k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n✨\nAsk Sonu anything\nOne clear answer + the path to get there · powered by 11 specialist lenses\n›\nGood afternoon · Thu 11 Jun\n11/06 13:32\nTODAY\nFUTURE\nPLAN\nWHAT IF\nMONTHLY SHORTFALL\n−£900/mo\nThat's £11k/year coming out of savings or going onto credit. Fixing this is priority one — the other scores",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money",
+   "url": "http://localhost:5180/?demo=mrt-core&tab=money&theme=dark",
+   "tieouts": [
+    {
+     "key": "money.nw",
+     "raw": "1747850",
+     "text": "£1.75m"
+    },
+    {
+     "key": "money.assets",
+     "raw": "2157540",
+     "text": "£2.16m"
+    },
+    {
+     "key": "money.liabilities",
+     "raw": "409690",
+     "text": "£410k"
+    },
+    {
+     "key": "money.cat.pensions",
+     "raw": "205500",
+     "text": "£206k⚡"
+    },
+    {
+     "key": "money.cat.investments",
+     "raw": "111900",
+     "text": "£112k⚡"
+    },
+    {
+     "key": "money.cat.property",
+     "raw": "1585000",
+     "text": "£1.58m⚡"
+    },
+    {
+     "key": "money.cat.business",
+     "raw": "163000",
+     "text": "£163k⚡"
+    },
+    {
+     "key": "money.cat.protection",
+     "raw": "0",
+     "text": "£0⚡"
+    },
+    {
+     "key": "money.cat.cash",
+     "raw": "28500",
+     "text": "£29k⚡"
+    },
+    {
+     "key": "money.cat.alternatives",
+     "raw": "63140",
+     "text": "£63k⚡"
+    }
+   ],
+   "bodyLen": 4613,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 1747850,
+    "investable": 400640
+   },
+   "ctaCount": 221,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nMT\nMr T · 35 · all-domain canonical\nSwitch · mrt-core\n✓ mrt · 35\nMT\nNW\n£1.75m\nWEALTH\n86\nRISK\n79\nCOST OF INACTION\n£97k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nToday\nFuture\nPlan\nWhat if\nChoices\n←\nBack\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nACCOUNTS\n39\nNET WORTH\n£1.75m\nASSETS\n£2.16m\nLIABILITIES\n£410k\nAdd or edit\n→\nHOW YOUR MONEY IS HELD · £2.16M\ni\nProperty · £1.58m\nPension",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money/income",
+   "url": "http://localhost:5180/?demo=mrt-core&tab=money%2Fincome&theme=dark",
+   "tieouts": [
+    {
+     "key": "income.gross",
+     "raw": "67420",
+     "text": "£67k"
+    },
+    {
+     "key": "income.tax",
+     "raw": "9249",
+     "text": "£9k"
+    },
+    {
+     "key": "income.net",
+     "raw": "58171",
+     "text": "£58k"
+    }
+   ],
+   "bodyLen": 2247,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 1747850,
+    "investable": 400640
+   },
+   "ctaCount": 42,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nMT\nMr T · 35 · all-domain canonical\nSwitch · mrt-core\n✓ mrt · 35\nMT\nNW\n£1.75m\nWEALTH\n86\nRISK\n79\nCOST OF INACTION\n£97k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nIncome Statement\nWhat comes in, what HMRC takes, what you keep.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nSOURCES\n4\nGROSS\n£67k\nTAX\n£9k\nNET\n£58k\nUpdate income\n→\nFLOW — SOURCES → TAX STAGES",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money/protection",
+   "url": "http://localhost:5180/?demo=mrt-core&tab=money%2Fprotection&theme=dark",
+   "tieouts": [
+    {
+     "key": "protection.cover",
+     "raw": "750000",
+     "text": "£750k"
+    },
+    {
+     "key": "protection.premiums",
+     "raw": "£156/mo",
+     "text": "£156/mo"
+    },
+    {
+     "key": "protection.gap",
+     "raw": "31400",
+     "text": "£31k"
+    }
+   ],
+   "bodyLen": 4569,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 1747850,
+    "investable": 400640
+   },
+   "ctaCount": 47,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nMT\nMr T · 35 · all-domain canonical\nSwitch · mrt-core\n✓ mrt · 35\nMT\nNW\n£1.75m\nWEALTH\n86\nRISK\n79\nCOST OF INACTION\n£97k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nPOLICIES\n4\nCOVER\n£750k\nPREMIUMS\n£156/mo\nGAP\n£31k\nUpdate cover\n→\n←\nBack\nProtection · drill-down\n£750K\n· 3/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COV",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money/business",
+   "url": "http://localhost:5180/?demo=mrt-core&tab=money%2Fbusiness&theme=dark",
+   "tieouts": [
+    {
+     "key": "business.value",
+     "raw": "145000",
+     "text": "£145k"
+    },
+    {
+     "key": "business.distributions",
+     "raw": "38000",
+     "text": "£38k"
+    },
+    {
+     "key": "business.directorPay",
+     "raw": "12570",
+     "text": "£13k"
+    }
+   ],
+   "bodyLen": 3617,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 1747850,
+    "investable": 400640
+   },
+   "ctaCount": 35,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nMT\nMr T · 35 · all-domain canonical\nSwitch · mrt-core\n✓ mrt · 35\nMT\nNW\n£1.75m\nWEALTH\n86\nRISK\n79\nCOST OF INACTION\n£97k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nBusiness\nLtd-company extraction, Corp tax, DLA, BPR.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nHOLDINGS\n1\nVALUE\n£145k\nDISTRIBUTIONS\n£38k\nDIRECTOR PAY\n£13k\nUpdate business\n→\nANNUAL FLOWS O",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money/trusts",
+   "url": "http://localhost:5180/?demo=mrt-core&tab=money%2Ftrusts&theme=dark",
+   "tieouts": [
+    {
+     "key": "trusts.estate",
+     "raw": "1929040",
+     "text": "£1.93m"
+    },
+    {
+     "key": "trusts.reliefs",
+     "raw": "1059690",
+     "text": "£1.06m"
+    },
+    {
+     "key": "trusts.iht",
+     "raw": "347740",
+     "text": "£348k"
+    }
+   ],
+   "bodyLen": 2178,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 1747850,
+    "investable": 400640
+   },
+   "ctaCount": 41,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nMT\nMr T · 35 · all-domain canonical\nSwitch · mrt-core\n✓ mrt · 35\nMT\nNW\n£1.75m\nWEALTH\n86\nRISK\n79\nCOST OF INACTION\n£97k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nTrusts & Estate\nWills, lasting powers of attorney, beneficiary nominations, and trusts — the four documents that decide where your money goes when you can't.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "a",
+   "tab": "home",
+   "url": "http://localhost:5180/?demo=a&tab=home&theme=dark",
+   "tieouts": [
+    {
+     "key": "home.monthly-deficit",
+     "raw": "591",
+     "text": "−£591/mo"
+    },
+    {
+     "key": "home.nw",
+     "raw": "3900000",
+     "text": "£3.90m"
+    }
+   ],
+   "bodyLen": 3462,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 3900000,
+    "investable": 1830000
+   },
+   "ctaCount": 69,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBW\nBruce Wayne · 62\nSwitch · a\n✓ a · 62\nBW\nNW\n£3.90m\nWEALTH\n67\nRISK\n71\nCOST OF INACTION\n£427k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n✨\nAsk Sonu anything\nOne clear answer + the path to get there · powered by 11 specialist lenses\n›\nGood afternoon · Thu 11 Jun\n11/06 13:33\nTODAY\nFUTURE\nPLAN\nWHAT IF\nMONTHLY SHORTFALL\n−£591/mo\nThat's £7k/year coming out of savings or going onto credit. Fixing this is priority one — the other scores wait.\nSee where it's goi",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "a",
+   "tab": "money",
+   "url": "http://localhost:5180/?demo=a&tab=money&theme=dark",
+   "tieouts": [
+    {
+     "key": "money.nw",
+     "raw": "3900000",
+     "text": "£3.90m"
+    },
+    {
+     "key": "money.assets",
+     "raw": "4080000",
+     "text": "£4.08m"
+    },
+    {
+     "key": "money.liabilities",
+     "raw": "180000",
+     "text": "£180k"
+    },
+    {
+     "key": "money.cat.pensions",
+     "raw": "850000",
+     "text": "£850k⚡"
+    },
+    {
+     "key": "money.cat.investments",
+     "raw": "800000",
+     "text": "£800k⚡"
+    },
+    {
+     "key": "money.cat.property",
+     "raw": "2250000",
+     "text": "£2.25m⚡"
+    },
+    {
+     "key": "money.cat.protection",
+     "raw": "0",
+     "text": "£0⚡"
+    },
+    {
+     "key": "money.cat.cash",
+     "raw": "180000",
+     "text": "£180k⚡"
+    }
+   ],
+   "bodyLen": 2839,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 3900000,
+    "investable": 1830000
+   },
+   "ctaCount": 109,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBW\nBruce Wayne · 62\nSwitch · a\n✓ a · 62\nBW\nNW\n£3.90m\nWEALTH\n67\nRISK\n71\nCOST OF INACTION\n£427k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nToday\nFuture\nPlan\nWhat if\nChoices\n←\nBack\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nACCOUNTS\n11\nNET WORTH\n£3.90m\nASSETS\n£4.08m\nLIABILITIES\n£180k\nAdd or edit\n→\nHOW YOUR MONEY IS HELD · £4.08M\ni\nProperty · £2.25m\nPension · £850k\nTax-free ISA · £420k\nGen",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "a",
+   "tab": "money/income",
+   "url": "http://localhost:5180/?demo=a&tab=money%2Fincome&theme=dark",
+   "tieouts": [
+    {
+     "key": "income.gross",
+     "raw": "35200",
+     "text": "£35k"
+    },
+    {
+     "key": "income.tax",
+     "raw": "2992",
+     "text": "£3k"
+    },
+    {
+     "key": "income.net",
+     "raw": "32208",
+     "text": "£32k"
+    }
+   ],
+   "bodyLen": 1799,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 3900000,
+    "investable": 1830000
+   },
+   "ctaCount": 38,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBW\nBruce Wayne · 62\nSwitch · a\n✓ a · 62\nBW\nNW\n£3.90m\nWEALTH\n67\nRISK\n71\nCOST OF INACTION\n£427k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nIncome Statement\nWhat comes in, what HMRC takes, what you keep.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nSOURCES\n2\nGROSS\n£35k\nTAX\n£3k\nNET\n£32k\nUpdate income\n→\nFLOW — SOURCES → TAX STAGES → NET\nDividends\nRental\nPersonal ",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "a",
+   "tab": "money/protection",
+   "url": "http://localhost:5180/?demo=a&tab=money%2Fprotection&theme=dark",
+   "tieouts": [
+    {
+     "key": "protection.cover",
+     "raw": "1500000",
+     "text": "£1.50m"
+    },
+    {
+     "key": "protection.premiums",
+     "raw": "£415/mo",
+     "text": "£415/mo"
+    },
+    {
+     "key": "protection.gap",
+     "raw": "0",
+     "text": "£0"
+    }
+   ],
+   "bodyLen": 3390,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 3900000,
+    "investable": 1830000
+   },
+   "ctaCount": 38,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBW\nBruce Wayne · 62\nSwitch · a\n✓ a · 62\nBW\nNW\n£3.90m\nWEALTH\n67\nRISK\n71\nCOST OF INACTION\n£427k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nPOLICIES\n2\nCOVER\n£1.50m\nPREMIUMS\n£415/mo\nGAP\n£0\nUpdate cover\n→\n←\nBack\nProtection · drill-down\n£1.50M\n· 2/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED AND WHERE THE GAPS ARE\nFour ",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "a",
+   "tab": "money/business",
+   "url": "http://localhost:5180/?demo=a&tab=money%2Fbusiness&theme=dark",
+   "tieouts": [],
+   "bodyLen": 1407,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 3900000,
+    "investable": 1830000
+   },
+   "ctaCount": 25,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBW\nBruce Wayne · 62\nSwitch · a\n✓ a · 62\nBW\nNW\n£3.90m\nWEALTH\n67\nRISK\n71\nCOST OF INACTION\n£427k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nBusiness\nLtd-company extraction, Corp tax, DLA, BPR.\nEMPTY STATE\nNo business context for this persona\nThis view is relevant when you hold shares in a UK limited company or operate through a Ltd structure. We surface here:\nDirector extraction mix — salary vs dividends vs employer pension vs ",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "a",
+   "tab": "money/trusts",
+   "url": "http://localhost:5180/?demo=a&tab=money%2Ftrusts&theme=dark",
+   "tieouts": [
+    {
+     "key": "trusts.estate",
+     "raw": "3230000",
+     "text": "£3.23m"
+    },
+    {
+     "key": "trusts.reliefs",
+     "raw": "510000",
+     "text": "£510k"
+    },
+    {
+     "key": "trusts.iht",
+     "raw": "1088000",
+     "text": "£1.09m"
+    }
+   ],
+   "bodyLen": 2375,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 3900000,
+    "investable": 1830000
+   },
+   "ctaCount": 40,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBW\nBruce Wayne · 62\nSwitch · a\n✓ a · 62\nBW\nNW\n£3.90m\nWEALTH\n67\nRISK\n71\nCOST OF INACTION\n£427k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nTrusts & Estate\nWills, lasting powers of attorney, beneficiary nominations, and trusts — the four documents that decide where your money goes when you can't.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nVEHICLES\n4\nESTATE\n£3",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "family",
+   "tab": "home",
+   "url": "http://localhost:5180/?demo=family&tab=home&theme=dark",
+   "tieouts": [
+    {
+     "key": "home.monthly-deficit",
+     "raw": "1202",
+     "text": "−£1k/mo"
+    },
+    {
+     "key": "home.nw",
+     "raw": "408900",
+     "text": "£409k"
+    }
+   ],
+   "bodyLen": 3338,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 408900,
+    "investable": 206100
+   },
+   "ctaCount": 70,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBH\nBob & Helen Parr · 42/40 · 2 children\nSwitch · family\n✓ family · 42\nB&\nNW\n£409k\nWEALTH\n77\nRISK\n50\nCOST OF INACTION\n£17k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n✨\nAsk Sonu anything\nOne clear answer + the path to get there · powered by 11 specialist lenses\n›\nGood afternoon · Thu 11 Jun\n11/06 13:33\nTODAY\nFUTURE\nPLAN\nWHAT IF\nMONTHLY SHORTFALL\n−£1k/mo\nThat's £14k/year coming out of savings or going onto credit. Fixing this is priority one — the other sc",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "family",
+   "tab": "money",
+   "url": "http://localhost:5180/?demo=family&tab=money&theme=dark",
+   "tieouts": [
+    {
+     "key": "money.nw",
+     "raw": "408900",
+     "text": "£409k"
+    },
+    {
+     "key": "money.assets",
+     "raw": "691100",
+     "text": "£691k"
+    },
+    {
+     "key": "money.liabilities",
+     "raw": "282200",
+     "text": "£282k"
+    },
+    {
+     "key": "money.cat.pensions",
+     "raw": "113500",
+     "text": "£114k⚡"
+    },
+    {
+     "key": "money.cat.investments",
+     "raw": "54900",
+     "text": "£55k⚡"
+    },
+    {
+     "key": "money.cat.property",
+     "raw": "485000",
+     "text": "£485k⚡"
+    },
+    {
+     "key": "money.cat.protection",
+     "raw": "0",
+     "text": "£0⚡"
+    },
+    {
+     "key": "money.cat.cash",
+     "raw": "37700",
+     "text": "£38k⚡"
+    }
+   ],
+   "bodyLen": 2885,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 408900,
+    "investable": 206100
+   },
+   "ctaCount": 111,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBH\nBob & Helen Parr · 42/40 · 2 children\nSwitch · family\n✓ family · 42\nB&\nNW\n£409k\nWEALTH\n77\nRISK\n50\nCOST OF INACTION\n£17k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nToday\nFuture\nPlan\nWhat if\nChoices\n←\nBack\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nACCOUNTS\n11\nNET WORTH\n£409k\nASSETS\n£691k\nLIABILITIES\n£282k\nAdd or edit\n→\nHOW YOUR MONEY IS HELD · £691K\ni\nProperty · £485k\nPension · £114k",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "family",
+   "tab": "money/income",
+   "url": "http://localhost:5180/?demo=family&tab=money%2Fincome&theme=dark",
+   "tieouts": [
+    {
+     "key": "income.gross",
+     "raw": "68500",
+     "text": "£69k"
+    },
+    {
+     "key": "income.tax",
+     "raw": "18779",
+     "text": "£19k"
+    },
+    {
+     "key": "income.net",
+     "raw": "49721",
+     "text": "£50k"
+    }
+   ],
+   "bodyLen": 1813,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 408900,
+    "investable": 206100
+   },
+   "ctaCount": 37,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBH\nBob & Helen Parr · 42/40 · 2 children\nSwitch · family\n✓ family · 42\nB&\nNW\n£409k\nWEALTH\n77\nRISK\n50\nCOST OF INACTION\n£17k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nIncome Statement\nWhat comes in, what HMRC takes, what you keep.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nSOURCES\n1\nGROSS\n£69k\nTAX\n£19k\nNET\n£50k\nUpdate income\n→\nFLOW — SOURCES → TAX STAGES → ",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "family",
+   "tab": "money/protection",
+   "url": "http://localhost:5180/?demo=family&tab=money%2Fprotection&theme=dark",
+   "tieouts": [
+    {
+     "key": "protection.cover",
+     "raw": "350000",
+     "text": "£350k"
+    },
+    {
+     "key": "protection.premiums",
+     "raw": "£83/mo",
+     "text": "£83/mo"
+    },
+    {
+     "key": "protection.gap",
+     "raw": "335000",
+     "text": "£335k"
+    }
+   ],
+   "bodyLen": 3442,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 408900,
+    "investable": 206100
+   },
+   "ctaCount": 38,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBH\nBob & Helen Parr · 42/40 · 2 children\nSwitch · family\n✓ family · 42\nB&\nNW\n£409k\nWEALTH\n77\nRISK\n50\nCOST OF INACTION\n£17k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of inaction\nPOLICIES\n2\nCOVER\n£350k\nPREMIUMS\n£83/mo\nGAP\n£335k\nUpdate cover\n→\n←\nBack\nProtection · drill-down\n£350K\n· 2/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "family",
+   "tab": "money/business",
+   "url": "http://localhost:5180/?demo=family&tab=money%2Fbusiness&theme=dark",
+   "tieouts": [],
+   "bodyLen": 1436,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 408900,
+    "investable": 206100
+   },
+   "ctaCount": 25,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBH\nBob & Helen Parr · 42/40 · 2 children\nSwitch · family\n✓ family · 42\nB&\nNW\n£409k\nWEALTH\n77\nRISK\n50\nCOST OF INACTION\n£17k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nBusiness\nLtd-company extraction, Corp tax, DLA, BPR.\nEMPTY STATE\nNo business context for this persona\nThis view is relevant when you hold shares in a UK limited company or operate through a Ltd structure. We surface here:\nDirector extraction mix — salary vs divi",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "family",
+   "tab": "money/trusts",
+   "url": "http://localhost:5180/?demo=family&tab=money%2Ftrusts&theme=dark",
+   "tieouts": [
+    {
+     "key": "trusts.estate",
+     "raw": "577600",
+     "text": "£578k"
+    },
+    {
+     "key": "trusts.reliefs",
+     "raw": "577600",
+     "text": "£578k"
+    },
+    {
+     "key": "trusts.iht",
+     "raw": "0",
+     "text": "£0"
+    }
+   ],
+   "bodyLen": 2587,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 408900,
+    "investable": 206100
+   },
+   "ctaCount": 40,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nBH\nBob & Helen Parr · 42/40 · 2 children\nSwitch · family\n✓ family · 42\nB&\nNW\n£409k\nWEALTH\n77\nRISK\n50\nCOST OF INACTION\n£17k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nTrusts & Estate\nWills, lasting powers of attorney, beneficiary nominations, and trusts — the four documents that decide where your money goes when you can't.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nTrusts & Estate\nCost of ",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "e",
+   "tab": "home",
+   "url": "http://localhost:5180/?demo=e&tab=home&theme=dark",
+   "tieouts": [
+    {
+     "key": "home.monthly-deficit",
+     "raw": "2010",
+     "text": "−£2k/mo"
+    },
+    {
+     "key": "home.nw",
+     "raw": "5460000",
+     "text": "£5.46m"
+    }
+   ],
+   "bodyLen": 3174,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 5460000,
+    "investable": 1460000
+   },
+   "ctaCount": 67,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nWW\nWilly Wonka · 78\nSwitch · e\n✓ e · 78\nWW\nNW\n£5.46m\nWEALTH\n100\nRISK\n82\nCOST OF INACTION\n£411k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n✨\nAsk Sonu anything\nOne clear answer + the path to get there · powered by 11 specialist lenses\n›\nGood afternoon · Thu 11 Jun\n11/06 13:33\nTODAY\nFUTURE\nPLAN\nWHAT IF\nMONTHLY SHORTFALL\n−£2k/mo\nThat's £24k/year coming out of savings or going onto credit. Fixing this is priority one — the other scores wait.\nSee where it's go",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "e",
+   "tab": "money",
+   "url": "http://localhost:5180/?demo=e&tab=money&theme=dark",
+   "tieouts": [
+    {
+     "key": "money.nw",
+     "raw": "5460000",
+     "text": "£5.46m"
+    },
+    {
+     "key": "money.assets",
+     "raw": "5460000",
+     "text": "£5.46m"
+    },
+    {
+     "key": "money.liabilities",
+     "raw": "0",
+     "text": "£0"
+    },
+    {
+     "key": "money.cat.pensions",
+     "raw": "680000",
+     "text": "£680k⚡"
+    },
+    {
+     "key": "money.cat.investments",
+     "raw": "520000",
+     "text": "£520k⚡"
+    },
+    {
+     "key": "money.cat.property",
+     "raw": "800000",
+     "text": "£800k⚡"
+    },
+    {
+     "key": "money.cat.business",
+     "raw": "3200000",
+     "text": "£3.20m⚡"
+    },
+    {
+     "key": "money.cat.protection",
+     "raw": "0",
+     "text": "£0⚡"
+    },
+    {
+     "key": "money.cat.cash",
+     "raw": "260000",
+     "text": "£260k⚡"
+    }
+   ],
+   "bodyLen": 3139,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 5460000,
+    "investable": 1460000
+   },
+   "ctaCount": 108,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nWW\nWilly Wonka · 78\nSwitch · e\n✓ e · 78\nWW\nNW\n£5.46m\nWEALTH\n100\nRISK\n82\nCOST OF INACTION\n£411k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nToday\nFuture\nPlan\nWhat if\nChoices\n←\nBack\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nACCOUNTS\n9\nNET WORTH\n£5.46m\nASSETS\n£5.46m\nLIABILITIES\n£0\nAdd or edit\n→\n⚠\n£100k income threshold passed — 60% marginal rate in effect\nAdjusted net income abov",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "e",
+   "tab": "money/income",
+   "url": "http://localhost:5180/?demo=e&tab=money%2Fincome&theme=dark",
+   "tieouts": [
+    {
+     "key": "income.gross",
+     "raw": "90000",
+     "text": "£90k"
+    },
+    {
+     "key": "income.tax",
+     "raw": "26524",
+     "text": "£27k"
+    },
+    {
+     "key": "income.net",
+     "raw": "63476",
+     "text": "£63k"
+    }
+   ],
+   "bodyLen": 1731,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 5460000,
+    "investable": 1460000
+   },
+   "ctaCount": 39,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nWW\nWilly Wonka · 78\nSwitch · e\n✓ e · 78\nWW\nNW\n£5.46m\nWEALTH\n100\nRISK\n82\nCOST OF INACTION\n£411k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nIncome Statement\nWhat comes in, what HMRC takes, what you keep.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nSOURCES\n2\nGROSS\n£90k\nTAX\n£27k\nNET\n£63k\nUpdate income\n→\nFLOW — SOURCES → TAX STAGES → NET\nDividends\nDrawd",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "e",
+   "tab": "money/protection",
+   "url": "http://localhost:5180/?demo=e&tab=money%2Fprotection&theme=dark",
+   "tieouts": [
+    {
+     "key": "protection.cover",
+     "raw": "1600000",
+     "text": "£1.60m"
+    },
+    {
+     "key": "protection.premiums",
+     "raw": "£3k/mo",
+     "text": "£3k/mo"
+    },
+    {
+     "key": "protection.gap",
+     "raw": "0",
+     "text": "£0"
+    }
+   ],
+   "bodyLen": 4042,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 5460000,
+    "investable": 1460000
+   },
+   "ctaCount": 41,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nWW\nWilly Wonka · 78\nSwitch · e\n✓ e · 78\nWW\nNW\n£5.46m\nWEALTH\n100\nRISK\n82\nCOST OF INACTION\n£411k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nPOLICIES\n3\nCOVER\n£1.60m\nPREMIUMS\n£3k/mo\nGAP\n£0\nUpdate cover\n→\n←\nBack\nProtection · drill-down\n£1.60M\n· 2/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED AND WHERE THE GAPS ",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "e",
+   "tab": "money/business",
+   "url": "http://localhost:5180/?demo=e&tab=money%2Fbusiness&theme=dark",
+   "tieouts": [
+    {
+     "key": "business.value",
+     "raw": "3200000",
+     "text": "£3.20m"
+    },
+    {
+     "key": "business.distributions",
+     "raw": "45000",
+     "text": "£45k"
+    },
+    {
+     "key": "business.directorPay",
+     "raw": "0",
+     "text": "£0"
+    }
+   ],
+   "bodyLen": 3607,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 5460000,
+    "investable": 1460000
+   },
+   "ctaCount": 35,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nWW\nWilly Wonka · 78\nSwitch · e\n✓ e · 78\nWW\nNW\n£5.46m\nWEALTH\n100\nRISK\n82\nCOST OF INACTION\n£411k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nBusiness\nLtd-company extraction, Corp tax, DLA, BPR.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nHOLDINGS\n1\nVALUE\n£3.20m\nDISTRIBUTIONS\n£45k\nDIRECTOR PAY\n£0\nUpdate business\n→\nANNUAL FLOWS OUT OF THE LTD\nDirector e",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  },
+  {
+   "pid": "e",
+   "tab": "money/trusts",
+   "url": "http://localhost:5180/?demo=e&tab=money%2Ftrusts&theme=dark",
+   "tieouts": [
+    {
+     "key": "trusts.estate",
+     "raw": "4780000",
+     "text": "£4.78m"
+    },
+    {
+     "key": "trusts.reliefs",
+     "raw": "3855000",
+     "text": "£3.85m"
+    },
+    {
+     "key": "trusts.iht",
+     "raw": "370000",
+     "text": "£370k"
+    }
+   ],
+   "bodyLen": 2148,
+   "suspicious": [],
+   "engine": {
+    "netWorth": 5460000,
+    "investable": 1460000
+   },
+   "ctaCount": 41,
+   "unlabeled": 0,
+   "deadLinks": [],
+   "firstText": "Skip to main content\nSonuswealth\nPREMIUM MANAGEMENT\n⌂\nOverview\n◈\nMy Money\n≋\nCashflow\n⚖\nTax & Estate\n◉\nRisk\n◷\nTimeline\nSchedule Review\nWW\nWilly Wonka · 78\nSwitch · e\n✓ e · 78\nWW\nNW\n£5.46m\nWEALTH\n100\nRISK\n82\nCOST OF INACTION\n£411k\n☀\n⋯\n⚙\n⏱\nHORIZON\nThis year\nCalendar year (Jan–Dec)\nLast year\nNext year\n5-year horizon\n10-year horizon\n20-year horizon\nLifetime\n📊\nReports\nRULES\n2026/27\n←\nMy Money\nUK · 2026/27 rules\nTrusts & Estate\nWills, lasting powers of attorney, beneficiary nominations, and trusts — the four documents that decide where your money goes when you can't.\nBalance Sheet\nIncome Statement\nCashflow\nTax & Allowances\nProtection & Insurance\nBusiness\nTrusts & Estate\nCost of inaction\nVEHICLES\n6",
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ],
+   "warnings": []
+  }
+ ],
+ "drills": [
+  {
+   "pid": "mrt-core",
+   "tiles": [
+    "Open reports and financial statements",
+    "Open Pensions detail",
+    "Open Savings & Investments detail",
+    "Open Property detail",
+    "Open Business Assets detail",
+    "Open Protection detail",
+    "Open Cash detail",
+    "Open Alternatives detail",
+    "Open Overdraft detail",
+    "Open Credit card detail",
+    "Open Car finance (PCP) detail",
+    "Open HMRC — Self Assessment detail",
+    "Open Student loan (Plan 2) detail",
+    "Open Second-charge mortgage detail",
+    "Open Personal loan detail",
+    "Open Buy-to-let mortgage detail",
+    "Open Mortgage detail",
+    "Open Buy now, pay later (BNPL) detail",
+    "Open Ask AI"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open reports and financial statements",
+   "changed": true,
+   "overlayHead": "← Back\nSonuswealth · Reports\nReports & financial statements\n⌂ Home\nEvery report is a live, frozen view of your own figures — choose an area to open it.\n📊\nFinancial statements\nBalance sheet · income · cashflow\n›\n📈\nNet worth & cashflow\nWhere you stan",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Pensions detail",
+   "changed": true,
+   "overlayHead": null,
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Savings & Investments detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nSavings & investments · drill-down\n£112K\n· 5 HOLDINGS\n⌂\nHome\nYOUR MONEY SITS IN DIFFERENT TAX WRAPPERS — EACH TAXED ITS OWN WAY. TAP ONE TO GO DEEPER.\nTOTAL INVESTED\n£112k\nWRAPPERS\n3\n5 holdings\n◈\nISA\n2 holdings\n£47k\n›\n▦\nGeneral account\n1 holdi",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Property detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProperty · drill-down\n£1.58M\n· £1.25M EQUITY\n⌂\nHome\n7 KINDS OF PROPERTY, EACH TAXED DIFFERENTLY. TAP ONE TO GO DEEPER.\nTOTAL PROPERTY\n£1.58m\nTOTAL EQUITY\n£1.25m\nAfter £339k debt\n⌂\nMain residence\n1 property · £170k equity\n£385k\n›\n⌖\nLet property",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Business Assets detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nBusiness assets · drill-down\n£182K\n· 1 COMPANY · 1 SCHEME\n⌂\nHome\nHOW YOUR BUSINESS PAYS YOU, AND WHAT YOU KEEP. TAP A STRAND TO GO DEEPER.\nTOTAL BUSINESS\n£182k\nINHERITANCE-TAX RELIEF\n£290k\n100% Business Relief (BPR) to £2.5m\n⚇\nCompany equity\n1",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Protection detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProtection · drill-down\n£750K\n· 3/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED AND WHERE THE GAPS ARE\nFour cover types — life, critical illness, income protection, private medical. Life cover policies written into",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Cash detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nCash · drill-down\n£29K\n· 3 ACCOUNTS\n⌂\nHome\nYOUR CASH SAFETY NET AND HOW LONG IT LASTS\nRUNWAY — HOW LONG CASH LASTS\nCash on hand vs months of essential spending it covers. Adds planned drawdown over the next 60 months for decumulation personas.",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Alternatives detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nAlternatives · drill-down\n£63K\n· 7 HOLDINGS · 6 TYPES\n⌂\nHome\nEIS, SEIS, VCT, AIM, AND PRIVATE HOLDINGS\nCOMPOSITION · STACKED BAR (SMALL SLICES PRESERVED)\nEIS 24%\nVCT 20%\nPrivate equity 16%\nCrypto 15%\nWine 13%\nSEIS 13%\n1 · COMPOSITION BY ASSET ",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Overdraft detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nOverdraft\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£1k\n39.00% APR\nEstate-deductible\nWHERE THIS IS HEADING\n£51k\n£0\nnow\n3y\n7y\n10y\nNo payment captured — add one to project when this clears.\nTHE DETAIL\nBalance\n−£1k\nInterest rate\n39.00%\nMonthly payme",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Credit card detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nCredit card\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£2k\n24.70% APR\nEstate-deductible\nWHERE THIS IS HEADING\n£2k\n£0\nnow\n1y\n2y\n3y\nEstimated at the current payment · clears ~2029. Balance only — not adjusted for inflation.\nTHE DETAIL\nBalance\n−£2k\nI",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Car finance (PCP) detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nCar finance (PCP)\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£14k\n8.90% APR\nfixed\nEstate-deductible\nWHERE THIS IS HEADING\n£14k\n£0\nnow\n2y\n3y\n5y\nEstimated at the current payment · clears ~2031. Balance only — not adjusted for inflation.\nTHE DETAIL\nB",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open HMRC — Self Assessment detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nHMRC — Self Assessment\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£5k\n8.50% APR\nEstate-deductible\nWHERE THIS IS HEADING\n£11k\n£0\nnow\n3y\n7y\n10y\nNo payment captured — add one to project when this clears.\nTHE DETAIL\nBalance\n−£5k\nInterest rate\n8.50%\nMo",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Student loan (Plan 2) detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nStudent loan (Plan 2)\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£16k\n7.40% APR\nWritten off on death — not in estate\nWHERE THIS IS HEADING\n£16k\n£0\nnow\n10y\n20y\n30y\nEstimated at the current payment · clears ~2058. Balance only — not adjusted for inf",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Second-charge mortgage detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nSecond-charge mortgage\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£24k\n7.40% APR\nfixed-until-2029\nEstate-deductible\nWHERE THIS IS HEADING\n£24k\n£0\nnow\n6y\n11y\n17y\nEstimated at the current payment · clears ~2043. Balance only — not adjusted for infla",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Personal loan detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nPersonal loan\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£8k\n6.90% APR\nfixed\nEstate-deductible\nWHERE THIS IS HEADING\n£8k\n£0\nnow\n1y\n2y\n3y\nEstimated at the current payment · clears ~2029. Balance only — not adjusted for inflation.\nTHE DETAIL\nBalance",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Buy-to-let mortgage detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nBuy-to-let mortgage\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£124k\n5.40% APR\nfixed-until-2027\nEstate-deductible\nS24 · 20% credit only\nWHERE THIS IS HEADING\n£124k\n£0\nnow\n10y\n20y\n30y\nEstimated at the current payment · clears ~2087. Balance only — ",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Mortgage detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nMortgage\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£215k\n3.90% APR\nfixed-until-2028\nEstate-deductible\nWHERE THIS IS HEADING\n£215k\n£0\nnow\n8y\n15y\n23y\nEstimated at the current payment · clears ~2049. Balance only — not adjusted for inflation.\nTHE DE",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Buy now, pay later (BNPL) detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nBuy now, pay later (BNPL)\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£540\nEstate-deductible\nWHERE THIS IS HEADING\n£540\n£0\nnow\nEstimated at the current payment · clears ~2026. Balance only — not adjusted for inflation.\nTHE DETAIL\nBalance\n−£540\nInte",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "drill": "Open Ask AI",
+   "fatal": "TimeoutError: page.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[aria-label=\"Open Ask AI\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Open Ask AI\" class=\"",
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "tiles": [
+    "Open reports and financial statements",
+    "Open Pensions detail",
+    "Open Savings & Investments detail",
+    "Open Property detail",
+    "Open Protection detail",
+    "Open Cash detail",
+    "Open Buy-to-let mortgage detail",
+    "Open Ask AI"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open reports and financial statements",
+   "changed": true,
+   "overlayHead": "← Back\nSonuswealth · Reports\nReports & financial statements\n⌂ Home\nEvery report is a live, frozen view of your own figures — choose an area to open it.\n📊\nFinancial statements\nBalance sheet · income · cashflow\n›\n📈\nNet worth & cashflow\nWhere you stan",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Pensions detail",
+   "changed": true,
+   "overlayHead": null,
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Savings & Investments detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nSavings & investments · drill-down\n£800K\n· 2 HOLDINGS\n⌂\nHome\nYOUR MONEY SITS IN DIFFERENT TAX WRAPPERS — EACH TAXED ITS OWN WAY. TAP ONE TO GO DEEPER.\nTOTAL INVESTED\n£800k\nWRAPPERS\n2\n2 holdings\n◈\nISA\n1 holding\n£420k\n›\n▦\nGeneral account\n1 holdi",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Property detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProperty · drill-down\n£2.25M\n· £2.25M EQUITY\n⌂\nHome\n2 KINDS OF PROPERTY, EACH TAXED DIFFERENTLY. TAP ONE TO GO DEEPER.\nTOTAL PROPERTY\n£2.25m\nTOTAL EQUITY\n£2.25m\nAfter £0 debt\n⌂\nMain residence\n1 property · £1.80m equity\n£1.80m\n›\n⌖\nLet property\n",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Protection detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProtection · drill-down\n£1.50M\n· 2/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED AND WHERE THE GAPS ARE\nFour cover types — life, critical illness, income protection, private medical. Life cover policies written int",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Cash detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nCash · drill-down\n£180K\n· 1 ACCOUNT\n⌂\nHome\nYOUR CASH SAFETY NET AND HOW LONG IT LASTS\nRUNWAY — HOW LONG CASH LASTS\nCash on hand vs months of essential spending it covers. Adds planned drawdown over the next 60 months for decumulation personas.",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Buy-to-let mortgage detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nBuy-to-let mortgage\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£180k\n3.85% APR\nfixed\nEstate-deductible\nS24 · 20% credit only\nWHERE THIS IS HEADING\n£180k\n£0\nnow\n6y\n13y\n19y\nEstimated at the current payment · clears ~2045. Balance only — not adjusted",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "a",
+   "drill": "Open Ask AI",
+   "fatal": "TimeoutError: page.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[aria-label=\"Open Ask AI\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Open Ask AI\" class=\"",
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tiles": [
+    "Open reports and financial statements",
+    "Open Pensions detail",
+    "Open Savings & Investments detail",
+    "Open Property detail",
+    "Open Protection detail",
+    "Open Cash detail",
+    "Open Personal loan detail",
+    "Open Mortgage detail",
+    "Open Ask AI"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open reports and financial statements",
+   "changed": true,
+   "overlayHead": "← Back\nSonuswealth · Reports\nReports & financial statements\n⌂ Home\nEvery report is a live, frozen view of your own figures — choose an area to open it.\n📊\nFinancial statements\nBalance sheet · income · cashflow\n›\n📈\nNet worth & cashflow\nWhere you stan",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Pensions detail",
+   "changed": true,
+   "overlayHead": null,
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Savings & Investments detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nSavings & investments · drill-down\n£55K\n· 2 HOLDINGS\n⌂\nHome\nYOUR MONEY SITS IN DIFFERENT TAX WRAPPERS — EACH TAXED ITS OWN WAY. TAP ONE TO GO DEEPER.\nTOTAL INVESTED\n£55k\nWRAPPERS\n2\n2 holdings\n◈\nISA\n1 holding\n£47k\n›\n▦\nGeneral account\n1 holding\n",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Property detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProperty · drill-down\n£485K\n· £207K EQUITY\n⌂\nHome\n1 KIND OF PROPERTY, EACH TAXED DIFFERENTLY. TAP ONE TO GO DEEPER.\nTOTAL PROPERTY\n£485k\nTOTAL EQUITY\n£207k\nAfter £278k debt\n⌂\nMain residence\n1 property · £207k equity\n£485k\n›\n70% OF NET WORTH · ",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Protection detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProtection · drill-down\n£350K\n· 2/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED AND WHERE THE GAPS ARE\nFour cover types — life, critical illness, income protection, private medical. Life cover policies written into",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Cash detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nCash · drill-down\n£38K\n· 1 ACCOUNT\n⌂\nHome\nYOUR CASH SAFETY NET AND HOW LONG IT LASTS\nRUNWAY — HOW LONG CASH LASTS\nCash on hand vs months of essential spending it covers. Adds planned drawdown over the next 60 months for decumulation personas.\n",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Personal loan detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nPersonal loan\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£4k\n6.80% APR\nfixed\nEstate-deductible\nWHERE THIS IS HEADING\n£4k\n£0\nnow\n1y\n2y\nEstimated at the current payment · clears ~2028. Balance only — not adjusted for inflation.\nTHE DETAIL\nBalance\n−£",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Mortgage detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nMortgage\nWHAT IT COSTS · WHEN IT CLEARS\n⌂\nHome\n−£278k\n3.90% APR\nfixed\nEstate-deductible\nWHERE THIS IS HEADING\n£278k\n£0\nnow\n6y\n13y\n19y\nEstimated at the current payment · clears ~2045. Balance only — not adjusted for inflation.\nTHE DETAIL\nBalanc",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "drill": "Open Ask AI",
+   "fatal": "TimeoutError: page.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[aria-label=\"Open Ask AI\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Open Ask AI\" class=\"",
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "tiles": [
+    "Open reports and financial statements",
+    "Open Pensions detail",
+    "Open Savings & Investments detail",
+    "Open Property detail",
+    "Open Business Assets detail",
+    "Open Protection detail",
+    "Open Cash detail",
+    "Open Ask AI"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open reports and financial statements",
+   "changed": true,
+   "overlayHead": "← Back\nSonuswealth · Reports\nReports & financial statements\n⌂ Home\nEvery report is a live, frozen view of your own figures — choose an area to open it.\n📊\nFinancial statements\nBalance sheet · income · cashflow\n›\n📈\nNet worth & cashflow\nWhere you stan",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Pensions detail",
+   "changed": true,
+   "overlayHead": null,
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Savings & Investments detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nSavings & investments · drill-down\n£520K\n· 1 HOLDING\n⌂\nHome\nYOUR MONEY SITS IN DIFFERENT TAX WRAPPERS — EACH TAXED ITS OWN WAY. TAP ONE TO GO DEEPER.\nTOTAL INVESTED\n£520k\nWRAPPERS\n1\n1 holdings\n◈\nISA\n1 holding\n£520k\n›\n\nInformation and guidance ",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Property detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProperty · drill-down\n£1.60M\n· £1.60M EQUITY\n⌂\nHome\n1 KIND OF PROPERTY, EACH TAXED DIFFERENTLY. TAP ONE TO GO DEEPER.\nTOTAL PROPERTY\n£1.60m\nTOTAL EQUITY\n£1.60m\nAfter £0 debt\n⌂\nMain residence\n1 property · £1.60m equity\n£1.60m\n›\nNOT CAPTURED YET",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Business Assets detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nBusiness assets · drill-down\n£3.20M\n· 0 COMPANIES · 0 SCHEMES\n⌂\nHome\nHOW YOUR BUSINESS PAYS YOU, AND WHAT YOU KEEP. TAP A STRAND TO GO DEEPER.\nTOTAL BUSINESS\n£3.20m\nINHERITANCE-TAX RELIEF\n£3.20m\n100% Business Relief (BPR) to £2.5m\n⚇\nCompany eq",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Protection detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nProtection · drill-down\n£1.60M\n· 2/4 CORE\n⌂\nHome\nWHAT'S COVERED, BY WHOM, AND WHEN IT PAYS\n1 · WHAT'S COVERED AND WHERE THE GAPS ARE\nFour cover types — life, critical illness, income protection, private medical. Life cover policies written int",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Cash detail",
+   "changed": true,
+   "overlayHead": "←\nBack\nCash · drill-down\n£260K\n· 1 ACCOUNT\n⌂\nHome\nYOUR CASH SAFETY NET AND HOW LONG IT LASTS\nRUNWAY — HOW LONG CASH LASTS\nCash on hand vs months of essential spending it covers. Adds planned drawdown over the next 60 months for decumulation personas.",
+   "hasBack": true,
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "e",
+   "drill": "Open Ask AI",
+   "fatal": "TimeoutError: page.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button[aria-label=\"Open Ask AI\"]')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-label=\"Open Ask AI\" class=\"",
+   "newErrors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  }
+ ],
+ "shots": [
+  {
+   "pid": "mrt-core",
+   "tab": "home",
+   "theme": "dark",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-home-dark-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "home",
+   "theme": "dark",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-home-dark-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "home",
+   "theme": "light",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-home-light-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "home",
+   "theme": "light",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-home-light-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money",
+   "theme": "dark",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-money-dark-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money",
+   "theme": "dark",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-money-dark-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money",
+   "theme": "light",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-money-light-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "mrt-core",
+   "tab": "money",
+   "theme": "light",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/mrt-core-money-light-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "home",
+   "theme": "dark",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-home-dark-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "home",
+   "theme": "dark",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-home-dark-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "home",
+   "theme": "light",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-home-light-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "home",
+   "theme": "light",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-home-light-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "money",
+   "theme": "dark",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-money-dark-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "money",
+   "theme": "dark",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-money-dark-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "money",
+   "theme": "light",
+   "vp": "mob",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-money-light-mob.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  },
+  {
+   "pid": "family",
+   "tab": "money",
+   "theme": "light",
+   "vp": "desk",
+   "file": "C:/Users/Powernet/Desktop/finio/audit-findings/shots-w1a/family-money-light-desk.png",
+   "hOverflow": 0,
+   "errors": [
+    "Missing Supabase environment variables. Check .env.local"
+   ]
+  }
+ ]
+}

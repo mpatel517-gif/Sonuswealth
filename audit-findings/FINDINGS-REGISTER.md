@@ -45,5 +45,8 @@
 | F-010 | Build | P2 | D4 | index chunk 1.56MB (414KB gz), mymoney 570KB, engine 704KB — no route-level code splitting. | OPEN | W7 |
 | F-011 | Header | P3 | D7 | Family persona avatar badge renders "B&" (name-truncation on "Bob & Helen Parr"). | OPEN | W7 |
 | F-012 | Docs | P3 | D6 | Stale-docs class: README-DRILLSTACK misled 2 audit agents (corrected); sweep other READMEs/status docs in W1. | OPEN | W1 |
+| F-600 | Security | **P0** | D2 | Production Supabase **service_role** JWT (RLS-bypass, exp 2090) hardcoded in tracked scripts on PUBLIC repo + in git history. **Scrubbed from HEAD (`b881637`); ROTATION PENDING — founder must rotate in Supabase dashboard + decide repo visibility.** Anon key in client bundle verified normal. | IN-WAVE (rotation = founder) | W1-F |
+| F-601 | Security | P1 | D2 | Two DeepSeek API keys hardcoded in 4 tracked launcher scripts (public + history). Scrubbed from HEAD (`b881637`); **rotation pending — founder, DeepSeek console.** | IN-WAVE (rotation = founder) | W1-F |
+| F-611 | Compliance | P1 | D3 | Ask Sonu "Sonu's call" = single lead play personalised to user data + verbatim imperative play strings ("Sell the lot, immediately re-buy inside ISA") — risks the FCA Art. 53 personal-recommendation test; disclaimers alone don't cure it. Needs copy-softening pass (option-framing, not imperatives) + legal sign-off pre-launch. | OPEN | W2 memo + W6 |
 
 *(W1 agents append from F-013 with their fragment prefix; main session dedupes.)*

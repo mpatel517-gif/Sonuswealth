@@ -20,7 +20,9 @@
 // keep their existing pattern; OverlayShell is for full-screen paths only.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+
+const FOCUSABLE = 'a[href],area[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
 export default function OverlayShell({
   title,
@@ -31,20 +33,45 @@ export default function OverlayShell({
   children,
   contentStyle,
 }) {
-  // Escape key returns via onBack (not onHome — escape is always "go back one")
+  const dialogRef = useRef(null)
+
+  // a11y (D5): Escape returns via onBack; Tab is trapped inside the dialog so
+  // keyboard focus can't leak to the screen behind a modal overlay. On open,
+  // focus moves into the dialog; on close, it returns to the previously-focused
+  // element so keyboard/screen-reader users aren't dropped at the top of the DOM.
   useEffect(() => {
+    const prevFocus = typeof document !== 'undefined' ? document.activeElement : null
+    const node = dialogRef.current
+    // Move focus into the dialog (the container is tabIndex=-1 so it can hold focus).
+    if (node) node.focus()
+
     function onKey(e) {
-      if (e.key === 'Escape' && typeof onBack === 'function') onBack()
+      if (e.key === 'Escape' && typeof onBack === 'function') { onBack(); return }
+      if (e.key !== 'Tab' || !node) return
+      const items = Array.from(node.querySelectorAll(FOCUSABLE))
+        .filter(el => el.offsetParent !== null || el === node)
+      if (items.length === 0) { e.preventDefault(); node.focus(); return }
+      const first = items[0], last = items[items.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      // Restore focus to where the user was before the overlay opened.
+      if (prevFocus && typeof prevFocus.focus === 'function') {
+        try { prevFocus.focus() } catch { /* element gone — ignore */ }
+      }
+    }
   }, [onBack])
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      tabIndex={-1}
       style={{
         position: 'absolute',
         inset: 0,
@@ -52,6 +79,7 @@ export default function OverlayShell({
         background: 'var(--c-bg)',
         display: 'flex',
         flexDirection: 'column',
+        outline: 'none',
       }}
     >
       {/* ── Header ────────────────────────────────────────────────────────── */}
@@ -60,7 +88,8 @@ export default function OverlayShell({
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '14px 16px 12px',
+          // D12 — respect the device safe-area (notch / Dynamic Island) at the top.
+          padding: 'max(14px, env(safe-area-inset-top)) 16px 12px',
           borderBottom: '1px solid var(--c-sep)',
           flexShrink: 0,
           background: 'var(--c-bg)',

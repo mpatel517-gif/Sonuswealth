@@ -2070,55 +2070,79 @@ function DeficitBanner({ entity, onNav }) {
   const monthly = surplus < 0 ? -surplus : (deficit > 0 ? deficit : 0)
   if (monthly <= 0) return null  // not in deficit — render nothing
   const annual = monthly * 12
+  return <DeficitBannerView monthly={monthly} annual={annual} onNav={onNav} />
+}
+
+// Compact, collapsible (founder #11: the shortfall "took over the page"). Leads
+// with the number + one primary action; the why + secondary route open on tap.
+function DeficitBannerView({ monthly, annual, onNav }) {
+  const [open, setOpen] = useState(false)
   return (
     <div role="region" aria-label="Cashflow deficit alert" style={{
-      margin: '0 16px 14px',
-      padding: '14px 16px',
+      margin: '0 16px 12px',
+      padding: '11px 14px',
       background: 'var(--c-tint-coral)',
       border: '1px solid var(--c-coral-text)',
       borderRadius: 14,
-      display: 'flex', flexDirection: 'column', gap: 10,
     }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--c-coral-text)', marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--c-coral-text)' }}>
             Monthly shortfall
           </div>
-          <div data-tieout="home.monthly-deficit" data-tieout-raw={String(monthly)} style={{ fontSize: 26, fontWeight: 800, color: 'var(--c-coral-text)', letterSpacing: -0.6, lineHeight: 1 }}>
-            −{fmt(monthly)}/mo
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 4, lineHeight: 1.4 }}>
-            That's <strong>{fmt(annual)}/year</strong> coming out of savings or going onto credit.
-            Fixing this is priority one — the other scores wait.
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <span data-tieout="home.monthly-deficit" data-tieout-raw={String(monthly)} style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-coral-text)', letterSpacing: -0.4, lineHeight: 1.15 }}>
+              −{fmt(monthly)}/mo
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--c-text2)' }}>· {fmt(annual)}/yr</span>
           </div>
         </div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => onNav?.('flow')}
-          aria-label="Open Cashflow to investigate the shortfall"
+          aria-label="Open Cashflow to fix the shortfall"
           style={{
-            padding: '12px 16px', minHeight: 44, borderRadius: 100,
+            flexShrink: 0,
+            padding: '8px 14px', minHeight: 40, borderRadius: 100,
             background: 'var(--c-coral-text)', color: '#fff',
             border: 'none', cursor: 'pointer',
             fontSize: 12, fontWeight: 700,
             display: 'inline-flex', alignItems: 'center',
           }}
-        >See where it's going →</button>
-        <button
-          type="button"
-          onClick={() => onNav?.('money/income')}
-          aria-label="Open Income statement"
-          style={{
-            padding: '12px 16px', minHeight: 44, borderRadius: 100,
-            background: 'transparent', color: 'var(--c-coral-text)',
-            border: '1px solid var(--c-coral-text)', cursor: 'pointer',
-            fontSize: 12, fontWeight: 700,
-            display: 'inline-flex', alignItems: 'center',
-          }}
-        >Income statement →</button>
+        >Fix this →</button>
       </div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        style={{
+          marginTop: 6, background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'inherit', fontSize: 11, fontWeight: 600, color: 'var(--c-coral-text)',
+          padding: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        {open ? 'Hide detail ▲' : 'Why this matters ▾'}
+      </button>
+      {open && (
+        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.45 }}>
+            That's <strong>{fmt(annual)}/year</strong> coming out of savings or going onto credit.
+            Fixing this comes before the other scores.
+          </div>
+          <button
+            type="button"
+            onClick={() => onNav?.('money/income')}
+            aria-label="Open Income statement"
+            style={{
+              alignSelf: 'flex-start',
+              padding: '7px 13px', minHeight: 36, borderRadius: 100,
+              background: 'transparent', color: 'var(--c-coral-text)',
+              border: '1px solid var(--c-coral-text)', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+            }}
+          >Income statement →</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -2187,36 +2211,30 @@ export default function HomeScreen({
       )}
       {stubMetric && <DimExplainerStub metric={stubMetric} fqData={fq} onNav={onNav} onClose={() => setStubMetric(null)} />}
 
-      {/* ── Ask Sonu — primary entry point, top of page ────────────────── */}
+      {/* ── Ask Sonu — calm search-style entry (founder #11: the gradient/glow
+          "pill" dominated the page and broke DESIGN.md). Now a single-surface
+          prompt that reads as an input affordance, not a hero banner. ─────── */}
       {onShowMagic && (
         <div style={{ padding: '12px 16px 4px' }} data-testid="ask-sonu-cta">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onShowMagic() }}
+            className="sw-press"
             style={{
               width: '100%',
-              padding: '18px 18px', borderRadius: 16,
-              background: 'linear-gradient(135deg, rgba(93,219,194,0.22) 0%, rgba(175,82,222,0.18) 100%)',
-              border: '1.5px solid var(--c-acc)',
-              color: 'var(--c-text)',
+              padding: '11px 14px', borderRadius: 12,
+              background: 'var(--c-surface)',
+              border: '1px solid var(--c-border)',
+              color: 'var(--c-text2)',
               cursor: 'pointer', fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center', gap: 14,
-              boxShadow: '0 4px 16px rgba(93,219,194,0.18)',
-              transition: 'transform .15s ease, box-shadow .15s ease',
+              display: 'flex', alignItems: 'center', gap: 10,
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(93,219,194,0.28)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(93,219,194,0.18)' }}
           >
-            <span style={{ fontSize: 26, lineHeight: 1 }}>✨</span>
-            <div style={{ flex: 1, textAlign: 'left' }}>
-              <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2, marginBottom: 3 }}>
-                Ask Sonu anything
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.4 }}>
-                One clear answer + the path to get there · powered by 11 specialist lenses
-              </div>
-            </div>
-            <span style={{ fontSize: 18, color: 'var(--c-acc)', fontWeight: 700 }}>›</span>
+            <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1, color: 'var(--c-acc)' }}>✦</span>
+            <span style={{ flex: 1, textAlign: 'left', fontSize: 13.5 }}>
+              Ask Sonu a money question…
+            </span>
+            <span aria-hidden="true" style={{ fontSize: 16, color: 'var(--c-text3)' }}>›</span>
           </button>
         </div>
       )}

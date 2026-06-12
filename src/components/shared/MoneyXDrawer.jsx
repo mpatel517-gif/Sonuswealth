@@ -41,8 +41,8 @@ export default function MoneyXDrawer({ entity, activeRoute, onNav, variant = 'fu
     || entityData.assets?.protection?.lifeInsurance?.inTrust)
 
   const sections = [
-    { id: 'mm-balance',    label: 'Balance Sheet',          always: true,             route: 'money'            },
-    { id: 'mm-income',     label: 'Income Statement',       always: true,             route: 'money/income'     },
+    { id: 'mm-balance',    label: 'What you own & owe',      always: true,             route: 'money'            },
+    { id: 'mm-income',     label: 'Money in & out',         always: true,             route: 'money/income'     },
     { id: 'mm-flow',       label: 'Cashflow',               always: true,             route: 'flow'             },
     { id: 'mm-tax',        label: 'Tax & Allowances',       always: true,             route: 'tax'              },
     { id: 'mm-insurance',  label: 'Protection & Insurance', always: true,             route: 'money/protection' },

@@ -26,9 +26,9 @@ import { captureSnapshot, recordReportGenerated } from '../state/report-snapshot
 
 // Report registry. `kind`: 'statement' | 'report' | 'soon'.
 const INDEX = {
-  'balance-sheet':     { label: 'Balance Sheet',     kind: 'statement', sub: 'Assets, liabilities & net worth' },
-  'income-statement':  { label: 'Income Statement',  kind: 'statement', sub: 'Income − tax − spending = surplus' },
-  'cashflow-statement':{ label: 'Cashflow Statement', kind: 'statement', sub: 'Money in, money out, net' },
+  'balance-sheet':     { label: 'What you own & owe (Balance Sheet)',     kind: 'statement', sub: 'Assets, liabilities & net worth' },
+  'income-statement':  { label: 'Money in & out (Income Statement)',  kind: 'statement', sub: 'Income − tax − spending = surplus' },
+  'cashflow-statement':{ label: 'Where your money goes (Cashflow Statement)', kind: 'statement', sub: 'Money in, money out, net' },
   'nw':                { label: 'Net Worth Snapshot', kind: 'report',    sub: 'Where your wealth sits today' },
   'cashflow':          { label: 'Cashflow Projection', kind: 'report',   sub: 'Your surplus, projected forward' },
   'tax':               { label: 'Tax Summary',        kind: 'report',    sub: 'Self-Assessment estimate for your accountant' },

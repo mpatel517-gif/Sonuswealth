@@ -40,6 +40,13 @@ const GLOSSARY = {
   CLT:    'Chargeable Lifetime Transfer — typically gifts to trusts; immediate IHT charge above NRB.',
   IHT:    'Inheritance Tax — UK tax on estate value above NRB at death; 40% rate.',
   IHT400: 'IHT400 — the HMRC form for estates that owe IHT.',
+  CGT:    'Capital Gains Tax — UK tax on the profit when you sell an asset (shares, property, etc.) above the annual exempt amount.',
+  AEA:    'Annual Exempt Amount — the slice of capital gains you can make each tax year before any CGT is due.',
+  PSA:    'Personal Savings Allowance — the amount of savings interest you can earn tax-free each year (£1,000 basic-rate, £500 higher-rate).',
+  AA:     'Annual Allowance — the most you can pay into pensions each tax year with tax relief (£60k, tapered for high earners).',
+  decumulation: 'Decumulation — the phase of turning your savings and pensions into retirement income (the opposite of building them up).',
+  S24:    'Section 24 — the rule restricting buy-to-let mortgage interest relief to a 20% basic-rate tax credit.',
+  BADR:   'Business Asset Disposal Relief — a reduced 10% CGT rate on qualifying business sales, up to a £1m lifetime limit.',
 }
 
 export function Term({ children, code }) {

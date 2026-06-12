@@ -14,7 +14,7 @@ export function buildIncomeStatement(entity, bundle = 'UK-2026.1') {
 
   return {
     key: 'income-statement',
-    title: 'Income Statement',
+    title: 'Money in & out (Income Statement)',
     rootValue: net,
     rootLabel: 'Monthly Surplus',
     periodNote: 'Monthly figures',

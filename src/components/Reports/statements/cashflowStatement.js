@@ -12,7 +12,7 @@ export function buildCashflowStatement(entity, bundle = 'UK-2026.1') {
 
   return {
     key: 'cashflow-statement',
-    title: 'Cashflow Statement',
+    title: 'Where your money goes (Cashflow Statement)',
     rootValue: net,
     rootLabel: 'Net Cashflow',
     periodNote: 'Monthly figures',

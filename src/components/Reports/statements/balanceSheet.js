@@ -32,7 +32,7 @@ export function buildBalanceSheet(entity) {
 
   return {
     key: 'balance-sheet',
-    title: 'Balance Sheet',
+    title: 'What you own & owe (Balance Sheet)',
     rootValue: nw,
     rootLabel: 'Net Worth',
     nodes: [

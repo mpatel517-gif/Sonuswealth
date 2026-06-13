@@ -22,6 +22,24 @@ await p.evaluate(() => {
 })
 await p.waitForTimeout(500)
 
+// Force the fixed-height scroll container open so fullPage captures everything.
+const forceOpen = () => p.evaluate(() => {
+  document.querySelectorAll('div').forEach(d => {
+    const s = getComputedStyle(d)
+    if ((s.overflow === 'hidden' && s.flex.includes('1')) || s.overflowY === 'auto' || s.overflowY === 'scroll') {
+      d.style.overflow = 'visible'; d.style.height = 'auto'; d.style.maxHeight = 'none'
+    }
+  })
+  document.documentElement.style.height = 'auto'
+  document.body.style.height = 'auto'; document.body.style.overflow = 'visible'
+})
+
+// Collapsed view first — shows the 5 drawer headers + their badges (polish win).
+await forceOpen()
+await p.waitForTimeout(300)
+await p.screenshot({ path: 'screenshots/risk-drawers-collapsed.png', fullPage: true })
+console.log('✓ snapped risk-drawers-collapsed.png')
+
 // Expand every collapsed RevealCard drawer (role=button, aria-expanded=false).
 const opened = await p.evaluate(() => {
   const heads = [...document.querySelectorAll('[role="button"][aria-expanded="false"]')]
@@ -29,6 +47,22 @@ const opened = await p.evaluate(() => {
   return heads.map(h => (h.innerText || '').split('\n')[0].trim())
 })
 await p.waitForTimeout(800)
+
+// Force the fixed-height scroll container open so fullPage captures everything.
+await p.evaluate(() => {
+  document.querySelectorAll('div').forEach(d => {
+    const s = getComputedStyle(d)
+    if (s.overflow === 'hidden' && s.flex.includes('1')) {
+      d.style.overflow = 'visible'; d.style.height = 'auto'; d.style.maxHeight = 'none'
+    }
+    if (s.overflowY === 'auto' || s.overflowY === 'scroll') {
+      d.style.overflow = 'visible'; d.style.height = 'auto'; d.style.maxHeight = 'none'
+    }
+  })
+  document.documentElement.style.height = 'auto'
+  document.body.style.height = 'auto'; document.body.style.overflow = 'visible'
+})
+await p.waitForTimeout(400)
 
 // Report which drawer titles are present.
 const titles = await p.evaluate(() =>

@@ -41,6 +41,7 @@ import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
 import { MiniTrendLines } from '../components/MyMoney/L3/MiniTrendLines.jsx'
 import { projectSeries, growthRateFor } from '../engine/projection.js'
+import { prcPccSpread } from '../engine/canonical-metrics.js' // §Z1.5 Capital Efficiency
 import { getActiveCMA } from '../engine/cma.js'
 import { classifyPot, potsNeedingReview } from '../engine/decumulation-plan.js'
 // S1 selector migration (Phase 2): canonical readers come through the
@@ -2185,6 +2186,41 @@ function DeficitBannerView({ monthly, annual, onNav }) {
   )
 }
 
+// ── §Z1.5 Sub-Anchor — Capital Efficiency strip (D-ANCHOR-2) ──────────────────
+// Thin band below the triple-anchor surfacing the canonical prcPccSpread (the
+// same PRC/PCC metric MyMoney renders as "Income buffer") so the home cockpit
+// answers "is my capital working?" at a glance. Honest-absence when pcc<=0.
+function SubAnchorStrip({ entity }) {
+  const pp = useMemo(() => { try { return prcPccSpread(entity) } catch { return null } }, [entity])
+  const ok = pp && pp.pcc > 0 && Number.isFinite(pp.ratio)
+  const tone = !ok ? 'var(--c-text3)'
+    : (pp.band === 'STRONG' || pp.band === 'COMFORTABLE') ? 'var(--c-acc)'
+    : pp.band === 'TIGHT' ? '#FFB347' : 'var(--c-coral, #FF6F7D)'
+  const bandLabel = ok ? pp.band.charAt(0) + pp.band.slice(1).toLowerCase() : null
+  return (
+    <div style={{
+      margin: '2px 16px 0', padding: '7px 2px',
+      borderTop: '1px solid var(--c-sep)', borderBottom: '1px solid var(--c-sep)',
+      display: 'flex', alignItems: 'center', gap: 10,
+    }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--c-text3)', flexShrink: 0 }}>
+        Capital efficiency
+      </span>
+      {ok ? (
+        <>
+          <span style={{ fontSize: 14, fontWeight: 800, color: tone, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{pp.ratio.toFixed(1)}×</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: tone, flexShrink: 0 }}>{bandLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--c-text2)', flex: 1, minWidth: 0, lineHeight: 1.4 }}>
+            Productive capital covers {pp.ratio.toFixed(1)}× your protective need.
+          </span>
+        </>
+      ) : (
+        <span style={{ fontSize: 12, color: 'var(--c-text3)', flex: 1 }}>Methodology being finalised.</span>
+      )}
+    </div>
+  )
+}
+
 export default function HomeScreen({
   entity,
   viewMode: _viewModeProp,  // eslint-disable-line no-unused-vars -- ignored; local state owns this
@@ -2295,6 +2331,9 @@ export default function HomeScreen({
         onDrillMetric={drillFn}
         onOpenBreakdown={onOpenBreakdown}
       />
+
+      {/* ── §Z1.5 Sub-Anchor: Capital Efficiency (PRC/PCC, D-ANCHOR-2) ──── */}
+      <SubAnchorStrip entity={entity} />
 
       {/* ── Zone 2 (HOME-12): "What changed since you last looked" ──────
           X29 daily-delta strip. Reads engine diffSet() — the delta between the

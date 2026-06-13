@@ -25,6 +25,8 @@ import {
   incomeTaxDetail,
   cgtDetail,
 } from './tax-estate-engine.js'
+import { getWealthTarget, gapDims } from '../config/wealth-targets.js'
+import { DIM_BY_KEY } from '../config/dimensions.js'
 
 /**
  * @param {object} entity
@@ -57,6 +59,7 @@ export function driver(entity, metric, level = 0) {
     case 'plan:gift':      return drvPlanGift(entity, level)
     case 'plan:tax':       return drvPlanTax(entity, level)
     case 'will':           return drvWill(entity, level)
+    case 'gaps':           return drvGaps(entity, level)
     default:
       // Net-worth composition sub-drills — the Home anchor fires
       // `netWorth:<category>` when a user taps a composition segment. Resolve to
@@ -324,6 +327,49 @@ function drvPlanTax(entity, level) {
         formula: `Pension annual allowance: £60,000 (tapered for income above £260,000). £${pensionRemain.toLocaleString()} remaining. Carry-forward of unused allowance from prior 3 years may apply.`,
         source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
     ],
+  }
+}
+
+// ─── Score gaps drill ────────────────────────────────────────────────────────
+// The Home anchor + radar card fire onDrillMetric('gaps'). A gap is an HONEST
+// shortfall vs the life-stage/plan target — NOT a low raw contribution (the FQ
+// dims are weighted contributions, so a low-weight dim is not a weakness).
+// Reuses the canonical getWealthTarget + gapDims so this can never drift from
+// what the radar shows.
+function drvGaps(entity, level) {
+  const fq = safe(() => calcFQ(entity), { dims: {} })
+  const current = fq.dims || {}
+  const target = safe(() => getWealthTarget(entity)?.dims, {}) || {}
+  const keys = safe(() => gapDims(current, target), []) || []
+  const ranked = keys
+    .map(k => {
+      const d = DIM_BY_KEY[k] || { label: k, max: 100, definition: '' }
+      const cur = current[k] ?? 0
+      const tgt = target[k] ?? 0
+      return { key: k, label: d.label, definition: d.definition, cur, tgt, frac: d.max ? (tgt - cur) / d.max : 0 }
+    })
+    .sort((a, b) => b.frac - a.frac)
+  const formula = ranked.length
+    ? `Biggest gaps to your life-stage target: ${ranked.map(g => `${g.label} (${Math.round(g.cur)} of ${Math.round(g.tgt)})`).join(', ')}. Closing the largest lifts your wealth score fastest.`
+    : 'No material gaps — your dimensions are at or near their targets for your life stage.'
+  return {
+    metric: 'gaps',
+    value: ranked.length,
+    unit: 'count',
+    formula,
+    source: 'engine',
+    confidence: 'medium',
+    terminal: false,
+    drivers: level >= 1 ? [] : ranked.map(g => ({
+      metric: g.key,
+      value: g.cur,
+      unit: 'score',
+      formula: `${g.label}: ${Math.round(g.cur)} of a target ${Math.round(g.tgt)}. ${g.definition}`,
+      source: 'engine',
+      confidence: 'medium',
+      terminal: true,
+      drivers: [],
+    })),
   }
 }
 

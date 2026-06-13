@@ -83,6 +83,7 @@ export const ALIAS = {
   bequest:            'Estate intent',
   bequestMotive:      'Estate intent',
   ihtExposure:        'Estate at risk',
+  gaps:               'Where to improve',
   will:               'Will & LPA',
   willStatus:         'Will status',
   lpa:                'Power of attorney',

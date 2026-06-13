@@ -16,7 +16,7 @@
 //   · Per-driver confidence (PP-7 — manual=1.0, AI=variable)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { netWorth, calcFQ, calcRisk, monthlySurplus, totalCoI, TAX } from './fq-calculator.js'
+import { netWorth, calcFQ, calcRisk, monthlySurplus, totalCoI, TAX, fqBreakdown, riskBreakdown } from './fq-calculator.js'
 import {
   ihtExposure,
   willLpaStatus,
@@ -105,11 +105,12 @@ function drvNetWorth(entity, level) {
 function drvWealthScore(entity, level) {
   const fq = safe(() => calcFQ(entity), { total: 0, dims: {} })
   const dims = fq.dims || {}
+  const bd = safe(() => fqBreakdown(entity), {})
   return {
     metric: 'wealthScore',
     value: fq.total || 0,
     unit: 'score',
-    formula: '8 dimensions weighted to your life stage. Higher = stronger overall financial health.',
+    formula: `Seven dimensions sum to a raw ${fq.raw ?? '—'}, then ×${(fq.momentum ?? 1).toFixed(2)} for action-momentum = ${fq.total ?? 0}. Tap any dimension to see exactly how it's built.`,
     source: 'engine',
     confidence: 'high',
     terminal: false,
@@ -117,7 +118,7 @@ function drvWealthScore(entity, level) {
       metric: key,
       value: dims[key]?.value ?? dims[key] ?? 0,
       unit: 'score',
-      formula: dims[key]?.formula || `${key} dimension contribution`,
+      formula: bd[key]?.summary || dims[key]?.formula || `${key} dimension contribution`,
       source: 'engine',
       confidence: 'medium',
       terminal: true,
@@ -139,11 +140,12 @@ const RISK_DIM_DESCRIPTIONS = {
 function drvRiskScore(entity, level) {
   const risk = safe(() => calcRisk(entity), { total: 0, dims: {} })
   const dims = risk.dims || {}
+  const bd = safe(() => riskBreakdown(entity), {})
   return {
     metric: 'riskScore',
     value: risk.total || 0,
     unit: 'score',
-    formula: '7 dimensions of financial resilience. Higher = more resilient to shocks.',
+    formula: `Seven resilience dimensions sum to ${risk.total ?? 0} of 100. Higher = more resilient to shocks. Tap any dimension to see how it's built.`,
     source: 'engine',
     confidence: risk.confidence?.level || 'medium',
     terminal: false,
@@ -151,7 +153,7 @@ function drvRiskScore(entity, level) {
       metric: key,
       value: dims[key]?.value ?? dims[key] ?? 0,
       unit: 'score',
-      formula: RISK_DIM_DESCRIPTIONS[key] || `Contributes to your overall financial resilience score.`,
+      formula: bd[key]?.summary || RISK_DIM_DESCRIPTIONS[key] || `Contributes to your overall financial resilience score.`,
       source: 'engine',
       confidence: 'medium',
       terminal: true,
@@ -483,18 +485,23 @@ function drvDimension(entity, metric) {
   if (wd) {
     const fq = safe(() => calcFQ(entity), { dims: {} })
     const value = dimValue(fq.dims?.[metric])
+    const bd = safe(() => fqBreakdown(entity)[metric], null)
+    const how = bd?.summary ? ` How it's built: ${bd.summary}` : ''
     return {
       metric, value, unit: 'score',
-      formula: `${wd.definition} You're at ${Math.round(value)} of a possible ${wd.max} on this dimension.`,
+      formula: `${wd.definition} You're at ${Math.round(value)} of a possible ${wd.max} on this dimension.${how}`,
       source: 'engine', confidence: 'medium', terminal: true, drivers: [],
     }
   }
   if (RISK_DIM_DESCRIPTIONS[metric]) {
     const risk = safe(() => calcRisk(entity), { dims: {} })
     const value = dimValue(risk.dims?.[metric])
+    const bd = safe(() => riskBreakdown(entity)[metric], null)
+    const how = bd?.summary ? ` How it's built: ${bd.summary}` : ''
+    const max = bd?.max ? ` of ${bd.max}` : ''
     return {
       metric, value, unit: 'score',
-      formula: `${RISK_DIM_DESCRIPTIONS[metric]} You're at ${Math.round(value)} on this resilience dimension.`,
+      formula: `${RISK_DIM_DESCRIPTIONS[metric]} You're at ${Math.round(value)}${max} on this resilience dimension.${how}`,
       source: 'engine', confidence: 'medium', terminal: true, drivers: [],
     }
   }

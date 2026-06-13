@@ -4144,3 +4144,305 @@ export {
   shockTrajectory,
   SHOCK_PARAM_DEFAULTS,
 } from './risk-engine.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCORE TRACEABILITY — per-dimension component breakdown
+// Founder rule: "every value presented must be traceable / drillable to bedrock."
+//
+// fqBreakdown(e) / riskBreakdown(e) expose HOW each dimension number is built,
+// component by component, so the drill can render e.g.
+//   Behaviour: Baseline 15 · ISA in use +2 · Nominations current +1 = 18 of 20.
+//
+// ⚠ ZERO-DRIFT CONTRACT — read before editing:
+//   · The component logic below MIRRORS calcFQ §1–7 / calcRisk D1–D7 line for
+//     line. It is a re-statement, not a re-implementation with new behaviour.
+//   · The DISPLAYED dimension value is taken straight from calcFQ(e).dims /
+//     calcRisk(e).dims (the authoritative source). The parts only EXPLAIN it.
+//     If a cap bites and parts don't sum to the value, _bdLine says so.
+//   · If you change a scoring rule in calcFQ / calcRisk you MUST change the
+//     matching block here in the same commit. Keep them in lockstep.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function _bdLine(parts, value, max) {
+  if (parts.length === 1 && parts[0].band) {
+    return `${parts[0].label} → ${value} of ${max}.`;
+  }
+  const body = parts.map(p => {
+    if (p.base) return `${p.label} ${p.points}`;
+    return `${p.label} ${p.points >= 0 ? '+' : ''}${p.points}`;
+  }).join(' · ');
+  const rawSum = parts.reduce((s, p) => s + (p.points || 0), 0);
+  const tail = rawSum !== value ? ` (held to ${value} of ${max})` : ` = ${value} of ${max}`;
+  return `${body}${tail}.`;
+}
+
+function _bdDim(value, max, parts) {
+  return { value, max, parts, summary: _bdLine(parts, value, max) };
+}
+
+/**
+ * Per-dimension component breakdown for the Wealth Score. Mirrors calcFQ §1–7.
+ * @param {object} e - entity object
+ * @returns {Object<string,{value:number,max:number,parts:Array,summary:string}>}
+ */
+export function fqBreakdown(e) {
+  const fq       = calcFQ(e);
+  const dims     = fq.dims || {};
+  const a        = e.assets || {};
+  const nw       = netWorth(e);
+  const retNum   = (e.targetIncome || 50000) / TAX.swr;
+  const drawdown = e.drawdown || 0;
+  const prot     = a.protection || {};
+  const dl       = daysLeft();
+  const age      = e.age || 0;
+  const sipp     = a.sipp?.total || 0;
+  const coi      = ihtSippDelta(e);
+  const out      = {};
+
+  // 1. BEHAVIOUR — floor 15, cap 20 (mirror calcFQ §1)
+  {
+    const parts = [{ label: 'Baseline', points: 15, base: true }];
+    if ((a.isa?.value || 0) > 0) parts.push({ label: 'ISA in use', points: 2 });
+    if (a.trustGifts)            parts.push({ label: 'Gifting in motion', points: 1 });
+    const freshNoms = (a.sipp?.pensions || []).filter(p => {
+      if (!p.nominationDate) return false;
+      return (Date.now() - new Date(p.nominationDate)) < 2 * 365.25 * 86400000;
+    }).length;
+    if (freshNoms > 0)             parts.push({ label: 'Nominations current', points: 1 });
+    if (drawdown > 0 || age < 55)  parts.push({ label: 'Active engagement', points: 1 });
+    out.behaviour = _bdDim(dims.behaviour, 20, parts);
+  }
+
+  // 2. CAPITAL — net-worth-to-target ratio band (mirror calcFQ §2)
+  {
+    const capRatio = retNum > 0 ? nw / retNum : 0;
+    out.capital = _bdDim(dims.capital, 18, [{
+      label: `Net worth is ${capRatio.toFixed(2)}× the pot needed for your target income`,
+      points: dims.capital, band: true,
+    }]);
+  }
+
+  // 3. TAX EFFICIENCY — clamp 1..18 (mirror calcFQ §3)
+  {
+    const parts = [{
+      label: e.isHigherRateTaxpayer ? 'Higher-rate starting point' : 'Basic-rate starting point',
+      points: e.isHigherRateTaxpayer ? 4 : 6, base: true,
+    }];
+    if (drawdown > 0)                  parts.push({ label: 'Pension drawn tax-efficiently', points: 5 });
+    if ((a.isa?.value || 0) > 50000)   parts.push({ label: 'Substantial ISA shelter', points: 3 });
+    if (a.trustGifts)                  parts.push({ label: 'IHT mitigation in place', points: 2 });
+    if ((e.payOptimisation?.taxSavingOptimised || 0) > 0) parts.push({ label: 'Tax saving still on the table', points: -2 });
+    out.tax = _bdDim(dims.tax, 18, parts);
+  }
+
+  // 4. PROTECTION — cap 16 (mirror calcFQ §4)
+  {
+    const parts = [];
+    if (prot.lifeInsurance?.exists) {
+      parts.push({ label: 'Life cover', points: 5 });
+      if (prot.lifeInsurance?.inTrust) parts.push({ label: 'Life cover written in trust', points: 3 });
+    }
+    if (prot.criticalIllness?.exists)  parts.push({ label: 'Critical-illness cover', points: 4 });
+    if (prot.incomeProtection?.exists) parts.push({ label: 'Income protection', points: 3 });
+    if (prot.relevantLifePlan?.exists) parts.push({ label: 'Relevant life plan', points: 2 });
+    if (parts.length === 0) parts.push({ label: 'No protection cover recorded', points: 0, base: true });
+    out.protection = _bdDim(dims.protection, 16, parts);
+  }
+
+  // 5. CASHFLOW — months-of-spending band, floor 12, cap 16 (mirror calcFQ §5)
+  {
+    const cashMos = ((a.cash?.total || 0) / (e.targetIncome || 50000)) * 12;
+    out.cashflow = _bdDim(dims.cashflow, 16, [{
+      label: `${cashMos.toFixed(1)} months of spending held in accessible cash`,
+      points: dims.cashflow, band: true,
+    }]);
+  }
+
+  // 6. DEBT INTELLIGENCE — baseline until debt model captured (mirror calcFQ §6)
+  out.debt = _bdDim(dims.debt, 14, [{
+    label: 'Baseline until your debt detail is captured', points: dims.debt, band: true,
+  }]);
+
+  // 7. ESTATE INTELLIGENCE — positives minus penalties, clamp 0..28 (mirror calcFQ §7)
+  {
+    const parts = [];
+    if (age >= 55)      parts.push({ label: 'Age 55+', points: 8, base: true });
+    else if (age >= 45) parts.push({ label: 'Age 45–54', points: 4, base: true });
+    else                parts.push({ label: 'Under 45', points: 0, base: true });
+    if (a.trustGifts)                  parts.push({ label: 'Gifting in motion', points: 5 });
+    if (prot.lifeInsurance?.inTrust)   parts.push({ label: 'Life cover in trust', points: 3 });
+    if ((a.residence?.value || 0) > 0) parts.push({ label: 'Main residence owned', points: 3 });
+    if (nw >= 1000000)     parts.push({ label: 'Estate £1m+', points: 5 });
+    else if (nw >= 500000) parts.push({ label: 'Estate £500k+', points: 3 });
+    else if (nw >= 200000) parts.push({ label: 'Estate £200k+', points: 1 });
+    const coiPct     = nw > 0 ? coi / nw : 0;
+    const coiPenalty = Math.min(18, Math.round(coiPct * 150));
+    if (coiPenalty > 0) parts.push({ label: 'Unaddressed IHT exposure', points: -coiPenalty });
+    const urgPenalty = (drawdown === 0 && sipp >= 50000 && age >= 55 && dl < 500)
+      ? Math.round(Math.min(6, (500 - dl) / 83)) : 0;
+    if (urgPenalty > 0) parts.push({ label: 'Time-sensitive pension action pending', points: -urgPenalty });
+    out.estate = _bdDim(dims.estate, 28, parts);
+  }
+
+  return out;
+}
+
+/**
+ * Per-dimension component breakdown for the Risk Score. Mirrors calcRisk D1–D7.
+ * @param {object} e - entity object
+ * @returns {Object<string,{value:number,max:number,parts:Array,summary:string}>}
+ */
+export function riskBreakdown(e) {
+  const risk     = calcRisk(e);
+  const dims     = risk.dims || {};
+  const a        = e.assets       || {};
+  const prot     = a.protection   || {};
+  const income   = e.income       || {};
+  const liab     = e.liabilities  || {};
+  const rqRaw    = e.riskQuestionnaire || {};
+  const Q11_ALIASES = { '3-to-6': '3-6', '1-to-3': '1-3', 'less-than-1': 'under-1', 'over-six': 'over-6' };
+  const Q13_ALIASES = { 'two-plus': 'three-or-more', 'multiple': 'three-or-more', 'single': 'one' };
+  const rq = {
+    ...rqRaw,
+    q11_liquidity_months: Q11_ALIASES[rqRaw.q11_liquidity_months] || rqRaw.q11_liquidity_months,
+    q13_income_sources:   Q13_ALIASES[rqRaw.q13_income_sources]   || rqRaw.q13_income_sources,
+  };
+  const nw        = netWorth(e);
+  const drawdown  = e.drawdown  || 0;
+  const age       = e.age       || 0;
+  const lifeStage = e.lifeStage || 1;
+  const out       = {};
+
+  // srcCount — shared by D1 and D5 (mirror calcRisk D1)
+  const dataSources = [
+    (income.employment  || 0) > 0,
+    (income.dividends   || 0) > 0,
+    (income.rentalIncome || 0) > 0,
+    drawdown > 0,
+    (income.statePension?.annual || 0) > 0 && age >= (income.statePension?.startAge || 67),
+    !!(e.hasBusiness),
+  ].filter(Boolean).length;
+  const q13      = rq.q13_income_sources;
+  const srcCount = q13 === 'three-or-more' ? 3 : q13 === 'two' ? 2 :
+                   q13 === 'one'           ? 1 : dataSources;
+
+  // D1 INCOME RESILIENCE — source-count band, max 20
+  out.incomeRes = _bdDim(dims.incomeRes, 20, [{
+    label: `${srcCount} independent income source${srcCount === 1 ? '' : 's'}`,
+    points: dims.incomeRes, band: true,
+  }]);
+
+  // D2 LIQUIDITY BUFFER — months-vs-target band, max 18
+  {
+    const monthlyEssential = (e.targetIncome || 50000) / 12;
+    const ownCash = a.cash?.own ?? a.cash?.total ?? 0;
+    const dataMos = monthlyEssential > 0 ? ownCash / monthlyEssential : 0;
+    const q11     = rq.q11_liquidity_months;
+    const qMos    = q11 === 'over-6' ? 8 : q11 === '3-6' ? 4.5 :
+                    q11 === '1-3'    ? 2 : q11 === 'under-1' ? 0.5 : null;
+    const cashMos = qMos !== null && dataMos === 0 ? qMos : dataMos;
+    const bufTarget = lifeStage >= 6 ? 18 : lifeStage >= 5 ? 12 :
+                      e.hasBusiness  ? 6  : lifeStage >= 4 ? 5  :
+                      lifeStage >= 2 ? 4  : 3;
+    out.liquidity = _bdDim(dims.liquidity, 18, [{
+      label: `${cashMos.toFixed(1)} months cash vs a ${bufTarget}-month target for your stage`,
+      points: dims.liquidity, band: true,
+    }]);
+  }
+
+  // D3 PROTECTION COVERAGE — additive, cap 18
+  {
+    const parts = [];
+    const q12 = rq.q12_income_protection;
+    if (prot.incomeProtection?.exists || q12 === 'yes') parts.push({ label: 'Income protection', points: 7 });
+    else if (q12 === 'partly' || prot.relevantLifePlan?.exists) parts.push({ label: 'Partial / employer cover', points: 3 });
+    if (prot.lifeInsurance?.exists) parts.push({
+      label: prot.lifeInsurance.inTrust ? 'Life cover (in trust)' : 'Life cover',
+      points: prot.lifeInsurance.inTrust ? 7 : 5,
+    });
+    if (prot.criticalIllness?.exists) parts.push({ label: 'Critical-illness cover', points: 4 });
+    if (parts.length === 0) parts.push({ label: 'No protection cover recorded', points: 0, base: true });
+    out.protCov = _bdDim(dims.protCov, 18, parts);
+  }
+
+  // D4 DEBT VULNERABILITY — leverage base minus penalties, clamp 0..15
+  {
+    const mortgageOut    = liab.mortgage?.outstanding || 0;
+    const otherDebt      = (liab.otherLoans || []).reduce((s, l) => s + (l.outstanding || 0), 0);
+    const totalDebt      = mortgageOut + otherDebt;
+    const monthlyService = (liab.mortgage?.monthlyPayment || 0) +
+                           (liab.otherLoans || []).reduce((s, l) => s + (l.monthlyPayment || 0), 0);
+    const annualIncome   = e.targetIncome || 50000;
+    const dsr            = annualIncome > 0 ? (monthlyService * 12) / annualIncome : 0;
+    const leverage       = nw > 0 ? totalDebt / nw : 0;
+    const hasVariable    = liab.mortgage?.rateType === 'variable' ||
+                           (liab.otherLoans || []).some(l => l.rateType === 'variable');
+    const parts = [];
+    if (totalDebt === 0) {
+      parts.push({ label: 'No debt', points: 15, base: true });
+    } else {
+      const baseLev = leverage < 0.30 ? 13 : leverage < 0.50 ? 10 : leverage < 0.70 ? 6 : 2;
+      parts.push({ label: `Debt is ${Math.round(leverage * 100)}% of net worth`, points: baseLev, base: true });
+      const dsrPen = dsr > 0.40 ? 5 : dsr > 0.25 ? 3 : dsr > 0.15 ? 1 : 0;
+      if (dsrPen) parts.push({ label: `${Math.round(dsr * 100)}% of income to debt service`, points: -dsrPen });
+      if (hasVariable && leverage > 0.30) parts.push({ label: 'Variable-rate exposure', points: -2 });
+    }
+    out.debtVuln = _bdDim(dims.debtVuln, 15, parts);
+  }
+
+  // D5 CONCENTRATION RISK — asset + income concentration, cap 12
+  {
+    const resVal      = (a.residence?.value || 0) * (a.residence?.ownershipShare || 1);
+    const resPct      = nw > 0 ? resVal / nw : 0;
+    const sippPct     = nw > 0 ? (a.sipp?.total || 0) / nw : 0;
+    const maxAssetPct = Math.max(resPct, sippPct);
+    const assetConc   = maxAssetPct > 0.70 ? 1 : maxAssetPct > 0.55 ? 3 :
+                        maxAssetPct > 0.40 ? 5 : maxAssetPct > 0.25 ? 6 : 7;
+    const incConc     = srcCount >= 3 ? 5 : srcCount === 2 ? 3 : 1;
+    out.concRisk = _bdDim(dims.concRisk, 12, [
+      { label: `Largest single asset is ${Math.round(maxAssetPct * 100)}% of net worth`, points: assetConc, base: true },
+      { label: `${srcCount} income source${srcCount === 1 ? '' : 's'}`, points: incConc },
+    ]);
+  }
+
+  // D6 DEPENDENCY EXPOSURE — will/noms/trust/LPA/guardian, clamp 0..10
+  {
+    const dependants    = e.dependants || [];
+    const minorChildren = dependants.filter(d => d.type === 'child' && (d.age || 0) < 18);
+    const hasDependants = dependants.some(d => d.financiallyDependent !== false) ||
+                          (_isCouple(e) && dependants.length === 0);
+    const pensions      = a.sipp?.pensions || [];
+    const willScore  = e.willStatus === 'current' ? 3 : e.willStatus ? 1 : 0;
+    const lpaScore   = e.lpaStatus === 'both' ? 2
+                     : (e.lpaStatus === 'one' || e.lpaStatus === 'pf' || e.lpaStatus === 'hw') ? 1 : 0;
+    const trustScore = (prot.lifeInsurance?.exists && prot.lifeInsurance?.inTrust) ? 2
+                     : prot.lifeInsurance?.exists ? 1 : 0;
+    const nomAllCurrent = rq.d6_nominations_complete === 'all' ||
+                          (pensions.length > 0 && pensions.every(p => !_isStale(p.nominationDate)));
+    const nomSomeNamed  = pensions.length > 0 && pensions.some(p => p.nominationDate);
+    const nomScore = nomAllCurrent ? 2 : (nomSomeNamed || rq.d6_nominations_complete === 'some') ? 1 : 0;
+    const guardianScore = minorChildren.length === 0 ? 1 : e.guardianNamed ? 1 : 0;
+    let parts;
+    if (!hasDependants) {
+      parts = [{ label: 'No financial dependants', points: 9, base: true }];
+      if (e.lpaStatus === 'both') parts.push({ label: 'Both LPAs in place', points: 1 });
+    } else {
+      parts = [
+        { label: willScore === 3 ? 'Will current' : willScore === 1 ? 'Will exists (review due)' : 'No will', points: willScore, base: true },
+        { label: nomScore === 2 ? 'Nominations current' : nomScore === 1 ? 'Some nominations' : 'No nominations', points: nomScore },
+        { label: trustScore === 2 ? 'Life cover in trust' : trustScore === 1 ? 'Life cover (not in trust)' : 'No life cover', points: trustScore },
+        { label: lpaScore === 2 ? 'Both LPAs' : lpaScore === 1 ? 'One LPA' : 'No LPA', points: lpaScore },
+      ];
+      if (minorChildren.length > 0) parts.push({ label: e.guardianNamed ? 'Guardian named' : 'Guardian not named', points: guardianScore });
+    }
+    out.depExp = _bdDim(dims.depExp, 10, parts);
+  }
+
+  // D7 BEHAVIOURAL TRACK RECORD — observed over time, max 7
+  out.behaviouralTrack = _bdDim(dims.behaviouralTrack, 7, [{
+    label: 'Earns over time from consistent action on the platform',
+    points: dims.behaviouralTrack, band: true,
+  }]);
+
+  return out;
+}

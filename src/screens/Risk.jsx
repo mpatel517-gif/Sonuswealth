@@ -47,7 +47,7 @@ import {
 } from '../engine/selectors/index.js'
 import {
   fmt, fqBand,
-  calcRisk, riskBand, financialProfile,
+  calcRisk, riskBand, financialProfile, riskBreakdown,
   calcAPQ, planFor,
   calcRiskHistory,
   riskShockSuite, whatWouldHelpMost as engineWhatHelpsMost, lifeEventPaths, shockTrajectory,
@@ -838,6 +838,43 @@ function DimSheet({ dimCfg, score, entity, onClose, onCommit }) {
           marginBottom:16 }}>
           {RISK_DIM_DESCRIPTIONS[dimCfg.key]}
         </div>
+
+        {/* Traceability — every dimension value decomposes to its components
+            (founder: "every value presented must be traceable"). Sourced from
+            riskBreakdown(), which mirrors calcRisk D1–D7 (zero-drift). */}
+        {(() => {
+          let bd = null
+          try { bd = riskBreakdown(entity)[dimCfg.key] } catch {}
+          if (!bd?.parts?.length) return null
+          return (
+            <div style={{ background:'var(--c-surface2)',
+              border:'1px solid var(--c-border)', borderRadius:12,
+              padding:12, marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'var(--c-text3)',
+                textTransform:'uppercase', letterSpacing:0.4, marginBottom:8 }}>
+                How this is built
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {bd.parts.map((pp, i) => (
+                  <div key={i} style={{ display:'flex',
+                    justifyContent:'space-between', gap:12, fontSize:13,
+                    color:'var(--c-text2)' }}>
+                    <span>{pp.label}</span>
+                    <span style={{ fontWeight:700, color:'var(--c-text)',
+                      flexShrink:0 }}>
+                      {pp.band ? bd.value : `${pp.points >= 0 ? '+' : ''}${pp.points}`}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ display:'flex', justifyContent:'space-between',
+                  fontSize:13, fontWeight:800, color:'var(--c-text)',
+                  borderTop:'1px solid var(--c-sep)', paddingTop:6, marginTop:2 }}>
+                  <span>Total</span><span>{bd.value} of {bd.max}</span>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {dimCfg.key === 'depExp' && <D6SubChips entity={entity} onCommit={onCommit} />}
 

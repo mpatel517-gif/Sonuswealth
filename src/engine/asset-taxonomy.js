@@ -670,8 +670,22 @@ const _BY_ID = new Map(ASSET_TYPES.map(t => [t.id, t]))
 const _norm = (s) => String(s || '').toLowerCase().trim().replace(/[\s_]+/g, '-')
 
 export function classifyAsset(typeString, opts = {}) {
+  // An exact canonical id always resolves to itself — the write path (Add-menu →
+  // applyAssetEvent) passes ids like 'SIPP'/'GIA', and they must route correctly
+  // regardless of the generic-word guard below.
+  if (typeString != null && _BY_ID.has(typeString)) {
+    const byId = _BY_ID.get(typeString)
+    if (!opts.category || byId.category === opts.category) return byId
+  }
   const raw = _norm(typeString)
   if (!raw) return null
+  // A bare generic/wrapper word ('isa', 'pension', 'bond', 'share', 'loan',
+  // 'account', 'investment', …) names a CATEGORY, not a holding. Resolving it to
+  // a specific instrument is a wrong-account hazard (founder: "no number to the
+  // wrong account") — e.g. 'share'→stocks&shares-ISA, 'pension'→a master trust,
+  // 'loan'→director's-loan asset. Such a bare word resolves ONLY on an exact
+  // token match; otherwise null, forcing the caller (the importer) to disambiguate.
+  const bareGeneric = _GENERIC_TOKENS.has(raw)
   const pool = opts.category ? ASSET_TYPES.filter(t => t.category === opts.category) : ASSET_TYPES
   let best = null
   let bestScore = 0
@@ -684,6 +698,9 @@ export function classifyAsset(typeString, opts = {}) {
         // short id ('db', 'ip', 'art') being swallowed by a longer token of
         // another type via reverse-substring.
         score = 1000 + tok.length
+      } else if (bareGeneric) {
+        // A bare category word never resolves on a fuzzy (contains/partial) match.
+        continue
       } else if (raw.includes(tok)) {
         // The persona string CONTAINS a known token, e.g. 'mortgage-btl' ⊃ 'btl'.
         // Generic tokens ('pension', 'isa', …) are penalised to 1.

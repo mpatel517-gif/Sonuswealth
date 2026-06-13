@@ -42,6 +42,8 @@ Status key: ✅ done+verified · 🔄 partial · ☐ open · ↗ engine/data-lay
 | Home dead code | Removed orphaned DeficitBanner/DeficitBannerView/SippIhtCountdown (~190 lines, superseded by HomeAlertsPanel). | (pushed) |
 | D-register verify | 3 items confirmed already-RESOLVED (punt copy, monthly-flow mismatch, see rows in §D); drill-label = founder brand-decision. |  |
 | Theme B/C drills | Wired all non-Risk driver-tree stub-hitters: `netWorth:<category>`, `will`, `gaps` (honest target-shortfall via canonical `gapDims`). Retirement/IHT confirmed covered natively. | `e7e1ee1`/`1ec8db0`/`c158b9b` |
+| **DE honesty** (founder-reported "joke") | Decision Engine badged hardcoded fallback demo trees as "engine-pure / N engine-validated consequences" (the relocate one reasons about a fictional £3.9M estate) — because with the API key off, EVERY question hits `getFallbackTree`. Founder chose "label honestly": `_fallback` trees now show an **Illustrative-example banner**, chip flips to "Illustrative — not from your data", validated-count line suppressed. Also tightened the relocate matcher (dropped bare country names + `ific`→`ifici` substring bug that matched "specific"). | `38a500b`/`b201d00` |
+| ⚠️ DE root cause | The real fix for per-question trees = **activate `ANTHROPIC_API_KEY`** (founder task, §E). Until then it's honestly-labelled fallbacks; only 4/60 events have bespoke canned trees, rest = generic catch-all. | founder |
 
 **Deferred this run (blocked, not skipped):** Theme A targetIncome (4 sites in risk-engine.js = Risk-locked, 6 in fq-calculator.js = blast-radius + parallel tie-outs, no golden-vector coverage yet); F5 live-snap (drives shared preview browser → would disrupt founder's Risk session).
 

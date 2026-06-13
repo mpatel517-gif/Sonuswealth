@@ -31,6 +31,19 @@ Status key: ✅ done+verified · 🔄 partial · ☐ open · ↗ engine/data-lay
 | #51 Z1.5 | Home Capital Efficiency sub-anchor strip BUILT (reuses canonical prcPccSpread). Verified live: mrT "7.9× Strong". |
 | #51 Z5 | Score Journey chart BUILT — NW+Wealth+Risk shared-axis, COEXISTS with radar (founder decision). Caught+fixed a silent-drift bug: trajectory readers preferred stale stored seeds (mrT chart showed £484k vs £1.75m canonical) → now anchor endpoint to live canonical (NW rescale, score shift) + null guards. Verified: chart shows £1.75m, golden vectors 9/9. |
 
+### Continuation run (2026-06-13, session 2 — parallel Risk session active, Risk files OFF-LIMITS)
+
+| Item | Outcome | Commit |
+|------|---------|--------|
+| #49 classifier | Bare generic asset words ('isa'/'pension'/'bond'/'share'/'loan'/'account'/'investment') → null not a specific holding (was: 'share'→ISA_SS wrapper, 'loan'→DLA asset). `_BY_ID` id shortcut for write path. | `40c153f` |
+| #49 parsed VTM | Null-wrapper parsed £ amount classifies its label vs canonical taxonomy (exact-match) before silent-cash; rejects fuzzy ('pe' in 'pension'). Spreadsheet already full-VTM; manual=picker(safe). | `34237bc` |
+| #49 liability audit | Clean — only the importer WRITES via classify, and it's `{strict}`. All other callers classify held debts for display. | (audit) |
+| F3 pension AA | Ask Sonu tax-year-state + decision-engine composer routed through canonical `pensionContributionsThisYear`; mrT-couple £0→£19.8k used. `usedProvisional` honest-absence flag threaded into LLM summary + AA chip. | `cd56941` |
+| Home dead code | Removed orphaned DeficitBanner/DeficitBannerView/SippIhtCountdown (~190 lines, superseded by HomeAlertsPanel). | (pushed) |
+| D-register verify | 3 items confirmed already-RESOLVED (punt copy, monthly-flow mismatch, see rows in §D); drill-label = founder brand-decision. |  |
+
+**Deferred this run (blocked, not skipped):** Theme A targetIncome (4 sites in risk-engine.js = Risk-locked, 6 in fq-calculator.js = blast-radius + parallel tie-outs, no golden-vector coverage yet); F5 live-snap (drives shared preview browser → would disrupt founder's Risk session).
+
 **Remaining — all genuinely founder-decision or focused-engine-session work (NOT skippable-by-rushing):**
 - **#51 Z5 Score Journey** — ⚠️ DECISION: spec makes it the canonical PRIMARY Home chart *replacing the radar*, but founder previously rejected hiding the radar (memory `feedback_session_2026_05_13_mistakes`). Radar-vs-ScoreJourney is a founder call, not a blind build. Engine fns exist (trajectoryData/scoreTrajectory/riskTrajectory).
 - **#51 Z13/Z12 (AI narrative/synthesis)** — real build, LLM via ask-sonu-proxy (key-gated). **Z14 Drive-to-Update** — needs new `updateStreakCheck` + realistic asset captured_at dates (fixtures lack them). **Z15 Milestone pin** — needs new `milestoneCheck` + baseline-crossing detection. **Z6** — founder-gated (O-HOME-1 thresholds).
@@ -92,10 +105,10 @@ These predate recent work and may be partly resolved. Each needs a live check be
 |--------|------|--------|
 | `_extracted-issues.txt` | "Move choices next to money sections — looks bare" | ⟳ |
 | `_extracted-issues.txt` | 2 info-only tiles should be drillable | ⟳ (overlaps #6/#44) |
-| `_extracted-issues.txt` | Drill → "back to MyMoney to see details" | ⟳ |
+| `_extracted-issues.txt` | Drill → "back to MyMoney to see details" | ✅ RESOLVED 2026-06-13 — no user-facing punt copy remains (grep clean; only code comments). Drills render detail inline. |
 | `_extracted-issues.txt` | Only 6 cashflow tiles — research more; correct sequence; sparklines on all | ⟳ |
-| `_extracted-issues.txt` | "Monthly flow −11k vs cashflow −7k don't match" | ⟳ ↗ (memory: surplus-clamp / NET=surplus−deficit) |
-| `_extracted-issues.txt` | Unify "dig in" / "view detail" label across screens | ⟳ |
+| `_extracted-issues.txt` | "Monthly flow −11k vs cashflow −7k don't match" | ✅ RESOLVED 2026-06-13 — both Home + Cashflow now source the SAME `monthlySurplus()` reading NET=surplus−deficit (two-lens redesign e813911). Probed: mrT-core NET=−£900 identical on both. |
+| `_extracted-issues.txt` | Unify "dig in" / "view detail" label across screens | ⚠️ FOUNDER-DECISION — "Dig in ›" is the dominant rendered CTA (8 sites), "View detail" is the asset-leaf overlay term (7). Which wins is a brand-voice call, not a bug; deferred to founder rather than guessed. |
 | `mymoney-cashflow-sweep-register.md` | open rows | ⟳ |
 | `temporal-drilldown-audit-2026-06-02.md` | P1 projection-unify, P2 tax-copy, P3 drillability, P4 leaks | 🔄 (P0 fixed; rest queued) |
 

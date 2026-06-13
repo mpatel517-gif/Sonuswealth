@@ -39,6 +39,7 @@ import useBundleVersion from '../hooks/useBundleVersion.jsx'
 import { useTemporalMode } from '../state/temporalMode.jsx'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
+import ScoreJourneyChart from '../components/Home/ScoreJourneyChart.jsx' // §Z5
 import { MiniTrendLines } from '../components/MyMoney/L3/MiniTrendLines.jsx'
 import { projectSeries, growthRateFor } from '../engine/projection.js'
 import { prcPccSpread } from '../engine/canonical-metrics.js' // §Z1.5 Capital Efficiency
@@ -2365,6 +2366,10 @@ export default function HomeScreen({
       <div className="sw-tiles-section">
         <StateTilesCard entity={entity} onNav={onNav} onDrillDim={drillFn} />
       </div>
+
+      {/* ── §Z5 Score Journey — NW + Wealth + Risk on a shared axis. Coexists
+          with the radar (founder decision 2026-06-13), not a replacement. ──── */}
+      <ScoreJourneyChart entity={entity} />
 
       {/* ── FUTURE / PLAN placeholder banner ────────────────────────── */}
       {(viewMode === 'forecast' || viewMode === 'plan') && (

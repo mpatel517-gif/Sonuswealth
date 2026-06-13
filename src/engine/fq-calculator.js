@@ -2550,16 +2550,21 @@ export function scoreTrajectory(entity, range = '12mo') {
   // Phase 2 Batch A.6 — prefer stored trajectory.
   // Note: this function returns the BACK-history series shape consumed by
   // ScoreJourney's forward extension. Stored shape is [{date, score}].
+  if (!entity || typeof entity !== 'object') return [];
+  const cur = calcFQ(entity).total;
   const stored = entity?.trajectories?.scoreHistory;
   if (Array.isArray(stored) && stored.length >= 6) {
-    return stored.map(p => ({
+    // Anchor the stored history's endpoint to today's live score (shift, since
+    // scores are 0–100 bounded) so the chart's "now" matches the anchor/radar.
+    const last = +stored[stored.length - 1]?.score || 0;
+    const shift = cur - last;
+    return stored.map((p, i) => ({
       date: p.date,
-      value: p.score,
-      confidence: 'HIGH',
+      value: Math.round(Math.max(0, Math.min(100, (+p.score || 0) + shift))),
+      confidence: (Math.abs(shift) < 1 || i === stored.length - 1) ? 'HIGH' : 'MEDIUM',
     }));
   }
   const months = _parseWindowMonths(range) || 12;
-  const cur = calcFQ(entity).total;
   const ls = lifeStageFor(_personAge(entity));
   // Foundation/Accumulation: +0.5/mo trend; Decumulation: 0; Legacy: -0.2/mo
   const trend = ls.stage <= 2 ? 0.5 : ls.stage <= 4 ? 0.2 : ls.stage <= 5 ? 0 : -0.2;
@@ -2585,16 +2590,20 @@ export function scoreTrajectory(entity, range = '12mo') {
  */
 export function riskTrajectory(entity, range = '12mo') {
   // Phase 2 Batch A.6 — prefer stored trajectory.
+  if (!entity || typeof entity !== 'object') return [];
+  const cur = calcRisk(entity).total;
   const stored = entity?.trajectories?.riskHistory;
   if (Array.isArray(stored) && stored.length >= 6) {
-    return stored.map(p => ({
+    // Anchor endpoint to today's live risk score (see scoreTrajectory).
+    const last = +stored[stored.length - 1]?.score || 0;
+    const shift = cur - last;
+    return stored.map((p, i) => ({
       date: p.date,
-      value: p.score,
-      confidence: 'HIGH',
+      value: Math.round(Math.max(0, Math.min(100, (+p.score || 0) + shift))),
+      confidence: (Math.abs(shift) < 1 || i === stored.length - 1) ? 'HIGH' : 'MEDIUM',
     }));
   }
   const months = _parseWindowMonths(range) || 12;
-  const cur = calcRisk(entity).total;
   const out = [];
   const today = new Date();
   for (let m = -months; m <= 0; m++) {
@@ -2616,17 +2625,24 @@ export function riskTrajectory(entity, range = '12mo') {
  * @returns {Array<{date:string, value:number, confidence:string}>}
  */
 export function netWorthHistory(entity, range = '12mo') {
-  // Phase 2 Batch A.6 — prefer stored trajectory when persona carries one.
+  if (!entity || typeof entity !== 'object') return [];
+  const cur = netWorth(entity);
+  // Phase 2 Batch A.6 — prefer stored trajectory when persona carries one, BUT
+  // anchor its endpoint to today's canonical net worth. Stored seeds can be stale
+  // (a £484k seed must not contradict a £1.75m current NW everywhere else in the
+  // app — that's a silent tie-out break). Rescale preserves the trend shape while
+  // making "today" match the hero. Factor ≈ 1 for accurate real history (no-op).
   const stored = entity?.trajectories?.netWorthHistory;
   if (Array.isArray(stored) && stored.length >= 6) {
-    return stored.map(p => ({
+    const last = +stored[stored.length - 1]?.value || 0;
+    const k = (last > 0 && cur > 0) ? cur / last : 1;
+    return stored.map((p, i) => ({
       date: p.date,
-      value: p.value,
-      confidence: 'HIGH',
+      value: Math.round((+p.value || 0) * k),
+      confidence: (Math.abs(k - 1) < 0.02) ? 'HIGH' : (i === stored.length - 1 ? 'HIGH' : 'MEDIUM'),
     }));
   }
   const months = _parseWindowMonths(range) || 12;
-  const cur = netWorth(entity);
   const monthlyG = Math.pow(1.04, 1/12);  // assume 4% growth backwards (so divide)
   const out = [];
   const today = new Date();

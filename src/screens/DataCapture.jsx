@@ -20,6 +20,7 @@
 
 import { useRef, useState } from 'react'
 import { requireStepUp } from '../lib/step-up.js'
+import SpreadsheetImport from '../components/DataCapture/SpreadsheetImport.jsx'
 
 // ── Provider gating (D-DEMO-HIDDEN-1) ────────────────────────────────────────
 // Mock parser ships fictitious values. Only run it in dev OR when explicitly
@@ -87,6 +88,16 @@ const CHANNELS = [
     title: 'Enter manually',
     body: 'High-trust path. Anything you type is treated as confirmed (confidence = 1.0). Use for sensitive numbers you would rather not store as scanned docs.',
     badge: 'Highest trust',
+    accept: null,
+    capture: null,
+    status: 'live',
+  },
+  {
+    id: 'spreadsheet',
+    icon: '▦',
+    title: 'Import a spreadsheet',
+    body: 'Paste or upload a CSV of your accounts. Every row is mapped to your taxonomy and shown for confirmation before anything saves — no figure lands in the wrong account.',
+    badge: 'CSV · Mapped & checked',
     accept: null,
     capture: null,
     status: 'live',
@@ -213,6 +224,7 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
   const [parsed, setParsed] = useState(null)        // FP-5 modal payload
   const [manualOpen, setManualOpen] = useState(false)
   const [householdOpen, setHouseholdOpen] = useState(false)
+  const [spreadsheetOpen, setSpreadsheetOpen] = useState(false)
   const fileInputRef = useRef(null)
   const channelRef = useRef(null)
 
@@ -251,6 +263,42 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
     )
   }
 
+  // Spreadsheet import is a full sub-flow (VTM mapping grid) — render it in place
+  // of the channel list. It commits validated rows through the same event path as
+  // manual/parsed capture, gated by a single step-up.
+  if (spreadsheetOpen) {
+    return (
+      <SpreadsheetImport
+        entity={entity}
+        onClose={() => { setSpreadsheetOpen(false); setActive(null) }}
+        onCommit={commitSpreadsheetRows}
+      />
+    )
+  }
+
+  async function commitSpreadsheetRows(payloads) {
+    const list = (payloads || []).filter(Boolean)
+    if (!list.length) return
+    const stepUp = await requireStepUp({
+      reason: `Confirm to record ${list.length} item${list.length === 1 ? '' : 's'} from your spreadsheet.`,
+    })
+    if (!stepUp.ok) return
+    list.forEach(p => {
+      onCommit?.(buildEnvelope({
+        type: p.category === 'liabilities' ? 'LIABILITY_VALUE_UPDATED' : 'ASSET_VALUE_UPDATED',
+        payload: p,
+        mode: 'spreadsheet',
+        parsedField: { id: p.itemType, label: p.label },
+      }))
+    })
+    onCommit?.(buildEnvelope({
+      type: 'document_captured',
+      payload: { channel: 'spreadsheet', file: null, fields: list.map(p => ({ label: p.label, value: Object.values(p.fields)[0] })) },
+      mode: 'spreadsheet',
+    }))
+    setSpreadsheetOpen(false); setActive(null)
+  }
+
   function openChannel(c) {
     // Phase-2 channels are non-functional placeholders.
     if (c.status === 'phase2') { setActive(c.id); return }
@@ -259,6 +307,7 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
     channelRef.current = c
     if (c.id === 'manual') { setManualOpen(true); return }
     if (c.id === 'household') { setHouseholdOpen(true); return }
+    if (c.id === 'spreadsheet') { setSpreadsheetOpen(true); return }
     // Trigger native file picker (with camera capture for scan on mobile).
     if (fileInputRef.current) {
       fileInputRef.current.accept = c.accept || ''
@@ -462,8 +511,8 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-        {CHANNELS.map(c => {
+      {(() => {
+        const renderTile = (c) => {
           const isPhase2 = c.status === 'phase2'
           return (
             <button
@@ -507,8 +556,28 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
               </div>
             </button>
           )
-        })}
-      </div>
+        }
+        const live = CHANNELS.filter(c => c.status !== 'phase2')
+        const soon = CHANNELS.filter(c => c.status === 'phase2')
+        return (
+          <div style={{ marginBottom: 20 }}>
+            <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Available now</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {live.map(renderTile)}
+            </div>
+            {soon.length > 0 && (
+              <>
+                <div className="sw-eyebrow" style={{ marginTop: 18, marginBottom: 8, color: 'var(--c-text3)' }}>
+                  Coming soon
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {soon.map(renderTile)}
+                </div>
+              </>
+            )}
+          </div>
+        )
+      })()}
 
       {/* FP-5 contract */}
       <div className="sw-tile" style={{ marginBottom: 16 }}>

@@ -52,14 +52,26 @@ function scoreConfidence(node, rawType) {
 
 // Resolve which existing holding a row targets, so we never blind-merge.
 // Returns { mode: 'new' | 'matched' | 'ambiguous', candidates: [...], chosen }.
-function resolveTarget(node, row, entity) {
+function resolveTarget(node, row, entity, kind = 'asset') {
   if (!node) return { mode: 'new', candidates: [] }
-  // Gather existing holdings the engine already knows, of the same node/category.
-  const a = entity?.assets || {}
   const holdings = []
   const pushArr = (arr, src) => { if (Array.isArray(arr)) arr.forEach((h) => holdings.push({ ...h, _src: src })) }
-  pushArr(a.property, 'property'); pushArr(a.investments, 'investments'); pushArr(a.pensions, 'pensions')
-  pushArr(a.cash, 'cash'); pushArr(a.protection, 'protection'); pushArr(a.other, 'other')
+  if (kind === 'liability') {
+    // Scan existing debts so a bulk import can't silently DUPLICATE one (e.g. a
+    // second "residential mortgage" alongside the singleton). liabilities is
+    // dual-shape: an object { mortgage, otherLoans[] } or a flat array.
+    const l = entity?.liabilities
+    if (Array.isArray(l)) pushArr(l, 'liabilities')
+    else if (l && typeof l === 'object') {
+      if (l.mortgage) holdings.push({ ...l.mortgage, type: l.mortgage.type || 'residential-mortgage', _src: 'mortgage' })
+      pushArr(l.otherLoans, 'otherLoans')
+    }
+  } else {
+    // Gather existing assets the engine already knows, of the same node/category.
+    const a = entity?.assets || {}
+    pushArr(a.property, 'property'); pushArr(a.investments, 'investments'); pushArr(a.pensions, 'pensions')
+    pushArr(a.cash, 'cash'); pushArr(a.protection, 'protection'); pushArr(a.other, 'other')
+  }
   // Match on an explicit account/provider label if the row carried one.
   const wanted = String(row.account || row.provider || '').toLowerCase().trim()
   const sameType = holdings.filter((h) => {
@@ -127,7 +139,7 @@ export function mapAndValidate(row = {}, entity = {}, opts = {}) {
   }
 
   // 3 — resolve target holding (never blind-merge into the wrong account)
-  const target = resolveTarget(node, row, entity)
+  const target = resolveTarget(node, row, entity, kind)
   if (target.mode === 'ambiguous') {
     flags.push({ level: 'review', code: 'TARGET_AMBIGUOUS', msg: `You have ${target.candidates.length} ${node?.label || 'matching'} holdings — pick which one` })
   }

@@ -663,14 +663,21 @@ const _BY_ID = new Map(ASSET_TYPES.map(t => [t.id, t]))
 // Highest _matchScore wins so a specific sub-type ('hmo', 'btl', 'lisa') beats a
 // generic token ('property', 'isa'). Optionally scope to a category to
 // disambiguate (e.g. only consider property types for a property row).
+// Normalise separators so free-text imports (spaces) match canonical tokens
+// (hyphens/underscores): 'cash isa' == 'cash-isa' == 'cash_isa'. Without this a
+// spreadsheet row "premium bonds" missed PREMIUM_BONDS ('premium-bonds') and
+// fell through to a spurious low-score match (EMI) — a wrong-account hazard.
+const _norm = (s) => String(s || '').toLowerCase().trim().replace(/[\s_]+/g, '-')
+
 export function classifyAsset(typeString, opts = {}) {
-  const raw = String(typeString || '').toLowerCase().trim()
+  const raw = _norm(typeString)
   if (!raw) return null
   const pool = opts.category ? ASSET_TYPES.filter(t => t.category === opts.category) : ASSET_TYPES
   let best = null
   let bestScore = 0
   for (const t of pool) {
-    for (const tok of t.match) {
+    for (const tokRaw of t.match) {
+      const tok = _norm(tokRaw)
       let score = 0
       if (raw === tok) {
         // Exact token (or canonical id) match always wins — guards against a
@@ -678,9 +685,9 @@ export function classifyAsset(typeString, opts = {}) {
         // another type via reverse-substring.
         score = 1000 + tok.length
       } else if (raw.includes(tok)) {
-        // The persona string CONTAINS a known token, e.g. 'mortgage_btl' ⊃ 'btl'.
+        // The persona string CONTAINS a known token, e.g. 'mortgage-btl' ⊃ 'btl'.
         // Generic tokens ('pension', 'isa', …) are penalised to 1.
-        score = _matchScore(tok)
+        score = _matchScore(tokRaw)
       } else if (tok.includes(raw) && raw.length >= 4) {
         // The persona string is a PARTIAL of a token, e.g. 'nhs' → 'nhs-pension'.
         // Weak, and only for raw ≥4 chars so short ids don't reverse-collide.

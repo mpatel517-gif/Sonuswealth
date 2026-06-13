@@ -28,7 +28,8 @@ Status key: ✅ done+verified · 🔄 partial · ☐ open · ↗ engine/data-lay
 | #53 Theme F | All 11 side-stripe borders → full borders (grep-clean). Typography half RECLASSIFIED: 268 sub-11px (not ~29), mostly intentional chart micro-labels → needs per-surface design pass, not a blanket bump. |
 | #52 (P1) | Life-event log completed 10→16 subtypes on Home (logging+fold+dim-reopen already worked; added the 6 incl. bereavement). Verified live: 16 chips render. |
 
-| #51 Z1.5 | Home Capital Efficiency sub-anchor strip BUILT (reuses canonical prcPccSpread). Verified live: mrT "7.9× Strong". The one safe placement zone. |
+| #51 Z1.5 | Home Capital Efficiency sub-anchor strip BUILT (reuses canonical prcPccSpread). Verified live: mrT "7.9× Strong". |
+| #51 Z5 | Score Journey chart BUILT — NW+Wealth+Risk shared-axis, COEXISTS with radar (founder decision). Caught+fixed a silent-drift bug: trajectory readers preferred stale stored seeds (mrT chart showed £484k vs £1.75m canonical) → now anchor endpoint to live canonical (NW rescale, score shift) + null guards. Verified: chart shows £1.75m, golden vectors 9/9. |
 
 **Remaining — all genuinely founder-decision or focused-engine-session work (NOT skippable-by-rushing):**
 - **#51 Z5 Score Journey** — ⚠️ DECISION: spec makes it the canonical PRIMARY Home chart *replacing the radar*, but founder previously rejected hiding the radar (memory `feedback_session_2026_05_13_mistakes`). Radar-vs-ScoreJourney is a founder call, not a blind build. Engine fns exist (trajectoryData/scoreTrajectory/riskTrajectory).

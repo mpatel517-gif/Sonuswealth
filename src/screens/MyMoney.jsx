@@ -79,6 +79,7 @@ import { monthlyEssentials as getMonthlyEssentials } from '../engine/selectors/i
 // and per-tax-year carry-forward — used by PensionDrillDown to replace the
 // previous static "This year's cap / Reduced cap / Unused room" tiles.
 import { effectiveAA, carryForwardByYear } from '../engine/persona-helpers.js'
+import { pensionContributionsThisYear } from '../engine/income-readers.js' // F-004 canonical (silent-£0 honesty)
 
 import { BRAND } from '../config/brand.js'
 import {
@@ -2543,8 +2544,24 @@ function PensionDrillDown({ entity, personaId, onBack, onHome, onCommit, onNav }
           const aa = effectiveAA(entity)
           const cf = carryForwardByYear(entity)
           const cfTotal = cf ? cf.reduce((s, v) => s + v, 0) : null
+          // F-004 silent-£0 honesty: the cap above is NOT "remaining room" if we
+          // don't know this year's contributions. Show used/remaining, and when
+          // contributions aren't captured (canonical reader returns 0) say so
+          // rather than implying the full cap is free to use.
+          const used = pensionContributionsThisYear(entity)
+          const provisional = used === 0
+          const remaining = Math.max(0, (aa.aa || 0) - used)
           return (
             <>
+              <div style={{
+                marginBottom: 10, padding: '9px 11px', borderRadius: 10,
+                background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.5,
+              }}>
+                {provisional
+                  ? <>We don&rsquo;t have this year&rsquo;s pension contributions yet, so the cap below is your <strong>full allowance</strong>, not your remaining room. <span style={{ color: 'var(--c-text3)' }}>Add them in Data capture to see what you can still pay in.</span></>
+                  : <>You&rsquo;ve paid in <strong>{fmt(used)}</strong> this year — <strong style={{ color: 'var(--c-mint-text)' }}>{fmt(remaining)}</strong> of your {fmt(aa.aa)} cap still available.</>}
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 10 }}>
                 <MetricTile
                   label="Effective annual allowance"

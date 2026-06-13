@@ -92,7 +92,7 @@ Gap-analysis agent claims corrected where wrong (life-event log, cashflow-Q5, ho
 | Theme | Item | Status |
 |-------|------|--------|
 | A | `targetIncome` `||30000` vs `||50000` inconsistency | ☐ ↗ needs golden-vector + tie-out run |
-| B/C | methodology drill + decision-path onto hero numbers (NW, IHT, retirement) | 🔄 ↗ pattern exists; roll-out incomplete |
+| B/C | methodology drill + decision-path onto hero numbers (NW, IHT, retirement) | 🔄 ↗ — infra IS the methodology surface: `DrillableNumber`/`onDrillMetric` → `driver-engine.js` `driver()` → `DetailOverlay` (formula+source+confidence+driver tree). 2026-06-13 wired the stub-hitters: `netWorth:<category>` composition sub-drills (`e7e1ee1`) + `will` estate-readiness (`will` commit). **Remaining stub-hitters:** `gaps`+`risk:${dim}` (radar — leave to Risk session); `est-iht`/`income` are TaxEstate-LOCAL subtab nav (NOT driver-tree) so they show the tile not a methodology drill — wiring them to `onDrillMetric` is a TaxEstate screen change; **retirement/fundedRatio has NO drill wired at all** (Cashflow CTA + driver case both needed). |
 | D | live-path audit of dead-pathed Liabilities/Pensions modellers | ☐ (memory: built but possibly unreachable) |
 | F | ~17 inline side-stripe borders + ~29 sub-11px typography elements | 🔄 (de-striped several; full sweep open) |
 | — | Risk a11y: 0 semantic headings / 11 eyebrow-divs | ☐ per-instance pass |

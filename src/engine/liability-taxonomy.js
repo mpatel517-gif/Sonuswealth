@@ -389,9 +389,15 @@ function _matchScore(token) { return _GENERIC_TOKENS.has(token) ? 1 : token.leng
 // Most-specific matching substring wins: 'second-charge-mortgage' → second-charge
 // (token 'second-charge'); 'mortgage-btl' → BTL ('btl' beats generic 'mortgage');
 // a bare 'mortgage' falls through to residential as a last resort.
-export function classifyLiability(typeString) {
+// opts.strict — return null when nothing genuinely matches, instead of the
+// GENERIC "Other loan" catch-all. Import validation needs this so an
+// unrecognised row becomes an honest "pick a type" rather than silently
+// becoming a debt (founder 2026-06-13: "I don't want a number to go to a wrong
+// account"). Display callers keep the GENERIC fallback (default) so .label is
+// always safe.
+export function classifyLiability(typeString, opts = {}) {
   const t = _norm(typeString)
-  if (!t) return GENERIC
+  if (!t) return opts.strict ? null : GENERIC
   let best = null, bestScore = 0
   for (const entry of LIABILITY_TYPES) {
     for (const m of entry.match) {
@@ -401,7 +407,7 @@ export function classifyLiability(typeString) {
       if (score > bestScore) { best = entry; bestScore = score }
     }
   }
-  return best || GENERIC
+  return best || (opts.strict ? null : GENERIC)
 }
 
 // Human label for a raw type string (used by tiles / drill headers everywhere).

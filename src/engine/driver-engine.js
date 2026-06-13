@@ -61,6 +61,15 @@ export function driver(entity, metric, level = 0) {
     case 'will':           return drvWill(entity, level)
     case 'gaps':           return drvGaps(entity, level)
     default:
+      // Wealth- or risk-score DIMENSION tapped from the score drill (e.g.
+      // 'behaviour', 'capital', 'incomeRes'). drvWealthScore/drvRiskScore list
+      // these as drivers, so a tap re-enters here — resolve to the dimension's
+      // plain-English definition + current value (score unit, so no £) instead
+      // of the "not yet wired" stub.
+      {
+        const dim = drvDimension(entity, metric)
+        if (dim) return dim
+      }
       // Net-worth composition sub-drills — the Home anchor fires
       // `netWorth:<category>` when a user taps a composition segment. Resolve to
       // a per-category methodology node so the tap explains the figure instead
@@ -459,6 +468,37 @@ function drvNWCategory(entity, key, level) {
     terminal: true,
     drivers: [],
   }
+}
+
+// ─── Dimension leaf resolver ─────────────────────────────────────────────────
+// A wealth- or risk-score dimension, tapped from the score drill. Returns a
+// coherent terminal node (definition + current value) so the tap explains the
+// dimension instead of dead-ending. Returns null if `metric` isn't a dimension.
+function dimValue(raw) {
+  if (raw && typeof raw === 'object') return raw.value ?? 0
+  return raw ?? 0
+}
+function drvDimension(entity, metric) {
+  const wd = DIM_BY_KEY[metric]
+  if (wd) {
+    const fq = safe(() => calcFQ(entity), { dims: {} })
+    const value = dimValue(fq.dims?.[metric])
+    return {
+      metric, value, unit: 'score',
+      formula: `${wd.definition} You're at ${Math.round(value)} of a possible ${wd.max} on this dimension.`,
+      source: 'engine', confidence: 'medium', terminal: true, drivers: [],
+    }
+  }
+  if (RISK_DIM_DESCRIPTIONS[metric]) {
+    const risk = safe(() => calcRisk(entity), { dims: {} })
+    const value = dimValue(risk.dims?.[metric])
+    return {
+      metric, value, unit: 'score',
+      formula: `${RISK_DIM_DESCRIPTIONS[metric]} You're at ${Math.round(value)} on this resilience dimension.`,
+      source: 'engine', confidence: 'medium', terminal: true, drivers: [],
+    }
+  }
+  return null
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

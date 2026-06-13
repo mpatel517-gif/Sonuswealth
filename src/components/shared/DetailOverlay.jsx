@@ -22,7 +22,8 @@ import { fmt } from '../../engine/fq-calculator.js'
 import { ALIAS } from '../../copy/plain-english.js'
 
 const FORMAT_BY_UNIT = {
-  gbp:   v => `£${fmt?.(v) || Math.round(v || 0).toLocaleString()}`,
+  // fmt() already prepends the currency symbol — don't add a second £ (was "££0").
+  gbp:   v => (typeof fmt === 'function' ? fmt(v) : `£${Math.round(v || 0).toLocaleString()}`),
   pct:   v => `${(v || 0).toFixed(1)}%`,
   score: v => `${Math.round(v || 0)}`,
   count: v => `${v || 0}`,

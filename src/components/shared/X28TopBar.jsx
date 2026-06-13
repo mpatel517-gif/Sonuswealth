@@ -114,6 +114,10 @@ export default function X28TopBar({
   // Choices toggle). Cashflow uses this: those modes are no-ops there, so showing
   // them was a dead control (sweep #54). Default keeps them for My Money etc.
   showViewModes = true,
+  // Restrict which view modes show, by id (subset of VIEW_MODES). A screen that
+  // only meaningfully branches on some modes passes just those, so the others
+  // aren't dead tabs (founder #4: "many do nothing"). Default = all four.
+  modes = null,
   onNowTap,
   // Optional 5th tab next to the view modes (founder 2026-06-06): a "Decisions"
   // entry that, like "What if", swaps the screen content for the decision
@@ -174,7 +178,9 @@ export default function X28TopBar({
   // Tab list for Row 2 — view modes, plus an optional Decisions tab. Decisions
   // is tracked separately (decisionsActive), so when it's on, none of the
   // view-mode tabs read as active.
-  const baseModes = showViewModes ? VIEW_MODES : []
+  const baseModes = showViewModes
+    ? (Array.isArray(modes) ? VIEW_MODES.filter((m) => modes.includes(m.id)) : VIEW_MODES)
+    : []
   const tabs = showDecisions ? [...baseModes, { id: '__decisions', label: 'Choices' }] : baseModes
   const activeIdx = decisionsActive ? baseModes.length : baseModes.findIndex(m => m.id === modeState)
 

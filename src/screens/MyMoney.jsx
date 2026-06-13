@@ -3581,6 +3581,9 @@ export default function MyMoney({ entity, personaId, onCommit, onHome, onBack, o
           rulesVersion={BRAND.rulesVersion}
           dataDate={BRAND.dataDate}
           showWindowRow={false}
+          // Only Today + What-if change content on My Money (Future/Plan rendered
+          // identical content — dead tabs, founder #4). Choices stays via showDecisions.
+          modes={['actual', 'scenario']}
           showDecisions
           decisionsActive={showDecisions}
           onDecisions={() => setShowDecisions(s => !s)}

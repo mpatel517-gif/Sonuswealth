@@ -2124,23 +2124,53 @@ function DeficitBannerView({ monthly, annual, onNav }) {
         {open ? 'Hide detail ▲' : 'Why this matters ▾'}
       </button>
       {open && (
-        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.45 }}>
             That's <strong>{fmt(annual)}/year</strong> coming out of savings or going onto credit.
             Fixing this comes before the other scores.
           </div>
+          {/* Decision path (founder #9/#10): the number alone isn't a decision —
+              this turns it into one. The decision → your levers → model the
+              effect → act. Information & guidance only, never a recommendation. */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--c-text3)', marginBottom: 6 }}>
+              Your decision · close the gap
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {[
+                { label: 'Trim outgoings', dest: 'flow' },
+                { label: 'Lift income', dest: 'money/income' },
+                { label: 'Check your runway', dest: 'timeline' },
+              ].map((o) => (
+                <button
+                  key={o.label}
+                  type="button"
+                  onClick={() => onNav?.(o.dest)}
+                  style={{
+                    padding: '6px 12px', minHeight: 34, borderRadius: 100,
+                    background: 'var(--c-surface)', color: 'var(--c-text)',
+                    border: '1px solid var(--c-border)', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 600,
+                  }}
+                >{o.label}</button>
+              ))}
+            </div>
+          </div>
           <button
             type="button"
-            onClick={() => onNav?.('money/income')}
-            aria-label="Open Income statement"
+            onClick={() => onNav?.('decisions')}
+            aria-label="Model the effect of each option in the decision engine"
             style={{
               alignSelf: 'flex-start',
-              padding: '7px 13px', minHeight: 36, borderRadius: 100,
-              background: 'transparent', color: 'var(--c-coral-text)',
-              border: '1px solid var(--c-coral-text)', cursor: 'pointer',
+              padding: '8px 14px', minHeight: 38, borderRadius: 100,
+              background: 'var(--c-coral-text)', color: '#fff',
+              border: 'none', cursor: 'pointer',
               fontSize: 12, fontWeight: 700,
             }}
-          >Income statement →</button>
+          >See what each option does →</button>
+          <div style={{ fontSize: 10, color: 'var(--c-text3)', lineHeight: 1.4 }}>
+            Information &amp; guidance only · not personal advice
+          </div>
         </div>
       )}
     </div>

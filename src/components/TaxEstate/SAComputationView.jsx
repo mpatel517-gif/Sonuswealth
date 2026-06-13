@@ -209,6 +209,7 @@ export default function SAComputationView({ entity, personaId, onCommit }) {
   return (
     <section
       data-sa-computation
+      className="sw-printable"
       style={{
         marginTop: 14, border: '1px solid var(--c-border)', borderRadius: 16,
         background: 'var(--c-surface)', overflow: 'hidden',

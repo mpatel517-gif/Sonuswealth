@@ -157,8 +157,9 @@ export default function ReportsViewer({ entity, personaId, onBack, onHome, activ
           )}
         </div>
 
-        {/* Body — one level at a time */}
-        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+        {/* Body — one level at a time. When viewing a report, mark it printable
+            so window.print() emits only the statement, not the app chrome (#8). */}
+        <div className={level === 'report' ? 'sw-printable' : undefined} style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
           {level === 'hub' && (
             <div style={{ padding: 16, maxWidth: 560, marginInline: 'auto' }}>
               <div style={{ fontSize: 12.5, color: 'var(--c-text3)', marginBottom: 14, lineHeight: 1.5 }}>

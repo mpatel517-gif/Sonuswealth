@@ -383,6 +383,32 @@ body {
   }
 }
 
+/* ── PRINT — accountant-facing reports only, not the coloured app chrome.
+   Founder #8: printed/exported reports were "formatted terribly" because
+   window.print() rendered the entire app (sidebar, nav, gradients). Now only
+   a .sw-printable region prints, black-on-white, flat, with page margins.
+   (Tip: expand the drawers you want before printing — collapsed sections
+   aren't in the DOM, so they don't print.) ─────────────────────────────── */
+@media print {
+  @page { margin: 16mm; }
+  html, body { background: #fff !important; }
+  body * { visibility: hidden !important; }
+  .sw-printable, .sw-printable * { visibility: visible !important; }
+  .sw-printable {
+    position: absolute !important;
+    left: 0; top: 0; width: 100% !important;
+    margin: 0 !important;
+  }
+  .sw-printable, .sw-printable * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  /* Belt-and-braces: drop known chrome and anything opted out. */
+  .sw-sidebar, .bnav, [data-bottom-nav], [data-no-print] { display: none !important; }
+}
+
 /* ── DESKTOP SIDEBAR (Phase 2 Batch B.5) ──────────────────────────────────
    Hidden by default; revealed at ≥1024px viewports.
    ───────────────────────────────────────────────────────────────────────── */

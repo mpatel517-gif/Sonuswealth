@@ -73,7 +73,7 @@ function ConflictBand({ conflict }) {
     <div style={{
       margin: '8px 0', padding: '10px 14px', borderRadius: 8,
       background: 'rgba(255,111,125,.10)',
-      borderLeft: '3px solid var(--c-acc3)',
+      border: '1px solid var(--c-acc3)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <span style={{ color: 'var(--c-acc3)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -281,7 +281,7 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
       {isCompound && tree.compoundStatement && (
         <div style={{
           padding: '10px 14px', borderRadius: 8, margin: '0 0 12px',
-          background: 'rgba(93,219,194,.08)', borderLeft: '3px solid var(--c-acc)',
+          background: 'rgba(93,219,194,.08)', border: '1px solid var(--c-acc)',
         }}>
           <div style={{ fontSize: 12, color: 'var(--c-acc)', fontWeight: 700, marginBottom: 4 }}>
             COMBINED IMPACT
@@ -393,7 +393,7 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
       {tree.recommendation && (
         <div style={{
           margin: '16px 0 12px', padding: '12px 16px', borderRadius: 10,
-          background: 'var(--c-surface2)', borderLeft: '3px solid var(--c-acc)',
+          background: 'var(--c-surface2)', border: '1px solid var(--c-acc)',
         }}>
           <div style={{ fontSize: 12, color: 'var(--c-acc)', fontWeight: 700, marginBottom: 4 }}>
             SONUSWEALTH PERSPECTIVE

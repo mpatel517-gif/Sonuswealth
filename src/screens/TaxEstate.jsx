@@ -1375,9 +1375,7 @@ function AllowancesStrip({ entity }) {
         <div style={{
           marginBottom: 12, padding: '11px 13px',
           background: 'var(--c-surface2)',
-          borderLeft: '3px solid var(--c-mint-text)',
-          border: '1px solid var(--c-sep)',
-          borderLeftWidth: 3, borderLeftColor: 'var(--c-mint-text)',
+          border: '1px solid var(--c-mint-text)',
           borderRadius: 10,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>

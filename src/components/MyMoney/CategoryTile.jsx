@@ -373,7 +373,8 @@ export default function CategoryTile({
             onClick={(e) => e.stopPropagation()}
             style={{
               fontSize: 10, color: 'var(--c-coral, #FF6F7D)', marginBottom: 8, lineHeight: 1.4,
-              paddingLeft: 8, borderLeft: '2px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 40%, transparent)',
+              padding: '6px 8px', borderRadius: 6,
+              border: '1px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 30%, transparent)',
               fontWeight: 600,
             }}>
             <span style={{

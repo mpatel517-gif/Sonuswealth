@@ -1095,7 +1095,7 @@ function StepOptions({ paths, decId, lever, leverVal, onLever, propValue, optLev
             <div key={p.id} className="sw-tile" style={{ padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{p.plainLabel || p.title || p.label}</div>
               {p.bottomLine && (
-                <div style={{ fontSize: 12, color: 'var(--c-text)', marginTop: 5, lineHeight: 1.5, paddingLeft: 8, borderLeft: '2px solid var(--c-acc)' }}>{p.bottomLine}</div>
+                <div style={{ fontSize: 12, color: 'var(--c-text)', marginTop: 5, lineHeight: 1.5, padding: '7px 10px', border: '1px solid var(--c-acc)', borderRadius: 8, background: 'var(--c-surface2)' }}>{p.bottomLine}</div>
               )}
               {p.goodIf && (
                 <div style={{ fontSize: 11, color: 'var(--c-text2)', marginTop: 3, lineHeight: 1.45 }}>

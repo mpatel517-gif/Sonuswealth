@@ -230,7 +230,8 @@ export default function TodayMoveCard({ entity, onTakeAction }) {
       <div style={{
         fontSize: 12, color: 'var(--c-text)', lineHeight: 1.5,
         marginBottom: 12, fontWeight: 600,
-        paddingLeft: 10, borderLeft: '2px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 50%, transparent)',
+        padding: '8px 10px', borderRadius: 8,
+        border: '1px solid color-mix(in srgb, var(--c-coral, #FF6F7D) 35%, transparent)',
       }}>
         <span style={{
           fontSize: 9, fontWeight: 800, color: 'var(--c-coral, #FF6F7D)',

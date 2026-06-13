@@ -1720,7 +1720,7 @@ function X25Header({ originLabel = 'Home', onBack }) {
           <div className="sw-card sw-card-elevated" style={{
             position:'relative',
             background:'linear-gradient(135deg, rgba(45,242,195,0.06), var(--c-surface))',
-            borderLeft:'3px solid var(--c-acc)',
+            border:'1px solid var(--c-acc)',
             padding:'14px 18px',
           }}>
             <button type="button" onClick={() => setCollapsed(true)} aria-label="Collapse risk story banner" className="sw-press" style={{

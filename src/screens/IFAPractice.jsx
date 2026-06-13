@@ -587,7 +587,7 @@ function AdviserModePreview({ client, practice, adviser, onClose, onOpenClient, 
               {client.flags.map(f => (
                 <div key={f} className="sw-tile" style={{
                   padding: '8px 12px', fontSize: 12, color: 'var(--c-text2)',
-                  borderLeft: '3px solid var(--c-gold)',
+                  border: '1px solid var(--c-gold)',
                 }}>{f}</div>
               ))}
             </div>

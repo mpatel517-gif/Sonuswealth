@@ -21,6 +21,7 @@
 import { useRef, useState } from 'react'
 import { requireStepUp } from '../lib/step-up.js'
 import SpreadsheetImport from '../components/DataCapture/SpreadsheetImport.jsx'
+import { classifyAsset } from '../engine/asset-taxonomy.js'
 
 // ── Provider gating (D-DEMO-HIDDEN-1) ────────────────────────────────────────
 // Mock parser ships fictitious values. Only run it in dev OR when explicitly
@@ -205,12 +206,35 @@ export function toAssetEventPayload(field) {
   // Only £ amounts become balance-sheet items. Dates / free text are metadata,
   // not assets — the caller keeps those on the document_captured audit event.
   if (!field || field.unit !== 'gbp') return null
-  const route = WRAPPER_ROUTE[field.wrapper] || DEFAULT_ROUTE
+  let route = WRAPPER_ROUTE[field.wrapper]
+  // The parser names a wrapper only when the document is explicit (else null).
+  // Before silently routing a £ amount to cash savings — a wrong-account hazard
+  // (founder: "no number to the wrong account") — try the canonical taxonomy on
+  // the field LABEL, so "Premium Bonds", "Lifetime ISA", "Aviva pension" land in
+  // the right category even with a null wrapper. A right-category sub-type beats
+  // a silent-wrong cash row; only a genuinely unclassifiable amount falls back.
+  if (!route) {
+    const node = classifyAsset(field.label)
+    // Only trust the label classification on an EXACT canonical token/id match.
+    // A fuzzy substring would mis-route ('pe' inside "pension" → Private Equity),
+    // which is worse than the conservative cash default — so anything weaker than
+    // an exact name stays on DEFAULT_ROUTE.
+    const norm = String(field.label || '').toLowerCase().trim().replace(/[\s_]+/g, '-')
+    const exact = node && node.category && (
+      norm === String(node.id).toLowerCase()
+      || (node.match || []).some(t => String(t).toLowerCase().replace(/[\s_]+/g, '-') === norm)
+    )
+    if (exact) {
+      route = { category: node.category, itemType: node.id, valueKey: node.category === 'cash' ? 'balance' : 'value' }
+    }
+  }
+  if (!route) route = DEFAULT_ROUTE
   const provider = field.label || ''
   const fields = { [route.valueKey]: Number(field.value) || 0 }
   if (route.category === 'pensions' || route.category === 'investments') fields.provider = provider
   else if (route.category === 'cash') fields.bank = provider
   else if (route.category === 'property') fields.address = provider
+  else fields.provider = provider // business / alternatives / protection
   return {
     category: route.category,
     itemType: route.itemType,

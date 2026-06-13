@@ -431,6 +431,11 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
   //   · 'money/income' / 'money/protection' / 'money/business' pass through
   const setTabSafe = useCallback((id, opts) => {
     if (id === 'plan') return setTab('timeline')
+    // More-menu overlays are reachable by nav id from anywhere (founder #12/#2:
+    // capture + reports were only findable two taps deep in the More menu).
+    if (id === 'capture') return setMoreScreen('capture')
+    if (id === 'reports') return setMoreScreen('reports')
+    if (id === 'vault')   return setMoreScreen('vault')
     // Trusts & Estate chip — v0.3 route-9 §5: dedicated page `/money/trusts`,
     // NO LONGER `/tax#estate`. Section-nav chip lands here.
     if (id === 'estate' || id === 'trusts') {
@@ -826,6 +831,39 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
           Founder direction 2026-05-28: TY must be visible on every page.
           Rendered here so every routed screen inherits it. */}
       <GlobalTaxYearChip onOpenReports={() => setMoreScreen('reports')} />
+
+      {/* ── Always-visible Import + Reports front door (founder #12/#2) ──────
+          Data capture (upload / scan / manual) and Reports were only reachable
+          two taps deep in the "More" menu. Surfaced here in the chrome so
+          they're one tap from every screen. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '2px 12px 6px', background: 'var(--c-bg)', borderBottom: '1px solid var(--c-border)' }}>
+        <button
+          type="button"
+          onClick={() => setMoreScreen('capture')}
+          aria-label="Import or add your data"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: 'var(--c-acc)',
+            background: 'var(--c-surface)', border: '1px solid var(--c-acc)',
+            borderRadius: 999, padding: '5px 12px',
+          }}
+        >
+          <span aria-hidden="true">＋</span> Import data
+        </button>
+        <button
+          type="button"
+          onClick={() => setMoreScreen('reports')}
+          aria-label="Open reports and statements"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 11, fontWeight: 600, color: 'var(--c-text2)',
+            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+            borderRadius: 999, padding: '5px 12px',
+          }}
+        >
+          <span aria-hidden="true">⎙</span> Reports
+        </button>
+      </div>
 
       {/* ── Whisper ribbon (§13.7) — ambient ticker, currently surfaces
            §13.8 Drill Memory resume on mount when applicable. ────────────────── */}

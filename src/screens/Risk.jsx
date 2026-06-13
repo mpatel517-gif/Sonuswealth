@@ -36,6 +36,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import DecisionDrawers from '../components/Decisions/DecisionDrawers.jsx'
+import { useEventsFor } from '../state/events.jsx'
 // S1 selector migration (Phase 2): canonical netWorth via facade. Other
 // risk-specific helpers stay in fq-calculator (their re-export through
 // selectors would force every screen to take the selector module on as
@@ -59,7 +60,7 @@ import { BRAND } from '../config/brand.js'
 // RiskPrimaryAnchor block instead. (`fmt` is already imported above.)
 import {
   CrossMap5x5, DiffBadge, ExplainerChip,
-  Num, FadeInOnMount, RevealStagger, DrawSVG,
+  Num, FadeInOnMount, RevealStagger, DrawSVG, RevealCard,
   // X28TopBar deliberately not imported — spec §33c O-RISK-17 bans X28 on Risk.
 } from '../components/shared/index.js'
 import ProtectionGap from '../components/Risk/ProtectionGap.jsx'
@@ -1353,6 +1354,84 @@ function RiskHistory({ entity }) {
   )
 }
 
+// ── Attitude version history (Z8b) ─────────────────────────────────────────
+// Every committed risk-perception answer, newest first, with the move from the
+// prior version. Reads the append-only event log the engine already folds, so
+// each "Update your risk perception" submission is a stored, dated version —
+// this is the "storage of each version" surface. Versions persist across
+// sessions via the event store's localStorage mirror (UI read, not a store).
+const APPETITE_ORDER = ['cautious', 'balanced', 'growth', 'aggressive']
+const APPETITE_SHORT = { cautious: 'Cautious', balanced: 'Balanced', growth: 'Growth', aggressive: 'Aggressive' }
+function AttitudeHistory({ personaId }) {
+  const log = useEventsFor(personaId)
+  const versions = (log || [])
+    .filter(ev => ev.type === 'risk_perception_committed')
+    .map(ev => ({ ts: ev.ts, ans: ev.payload?.answers || ev.answers || {} }))
+    .filter(v => v.ans && typeof v.ans.riskAppetite === 'string')
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0)) // chronological for delta calc
+
+  if (versions.length === 0) {
+    return (
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="sw-eyebrow" style={{ marginBottom: 6 }}>Attitude history</div>
+        <div style={{ fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.55 }}>
+          No saved versions yet. Each time you update your risk perception, that
+          answer is stored here with its date — so you can see how your attitude
+          to risk changes over time.
+        </div>
+      </div>
+    )
+  }
+
+  const rows = versions.slice().reverse() // newest first for display
+  return (
+    <div className="card sw-lift" style={{ marginTop: 12 }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 10 }}>
+        Attitude history · {versions.length} version{versions.length === 1 ? '' : 's'}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map((v, i) => {
+          const chronoIdx = versions.length - 1 - i
+          const prev = chronoIdx > 0 ? versions[chronoIdx - 1] : null
+          const cur = APPETITE_ORDER.indexOf(v.ans.riskAppetite)
+          const was = prev ? APPETITE_ORDER.indexOf(prev.ans.riskAppetite) : -1
+          const moved = prev && cur !== was
+          const dir = moved ? (cur > was ? 'more growth-seeking' : 'more cautious') : null
+          let date = ''
+          try { date = new Date(v.ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) } catch {}
+          return (
+            <div key={v.ts || i} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 10px', borderRadius: 10,
+              background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: i === 0 ? 'var(--c-acc)' : 'var(--c-text3)' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                  {APPETITE_SHORT[v.ans.riskAppetite] || v.ans.riskAppetite}
+                  {i === 0 && (
+                    <span style={{ fontSize: 10, color: 'var(--c-acc)', marginLeft: 6, fontWeight: 700 }}>
+                      current
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 1 }}>{date}</div>
+              </div>
+              {moved && (
+                <span style={{ fontSize: 10, fontWeight: 700,
+                  color: cur > was ? 'var(--c-warning)' : 'var(--c-acc)' }}>
+                  {dir}
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Take Action top-3 (Z9) — staggered cards ──────────────────────────────
 function TakeAction({ entity, onAct }) {
   let actions = []
@@ -1840,6 +1919,96 @@ function RiskPerceptionQuestionnaire({ entity, onClose, onCommit }) {
   )
 }
 
+// ── Suggested risk level (investing drawer) ────────────────────────────────
+// Maps the user's OWN answers (appetite + horizon + loss-reaction, all folded
+// onto entity by the risk_perception_committed reducer) to a risk CATEGORY,
+// using the IFA-canonical principle that suitability = the more conservative of
+// willingness (stated appetite) and capacity (horizon + loss-reaction +
+// calculated resilience). This is self-knowledge, NOT a personal
+// recommendation: no products, no "you should", allocation bands are generic
+// category illustrations — not figures derived from the user's money.
+// ⚠ COPY PENDING sonuswealth-compliance review before this ships.
+const RISK_LEVEL_INFO = {
+  cautious:   { label: 'Cautious',    band: 'typically a smaller share in higher-risk assets', means: 'Stability matters more than growth — smaller ups and downs.' },
+  balanced:   { label: 'Balanced',    band: 'typically a roughly even split of higher- and lower-risk assets', means: 'A mix of growth and stability — moderate ups and downs.' },
+  growth:     { label: 'Growth',      band: 'typically a larger share in higher-risk assets', means: 'Long-term growth prioritised — larger ups and downs accepted.' },
+  aggressive: { label: 'Adventurous', band: 'typically a high share in higher-risk assets', means: 'Maximum growth focus — large short-term falls are expected.' },
+}
+const APPETITE_IDX = { cautious: 0, balanced: 1, growth: 2, aggressive: 3 }
+const HORIZON_IDX  = { under5: 0, '5to10': 1, '10to20': 2, over20: 3 }
+const LOSS_IDX     = { sell: 0, unsure: 1, hold: 2, buy: 3 }
+const RESILIENCE_IDX = { vulnerable: 0, cautious: 1, managed: 2, protected: 3, resilient: 3 }
+const IDX_TO_LEVEL = ['cautious', 'balanced', 'growth', 'aggressive']
+
+function SuggestedRiskLevel({ entity, risk }) {
+  const appetite = entity?.riskAppetite
+  if (!appetite || APPETITE_IDX[appetite] == null) {
+    return (
+      <div style={{ marginTop: 4, fontSize: 12, color: 'var(--c-text3)', lineHeight: 1.55 }}>
+        Answer the 60-second questionnaire above to see how your stated attitude
+        compares with your capacity for risk.
+      </div>
+    )
+  }
+  const willIdx = APPETITE_IDX[appetite]
+  // Capacity = average of horizon, loss-reaction and calculated resilience —
+  // whichever the user has answered (each is 0–3). Missing inputs are skipped.
+  const capSignals = []
+  if (HORIZON_IDX[entity.riskTimeHorizon] != null) capSignals.push(HORIZON_IDX[entity.riskTimeHorizon])
+  if (LOSS_IDX[entity.riskLossReaction] != null) capSignals.push(LOSS_IDX[entity.riskLossReaction])
+  const bandName = (risk?.band?.name || riskBand(risk?.total || 0).name || '').toLowerCase()
+  if (RESILIENCE_IDX[bandName] != null) capSignals.push(RESILIENCE_IDX[bandName])
+  const capIdx = capSignals.length
+    ? Math.round(capSignals.reduce((s, x) => s + x, 0) / capSignals.length)
+    : willIdx
+  // Suitability = the more conservative of willingness and capacity.
+  const suggestedIdx = Math.min(willIdx, capIdx)
+  const suggested = IDX_TO_LEVEL[suggestedIdx]
+  const info = RISK_LEVEL_INFO[suggested]
+  const gap = willIdx - capIdx // >0: appetite exceeds capacity
+
+  // Copy states the gap as a fact, never directs a course of action (FCA
+  // PERG 8.28 — avoid evaluation/persuasion; sonuswealth-compliance AMBER fix).
+  const mismatch = gap >= 1
+    ? { tone: 'warn', text: `Your stated appetite (${RISK_LEVEL_INFO[appetite].label}) sits above what your answers about capacity suggest. A fall could mean selling at the wrong time — so there's a gap between the risk you say you'll take and the risk your situation may absorb.` }
+    : gap <= -1
+      ? { tone: 'good', text: `Your capacity for risk looks higher than your stated appetite. The two don't have to match — this is just a difference between how you feel about risk and what your situation could absorb.` }
+      : { tone: 'neutral', text: 'Your stated attitude and your capacity for risk are broadly in line.' }
+  const toneBorder = mismatch.tone === 'warn' ? 'rgba(255,179,71,0.30)' : mismatch.tone === 'good' ? 'rgba(0,229,168,0.25)' : 'var(--c-sep)'
+  const toneBg = mismatch.tone === 'warn' ? 'rgba(255,179,71,0.07)' : mismatch.tone === 'good' ? 'rgba(0,229,168,0.06)' : 'var(--c-surface2)'
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 8 }}>What your answers indicate</div>
+      <div style={{
+        background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+        borderRadius: 12, padding: '12px 14px', marginBottom: 10,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{info.label}</span>
+          <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>based on your answers</span>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55, marginTop: 6 }}>
+          {info.means} People who describe themselves this way {info.band}.
+        </div>
+      </div>
+      <div style={{ background: toneBg, border: `1px solid ${toneBorder}`, borderRadius: 10, padding: '10px 12px' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6,
+          color: mismatch.tone === 'warn' ? 'var(--c-warning)' : mismatch.tone === 'good' ? 'var(--c-acc)' : 'var(--c-text3)',
+          marginBottom: 4 }}>
+          Attitude vs capacity
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>{mismatch.text}</div>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 8, fontStyle: 'italic', lineHeight: 1.5 }}>
+        General information about risk categories — not a personal recommendation, a
+        product suggestion, or financial advice. Your actual choices depend on your
+        full circumstances.
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Reusable composed body — renders all zones. Used by Risk.jsx full-page
 // surface AND by RiskOverlay sheet variant.
@@ -1847,7 +2016,7 @@ function RiskPerceptionQuestionnaire({ entity, onClose, onCommit }) {
 // sticky Risk-primary anchor at the top, hide the Z1 ring card here to avoid
 // the 4×-on-page score-78 duplication called out in HIGH 3.1.
 // ─────────────────────────────────────────────────────────────────────────────
-export function RiskBody({ entity, onAddProtection, onNav, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
+export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
   const [activeDim, setActiveDim] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
   const [riskQOpen, setRiskQOpen] = useState(false)
@@ -1891,162 +2060,195 @@ export function RiskBody({ entity, onAddProtection, onNav, onDrillMetric, onComm
         </FadeInOnMount>
       )}
 
-      {/* Compact profile cell — elevated, hero band-name */}
-      <ProfileCell profile={profile} />
-
-      {/* Attitude to Risk — stated appetite vs calculated resilience */}
-      {(() => {
-        const appetite = entity?.riskAppetite
-        const APPETITE_LABELS = {
-          cautious:   { label: 'Cautious',   desc: 'Prefer stability — lower returns accepted to reduce volatility.' },
-          balanced:   { label: 'Balanced',   desc: 'Mix of growth and stability — accepts moderate swings.' },
-          growth:     { label: 'Growth',     desc: 'Prioritises long-term growth — comfortable with higher volatility.' },
-          aggressive: { label: 'Aggressive', desc: 'Maximum growth focus — accepts significant short-term falls.' },
-        }
-        const current = appetite ? APPETITE_LABELS[appetite] : null
-        const band = risk.band || riskBand(risk.total)
-        const RISK_DECISIONS = {
-          vulnerable: 'At lower resilience, people often hold 12+ months in accessible cash and focus on income stability before taking on new debt.',
-          cautious:   'A 6–12 month cash buffer and reviewed protection cover are common at this level, with allocations tending to be more conservative.',
-          managed:    'At this level, annual stress-scenario reviews and use of ISA / pension tax shelters are typical.',
-          protected:  'Resilience is solid — attention often shifts toward growth and estate efficiency.',
-          resilient:  'Resilience is strong — there is often capacity for more investment risk and a focus on legacy.',
-        }
-        const decision = RISK_DECISIONS[(band.name || '').toLowerCase()] || 'Your seven dimensions show where resilience could improve.'
-        return (
-          <FadeInOnMount delay={100}>
-            <div className="card sw-lift" style={{ marginBottom: 12 }}>
-              <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Your risk profile</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>
-                    Stated appetite
-                  </div>
-                  {current ? (
-                    <>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: band.colour }}>{current.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>{current.desc}</div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 12, color: 'var(--c-text3)', fontStyle: 'italic' }}>Not set — update your profile</div>
-                  )}
-                </div>
-                <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>
-                    Calculated resilience
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: band.colour }}>{band.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>
-                    {risk.total}/100 — from your 7 dimensions
-                  </div>
-                </div>
-              </div>
-              <div style={{ background: 'rgba(45,242,195,0.06)', border: '1px solid rgba(45,242,195,0.15)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-acc)', marginBottom: 4 }}>
-                  What this means for decisions
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>{decision}</div>
-                <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, fontStyle: 'italic' }}>General information, not personal advice.</div>
-              </div>
-              <button
-                onClick={() => setRiskQOpen(true)}
-                style={{
-                  width: '100%', padding: '9px 14px', borderRadius: 100,
-                  background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
-                  fontSize: 12, fontWeight: 700, color: 'var(--c-acc)',
-                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                }}
-              >
-                Update your risk perception — 60-second questionnaire →
-              </button>
-              {riskQOpen && (
-                <RiskPerceptionQuestionnaire
-                  entity={entity}
-                  onClose={() => setRiskQOpen(false)}
-                  onCommit={(answers) => { onCommit?.(answers); setRiskQOpen(false) }}
-                />
-              )}
-            </div>
-          </FadeInOnMount>
-        )
-      })()}
-
-      {/* Z2: 5×5 cross-map — staggered cells fan in */}
-      <FadeInOnMount delay={180}>
-        <div className="sw-eyebrow" style={{ marginBottom:6, marginLeft:4 }}>
-          Financial Profile Map
-        </div>
-        <CrossMap5x5
-          fqBand={mapFqBand(fq.band?.name)}
-          riskBand={mapRiskBand(risk.band?.name)}
-          onCellTap={(cell) => onDrillMetric?.(`crossmap:${cell?.fq || ''}-${cell?.risk || ''}`)}
-        />
-      </FadeInOnMount>
-
-      {/* Z3: 7-dimension breakdown — 3-view toggle (Radar · Orbit · Bars) */}
-      <DimensionsPanel
-        dims={DIMS}
-        risk={risk}
-        entity={entity}
-        onTap={setActiveDim}
-      />
-
-      {/* Z4: Protection gap card */}
-      <ProtectionGap entity={entity} onAction={() => onAddProtection?.('life-cover')} />
-
-      {/* Z5a: Shock Lab — grabbable shock size/horizon/income-loss, live re-draw */}
-      <ShockLab entity={entity} />
-
-      {/* Z5b: Shock scenarios — staggered cards (at-a-glance summary at defaults) */}
-      <div className="card sw-lift">
-        <div className="sw-eyebrow" style={{ marginBottom:8 }}>Stress Tests</div>
-        <div className="card-title" style={{
-          display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <span>Shock Scenarios — recomputed by engine</span>
-          <AskChip id="RISK-AI-3" label="What if?" />
-        </div>
-        {shocks.length === 0 ? (
-          <div style={{ fontSize:12, color:'var(--c-text3)' }}>
-            No shock results available — engine returned empty.
-          </div>
-        ) : (
-          <RevealStagger interval={70}>
-            {shocks.map(s => <ShockCard key={s.shockId} shock={s} onNav={onNav} onAddProtection={onAddProtection} />)}
-          </RevealStagger>
-        )}
-      </div>
-
-      {/* Z7: Life events — slide-in from top */}
+      {/* Top signal: life-event banner — only renders when triggered, kept
+          above the drawers so a re-open prompt is never hidden in a closed
+          section (Z7). */}
       <LifeEventBanner entity={entity} />
 
-      {/* Z8: History (own picker, line draws in) */}
-      <RiskHistory entity={entity} />
+      {/* ── Drawer 1 · Where I stand (open by default) ─────────────────────
+          Diagnostic anchor (spec §2.4 diagnostic-first): the band-name
+          implication, the 5×5 profile map, and the 7 resilience dimensions. */}
+      <RevealCard cardId="risk-stand" title="Where I stand" defaultOpen>
+        <ProfileCell profile={profile} />
 
-      {/* Z9: Take Action top 3 — staggered.
-          onAct wires the row click to a navigation/ask event so it's no
-          longer a silent affordance. Dashboard or any listener can route. */}
-      <TakeAction
-        entity={entity}
-        onAct={(a) => {
-          if (typeof window === 'undefined') return
-          // Prefer drill if the action has a dimension key
-          if (a?.dimension && typeof onDrillMetric === 'function') {
-            onDrillMetric(`risk:${a.dimension}`)
-            return
+        {/* Z2: 5×5 cross-map — staggered cells fan in */}
+        <FadeInOnMount delay={120}>
+          <div className="sw-eyebrow" style={{ marginBottom:6, marginLeft:4 }}>
+            Financial Profile Map
+          </div>
+          <CrossMap5x5
+            fqBand={mapFqBand(fq.band?.name)}
+            riskBand={mapRiskBand(risk.band?.name)}
+            onCellTap={(cell) => onDrillMetric?.(`crossmap:${cell?.fq || ''}-${cell?.risk || ''}`)}
+          />
+        </FadeInOnMount>
+
+        {/* Z3: 7-dimension breakdown — 3-view toggle (Radar · Orbit · Bars) */}
+        <DimensionsPanel
+          dims={DIMS}
+          risk={risk}
+          entity={entity}
+          onTap={setActiveDim}
+        />
+      </RevealCard>
+
+      {/* ── Drawer 2 · The risk in my investing ────────────────────────────
+          Stated appetite vs calculated resilience + the perception
+          questionnaire. NOTE (compliance): this surface reconciles attitude
+          with capacity as self-knowledge. The suggested-risk-level build sits
+          here and goes through sonuswealth-compliance before its copy ships —
+          it must state category meaning + generic ranges, never products or
+          "you should". */}
+      <RevealCard cardId="risk-investing" title="The risk in my investing">
+        {(() => {
+          const appetite = entity?.riskAppetite
+          const APPETITE_LABELS = {
+            cautious:   { label: 'Cautious',   desc: 'Prefer stability — lower returns accepted to reduce volatility.' },
+            balanced:   { label: 'Balanced',   desc: 'Mix of growth and stability — accepts moderate swings.' },
+            growth:     { label: 'Growth',     desc: 'Prioritises long-term growth — comfortable with higher volatility.' },
+            aggressive: { label: 'Aggressive', desc: 'Maximum growth focus — accepts significant short-term falls.' },
           }
-          try {
-            window.dispatchEvent(new CustomEvent('sonus:action', {
-              detail: { source: 'risk-take-action', action: a },
-            }))
-          } catch {}
-        }}
-      />
+          const current = appetite ? APPETITE_LABELS[appetite] : null
+          const band = risk.band || riskBand(risk.total)
+          const RISK_DECISIONS = {
+            vulnerable: 'At lower resilience, people often hold 12+ months in accessible cash and focus on income stability before taking on new debt.',
+            cautious:   'A 6–12 month cash buffer and reviewed protection cover are common at this level, with allocations tending to be more conservative.',
+            managed:    'At this level, annual stress-scenario reviews and use of ISA / pension tax shelters are typical.',
+            protected:  'Resilience is solid — attention often shifts toward growth and estate efficiency.',
+            resilient:  'Resilience is strong — there is often capacity for more investment risk and a focus on legacy.',
+          }
+          const decision = RISK_DECISIONS[(band.name || '').toLowerCase()] || 'Your seven dimensions show where resilience could improve.'
+          return (
+            <FadeInOnMount delay={40}>
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>
+                      Stated appetite
+                    </div>
+                    {current ? (
+                      <>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: band.colour }}>{current.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>{current.desc}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--c-text3)', fontStyle: 'italic' }}>Not set — update your profile</div>
+                    )}
+                  </div>
+                  <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-text3)', marginBottom: 4 }}>
+                      Calculated resilience
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: band.colour }}>{band.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--c-text3)', marginTop: 2, lineHeight: 1.4 }}>
+                      {risk.total}/100 — from your 7 dimensions
+                    </div>
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(45,242,195,0.06)', border: '1px solid rgba(45,242,195,0.15)', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'var(--c-acc)', marginBottom: 4 }}>
+                    What this means for decisions
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>{decision}</div>
+                  <div style={{ fontSize: 10, color: 'var(--c-text3)', marginTop: 6, fontStyle: 'italic' }}>General information, not personal advice.</div>
+                </div>
+                <button
+                  onClick={() => setRiskQOpen(true)}
+                  style={{
+                    width: '100%', padding: '9px 14px', borderRadius: 100,
+                    background: 'var(--c-surface2)', border: '1px solid var(--c-sep)',
+                    fontSize: 12, fontWeight: 700, color: 'var(--c-acc)',
+                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                  }}
+                >
+                  Update your risk perception — 60-second questionnaire →
+                </button>
+                {riskQOpen && (
+                  <RiskPerceptionQuestionnaire
+                    entity={entity}
+                    onClose={() => setRiskQOpen(false)}
+                    onCommit={(answers) => { onCommit?.(answers); setRiskQOpen(false) }}
+                  />
+                )}
+              </div>
+            </FadeInOnMount>
+          )
+        })()}
 
-      {/* Z11: What would help most lens — staggered rows */}
-      <WhatHelpsMost entity={entity} onNav={onNav} onAddProtection={onAddProtection} />
+        {/* Suggested risk level — willingness vs capacity (compliance-gated copy) */}
+        <SuggestedRiskLevel entity={entity} risk={risk} />
+      </RevealCard>
 
-      {/* Z12: Protection plan anchor (always rendered, pulses if no plan) */}
-      <ProtectionPlanCard entity={entity} />
+      {/* ── Drawer 3 · What could go wrong ──────────────────────────────────
+          Stress-test cluster (spec §2.4): protection gap, the live Shock Lab,
+          and the engine-recomputed shock scenarios. */}
+      <RevealCard cardId="risk-wrong" title="What could go wrong">
+        {/* Z4: Protection gap card */}
+        <ProtectionGap entity={entity} onAction={() => onAddProtection?.('life-cover')} />
+
+        {/* Z5a: Shock Lab — grabbable shock size/horizon/income-loss, live re-draw */}
+        <ShockLab entity={entity} />
+
+        {/* Z5b: Shock scenarios — staggered cards (at-a-glance summary at defaults) */}
+        <div className="card sw-lift">
+          <div className="sw-eyebrow" style={{ marginBottom:8 }}>Stress Tests</div>
+          <div className="card-title" style={{
+            display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span>Shock Scenarios — recomputed by engine</span>
+            <AskChip id="RISK-AI-3" label="What if?" />
+          </div>
+          {shocks.length === 0 ? (
+            <div style={{ fontSize:12, color:'var(--c-text3)' }}>
+              We don't have enough of your data yet to model these shocks.
+            </div>
+          ) : (
+            <RevealStagger interval={70}>
+              {shocks.map(s => <ShockCard key={s.shockId} shock={s} onNav={onNav} onAddProtection={onAddProtection} />)}
+            </RevealStagger>
+          )}
+        </div>
+      </RevealCard>
+
+      {/* ── Drawer 4 · What I'd do about it ─────────────────────────────────
+          Action cluster (spec §2.4): top-3 ranked actions, the what-helps-most
+          lens, and the protection-plan anchor. */}
+      <RevealCard cardId="risk-act" title="What I'd do about it">
+        {/* Z9: Take Action top 3 — staggered.
+            onAct wires the row click to a navigation/ask event so it's no
+            longer a silent affordance. Dashboard or any listener can route. */}
+        <TakeAction
+          entity={entity}
+          onAct={(a) => {
+            if (typeof window === 'undefined') return
+            // Prefer drill if the action has a dimension key
+            if (a?.dimension && typeof onDrillMetric === 'function') {
+              onDrillMetric(`risk:${a.dimension}`)
+              return
+            }
+            try {
+              window.dispatchEvent(new CustomEvent('sonus:action', {
+                detail: { source: 'risk-take-action', action: a },
+              }))
+            } catch {}
+          }}
+        />
+
+        {/* Z11: What would help most lens — staggered rows */}
+        <WhatHelpsMost entity={entity} onNav={onNav} onAddProtection={onAddProtection} />
+
+        {/* Z12: Protection plan anchor (always rendered, pulses if no plan) */}
+        <ProtectionPlanCard entity={entity} />
+      </RevealCard>
+
+      {/* ── Drawer 5 · How it's changed ─────────────────────────────────────
+          History cluster (spec §2.4): the Risk Score time-series. Attitude
+          version-history lands here next once the event→entity loop is wired. */}
+      <RevealCard cardId="risk-changed" title="How it's changed">
+        {/* Z8: History (own picker, line draws in) */}
+        <RiskHistory entity={entity} />
+        {/* Z8b: Attitude version history — each committed perception answer, dated */}
+        <AttitudeHistory personaId={personaId} />
+      </RevealCard>
 
       {/* Dimension detail sheet */}
       {activeDim && (
@@ -2206,7 +2408,7 @@ function SecondaryTile({ label, value, band, isMoney = false, onTap, tieout, tie
 // ─────────────────────────────────────────────────────────────────────────────
 // Default export — full-page Risk surface.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav, onOpenDecision }) {
+export default function Risk({ entity, personaId, onHome, onBack, originLabel = 'Home', onDrillMetric, onCommit, onAddProtection, onNav, onOpenDecision }) {
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)
@@ -2240,6 +2442,7 @@ export default function Risk({ entity, onHome, onBack, originLabel = 'Home', onD
       {/* All zones (Z1 ring suppressed — primary anchor already shows it) */}
       <RiskBody
         entity={entity}
+        personaId={personaId}
         onDrillMetric={onDrillMetric}
         onCommit={onCommit}
         onAddProtection={onAddProtection}

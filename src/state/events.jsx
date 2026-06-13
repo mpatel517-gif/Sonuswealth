@@ -274,6 +274,55 @@ export function applyEvents(baseEntity, events = []) {
         break
       }
 
+      case 'risk_perception_committed': {
+        // Risk attitude/perception questionnaire (Risk.jsx). Previously
+        // fired-and-forgotten: the answer was stored but never reflected, so
+        // the "Stated appetite" tile never moved. Fold it onto the canonical
+        // fields the UI + engine already read. Event shape carries `answers`
+        // at the top level (no payload wrapper); D6 below uses payload.answers,
+        // so normalise both.
+        const ans = ev.payload?.answers || ev.answers
+        if (ans && typeof ans === 'object') {
+          // riskAppetite MUST stay a string ('cautious'|'balanced'|'growth'|
+          // 'aggressive') — APPETITE_LABELS[appetite] and fq-calculator's
+          // `riskAppetite === 'growth'` checks depend on it.
+          if (typeof ans.riskAppetite === 'string')  e.riskAppetite    = ans.riskAppetite
+          if (typeof ans.timeHorizon === 'string')   e.riskTimeHorizon = ans.timeHorizon
+          if (typeof ans.lossReaction === 'string')  e.riskLossReaction = ans.lossReaction
+        }
+        break
+      }
+
+      case 'risk_questionnaire_committed': {
+        // D6 estate-readiness questionnaire (Risk.jsx). Also previously inert.
+        // Maps each answer to the canonical field d6SubScores + calcRisk's
+        // Dependency-Exposure dimension already read, so re-answering actually
+        // moves the score. Event shape: { payload: { source:'D6', answers } }.
+        const ans = ev.payload?.answers || ev.answers
+        if (ans && typeof ans === 'object') {
+          if (ans.willStatus)        e.willStatus        = ans.willStatus
+          if (ans.lpaStatus)         e.lpaStatus         = ans.lpaStatus
+          if (ans.nominationsStatus) e.nominationsStatus = ans.nominationsStatus
+          if (ans.guardianStatus)    e.guardianStatus    = ans.guardianStatus
+          // life-in-trust folds into the nested protection shape d6SubScores
+          // reads (prot.lifeInsurance.{exists,inTrust}).
+          if (ans.lifeInTrust) {
+            e.assets = e.assets || {}
+            const prot = e.assets.protection || {}
+            const li = prot.lifeInsurance || {}
+            e.assets.protection = {
+              ...prot,
+              lifeInsurance: {
+                ...li,
+                exists:  ans.lifeInTrust === 'none' ? false : true,
+                inTrust: ans.lifeInTrust === 'in_trust',
+              },
+            }
+          }
+        }
+        break
+      }
+
       default:
         // Unknown event type — ignore (forward-compatible)
         break

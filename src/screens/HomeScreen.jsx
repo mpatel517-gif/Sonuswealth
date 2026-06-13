@@ -2088,24 +2088,23 @@ function DeficitBanner({ entity, onNav }) {
 function DeficitBannerView({ monthly, annual, onNav }) {
   const [open, setOpen] = useState(false)
   return (
-    <div role="region" aria-label="Cashflow deficit alert" style={{
-      margin: '0 16px 12px',
-      padding: '11px 14px',
-      background: 'var(--c-tint-coral)',
-      border: '1px solid var(--c-coral-text)',
-      borderRadius: 14,
+    <div role="region" aria-label="Cashflow deficit" style={{
+      margin: '2px 16px 0',
+      padding: '9px 14px',
+      background: 'var(--c-surface)',
+      border: '1px solid var(--c-border)',
+      borderRadius: 12,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--c-coral-text)' }}>
-            Monthly shortfall
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-            <span data-tieout="home.monthly-deficit" data-tieout-raw={String(monthly)} style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-coral-text)', letterSpacing: -0.4, lineHeight: 1.15 }}>
-              −{fmt(monthly)}/mo
-            </span>
-            <span style={{ fontSize: 11, color: 'var(--c-text2)' }}>· {fmt(annual)}/yr</span>
-          </div>
+        {/* One calm line — a coral dot + small coral number signals attention
+            without the red block dominating the page. */}
+        <div style={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 100, background: 'var(--c-coral-text)', alignSelf: 'center', flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text2)' }}>Monthly shortfall</span>
+          <span data-tieout="home.monthly-deficit" data-tieout-raw={String(monthly)} style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-coral-text)', letterSpacing: -0.3 }}>
+            −{fmt(monthly)}/mo
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>· {fmt(annual)}/yr</span>
         </div>
         <button
           type="button"
@@ -2113,9 +2112,9 @@ function DeficitBannerView({ monthly, annual, onNav }) {
           aria-label="Open Cashflow to fix the shortfall"
           style={{
             flexShrink: 0,
-            padding: '8px 14px', minHeight: 40, borderRadius: 100,
-            background: 'var(--c-coral-text)', color: '#fff',
-            border: 'none', cursor: 'pointer',
+            padding: '6px 12px', minHeight: 34, borderRadius: 100,
+            background: 'transparent', color: 'var(--c-coral-text)',
+            border: '1px solid var(--c-coral-text)', cursor: 'pointer',
             fontSize: 12, fontWeight: 700,
             display: 'inline-flex', alignItems: 'center',
           }}
@@ -2317,12 +2316,6 @@ export default function HomeScreen({
       {/* ── Masthead (Task 2: avatar + mode pill) ─────────────────────── */}
       <MastheadCard entity={entity} viewMode={viewMode} onModeChange={setViewMode} />
 
-      {/* P13-2 (2026-05-28, IFA must-fix #2): deficit-led hero.
-          When monthlySurplus is negative, the dashboard now leads with
-          the deficit headline instead of letting FQ-score lull a user
-          who's losing money each month. Renders nothing when surplus ≥ 0. */}
-      <DeficitBanner entity={entity} onNav={onNav} />
-
       {/* ── Anchor row (inline AnchorRow component defined above) ─────── */}
       <AnchorRow
         nw={nw}
@@ -2335,6 +2328,13 @@ export default function HomeScreen({
 
       {/* ── §Z1.5 Sub-Anchor: Capital Efficiency (PRC/PCC, D-ANCHOR-2) ──── */}
       <SubAnchorStrip entity={entity} />
+
+      {/* Cashflow deficit — moved BELOW the triple-anchor (founder 2026-06-13:
+          "−£900/mo supersedes the main information"). Anchors lead the page;
+          the shortfall is a calm, actionable secondary line, not a red hero
+          block. Still rendered (a real deficit must stay visible — IFA P13-2),
+          just no longer dominating. */}
+      <DeficitBanner entity={entity} onNav={onNav} />
 
       {/* ── Zone 2 (HOME-12): "What changed since you last looked" ──────
           X29 daily-delta strip. Reads engine diffSet() — the delta between the

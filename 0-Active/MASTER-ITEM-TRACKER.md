@@ -28,7 +28,17 @@ Status key: ✅ done+verified · 🔄 partial · ☐ open · ↗ engine/data-lay
 | #53 Theme F | All 11 side-stripe borders → full borders (grep-clean). Typography half RECLASSIFIED: 268 sub-11px (not ~29), mostly intentional chart micro-labels → needs per-surface design pass, not a blanket bump. |
 | #52 (P1) | Life-event log completed 10→16 subtypes on Home (logging+fold+dim-reopen already worked; added the 6 incl. bereavement). Verified live: 16 chips render. |
 
-**Remaining = #51 (Home spec zones — needs the §8 design-dialogue process, not blind autonomous build) + Tier-4 Phase-2/founder-gated (need vendor/architecture decisions).** Gap-analysis agent claims corrected where wrong (life-event log + cashflow-Q5 + home-Q2 were already built).
+| #51 Z1.5 | Home Capital Efficiency sub-anchor strip BUILT (reuses canonical prcPccSpread). Verified live: mrT "7.9× Strong". The one safe placement zone. |
+
+**Remaining — all genuinely founder-decision or focused-engine-session work (NOT skippable-by-rushing):**
+- **#51 Z5 Score Journey** — ⚠️ DECISION: spec makes it the canonical PRIMARY Home chart *replacing the radar*, but founder previously rejected hiding the radar (memory `feedback_session_2026_05_13_mistakes`). Radar-vs-ScoreJourney is a founder call, not a blind build. Engine fns exist (trajectoryData/scoreTrajectory/riskTrajectory).
+- **#51 Z13/Z12 (AI narrative/synthesis)** — real build, LLM via ask-sonu-proxy (key-gated). **Z14 Drive-to-Update** — needs new `updateStreakCheck` + realistic asset captured_at dates (fixtures lack them). **Z15 Milestone pin** — needs new `milestoneCheck` + baseline-crossing detection. **Z6** — founder-gated (O-HOME-1 thresholds).
+- **Theme A targetIncome default (30000 vs 50000)** — engine projection math; golden-vectors PASS but do NOT cover the targetIncome path. Needs: audit `_targetIncome` resolution → add golden-vector coverage for fiRatio/retirement path → canonical consolidation → then unify default. Do NOT change blind.
+- **Theme F typography** — 268 sub-11px (mostly intentional chart micro-labels) → per-surface design pass.
+- **Theme B/C** — methodology+decision-path roll-out onto hero numbers (design).
+- **Tier 4 Phase-2** — Open Banking, Vault uploads, Reports PDF export, rules-admin, real-user persistence — need vendor/architecture decisions.
+
+Gap-analysis agent claims corrected where wrong (life-event log, cashflow-Q5, home-Q2 were already built).
 
 ---
 

@@ -40,6 +40,7 @@ import { useTemporalMode } from '../state/temporalMode.jsx'
 import ScenarioIntake from '../components/Home/ScenarioIntake.jsx'
 import PensionDrawdownPanel from '../components/Home/PensionDrawdownPanel.jsx'
 import ScoreJourneyChart from '../components/Home/ScoreJourneyChart.jsx' // §Z5
+import HomeAlertsPanel from '../components/Home/HomeAlertsPanel.jsx' // unified alerts
 import { MiniTrendLines } from '../components/MyMoney/L3/MiniTrendLines.jsx'
 import { projectSeries, growthRateFor } from '../engine/projection.js'
 import { prcPccSpread } from '../engine/canonical-metrics.js' // §Z1.5 Capital Efficiency
@@ -2329,12 +2330,12 @@ export default function HomeScreen({
       {/* ── §Z1.5 Sub-Anchor: Capital Efficiency (PRC/PCC, D-ANCHOR-2) ──── */}
       <SubAnchorStrip entity={entity} />
 
-      {/* Cashflow deficit — moved BELOW the triple-anchor (founder 2026-06-13:
-          "−£900/mo supersedes the main information"). Anchors lead the page;
-          the shortfall is a calm, actionable secondary line, not a red hero
-          block. Still rendered (a real deficit must stay visible — IFA P13-2),
-          just no longer dominating. */}
-      <DeficitBanner entity={entity} onNav={onNav} />
+      {/* Unified alerts (founder 2026-06-13: stacked deficit + SIPP-IHT banners
+          "took over the page"). ONE managed panel backed by the same stream the
+          Notification Centre uses — cashflow deficit, SIPP-IHT 2027, estate
+          discovery — severity-ranked, top few inline, rest via "View all".
+          Replaces the standalone DeficitBanner + SippIhtCountdown banners. */}
+      <HomeAlertsPanel entity={entity} onNav={onNav} />
 
       {/* ── Zone 2 (HOME-12): "What changed since you last looked" ──────
           X29 daily-delta strip. Reads engine diffSet() — the delta between the
@@ -2344,8 +2345,8 @@ export default function HomeScreen({
           logged (F3), so it answers §Q1.1 Q2 directly. */}
       <WhatChangedStrip diffs={diffs} entity={entity} />
 
-      {/* ── §Z10 SIPP-IHT countdown (regulatory: Finance Act 2026) ──── */}
-      <SippIhtCountdown entity={entity} onNav={onNav} />
+      {/* §Z10 SIPP-IHT countdown now folded into HomeAlertsPanel (above) — it
+          was a duplicate of the NC-RC item the Notification Centre derives. */}
 
       {/* ── 2-column content grid — radar first on mobile, tiles follow ── */}
       <div className="sw-content-grid">

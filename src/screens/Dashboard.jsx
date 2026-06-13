@@ -436,6 +436,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
     if (id === 'capture') return setMoreScreen('capture')
     if (id === 'reports') return setMoreScreen('reports')
     if (id === 'vault')   return setMoreScreen('vault')
+    if (id === 'notif')   return setMoreScreen('notif')
     // Trusts & Estate chip — v0.3 route-9 §5: dedicated page `/money/trusts`,
     // NO LONGER `/tax#estate`. Section-nav chip lands here.
     if (id === 'estate' || id === 'trusts') {

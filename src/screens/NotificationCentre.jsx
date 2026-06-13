@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState } from 'react'
-import { calcAPQ } from '../engine/fq-calculator.js'
+import { calcAPQ, monthlySurplus, fmt } from '../engine/fq-calculator.js'
 
 // ── Taxonomy per spec ──
 const NC_TYPES = {
@@ -21,6 +21,7 @@ const NC_TYPES = {
   'NC-TB': { label: 'Tax Boundary',        tone: 'AMBER' },
   'NC-EX': { label: 'Export Ready',        tone: 'GREEN' },
   'NC-RC': { label: 'Regulatory Critical', tone: 'RED', mandatory: true },
+  'NC-CF': { label: 'Cashflow',            tone: 'AMBER' },
 }
 
 const TONE_COLOUR = {
@@ -45,11 +46,38 @@ function sipDays(_entity, now = Date.now()) {
 }
 
 // ── Engine-derived stream ──
-function deriveNotifications(entity, { now = Date.now() } = {}) {
+export function deriveNotifications(entity, { now = Date.now() } = {}) {
   const items = []
   const e = entity || {}
   const entity_id    = e.id || 'unknown'
   const jurisdiction = e.jurisdictionContext?.primary || 'UK-2026.1'
+
+  // Cashflow deficit → NC-CF. Folded into the one notification stream so it's a
+  // managed alert (Home shows it via the shared HomeAlertsPanel) rather than a
+  // bespoke full-width banner that dominates the dashboard.
+  let _ms = null
+  try { _ms = monthlySurplus(e) } catch (_err) { _ms = null }
+  if (_ms) {
+    const surplus = +_ms.surplus || 0
+    const deficit = +_ms.deficit || 0
+    const monthly = surplus < 0 ? -surplus : (deficit > 0 ? deficit : 0)
+    if (monthly > 0) {
+      items.push({
+        id:              'cashflow-deficit',
+        correlation_id:  'corr-cashflow-deficit',
+        entity_id,
+        jurisdiction,
+        type:            'NC-CF',
+        title:           `Monthly shortfall ${fmt(monthly)}/mo`,
+        body:            `You're spending ${fmt(monthly * 12)}/yr more than you bring in — closing this comes first.`,
+        cta:             { label: 'Fix this', route: 'flow' },
+        source_chip:     'From your cashflow',
+        created_at:      now,
+        acknowledged_at: null,
+        can_disable:     false,
+      })
+    }
+  }
 
   // APQ → NC-SC
   let apq = []

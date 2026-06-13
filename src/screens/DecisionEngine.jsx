@@ -1356,7 +1356,7 @@ function StepAnswer({ path, weights, engineRec, decId }) {
   const steps   = pathChecklist.length ? pathChecklist : (engineRec?.steps || [])
   const fca     = engineRec?.fcaBoundary || FCA_BOUNDARY
   const impact  = engineRec?.impact
-  const sources = engineRec?.sources || ['Your data', 'UK tax rules 2026/27', 'Ranked by your priorities']
+  const sources = engineRec?.sources || ['Your data', `UK tax rules ${TAX.taxYear}`, 'Ranked by your priorities']
 
   // Build the factor list from whatever real data this decision carries. Property
   // (path.impact) and engine paths (simulation.delta + engineRec.impact) have
@@ -1548,7 +1548,7 @@ function buildAdviserSummary({ decId, path, steps, reviewHint, engineRec }) {
   if (engineRec?.methodology?.assumptions?.length) { L.push(''); L.push('Assumptions:'); engineRec.methodology.assumptions.forEach(a => L.push(`  - ${a}`)) }
   if (reviewHint) { L.push(''); L.push(`When to revisit: ${reviewHint}`) }
   L.push('')
-  L.push('Basis: UK 2026/27 tax rules. Information and guidance only — NOT regulated financial advice. Verify with an FCA-authorised adviser before acting.')
+  L.push(`Basis: UK ${TAX.taxYear} tax rules. Information and guidance only — NOT regulated financial advice. Verify with an FCA-authorised adviser before acting.`)
   return L.join('\n')
 }
 

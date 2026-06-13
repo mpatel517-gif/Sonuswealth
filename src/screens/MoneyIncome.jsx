@@ -627,7 +627,7 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
           }}>
             <span style={{ fontSize: 16 }}>←</span> {getContent('income.backLabel', 'My Money')}
           </button>
-          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{getContent('income.yearChip', 'UK · 2026/27 rules')}</div>
+          <div style={{ fontSize: 11, color: 'var(--c-text3)' }}>{getContent('income.yearChip', `UK · ${TAX.taxYear} rules`)}</div>
         </div>
         <div style={{ fontSize: 22, fontWeight: 870, color: 'var(--c-text)', marginBottom: 16 }}>
           {getContent('income.screenTitle', 'Income Statement')}
@@ -652,7 +652,7 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
           </div>
         </Card>
         <div style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'center', marginTop: 16 }}>
-          {getContent('income.footerNote', 'Information based on UK 2026/27 rules. Not personal advice.')}
+          {getContent('income.footerNote', `Information based on UK ${TAX.taxYear} rules. Not personal advice.`)}
         </div>
       </div>
     )
@@ -857,7 +857,7 @@ export default function MoneyIncome({ entity, personaId, onBack, onNav }) {
 
       {/* 10. Statutory disclaimer */}
       <div style={{ fontSize: 10, color: 'var(--c-text3)', textAlign: 'center', marginTop: 20, paddingTop: 12, borderTop: '1px solid var(--c-sep)' }}>
-        Information based on UK 2026/27 rules. Not personal advice.
+        Information based on UK {TAX.taxYear} rules. Not personal advice.
       </div>
 
       {/* Per-source drill — the purpose-built Income panel, every source → leaf. */}

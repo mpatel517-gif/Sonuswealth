@@ -3462,7 +3462,7 @@ function AllowanceDrillPanel({ entity, onClose }) {
         )}
 
         <div style={{ fontSize: 11, color: 'var(--c-text3)', textAlign: 'center', lineHeight: 1.6, padding: '4px 0 12px' }}>
-          Based on UK 2026/27 thresholds · Not regulated advice
+          Based on UK {TAX.taxYear} thresholds · Not regulated advice
         </div>
       </div>
     </div>

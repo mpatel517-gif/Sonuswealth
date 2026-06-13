@@ -17,6 +17,21 @@ Status key: ✅ done+verified · 🔄 partial · ☐ open · ↗ engine/data-lay
 
 ---
 
+## AUTONOMOUS RUN LOG (2026-06-13) — completed, committed, pushed
+
+| Item | Outcome |
+|------|---------|
+| #50 (P1) | Pension AA silent-£0 honesty added on MyMoney (T&E already had it). Verified: mrT contributions=0 → provisional fires. |
+| #49 (P1) | `classifyAsset` separator-normalised → fixed real wrong-account bugs (`premium bonds→EMI`, `cash isa→NULL`). Write-path classifier audit clean (only strict-gated importer touches free text). |
+| F5 | Cashflow tiles verified live: render + tie-out (−£900=Home) + no console errors + no mobile overflow. Full dark pixel-matrix blocked by screenshot wedge. |
+| #44 | Confirmed satisfied — every primary surface drawered (Settings=Sections, Cashflow=tiles, MyMoney=DomainCards, Risk=views, T&E/SA/Timeline=drawers). |
+| #53 Theme F | All 11 side-stripe borders → full borders (grep-clean). Typography half RECLASSIFIED: 268 sub-11px (not ~29), mostly intentional chart micro-labels → needs per-surface design pass, not a blanket bump. |
+| #52 (P1) | Life-event log completed 10→16 subtypes on Home (logging+fold+dim-reopen already worked; added the 6 incl. bereavement). Verified live: 16 chips render. |
+
+**Remaining = #51 (Home spec zones — needs the §8 design-dialogue process, not blind autonomous build) + Tier-4 Phase-2/founder-gated (need vendor/architecture decisions).** Gap-analysis agent claims corrected where wrong (life-event log + cashflow-Q5 + home-Q2 were already built).
+
+---
+
 ## A. The original 13-item list (+ import, item 14)
 
 | # | Item | Status | Where |

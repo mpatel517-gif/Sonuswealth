@@ -248,7 +248,11 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
 
   const isCompound = (tree.events ?? []).length > 1
   const recommendedId = tree.recommendation?.pathId
-  const enginePure = tree._validation?.dropped === 0
+  // A fallback tree is canned demo content (the live engine couldn't be reached
+  // — e.g. no API key). Its numbers are illustrative, NOT computed from this
+  // user's finances, so it must not claim engine validation (CLAUDE.md §9.2).
+  const isFallback = !!tree._fallback
+  const enginePure = !isFallback && tree._validation?.dropped === 0
 
   // Separate named options from unconsidered (option D or last option)
   const allOptions = tree.options ?? []
@@ -277,6 +281,25 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
         }}>{tree.statement}</p>
       )}
 
+      {/* Illustrative banner — canned fallback content, not computed from this
+          user's data. Honest framing so the figures below aren't mistaken for
+          engine-validated numbers (founder 2026-06-13: demo trees were badged
+          "engine-validated"). */}
+      {isFallback && (
+        <div role="note" style={{
+          margin: '0 0 12px', padding: '10px 14px', borderRadius: 10,
+          background: 'var(--c-surface)', border: '1px solid var(--c-gold)',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-gold)', marginBottom: 2 }}>
+            Illustrative example
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.5 }}>
+            These figures are a worked example, not computed from your finances. Connect the
+            live engine to model your actual numbers for this decision.
+          </div>
+        </div>
+      )}
+
       {/* Compound statement (if compound) */}
       {isCompound && tree.compoundStatement && (
         <div style={{
@@ -292,7 +315,13 @@ export default function DecisionTree({ tree, events, onCommit, onSaveScenario, o
 
       {/* Engine pure badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        {enginePure ? (
+        {isFallback ? (
+          <span style={{
+            fontSize: 11, padding: '2px 8px', borderRadius: 999,
+            background: 'rgba(255,189,89,.12)', color: 'var(--c-gold)',
+            border: '1px solid rgba(255,189,89,.3)', fontWeight: 600,
+          }}>Illustrative — not from your data</span>
+        ) : enginePure ? (
           <span style={{
             fontSize: 11, padding: '2px 8px', borderRadius: 999,
             background: 'rgba(93,219,194,.12)', color: 'var(--c-acc)',

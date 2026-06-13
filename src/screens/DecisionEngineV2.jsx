@@ -381,8 +381,10 @@ export default function DecisionEngineV2({ entity, initialQuery, initialEventIds
         {/* Tree */}
         {orc.tree && (
           <div ref={scrollRef} style={{ padding: '16px 20px' }}>
-            {/* Validation summary */}
-            {orc.report && (
+            {/* Validation summary — only claim engine validation when the tree
+                actually came from the engine. Fallback (canned demo) trees say
+                so via the Illustrative banner inside DecisionTree instead. */}
+            {orc.report && !orc.tree?._fallback && (
               <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, display: 'flex', gap: 12 }}>
                 <span>{orc.report.validated} engine-validated consequences</span>
                 {orc.report.dropped > 0 && (

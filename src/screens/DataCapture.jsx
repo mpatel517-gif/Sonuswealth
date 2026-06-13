@@ -51,11 +51,15 @@ const REAL_PARSER_WIRED =
 // at all until encryption + parser are real. Dev builds (IS_DEV) still see
 // live channels so manual QA works.
 const UPLOAD_LIVE = IS_DEV || REAL_PARSER_WIRED
-const _stubBadge = 'Coming soon'
+// Upload + Scan are fully BUILT (parser pipeline, edge function, FP-5 verify all
+// wired). They are inert only because real document reading is keyed to the
+// account's Anthropic key, which switches on via build env (VITE_PARSER_PROVIDER
+// =anthropic-vision). So their gated state is "awaiting activation", NOT "Phase 2
+// / not built" — kept distinct from Connect/Voice which are genuinely unbuilt.
+const _stubBadge = 'Ready · switch on with your key'
 const _stubBody = (verb) =>
-  `${verb} will land when document parsing + encryption-at-rest are wired. ` +
-  `Until then, please use manual entry — anything you type is stored at confidence 1.0 ` +
-  `and is the safest path for sensitive figures.`
+  `${verb} is built and ready. It switches on the moment document reading is enabled for your account ` +
+  `(one server key). Until then, manual entry is the safest path — anything you type is stored at confidence 1.0.`
 
 const CHANNELS = [
   {
@@ -68,7 +72,7 @@ const CHANNELS = [
     badge: UPLOAD_LIVE ? 'Statements · Wills · LPA' : _stubBadge,
     accept: UPLOAD_LIVE ? '.pdf,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.heic' : null,
     capture: null,
-    status: UPLOAD_LIVE ? 'live' : 'phase2',
+    status: UPLOAD_LIVE ? 'live' : 'awaiting',
   },
   {
     id: 'scan',
@@ -80,7 +84,7 @@ const CHANNELS = [
     badge: UPLOAD_LIVE ? 'Paper · On-the-go' : _stubBadge,
     accept: UPLOAD_LIVE ? 'image/*' : null,
     capture: UPLOAD_LIVE ? 'environment' : null,
-    status: UPLOAD_LIVE ? 'live' : 'phase2',
+    status: UPLOAD_LIVE ? 'live' : 'awaiting',
   },
   {
     id: 'manual',
@@ -300,8 +304,9 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
   }
 
   function openChannel(c) {
-    // Phase-2 channels are non-functional placeholders.
-    if (c.status === 'phase2') { setActive(c.id); return }
+    // Phase-2 (unbuilt) and awaiting-key (built, inert) channels show an
+    // explainer rather than opening a file picker that can't parse yet.
+    if (c.status === 'phase2' || c.status === 'awaiting') { setActive(c.id); return }
     setActive(c.id)
     onChannelOpen?.(c.id)
     channelRef.current = c
@@ -513,7 +518,9 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
 
       {(() => {
         const renderTile = (c) => {
-          const isPhase2 = c.status === 'phase2'
+          const awaiting = c.status === 'awaiting'   // built, needs the key
+          const isPhase2 = c.status === 'phase2'      // genuinely unbuilt
+          const dim = isPhase2
           return (
             <button
               key={c.id}
@@ -523,14 +530,14 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
               style={{
                 textAlign: 'left',
                 cursor: isPhase2 ? 'not-allowed' : 'pointer',
-                opacity: isPhase2 ? 0.6 : 1,
+                opacity: dim ? 0.6 : (awaiting ? 0.92 : 1),
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: 14,
-                  background: isPhase2 ? 'var(--c-surface2)' : 'var(--c-tint-mint)',
-                  color: isPhase2 ? 'var(--c-text3)' : 'var(--c-mint-text)',
+                  background: isPhase2 ? 'var(--c-surface2)' : awaiting ? 'var(--c-tint-amber, #FFF3D6)' : 'var(--c-tint-mint)',
+                  color: isPhase2 ? 'var(--c-text3)' : awaiting ? 'var(--c-text)' : 'var(--c-mint-text)',
                   display: 'grid', placeItems: 'center',
                   fontSize: 22, fontWeight: 800, flexShrink: 0,
                 }}>{c.icon}</div>
@@ -540,7 +547,7 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
                       {c.title}
                     </span>
                     <span
-                      className={`sw-chip sw-chip-sm ${isPhase2 ? 'sw-chip-amber' : ''}`}
+                      className={`sw-chip sw-chip-sm ${(isPhase2 || awaiting) ? 'sw-chip-amber' : ''}`}
                       style={{ fontSize: 9 }}
                     >
                       {c.badge}
@@ -551,30 +558,29 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
                   </div>
                 </div>
                 <span style={{ color: 'var(--c-text3)', fontSize: 18, alignSelf: 'center' }}>
-                  {isPhase2 ? '⏳' : '›'}
+                  {isPhase2 ? '⏳' : awaiting ? '🔑' : '›'}
                 </span>
               </div>
             </button>
           )
         }
-        const live = CHANNELS.filter(c => c.status !== 'phase2')
+        const live = CHANNELS.filter(c => c.status === 'live')
+        const awaiting = CHANNELS.filter(c => c.status === 'awaiting')
         const soon = CHANNELS.filter(c => c.status === 'phase2')
+        const Group = ({ label, items, note }) => items.length === 0 ? null : (
+          <>
+            <div className="sw-eyebrow" style={{ marginTop: 18, marginBottom: note ? 2 : 8, color: 'var(--c-text3)' }}>{label}</div>
+            {note && <div style={{ fontSize: 11, color: 'var(--c-text3)', marginBottom: 8, lineHeight: 1.5 }}>{note}</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{items.map(renderTile)}</div>
+          </>
+        )
         return (
           <div style={{ marginBottom: 20 }}>
             <div className="sw-eyebrow" style={{ marginBottom: 8 }}>Available now</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {live.map(renderTile)}
-            </div>
-            {soon.length > 0 && (
-              <>
-                <div className="sw-eyebrow" style={{ marginTop: 18, marginBottom: 8, color: 'var(--c-text3)' }}>
-                  Coming soon
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {soon.map(renderTile)}
-                </div>
-              </>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{live.map(renderTile)}</div>
+            <Group label="Built · switches on with your key" items={awaiting}
+              note="These are finished. They turn on the moment document reading is enabled for your account." />
+            <Group label="Coming in Phase 2" items={soon} />
           </div>
         )
       })()}
@@ -644,17 +650,18 @@ export default function DataCapture({ onBack, onChannelOpen, onCommit, entity })
 
       {/* Stub state when channel selected but no flow available */}
       {active && !parsing && !parsed && !manualOpen && (() => {
-        const phase2Channel = CHANNELS.find(c => c.id === active && c.status === 'phase2')
-        if (phase2Channel) {
+        const gatedChannel = CHANNELS.find(c => c.id === active && (c.status === 'phase2' || c.status === 'awaiting'))
+        if (gatedChannel) {
+          const awaiting = gatedChannel.status === 'awaiting'
           return (
             <div className="sw-tile" style={{
               background: 'var(--c-tint-neutral)', textAlign: 'center',
             }}>
               <div className="sw-eyebrow" style={{ color: 'var(--c-acc)' }}>
-                {phase2Channel.title} — Phase 2
+                {gatedChannel.title} {awaiting ? '— ready to switch on' : '— Phase 2'}
               </div>
               <div style={{ fontSize: 12, color: 'var(--c-text2)', marginTop: 6, lineHeight: 1.5 }}>
-                {phase2Channel.body}
+                {gatedChannel.body}
               </div>
               <button onClick={() => setActive(null)} style={{
                 marginTop: 10, padding: '6px 14px', fontSize: 12,

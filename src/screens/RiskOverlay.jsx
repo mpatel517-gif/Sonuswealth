@@ -23,7 +23,7 @@ import { BRAND } from '../config/brand.js'
 import { RiskBody } from './Risk.jsx'  // re-use composed body
 import { Num, FadeInOnMount } from '../components/shared/index.js'
 
-export default function RiskOverlay({ entity, onClose, originLabel = 'Home', onNav, onDrillMetric, onCommit, onAddProtection }) {
+export default function RiskOverlay({ entity, personaId, onClose, originLabel = 'Home', onNav, onDrillMetric, onCommit, onAddProtection }) {
   const risk = calcRisk(entity)
   const band = risk.band || riskBand(risk.total)
   const fq   = calcFQ(entity)
@@ -158,6 +158,7 @@ export default function RiskOverlay({ entity, onClose, originLabel = 'Home', onN
         {/* All zones — same composition as full-page Risk.jsx */}
         <RiskBody
           entity={entity}
+          personaId={personaId}
           onNav={onNav}
           onDrillMetric={onDrillMetric}
           onCommit={onCommit}

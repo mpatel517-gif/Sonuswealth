@@ -967,7 +967,7 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
             IHT pre/post-2027 delta card. R1 SIPP-IHT chip seeds the hash;
             R7 SCENARIO_SAVED back_flow bumps ihtForceKey for live recompute. */}
         {tab === 'tax'   && <TaxEstate   entity={entity} personaId={persona} onCommit={handleCommit} onHome={goHome} onBack={goBack} onNav={setTabSafe} onOpenRisk={() => setShowRiskOverlay(true)} onDrillMetric={pushDetail} hash={tabHash} seed={tabSeed} ihtForceKey={ihtForceKey} onOpenDecision={openDecision} />}
-        {tab === 'risk'  && <Risk        entity={entity} personaId={persona} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={(type) => { /* routed to protection add flow */ }} onOpenDecision={openDecision} />}
+        {tab === 'risk'  && <Risk        entity={entity} personaId={persona} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} onCommit={handleCommit} onAddProtection={() => setTabSafe('money/protection')} onOpenDecision={openDecision} />}
         {tab === 'timeline'  && <Timeline     entity={sessionDecisions.length ? { ...entity, decisions: [...sessionDecisions, ...(entity?.decisions || [])] } : entity} onHome={goHome} onBack={goBack} onNav={setTabSafe} onDrillMetric={pushDetail} />}
         </Suspense>
         </ErrorBoundary>
@@ -1062,7 +1062,12 @@ export default function Dashboard({ entity, persona, personaList, onSwitchPerson
       {showRiskOverlay && (
         <RiskOverlay
           entity={entity}
+          personaId={persona}
           onClose={() => setShowRiskOverlay(false)}
+          onCommit={handleCommit}
+          onDrillMetric={pushDetail}
+          onNav={(t) => { setShowRiskOverlay(false); setTabSafe(t) }}
+          onAddProtection={() => { setShowRiskOverlay(false); setTabSafe('money/protection') }}
         />
       )}
 

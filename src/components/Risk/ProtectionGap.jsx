@@ -4,7 +4,7 @@
 // real underwriting comes via the protection-quote integration at s02a.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { fmt } from '../../engine/fq-calculator.js'
+import { fmt, TAX } from '../../engine/fq-calculator.js'
 
 export default function ProtectionGap({ entity, onAction }) {
   const a    = entity.assets || {}
@@ -12,13 +12,15 @@ export default function ProtectionGap({ entity, onAction }) {
   const target = entity.targetIncome || 0
   const dependants = entity.dependants?.length || 0
 
-  // Suggested life cover ≈ 10× target income for households with dependants
-  const lifeCoverNeed = dependants > 0 ? target * 10 : target * 5
+  // Planning heuristics sourced from the rules bundle (UK-PROT-NEED-01) — never
+  // hardcoded here (CLAUDE.md §6.2). Life cover ≈ multiple × income.
+  const lifeMultiple = dependants > 0 ? TAX.lifeCoverMultipleDep : TAX.lifeCoverMultipleNoDep
+  const lifeCoverNeed = target * lifeMultiple
   const lifeCoverHave = prot.lifeInsurance?.amount || 0
   const lifeGap = Math.max(0, lifeCoverNeed - lifeCoverHave)
 
-  // Income protection ≈ 60% of target income annual benefit
-  const ipNeed = Math.round(target * 0.6)
+  // Income protection ≈ bundle fraction of target income (annual benefit).
+  const ipNeed = Math.round(target * TAX.ipBenefitFraction)
   const ipHave = (prot.incomeProtection?.monthlyBenefit || 0) * 12
   const ipGap = Math.max(0, ipNeed - ipHave)
 
@@ -50,12 +52,12 @@ export default function ProtectionGap({ entity, onAction }) {
       <GapRow
         label="Life cover"
         have={lifeCoverHave} need={lifeCoverNeed}
-        suffix="" sub={`Suggested: ${dependants > 0 ? '10× income' : '5× income'}`}
+        suffix="" sub={`Suggested: ${lifeMultiple}× income`}
       />
       <GapRow
         label="Income protection"
         have={ipHave} need={ipNeed}
-        suffix="/yr" sub="Suggested: 60% of target income"
+        suffix="/yr" sub={`Suggested: ${Math.round(TAX.ipBenefitFraction * 100)}% of target income`}
       />
 
       <div style={{

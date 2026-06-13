@@ -64,6 +64,7 @@ import {
   // X28TopBar deliberately not imported — spec §33c O-RISK-17 bans X28 on Risk.
 } from '../components/shared/index.js'
 import ProtectionGap from '../components/Risk/ProtectionGap.jsx'
+import QuestionBankEditor from '../components/Risk/QuestionBankEditor.jsx'
 
 // ── Engine-band → CrossMap5x5 prop mapper ─────────────────────────────────
 const FQ_NAME_MAP = {
@@ -1432,6 +1433,68 @@ function AttitudeHistory({ personaId }) {
   )
 }
 
+// ── Confidence card (Z6, spec §8.1) ─────────────────────────────────────────
+// How sure we are of the Risk Score — three levels per Risk rules v1.1 §11.
+// Previously only a chip on the anchor; this restores the dedicated card the
+// spec calls for, framed in plain English (no "primary/secondary input" jargon).
+function ConfidenceCard({ risk }) {
+  const level = risk?.confidenceLevel || 'low'
+  const meta = {
+    high:   { label: 'High confidence',   color: 'var(--c-acc)',     text: 'We have the key inputs your Risk Score needs. Only optional detail is missing.' },
+    medium: { label: 'Medium confidence', color: 'var(--c-warning)', text: 'Your score uses your main inputs, but some details are estimated. Adding income, protection or estate details would sharpen it.' },
+    low:    { label: 'Low confidence',    color: 'var(--c-danger)',  text: 'Some key inputs are missing or assumed, so treat the score as indicative. Adding your income, protection and estate details will raise it.' },
+  }[level] || {}
+  return (
+    <div className="card" style={{ marginTop: 12 }}>
+      <div className="sw-eyebrow" style={{ marginBottom: 6 }}>How sure we are</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color }} />
+        <span style={{ fontSize: 14, fontWeight: 800, color: meta.color }}>{meta.label}</span>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.55 }}>{meta.text}</div>
+    </div>
+  )
+}
+
+// ── Attitude review re-prompt ───────────────────────────────────────────────
+// Surfaces a gentle nudge when the user has never set their risk perception, or
+// last answered more than 12 months ago (spec §6.6 annual-anniversary trigger).
+// Reads the event log so the cadence is honest, not hardcoded.
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
+function RiskReviewPrompt({ personaId, onReview }) {
+  const log = useEventsFor(personaId)
+  const last = (log || [])
+    .filter(ev => ev.type === 'risk_perception_committed')
+    .reduce((max, ev) => Math.max(max, ev.ts || 0), 0)
+  let stale = false, msg = ''
+  if (!last) {
+    // Never answered — handled by the in-card "Not set" prompt, no banner.
+    return null
+  }
+  let ageMs = 0
+  try { ageMs = Date.now() - last } catch { ageMs = 0 }
+  if (ageMs < ONE_YEAR_MS) return null
+  stale = true
+  const months = Math.round(ageMs / (30 * 24 * 60 * 60 * 1000))
+  msg = `You last reviewed your risk attitude about ${months} months ago. Attitudes drift — worth a refresh.`
+  if (!stale) return null
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+      padding: '10px 12px', borderRadius: 10,
+      background: 'rgba(255,179,71,0.08)', border: '1px solid rgba(255,179,71,0.28)',
+    }}>
+      <span style={{ fontSize: 16 }}>⟳</span>
+      <span style={{ flex: 1, fontSize: 12, color: 'var(--c-text2)', lineHeight: 1.45 }}>{msg}</span>
+      <button onClick={onReview} className="sw-press" style={{
+        flexShrink: 0, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+        background: 'var(--c-acc)', color: 'var(--c-bg)', border: 'none',
+        borderRadius: 100, padding: '6px 12px',
+      }}>Review</button>
+    </div>
+  )
+}
+
 // ── Take Action top-3 (Z9) — staggered cards ──────────────────────────────
 function TakeAction({ entity, onAct }) {
   let actions = []
@@ -1543,8 +1606,8 @@ function WhatHelpsMost({ entity, onNav, onAddProtection }) {
                 color:'var(--c-text3)', textTransform:'uppercase', opacity:0.7,
               }}>est · not advice</span>
             </th>
-            <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, textAlign:'right', cursor:'pointer' }}>Effort</th>
-            <th className="sw-press" style={{ padding:'6px 8px', fontWeight:700, textAlign:'right', cursor:'pointer' }}>Δ Risk</th>
+            <th style={{ padding:'6px 8px', fontWeight:700, textAlign:'right' }}>Effort</th>
+            <th style={{ padding:'6px 8px', fontWeight:700, textAlign:'right' }}>Δ Risk</th>
           </tr>
         </thead>
         <tbody key={shockId}>
@@ -1596,7 +1659,10 @@ function WhatHelpsMost({ entity, onNav, onAddProtection }) {
 }
 
 // ── Life-event banner (Z7) — slides in from top ───────────────────────────
-function LifeEventBanner({ entity }) {
+// onReview opens the perception questionnaire so the "re-answer" affordance is
+// live, not a dead caption (fixes prior S-08). This is the life-event re-prompt
+// trigger (spec §6.6 (a) — re-answer on any life event).
+function LifeEventBanner({ entity, onReview }) {
   let events = []
   try { events = lifeEventPaths(entity) || [] } catch { events = [] }
   if (!events || events.length === 0) return null
@@ -1616,9 +1682,17 @@ function LifeEventBanner({ entity }) {
         <span>Life event detected — review your risk profile</span>
         <AskChip id="RISK-AI-6" label="What should I review?" />
       </div>
-      <div style={{ fontSize:12, color:'var(--c-text2)', lineHeight:1.55 }}>
-        {events.length} prompt{events.length === 1 ? '' : 's'} pending. Tap to re-answer affected dimensions.
+      <div style={{ fontSize:12, color:'var(--c-text2)', lineHeight:1.55, marginBottom: onReview ? 10 : 0 }}>
+        {events.length} prompt{events.length === 1 ? '' : 's'} pending. A life event can
+        change how much risk you can take — worth re-checking your attitude.
       </div>
+      {onReview && (
+        <button onClick={onReview} className="sw-press" style={{
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          background: 'var(--c-acc)', color: 'var(--c-bg)', border: 'none',
+          borderRadius: 100, padding: '8px 16px',
+        }}>Re-check my risk attitude →</button>
+      )}
     </div>
   )
 }
@@ -1863,11 +1937,34 @@ const PERCEPTION_QUESTIONS = [
   },
 ]
 
-function RiskPerceptionQuestionnaire({ entity, onClose, onCommit }) {
+// Version tag for the perception question set. Every committed answer carries
+// it, so when questions are edited/added later (the future editable bank) old
+// answers stay self-describing and the history never silently mismatches. This
+// is the foundation the runtime question bank edits.
+const RISK_QUESTION_SET_VERSION = 'risk-perception-v1'
+
+// The effective question bank = admin-edited set (folded onto entity) or the
+// built-in default. The version travels with every committed answer.
+function getQuestionBank(entity) {
+  const b = entity?.riskQuestionBank
+  return Array.isArray(b) && b.length ? b : PERCEPTION_QUESTIONS
+}
+function getBankVersion(entity) {
+  return entity?.riskQuestionBankVersion || RISK_QUESTION_SET_VERSION
+}
+
+function RiskPerceptionQuestionnaire({ entity, onClose, onCommit, questions, version }) {
+  const bank = (Array.isArray(questions) && questions.length) ? questions : PERCEPTION_QUESTIONS
+  const ver = version || RISK_QUESTION_SET_VERSION
   const [step, setStep] = useState(0)
-  const [answers, setAnswers] = useState({})
-  const q = PERCEPTION_QUESTIONS[step]
-  const total = PERCEPTION_QUESTIONS.length
+  const [answers, setAnswers] = useState(() => ({
+    // Pre-fill from the user's current answers so re-answering edits, not resets.
+    riskAppetite: entity?.riskAppetite || undefined,
+    timeHorizon:  entity?.riskTimeHorizon || undefined,
+    lossReaction: entity?.riskLossReaction || undefined,
+  }))
+  const q = bank[Math.min(step, bank.length - 1)]
+  const total = bank.length
 
   function selectAnswer(val) {
     const next = { ...answers, [q.id]: val }
@@ -1875,7 +1972,12 @@ function RiskPerceptionQuestionnaire({ entity, onClose, onCommit }) {
     if (step < total - 1) {
       setStep(step + 1)
     } else {
-      onCommit?.({ type: 'risk_perception_committed', ts: Date.now(), answers: next })
+      onCommit?.({
+        type: 'risk_perception_committed',
+        ts: Date.now(),
+        questionSetVersion: ver,
+        answers: next,
+      })
     }
   }
 
@@ -2016,10 +2118,11 @@ function SuggestedRiskLevel({ entity, risk }) {
 // sticky Risk-primary anchor at the top, hide the Z1 ring card here to avoid
 // the 4×-on-page score-78 duplication called out in HIGH 3.1.
 // ─────────────────────────────────────────────────────────────────────────────
-export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
+export function RiskBody({ entity, personaId, admin = false, onAddProtection, onNav, onDrillMetric, onCommit, suppressPrimaryRing = false }) {
   const [activeDim, setActiveDim] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
   const [riskQOpen, setRiskQOpen] = useState(false)
+  const [bankEditorOpen, setBankEditorOpen] = useState(false)
 
   const risk = calcRisk(entity)
   const fq   = calcFQ(entity)
@@ -2037,8 +2140,38 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
     })
   } catch { shocks = [] }
 
+  // ── Drawer header badges — at-a-glance status so a collapsed drawer tells
+  //    you what's inside without opening it. ────────────────────────────────
+  const band = risk.band || riskBand(risk.total)
+  const appetiteKey = entity?.riskAppetite
+  let actionCount = 0
+  try { actionCount = (calcAPQ(entity) || []).filter(a => (a.impact?.riskScore || 0) > 0).slice(0, 3).length } catch {}
+  const _attLog = useEventsFor(personaId)
+  const attVersions = (_attLog || []).filter(ev => ev.type === 'risk_perception_committed').length
+  const severeShock = shocks.some(s => (s.rsDelta || 0) <= -10)
+  const badge = (text, color) => (
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100,
+      color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
+      border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`, whiteSpace: 'nowrap',
+    }}>{text}</span>
+  )
+
   return (
     <>
+      {/* De-weight card-in-card: the drawer IS the card, so inner class-styled
+          cards drop their border/background/shadow. Cards with an inline accent
+          (Shock Lab, shock cards, protection plan, profile cell) override these
+          via inline-style specificity and keep their emphasis. Scoped to the
+          RevealCard drawer bodies (id="rc-risk-*-body") so nothing else moves. */}
+      <style>{`
+        [id^="rc-risk-"] .card {
+          background: transparent;
+          border-color: transparent;
+          box-shadow: none;
+        }
+      `}</style>
+
       {/* Z1: Ring + Setback chip + Confidence chip — elevated card.
           Suppressed on the full-page Risk surface because RiskPrimaryAnchor
           already renders the sticky primary ring + ConfBadge + SetbackChip. */}
@@ -2063,7 +2196,7 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
       {/* Top signal: life-event banner — only renders when triggered, kept
           above the drawers so a re-open prompt is never hidden in a closed
           section (Z7). */}
-      <LifeEventBanner entity={entity} />
+      <LifeEventBanner entity={entity} onReview={() => setRiskQOpen(true)} />
 
       {/* ── Drawer 1 · Where I stand (open by default) ─────────────────────
           Diagnostic anchor (spec §2.4 diagnostic-first): the band-name
@@ -2099,7 +2232,10 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
           here and goes through sonuswealth-compliance before its copy ships —
           it must state category meaning + generic ranges, never products or
           "you should". */}
-      <RevealCard cardId="risk-investing" title="The risk in my investing">
+      <RevealCard cardId="risk-investing" title="The risk in my investing"
+        headerAccessory={badge(appetiteKey ? (APPETITE_SHORT[appetiteKey] || appetiteKey) : 'Not set', appetiteKey ? 'var(--c-acc)' : 'var(--c-warning)')}>
+        {/* Annual re-prompt (spec §6.6) — shows only when the last answer is >12mo old */}
+        <RiskReviewPrompt personaId={personaId} onReview={() => setRiskQOpen(true)} />
         {(() => {
           const appetite = entity?.riskAppetite
           const APPETITE_LABELS = {
@@ -2163,13 +2299,6 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
                 >
                   Update your risk perception — 60-second questionnaire →
                 </button>
-                {riskQOpen && (
-                  <RiskPerceptionQuestionnaire
-                    entity={entity}
-                    onClose={() => setRiskQOpen(false)}
-                    onCommit={(answers) => { onCommit?.(answers); setRiskQOpen(false) }}
-                  />
-                )}
               </div>
             </FadeInOnMount>
           )
@@ -2177,12 +2306,27 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
 
         {/* Suggested risk level — willingness vs capacity (compliance-gated copy) */}
         <SuggestedRiskLevel entity={entity} risk={risk} />
+
+        {/* Admin-only: edit the question bank. Hidden from end users — a runtime
+            question editor is a rules-admin function, not a user one. */}
+        {admin && (
+          <button onClick={() => setBankEditorOpen(true)} className="sw-press"
+            style={{
+              marginTop: 12, width: '100%', padding: '9px 14px', borderRadius: 100,
+              background: 'transparent', border: '1px dashed var(--c-border)',
+              fontSize: 12, fontWeight: 700, color: 'var(--c-text3)',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+            ⚙ Edit risk questions (admin)
+          </button>
+        )}
       </RevealCard>
 
       {/* ── Drawer 3 · What could go wrong ──────────────────────────────────
           Stress-test cluster (spec §2.4): protection gap, the live Shock Lab,
           and the engine-recomputed shock scenarios. */}
-      <RevealCard cardId="risk-wrong" title="What could go wrong">
+      <RevealCard cardId="risk-wrong" title="What could go wrong"
+        headerAccessory={badge(severeShock ? 'High impact' : `${shocks.length} stress tests`, severeShock ? 'var(--c-warning)' : 'var(--c-text3)')}>
         {/* Z4: Protection gap card */}
         <ProtectionGap entity={entity} onAction={() => onAddProtection?.('life-cover')} />
 
@@ -2212,7 +2356,8 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
       {/* ── Drawer 4 · What I'd do about it ─────────────────────────────────
           Action cluster (spec §2.4): top-3 ranked actions, the what-helps-most
           lens, and the protection-plan anchor. */}
-      <RevealCard cardId="risk-act" title="What I'd do about it">
+      <RevealCard cardId="risk-act" title="What I'd do about it"
+        headerAccessory={actionCount ? badge(`${actionCount} action${actionCount === 1 ? '' : 's'}`, 'var(--c-acc)') : null}>
         {/* Z9: Take Action top 3 — staggered.
             onAct wires the row click to a navigation/ask event so it's no
             longer a silent affordance. Dashboard or any listener can route. */}
@@ -2243,12 +2388,37 @@ export function RiskBody({ entity, personaId, onAddProtection, onNav, onDrillMet
       {/* ── Drawer 5 · How it's changed ─────────────────────────────────────
           History cluster (spec §2.4): the Risk Score time-series. Attitude
           version-history lands here next once the event→entity loop is wired. */}
-      <RevealCard cardId="risk-changed" title="How it's changed">
+      <RevealCard cardId="risk-changed" title="How it's changed"
+        headerAccessory={attVersions ? badge(`${attVersions} version${attVersions === 1 ? '' : 's'}`, 'var(--c-text3)') : null}>
         {/* Z8: History (own picker, line draws in) */}
         <RiskHistory entity={entity} />
         {/* Z8b: Attitude version history — each committed perception answer, dated */}
         <AttitudeHistory personaId={personaId} />
+        {/* Z6: Confidence — how sure we are of the score (spec §8.1) */}
+        <ConfidenceCard risk={risk} />
       </RevealCard>
+
+      {/* Risk perception questionnaire — rendered at overlay level so any
+          re-prompt (life-event banner, annual nudge) can open it regardless of
+          which drawer is open. */}
+      {riskQOpen && (
+        <RiskPerceptionQuestionnaire
+          entity={entity}
+          questions={getQuestionBank(entity)}
+          version={getBankVersion(entity)}
+          onClose={() => setRiskQOpen(false)}
+          onCommit={(answers) => { onCommit?.(answers); setRiskQOpen(false) }}
+        />
+      )}
+
+      {/* Admin-only: edit the perception question bank (event-sourced) */}
+      {bankEditorOpen && (
+        <QuestionBankEditor
+          entity={entity}
+          onClose={() => setBankEditorOpen(false)}
+          onCommit={(ev) => { onCommit?.(ev); setBankEditorOpen(false) }}
+        />
+      )}
 
       {/* Dimension detail sheet */}
       {activeDim && (
@@ -2413,6 +2583,13 @@ export default function Risk({ entity, personaId, onHome, onBack, originLabel = 
   const fq   = calcFQ(entity)
   const nw   = netWorth(entity)
 
+  // Admin gate for the question-bank editor. Founder-accessible via ?admin=1,
+  // hidden from end users (a runtime question editor is a rules-admin function).
+  // TODO: bind to a real admin role once rules-admin (Tier-4) lands.
+  const isAdmin = typeof window !== 'undefined' && (() => {
+    try { return new URLSearchParams(window.location.search).get('admin') === '1' } catch { return false }
+  })()
+
   // No X28 state on Risk — see spec §33c O-RISK-17. RiskHistory carries its
   // own 1/3/6/12 mo selector for change-over-time.
 
@@ -2443,6 +2620,7 @@ export default function Risk({ entity, personaId, onHome, onBack, originLabel = 
       <RiskBody
         entity={entity}
         personaId={personaId}
+        admin={isAdmin}
         onDrillMetric={onDrillMetric}
         onCommit={onCommit}
         onAddProtection={onAddProtection}

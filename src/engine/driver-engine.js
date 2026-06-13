@@ -56,6 +56,7 @@ export function driver(entity, metric, level = 0) {
     case 'plan:estate':    return drvPlanEstate(entity, level)
     case 'plan:gift':      return drvPlanGift(entity, level)
     case 'plan:tax':       return drvPlanTax(entity, level)
+    case 'will':           return drvWill(entity, level)
     default:
       // Net-worth composition sub-drills — the Home anchor fires
       // `netWorth:<category>` when a user taps a composition segment. Resolve to
@@ -321,6 +322,41 @@ function drvPlanTax(entity, level) {
         source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
       { metric: 'pensionRoom', value: pensionRemain, unit: 'gbp',
         formula: `Pension annual allowance: £60,000 (tapered for income above £260,000). £${pensionRemain.toLocaleString()} remaining. Carry-forward of unused allowance from prior 3 years may apply.`,
+        source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
+    ],
+  }
+}
+
+// ─── Will / LPA drill ────────────────────────────────────────────────────────
+// The Home + T&E will-status card fires onDrillMetric('will'). Resolve to the
+// estate-readiness methodology (will currency, both LPA types) rather than the
+// "not yet wired" stub. Reuses willLpaStatus — no recompute.
+function drvWill(entity, level) {
+  const wls = safe(() => willLpaStatus(entity), null)
+  const willExists = wls?.will?.exists || wls?.will?.current || false
+  const willStale  = wls?.will?.stale_flag || false
+  const lpaPF      = wls?.lpa?.property_financial?.exists || wls?.lpa?.propertyFinance || false
+  const lpaHW      = wls?.lpa?.health_welfare?.exists || false
+  const ready = (willExists && !willStale ? 1 : 0) + (lpaPF ? 1 : 0) + (lpaHW ? 1 : 0)
+  const formula = [
+    `Will: ${willExists ? (willStale ? 'in place but 5+ years old — review advised' : 'current') : 'MISSING — estate would pass under intestacy rules'}.`,
+    `LPA (Property & Finance): ${lpaPF ? 'registered' : 'not registered'}.`,
+    `LPA (Health & Welfare): ${lpaHW ? 'registered' : 'not registered'}.`,
+  ].join(' ')
+  return {
+    metric: 'will',
+    value: ready,
+    unit: 'count',
+    formula,
+    source: 'engine',
+    confidence: wls ? 'medium' : 'low',
+    terminal: false,
+    drivers: level >= 1 ? [] : [
+      { metric: 'willStatus', value: willExists ? 1 : 0, unit: 'count',
+        formula: willExists ? (willStale ? 'A will exists but is 5+ years old — life changes may have outdated it.' : 'A current will is on file.') : 'No will found — without one, the estate is distributed under intestacy rules, not your wishes.',
+        source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
+      { metric: 'lpa', value: (lpaPF ? 1 : 0) + (lpaHW ? 1 : 0), unit: 'count',
+        formula: `Property & Finance LPA: ${lpaPF ? 'registered' : 'not registered'}. Health & Welfare LPA: ${lpaHW ? 'registered' : 'not registered'}. An LPA lets someone act for you if you lose capacity.`,
         source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
     ],
   }

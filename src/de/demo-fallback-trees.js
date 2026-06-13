@@ -931,7 +931,11 @@ export function getFallbackTree(eventIds, userQuery = '') {
   // 2. keyword match against the query
   if (!tree) {
     const q = (userQuery || '').toLowerCase()
-    if (/relocat|abroad|move overseas|emigrat|portugal|uae|dubai|cyprus|nhr|ific|kenya|spain|italy|france|ireland|australia|canada/.test(q)) {
+    // Require a relocation SIGNAL (verb or a relocation-hub / tax-regime term).
+    // Bare country names ('france', 'spain', …) were removed — they mis-routed
+    // any question that merely mentioned a country to the relocate demo. 'ific'
+    // was a substring bug (matched 'specific'/'pacific'); use the full 'ifici'.
+    if (/relocat|abroad|move overseas|emigrat|non-?dom|portugal|uae|dubai|cyprus|\bnhr\b|ifici/.test(q)) {
       tree = JSON.parse(JSON.stringify(RELOCATE_ABROAD))
     } else if (/iht|inheritance|estate|gift|trust|nrb|rnrb/.test(q)) {
       tree = JSON.parse(JSON.stringify(IHT_PLANNING))

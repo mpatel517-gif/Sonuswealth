@@ -8,6 +8,10 @@ import {
   te_ihtExposure, allowanceTracker, monthlySurplus,
   calcAge,
 } from './fq-calculator.js'
+// Canonical property-value reader (handles array + legacy asset shapes). Replaces
+// the old `entity?.assets?.property?.total || 450000` guess, which fabricated a
+// £450k figure for any persona whose property isn't in that exact legacy field.
+import { propertyTotal } from './_helpers.js'
 
 const FCA_BOUNDARY = 'Information and guidance only. Not personal advice — verify with a qualified FCA-authorised adviser before acting.'
 
@@ -287,7 +291,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-09': { // Property: keep, sell, or let?
-      const propertyValue = entity?.assets?.property?.total || 450000
+      const propertyValue = propertyTotal(entity) || 0
       const isa           = entity?.assets?.isa?.value || 0
       // Best path: sell + wrap — tax saved vs status quo
       const assumedGain = Math.max(0, propertyValue - 125000) // assumed acquisition base (model proxy)
@@ -335,7 +339,7 @@ export function simulateAction(entity, decisionType, params = {}) {
     }
 
     case 'DE-12': { // Equity release: lifetime mortgage assessment
-      const propertyValue = entity?.assets?.property?.total || 450000
+      const propertyValue = propertyTotal(entity) || 0
       const releaseRate   = 0.55 // max LTV for equity release (market norm)
       const released      = params.releaseAmount != null ? Math.max(0, +params.releaseAmount) : propertyValue * releaseRate * 0.25 // slidable; else typical drawdown
       // A lifetime mortgage is a LOAN, not wealth: ~neutral today, then net worth
@@ -820,7 +824,7 @@ export function simulateAction(entity, decisionType, params = {}) {
       const carePotential = params.careYears != null ? Math.max(1, +params.careYears) : 3 // ESTIMATED average LTC duration (yrs) — reviewer/user to confirm
       const dpaRate      = params.dpaRollupRate != null ? +params.dpaRollupRate : 0.07 // ESTIMATED deferred-payment-agreement roll-up rate — reviewer/council to confirm
       const totalCost    = carePerYear * carePotential
-      const propertyValue = entity?.assets?.property?.total || 450000
+      const propertyValue = propertyTotal(entity) || 0
       // Deferred payment preserves liquid assets but rolls up interest over the period.
       const deferredCost = totalCost * Math.pow(1 + dpaRate, carePotential)
       nwDelta    = -(totalCost) // self-fund baseline; the deferred-payment path scales up via _PATH_FACTORS
@@ -903,7 +907,7 @@ export function enumeratePaths(entity, decisionType) {
       { id: 'maximum',      label: 'Maximise sacrifice to pension AA', riskLevel: 'low', detail: 'Combine salary sacrifice + SIPP to hit full annual allowance tax-efficiently.' },
     ],
     'DE-09': [
-      { id: 'keep_use',         label: 'Keep & use as primary residence', riskLevel: 'high',   detail: 'No CGT today. Full £450k in estate. Zero income generated.' },
+      { id: 'keep_use',         label: 'Keep & use as primary residence', riskLevel: 'high',   detail: 'No CGT today. Full property value stays in your estate. Zero income generated.' },
       { id: 'let',              label: 'Let on AST (£1,800/mo gross)',    riskLevel: 'medium', detail: '~£16,700 net/yr after §24 costs. Asset stays in estate.' },
       { id: 'sell_isa_pension', label: 'Sell & wrap into ISA + pension',  riskLevel: 'low',    detail: 'CGT crystallised (~£35k). £415k liquid. Future growth sheltered.' },
       { id: 'sell_btl_replace', label: 'Sell & buy yielding BTL',         riskLevel: 'medium', detail: '~£22k/yr but concentration risk unchanged. CGT triggered.' },

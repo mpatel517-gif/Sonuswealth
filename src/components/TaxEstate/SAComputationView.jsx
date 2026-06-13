@@ -45,6 +45,34 @@ function ConfBadge({ confidence }) {
   )
 }
 
+// Collapsible SA section — keeps the filing-format detail from rendering as one
+// wall (founder #13). Header shows the section + line count; body opens on tap.
+function SectionDrawer({ title, page, count, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div style={{ borderTop: '1px solid var(--c-sep)' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 10, padding: '10px 2px', background: 'transparent', border: 'none',
+          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        }}
+      >
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--c-text2)' }}>
+          {title}{page ? <span style={{ fontWeight: 500, color: 'var(--c-text3)' }}> ({page})</span> : null}
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {count != null && <span style={{ fontSize: 10, color: 'var(--c-text3)' }}>{count} {count === 1 ? 'line' : 'lines'}</span>}
+          <span style={{ fontSize: 11, color: 'var(--c-text3)' }}>{open ? '▲' : '▼'}</span>
+        </span>
+      </button>
+      {open && <div style={{ paddingBottom: 10 }}>{children}</div>}
+    </div>
+  )
+}
+
 // One SA line: label (+ box) on the left, drillable amount on the right; tapping
 // the amount toggles an inline detail block (formula / rule / source / confidence).
 function LineRow({ line, lineKey, openKey, setOpenKey }) {
@@ -248,12 +276,23 @@ export default function SAComputationView({ entity, personaId, onCommit }) {
             />
           )}
 
-          {/* Sections → lines */}
+          {/* Headline summary — the two numbers that matter, always visible so
+              the filing detail below can stay collapsed (founder #13). */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ flex: 1, minWidth: 140, background: 'var(--c-surface2)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--c-text3)' }}>Tax due for the year</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', fontVariantNumeric: 'tabular-nums' }}>{money(c.tax_due_before_poa)}</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 140, background: 'var(--c-surface2)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--c-text3)' }}>Balancing payment · 31 Jan</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-coral-text, var(--c-danger))', fontVariantNumeric: 'tabular-nums' }}>{money(c.balancing_payment)}</div>
+            </div>
+          </div>
+
+          {/* Filing-format detail — one collapsible drawer per SA page (was a
+              single wall of every line at once). */}
           {sa.sections.map((section) => (
-            <div key={section.page} style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--c-text3)', margin: '4px 2px 4px' }}>
-                {section.title} <span style={{ fontWeight: 500 }}>({section.page})</span>
-              </div>
+            <SectionDrawer key={section.page} title={section.title} page={section.page} count={section.lines.length} defaultOpen={false}>
               {section.lines.map((line, i) => (
                 <LineRow
                   key={`${section.page}-${i}`}
@@ -263,14 +302,11 @@ export default function SAComputationView({ entity, personaId, onCommit }) {
                   setOpenKey={setOpenKey}
                 />
               ))}
-            </div>
+            </SectionDrawer>
           ))}
 
-          {/* Tax computation (SA110 working) */}
-          <div style={{ marginTop: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--c-text3)', margin: '4px 2px 4px' }}>
-              Tax computation (SA110)
-            </div>
+          {/* Tax computation (SA110 working) — collapsible */}
+          <SectionDrawer title="Tax computation" page="SA110" defaultOpen={false}>
             <CompRow label="Total income" amount={c.total_income} />
             {c.reliefs > 0 && <CompRow label="Less: reliefs" amount={-c.reliefs} />}
             <CompRow label="Personal allowance" amount={-c.personal_allowance} />
@@ -298,13 +334,14 @@ export default function SAComputationView({ entity, personaId, onCommit }) {
                 note={p.provisional ? 'provisional' : undefined}
               />
             ))}
-          </div>
+          </SectionDrawer>
 
-          {/* Provisional summary */}
+          {/* Provisional summary — full-border note (no side-stripe, DESIGN.md) */}
           {sa.provisionalFlags.length > 0 && (
             <div style={{
               marginTop: 12, fontSize: 11, lineHeight: 1.5, color: 'var(--c-text3)',
-              borderLeft: '2px solid var(--c-warning)', paddingLeft: 10,
+              border: '1px solid var(--c-warning)', borderRadius: 10, padding: '8px 10px',
+              background: 'var(--c-surface2)',
             }}>
               <strong style={{ color: 'var(--c-warning)' }}>Why some figures are provisional:</strong>{' '}
               {sa.provisionalFlags.join('; ')}. Add last year's return to firm these up.

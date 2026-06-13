@@ -203,6 +203,35 @@ function SectionHeader({ letter, title, purpose, colour, accessory = null }) {
   )
 }
 
+// Collapsible section drawer (founder: Timeline must follow the drawer principle,
+// not be one ~5000px scroll). Reuses SectionHeader as the tappable toggle; the
+// header chevron + sticky behaviour make the six headers a table of contents.
+function TLDrawer({ letter, title, purpose, colour, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        aria-label={`${title} — ${open ? 'collapse' : 'expand'}`}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen((o) => !o) } }}
+        style={{ cursor: 'pointer' }}
+      >
+        <SectionHeader
+          letter={letter}
+          title={title}
+          purpose={purpose}
+          colour={colour}
+          accessory={<span aria-hidden="true" style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text3)' }}>{open ? '▲' : '▼'}</span>}
+        />
+      </div>
+      {open && <div className="sw-tab-slide">{children}</div>}
+    </div>
+  )
+}
+
 // Animated progress bar — fills from 0 → pct on mount.
 function ProgressBar({ progress, colour, animateOnMount = true }) {
   const pct = Math.max(0, Math.min(100, Math.round((progress ?? 0) * 100)))
@@ -2899,22 +2928,14 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
       {/* SECTION ORDER (HIGH 4.2): per spec §2.7 → §A life-stage → §B score → §C calendar.
            Earlier code reversed this (calendar first); restored to spec ranking. */}
 
-      {/* §A Life Stage (spec §4 · LIFETIME-anchored — base orientation) */}
-      <SectionHeader
-        letter="A"
-        title="Life stage"
-        purpose="Where you sit on the path"
-        colour="var(--c-success)"
-      />
-      <SectionA entity={entity} />
+      {/* §A Life Stage (spec §4 · LIFETIME-anchored — base orientation).
+          Open by default: the orientation anchor for the whole screen. */}
+      <TLDrawer letter="A" title="Life stage" purpose="Where you sit on the path" colour="var(--c-success)" defaultOpen>
+        <SectionA entity={entity} />
+      </TLDrawer>
 
       {/* §B Score Journey (spec §5 · D-SCORE-JOURNEY-1 read-only mirror) */}
-      <SectionHeader
-        letter="B"
-        title="Score journey"
-        purpose="Your Wealth + Risk scores over the selected window"
-        colour="var(--c-accent)"
-      />
+      <TLDrawer letter="B" title="Score journey" purpose="Your Wealth + Risk scores over the selected window" colour="var(--c-accent)">
       <div style={{ position: 'relative' }}>
         <SectionB
           scoreJourneyData={scoreJourneyData}
@@ -2938,48 +2959,33 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
           </button>
         )}
       </div>
+      </TLDrawer>
 
       {/* §C Action Calendar (spec §6 · X28 window scopes horizon) */}
-      <SectionHeader
-        letter="C"
-        title="What's coming and when"
-        purpose="Statutory · personal · action — sorted by urgency"
-        colour="var(--c-warning)"
-      />
-      <SectionC entity={entity} windowId={windowId} onNav={onNav} />
+      <TLDrawer letter="C" title="What's coming and when" purpose="Statutory · personal · action — sorted by urgency" colour="var(--c-warning)">
+        <SectionC entity={entity} windowId={windowId} onNav={onNav} />
+      </TLDrawer>
 
       {/* §D Decision Log (spec §7 · backward-only) */}
-      <SectionHeader
-        letter="D"
-        title="Decision Log"
-        purpose="Audit trail of every committed action"
-        colour="var(--c-muted)"
-      />
-      <SectionD entity={entity} />
+      <TLDrawer letter="D" title="Decision Log" purpose="Audit trail of every committed action" colour="var(--c-muted)">
+        <SectionD entity={entity} />
+      </TLDrawer>
 
       {/* §E Scenario Library & Plan-Builder (spec §8 · goalSeek wired) */}
-      <SectionHeader
-        letter="E"
-        title="Scenarios & Plans"
-        purpose="8 plan types · saved scenarios · goal-seek"
-        colour="var(--c-danger)"
-      />
-      <SectionE
-        entity={entity}
-        planRows={planRows}
-        scenarios={scenarios}
-        onOpenGoalSeek={(metric) => openGoalSeek(metric)}
-        onEditGoalSeek={(planTypeId) => openGoalSeek(planTypeId)}
-      />
+      <TLDrawer letter="E" title="Scenarios & Plans" purpose="8 plan types · saved scenarios · goal-seek" colour="var(--c-danger)">
+        <SectionE
+          entity={entity}
+          planRows={planRows}
+          scenarios={scenarios}
+          onOpenGoalSeek={(metric) => openGoalSeek(metric)}
+          onEditGoalSeek={(planTypeId) => openGoalSeek(planTypeId)}
+        />
+      </TLDrawer>
 
       {/* §F Goals & Milestones (spec §9 · §F-CANONICAL · onCommit wired) */}
-      <SectionHeader
-        letter="F"
-        title="Goals & Milestones"
-        purpose="Achieved + projected — tap Celebrate to mark"
-        colour="var(--c-success)"
-      />
-      <SectionF entity={entity} onCommit={handleCommit} onCreateGoal={handleCreateGoal} onMilestoneTap={setActiveMilestone} />
+      <TLDrawer letter="F" title="Goals & Milestones" purpose="Achieved + projected — tap Celebrate to mark" colour="var(--c-success)">
+        <SectionF entity={entity} onCommit={handleCommit} onCreateGoal={handleCreateGoal} onMilestoneTap={setActiveMilestone} />
+      </TLDrawer>
 
       {/* Lifted goal-seek sheet — openable from §F.1 headline, §E top CTA, PlanRow Edit */}
       <GoalSeekSheet
@@ -2998,7 +3004,7 @@ export default function TimelineScreen({ entity, onNav, onDrillMetric }) {
         Information and guidance only. Not personal advice. Sonuswealth models scenarios and
         surfaces statutory dates relevant to your position; final decisions and timing should
         be validated with a qualified FCA-authorised adviser before acting.
-        <br />UK tax rules 2026/27 · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        <br />UK tax rules {TAX.taxYear} · Last verified: {entity?.dataLastUpdated || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
       </div>
       <div style={{ height: 78 }} />
     </>

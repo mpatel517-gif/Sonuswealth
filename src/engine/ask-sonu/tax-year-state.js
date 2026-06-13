@@ -16,6 +16,7 @@
 import { allowanceTracker, TAX } from '../fq-calculator.js'
 import { daysToTaxYearEnd, daysToSippIht, ageAt } from '../../lenses/_base.js'
 import { buildCarryForwardLedger } from '../carry-forward-state.js'
+import { pensionContributionsThisYear } from '../income-readers.js'  // F-004 canonical
 
 function num(v) {
   if (v == null) return 0
@@ -61,11 +62,16 @@ export function buildTaxYearState(entity, asOfDate = new Date()) {
     tracker = {}
   }
 
-  // Pension AA — tracker doesn't return this, compute from entity
-  const pensionContribs = num(entity.pensionContributions)
-                       || num(entity.pensionContribAnnual)
-                       || num(entity.assets?.pensionContributions)
-                       || 0
+  // Pension AA used — canonical reader (F-004): scalar aliases MAX, else per-pot
+  // sum. The previous scalar-only hand-read missed per-pot contributions, so
+  // every persona that declares contributions per pot (mrT-couple £19.8k,
+  // mrT-uk-in £11.4k, …) silently showed £0 used / a false full-headroom.
+  const pensionContribs = pensionContributionsThisYear(entity)
+  // Honest-absence: £0 used while pension pots exist means "undeclared", not a
+  // hard zero — flag provisional so the surface doesn't assert full headroom.
+  const hasPensionPots = (Array.isArray(entity.assets?.pensions) && entity.assets.pensions.length > 0)
+    || (Array.isArray(entity.assets?.sipp?.pensions) && entity.assets.sipp.pensions.length > 0)
+  const usedProvisional = pensionContribs === 0 && hasPensionPots
   const aaLimit = TAX.pensionAA || 60000
   // Tapered AA: reduces by £1 for every £2 of adjusted income above £260k,
   // floor at £10k. Approximate from gross income for the demo.
@@ -88,6 +94,7 @@ export function buildTaxYearState(entity, asOfDate = new Date()) {
     carryForwardProvisional,
     totalAvailable: Math.round(aaTotalAvailable),
     used: Math.round(pensionContribs),
+    usedProvisional,
     remaining: Math.max(0, aaTotalAvailable - pensionContribs),
     tapered: aaTapered,
     pctUsed: Math.round((pensionContribs / aaEffective) * 100),
@@ -172,7 +179,8 @@ export function summariseTaxYearState(state) {
   if (state.isa)      lines.push(`ISA allowance: £${state.isa.used.toLocaleString()} used of £${state.isa.limit.toLocaleString()} — £${state.isa.remaining.toLocaleString()} remaining`)
   if (state.pension_aa) {
     const taperNote = state.pension_aa.tapered ? ` (TAPERED to £${state.pension_aa.effective.toLocaleString()})` : ''
-    lines.push(`Pension AA: £${state.pension_aa.used.toLocaleString()} used of £${state.pension_aa.effective.toLocaleString()}${taperNote} — £${state.pension_aa.remaining.toLocaleString()} remaining`)
+    const provNote = state.pension_aa.usedProvisional ? ' [used figure PROVISIONAL — this year\'s contributions not declared; do NOT assert full headroom]' : ''
+    lines.push(`Pension AA: £${state.pension_aa.used.toLocaleString()} used of £${state.pension_aa.effective.toLocaleString()}${taperNote} — £${state.pension_aa.remaining.toLocaleString()} remaining${provNote}`)
   }
   if (state.mpaa_triggered) lines.push(`⚠ MPAA TRIGGERED — only £${(state.mpaa_remaining || 0).toLocaleString()} pension contribution allowed this year`)
   if (state.psa && state.psa.limit > 0) lines.push(`PSA (savings interest): £${state.psa.remaining.toLocaleString()} remaining`)

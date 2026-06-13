@@ -31,6 +31,7 @@ import {
 } from '../engine/fq-calculator.js';
 import { monthlyFlow } from '../engine/monthly-flow-engine.js';
 import { maritalStatus } from '../engine/persona-helpers.js';
+import { pensionContributionsThisYear } from '../engine/income-readers.js';  // F-004 canonical
 
 // ── Safe engine call ──────────────────────────────────────────────────────────
 // All composer engine calls are wrapped — a missing entity field should never
@@ -174,7 +175,11 @@ function buildDeadlines(entity, deadlineIds) {
     const nextApril5 = new Date(today.getFullYear(), 3, 5);
     if (nextApril5 < today) nextApril5.setFullYear(nextApril5.getFullYear() + 1);
     const days = Math.ceil((nextApril5 - today) / 86400000);
-    const aaUsed = entity?.pensionContributions?.thisYear ?? null;
+    // Canonical reader (F-004) — picks up per-pot contributions; the old
+    // `entity.pensionContributions.thisYear` nested read matched no persona and
+    // always showed null. null still means "undeclared" (vs a genuine 0).
+    const _used = pensionContributionsThisYear(entity);
+    const aaUsed = _used > 0 ? _used : null;
     results.push({
       id: DEADLINES.PENSION_AA,
       label: `Pension annual allowance (£${(TAX.pensionAA / 1000).toFixed(0)}K — use or lose)`,

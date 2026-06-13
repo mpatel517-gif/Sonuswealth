@@ -222,7 +222,7 @@ function HeroBlock({ query, answer }) {
   const stateTags = []
   if (state) {
     if (state.isa) stateTags.push({ label: 'ISA', value: `£${state.isa.remaining.toLocaleString()} left`, urgent: state.isa.remaining === 0 })
-    if (state.pension_aa) stateTags.push({ label: 'Pension AA', value: `£${state.pension_aa.remaining.toLocaleString()} left`, urgent: state.pension_aa.remaining < 5000 })
+    if (state.pension_aa) stateTags.push({ label: 'Pension AA', value: `£${state.pension_aa.remaining.toLocaleString()} left${state.pension_aa.usedProvisional ? ' (provisional)' : ''}`, urgent: state.pension_aa.remaining < 5000 })
     if (state.mpaa_triggered) stateTags.push({ label: 'MPAA', value: 'triggered', urgent: true })
     if (state.pa?.tapered) stateTags.push({ label: '£100k taper', value: 'active', urgent: true })
     if (state.days_to_sipp_iht > 0 && state.days_to_sipp_iht < 730) {

@@ -70,9 +70,9 @@ Gap-analysis agent claims corrected where wrong (life-event log, cashflow-Q5, ho
 | Spreadsheet → mapping-review grid | ✅ | `SpreadsheetImport.jsx`; verified live (gate holds, junk blocks) |
 | Liability target dedup (no duplicate mortgage) | ✅ | `resolveTarget` scans liabilities (verified: matched) |
 | Key activation for real parsing | ✅ | env-driven, zero source edits; `KEY-ACTIVATION-STEPS.md` (founder runs) |
-| Share VTM gate across manual + parsed FP-5 paths | ☐ | #49 — today only spreadsheet uses it |
-| `classifyAsset('isa')` → null (ISA is a wrapper) | ☐ | #49 |
-| Audit non-strict `classifyLiability` write-path callers | ☐ | #49 |
+| Share VTM gate across manual + parsed FP-5 paths | ✅ | #49 — spreadsheet=full VTM grid; **parsed**=null-wrapper now classifies label vs canonical taxonomy (exact-match) before silent-cash (`40c153f`/`34237bc`); manual=taxonomy **picker** (no free text → inherently safe). Full per-field mapping-review *inside* the FP-5 modal deferred (needs event-infra work the Risk session currently holds). |
+| `classifyAsset('isa')` → null (ISA is a wrapper) | ✅ | #49 — generalised: ALL bare generics ('isa','pension','bond','share','loan','account','investment') → null (force disambiguate); canonical ids resolve via `_BY_ID` shortcut. Verified golden 9/9, wrappers 27/27, income 28/28. |
+| Audit non-strict `classifyLiability` write-path callers | ✅ | #49 — **clean.** Only the importer WRITES via classify and it uses `{strict:true}`. All other `classifyLiability` callers (MyMoney.jsx:431, LiabilitiesDrillDown, DebtDecisions) classify ALREADY-HELD debts for display/labelling — loose catch-all is correct there. `events.jsx` asset-routing receives canonical ids from the Add-menu, not free text. |
 
 ## C. "Themes reported and not fixed" — deferred from P1–P7 / earlier audits
 
@@ -136,7 +136,7 @@ Compared the canonical scope docs — `~/.claude/plans` schedule + nice-to-haves
 ### F3 — Engine
 | Item | Status | Pri |
 |------|--------|-----|
-| Pension current-year contribution canonical reader (AA "used" silently £0) | ☐ ↗ memory-flagged | **P1** |
+| Pension current-year contribution canonical reader (AA "used" silently £0) | ✅ ↗ | **P1** — reader `pensionContributionsThisYear` (F-004) already existed; the residue was TWO bypassers: `ask-sonu/tax-year-state.js` (scalar-only hand-read → missed per-pot → mrT-couple showed £0/full-£60k headroom; now £19.8k/£40.2k) and `de/composer.js` (dead nested read). Both routed through the canonical reader; added `usedProvisional` honest-absence flag (mrT-core: £0 used + pots → flagged provisional, not asserted headroom) threaded into the LLM summary + AskSonuFlow chip. Build green, decision-smoke 40/40, golden 9/9. |
 | 16 life-event log + recompute (inheritance, business sale, partner death…) | ☐ matrix-only, no logging UI/ripple | P1 |
 | Full `goalSeek` multi-metric solver (only pot-contribution real today) | 🔄 ↗ | P2 |
 | Decumulation network type→holding drill-down + per-edge taxCost | ☐ | P2 |

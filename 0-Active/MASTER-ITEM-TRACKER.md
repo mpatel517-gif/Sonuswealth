@@ -83,14 +83,84 @@ These predate recent work and may be partly resolved. Each needs a live check be
 
 ---
 
-## Proposed order (disjoint code areas first, engine-risk serial)
+## F. Scope-doc gap analysis (2026-06-13, 4-agent sweep vs live code)
 
-1. **#44** drawers/drill sweep on remaining long lists (UI, low risk) — closes 13-list #5/#6.
-2. **#49** share VTM gate across manual + parsed paths + isa-wrapper (data integrity, finishes import).
-3. **D-register re-verify** (⟳ pass) — one live sweep, mark each done/real-open; fold real-opens here.
-4. **Theme F** side-stripe + typography sweep (mechanical, grep-driven).
-5. **Theme B/C** methodology+decision-path roll-out onto hero numbers.
-6. **Theme A** targetIncome reconciliation (engine; golden-vectors + tie-out gate).
-7. **Theme D** dead-path modeller audit + Risk a11y headings.
+Compared the canonical scope docs — `~/.claude/plans` schedule + nice-to-haves + audit-findings, the six 2-Product specs, the route-specs + coverage-matrix, and the vault Master backlog v1.8/v1.9 + remaining-work view — against the actual codebase. **Headline: the docs are ~95% stale — almost every "open" row is already built.** The genuine gaps below were each verified against code.
+
+### F1 — Home screen (densest real gap: ships a Radar-centric layout missing 6 spec'd zones)
+| Item | Spec | Status | Note | Pri |
+|------|------|--------|------|-----|
+| Z5 Score Journey multi-line trajectory (NW+Wealth+Risk, confidence band, plan line) | home-v1_4 §Z5 | ☐ missing on Home | analogue exists in Timeline §B → **placement** gap | P1 |
+| Z13 AI Weekly Narrative + Z12 AI Synthesis chip | home-v1_4 §Z12/13 | ☐ no impl anywhere | genuine build | P2 |
+| Z14 Drive-to-Update stale-asset prompt (`updateStreakCheck`) | home-v1_4 §Z14 | ☐ no impl anywhere | genuine build | P2 |
+| Z1.5 Sub-Anchor PRC/PCC "Capital Efficiency" strip | home-v1_4 §Z1.5 | ☐ missing on Home | exists in MyMoney/Cashflow → placement | P2 |
+| Z15 Milestone / Pride pin | home-v1_4 §Z15 | ☐ missing on Home | exists in Timeline §F → placement | P3 |
+| Z6 Reality Engine three-ring | home-v1_4 §Z6 | ☐ (thresholds O-HOME-1 open) | stub acceptable; founder-spec gated | P3 |
+
+### F2 — Capture / backend (mostly inert-by-design or true Phase 2)
+| Item | Status | Pri |
+|------|--------|-----|
+| Open Banking / aggregator pull (Connect channel — TrueLayer/Plaid) | ☐ Phase 2 (vendor + keys) | P2 |
+| Document Vault Phase 2 — uploads, permission matrix, version history | ☐ (read-only catalogue today) | P2 |
+| Reports PDF/CSV export engine (button disabled "SP-3") | ☐ | P2 |
+| Event-store persistence for real users (UI runs in-memory) | ↗ inert by design | P2 |
+| Rules-management admin UI (rules are static JSON, no editor) | ☐ | P2 |
+| Supabase live read path (defaults to JSON fallback) | ↗ Phase 2 contract | P2 |
+
+### F3 — Engine
+| Item | Status | Pri |
+|------|--------|-----|
+| Pension current-year contribution canonical reader (AA "used" silently £0) | ☐ ↗ memory-flagged | **P1** |
+| 16 life-event log + recompute (inheritance, business sale, partner death…) | ☐ matrix-only, no logging UI/ripple | P1 |
+| Full `goalSeek` multi-metric solver (only pot-contribution real today) | 🔄 ↗ | P2 |
+| Decumulation network type→holding drill-down + per-edge taxCost | ☐ | P2 |
+| Per-line CGT (lowest-embedded-gain-first) as solver default | 🔄 ↗ | P2 |
+| Solver-vs-fundedRatio reconciliation ("£96k to 95" vs 0.48 funded) | 🔄 ↗ memory-flagged | P2 |
+
+### F4 — Cashflow / Timeline
+| Item | Status | Pri |
+|------|--------|-----|
+| Cashflow Bill calendar — data path (renders empty-state only) | 🔄 | P2 |
+| Cashflow Subscription tracker — manual entry | 🔄 (Phase 1.2) | P3 |
+| Timeline scenario compare (side-by-side) | ☐ | P2 |
+| Timeline AI re-explain modal | ☐ | P3 |
+
+### F5 — Verification / hygiene debt
+| Item | Status | Pri |
+|------|--------|-----|
+| §9.5 snap matrix + compliance/IFA skill pass on Cashflow tiles (no `.snap-audit` on disk) | ☐ unverified | P1-verify |
+| `<DepthCard>` shared primitive never extracted (local copy in Cashflow) | 🔄 | P3 |
+
+**Not gaps (excluded):** nice-to-haves register (all ⚪ unreviewed, out of scope); India/Thailand/jurisdiction-regen (explicitly post-launch in the docs); founder-blocked CF items (PRC-anchored SWR 5th regime, Reality Engine factorisation — need founder spec, already in §E).
+
+## G. Doc-staleness verdict (action: retire/refresh, don't re-audit)
+
+The 4-agent sweep verified these docs are **pre-build snapshots** — treat their "open" lists as historical:
+- `finio-product-audit-findings.md` (2026-05-28): ~7 BLOCKER/MAJOR rows already RESOLVED (hardcoded key, Home↔T&E CoI, MyMoney↔Cashflow drawdown, onboarding save/resume, persona persistence, goal tracker, NW history).
+- Master backlog v1.8/v1.9 + remaining-work view (Apr 2026): ~95% DONE-NOW (all 6 screens, canonical engine fns, Num/TripleAnchor, 5×5 cross-map, persona fixtures, Reports framework, X21-23).
+- `hot.md` (2026-05-25): stale — predates W0–W8 + P1–P7 + the 13-item overhaul. **Refresh recommended.**
+
+Action: do NOT re-audit these. Mark superseded; refresh `hot.md`; the genuine residue is captured in §F above.
+
+## Proposed order (P1 integrity first, then placement, then themes, engine-risk serial)
+
+**Tier 1 — P1 integrity / correctness (do first):**
+1. **F3 pension contribution canonical reader** — ends the silent-£0 AA class; same taxonomy-consolidation pattern as assets/liabilities. (memory `reference_pension_contribution_plumbing`)
+2. **#49** share VTM gate across manual + parsed paths + isa-wrapper — finishes the import-integrity story.
+3. **F5 §9.5 snap-matrix on Cashflow tiles** — one verification pass; cheap, closes an unproven claim.
+
+**Tier 2 — finish the founder's 13-list + Home placement gaps:**
+4. **#44** drawers/drill sweep on remaining long lists (closes 13-list #5/#6).
+5. **F1 Home zones** — Score Journey chart + Sub-Anchor + Milestone pin are placement (analogues exist elsewhere — reuse, don't rebuild); AI Narrative + Drive-to-Update are genuine builds.
+6. **D-register re-verify** (⟳ pass) — one live sweep; fold real-opens here.
+
+**Tier 3 — themes + polish:**
+7. **Theme F** side-stripe + typography sweep · **Theme B/C** methodology roll-out onto hero numbers.
+8. **Theme A** targetIncome reconciliation (engine; golden-vectors + tie-out gate) · **F3 solver/fundedRatio reconcile** · **F3 per-line CGT default**.
+9. **Theme D** dead-path modeller audit + Risk a11y headings.
+
+**Tier 4 — Phase 2 / founder-gated (scope, not bugs):** F2 Open Banking, Vault Phase 2, Reports export, rules-admin UI, event-store persistence; F3 16 life-event log+recompute; F4 bill-calendar data path + Timeline scenario-compare. Most need a founder decision (vendor, persistence model) — surface at the next decision memo, don't start unprompted.
 
 Each step: build green + live MCP verify + commit/push per CLAUDE.md §9 / §9.5.
+
+**Doc hygiene (quick, do alongside):** refresh `hot.md`; mark Master backlog v1.8/v1.9, remaining-work view, and audit-findings as SUPERSEDED (pointer to this tracker).

@@ -759,6 +759,14 @@ const LIFE_EVENT_OPTIONS = [
   { sub: 'child_birth',       label: 'New child',        amount: false },
   { sub: 'jurisdiction_move', label: 'Moved abroad',     amount: false },
   { sub: 'serious_illness',   label: 'Serious illness',  amount: false },
+  { sub: 'employment_change_employed', label: 'New job',          amount: false },
+  { sub: 'employment_change_self_emp', label: 'Became self-employed', amount: false, hint: 'Income becomes variable — protection and buffer matter more.' },
+  { sub: 'property_purchase', label: 'Bought a property', amount: false, hint: 'Add the property itself in My Money — this flags the parts of your plan to revisit.' },
+  { sub: 'pension_crystallisation', label: 'Took pension money', amount: false, hint: 'Taking taxable pension income can trigger the MPAA (£10k contribution cap) — worth checking.' },
+  // Bereavement — the highest financial-impact events (partner death is Critical
+  // priority in the risk matrix). Gently labelled; logged-only + reopens dims.
+  { sub: 'dependant_death',   label: 'Loss of a dependant', amount: false },
+  { sub: 'partner_death',     label: 'Loss of a partner',   amount: false, hint: 'We’re sorry. This reopens income, protection and estate — take your time.' },
 ]
 
 // Modal: log a real-life change → commits a LIFE_EVENT → the entity refolds and

@@ -56,7 +56,15 @@ export function driver(entity, metric, level = 0) {
     case 'plan:estate':    return drvPlanEstate(entity, level)
     case 'plan:gift':      return drvPlanGift(entity, level)
     case 'plan:tax':       return drvPlanTax(entity, level)
-    default:               return terminal(metric, 0, `Drill detail for "${metric}" is not yet wired into the driver tree. Tap Ask Sonu below to ask about ${metric}, or open the underlying tab for the raw data.`)
+    default:
+      // Net-worth composition sub-drills — the Home anchor fires
+      // `netWorth:<category>` when a user taps a composition segment. Resolve to
+      // a per-category methodology node so the tap explains the figure instead
+      // of hitting the "not yet wired" stub.
+      if (typeof metric === 'string' && metric.startsWith('netWorth:')) {
+        return drvNWCategory(entity, metric.slice('netWorth:'.length), level)
+      }
+      return terminal(metric, 0, `Drill detail for "${metric}" is not yet wired into the driver tree. Tap Ask Sonu below to ask about ${metric}, or open the underlying tab for the raw data.`)
   }
 }
 
@@ -315,6 +323,59 @@ function drvPlanTax(entity, level) {
         formula: `Pension annual allowance: £60,000 (tapered for income above £260,000). £${pensionRemain.toLocaleString()} remaining. Carry-forward of unused allowance from prior 3 years may apply.`,
         source: 'engine', confidence: 'medium', terminal: true, drivers: [] },
     ],
+  }
+}
+
+// ─── Net-worth composition sub-drill ─────────────────────────────────────────
+// Mirrors HomeScreen's nwComposition() category sums (the engine must not import
+// from a screen). Keys match the anchor segments: pensions / isa / property /
+// cash / business / portfolio.
+const NW_CATEGORY_META = {
+  pensions:  { label: 'Pensions',    formula: 'Sum of your pension pots — SIPP, personal and workplace pensions.' },
+  isa:       { label: 'ISAs',        formula: 'Sum of your ISA wrappers — Stocks & Shares, Cash and Lifetime ISAs.' },
+  property:  { label: 'Property',    formula: 'Estimated value of your home and any other property you hold.' },
+  cash:      { label: 'Cash',        formula: 'Cash across current accounts, savings and bank balances.' },
+  business:  { label: 'Business',    formula: 'Value of the business interests and assets you hold.' },
+  portfolio: { label: 'Investments', formula: 'Investments outside ISAs — GIA holdings, funds and alternatives.' },
+}
+
+function nwCategorySum(entity, key) {
+  const a = entity?.assets || {}
+  const num = v => {
+    if (!v && v !== 0) return 0
+    if (typeof v === 'number') return v
+    if (Array.isArray(v)) return v.reduce((s, x) => s + (+x.currentValue || +x.value || 0), 0)
+    return +v?.total || +v?.value || 0
+  }
+  switch (key) {
+    case 'pensions':  return num(a.sipp) + num(a.pension) + num(a.pensions)
+    case 'isa':       return num(a.isa) + num(a.lisa)
+    case 'property':  return safe(() => (Array.isArray(a.property) ? a.property : []).reduce((s, p) => s + (+p.estimatedValue || +p.value || 0), 0), 0) + num(a.residence) + num(a.home)
+    case 'cash':      return num(a.cash) + num(a.bank) + num(a.savings)
+    case 'business':  return safe(() => (Array.isArray(a.business_assets) ? a.business_assets : []).reduce((s, b) => s + (+b.currentValue || +b.value || 0), 0), 0)
+    case 'portfolio': return safe(() => {
+      const h = a.portfolio?.holdings || a.holdings || []
+      const fromHoldings = h.reduce((s, hh) => s + (+hh.currentValue || +hh.value || 0), 0)
+      return fromHoldings > 0 ? fromHoldings : num(a.portfolio)
+    }, 0) + num(a.investments) + num(a.alternatives)
+    default: return 0
+  }
+}
+
+function drvNWCategory(entity, key, level) {
+  const meta = NW_CATEGORY_META[key] || { label: key, formula: `Your ${key} holdings.` }
+  const value = safe(() => nwCategorySum(entity, key), 0)
+  const assets = safe(() => sumAssets(entity), 0)
+  const pct = assets > 0 ? Math.round((value / assets) * 100) : 0
+  return {
+    metric: `netWorth:${key}`,
+    value,
+    unit: 'gbp',
+    formula: `${meta.formula}${value > 0 ? ` £${Math.round(value).toLocaleString()} — about ${pct}% of your total assets.` : ' Nothing recorded in this category yet.'} Open MyMoney to see each holding.`,
+    source: 'engine',
+    confidence: 'high',
+    terminal: true,
+    drivers: [],
   }
 }
 

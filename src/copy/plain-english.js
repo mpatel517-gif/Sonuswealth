@@ -34,6 +34,13 @@ export const ALIAS = {
   // Net Worth + drivers
   netWorth:           'Net Worth',
   nw:                 'Net Worth',
+  // Net-worth composition sub-drills (Home anchor segment taps)
+  'netWorth:pensions':  'Pensions share',
+  'netWorth:isa':       'ISA share',
+  'netWorth:property':  'Property share',
+  'netWorth:cash':      'Cash share',
+  'netWorth:business':  'Business share',
+  'netWorth:portfolio': 'Investments share',
   assets:             'What you own',
   liabilities:        'What you owe',
 

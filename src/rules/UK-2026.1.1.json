@@ -860,6 +860,12 @@
     "nsiTreasuryBacked": true,
     "note": "FSCS deposit protection \u00a3120,000 per eligible person, per banking-licence institution from 1 December 2025 (raised from \u00a385,000, in force 2017\u20132025). Joint accounts \u00a3240,000. Temporary high balances (e.g. property-sale proceeds) protected up to \u00a31,000,000 for 6 months. NS&I products are 100% HM Treasury-backed with no FSCS cap. Investments/pensions carry a separate \u00a385,000 FSCS investment-protection limit (unchanged). UK-CASH-FSCS-01."
   },
+  "protectionNeed": {
+    "lifeCoverIncomeMultipleWithDependants": 10,
+    "lifeCoverIncomeMultipleNoDependants": 5,
+    "incomeProtectionBenefitFraction": 0.6,
+    "note": "Planning heuristics for the Risk protection-gap estimate \u2014 NOT statutory. Life cover \u224810\u00d7 income with dependants / \u22485\u00d7 without; income protection \u224860% of target income (typical insurer benefit cap). Estimates only, not a recommendation to buy. UK-PROT-NEED-01."
+  },
   "milestones": {
     "_note": "Timeline milestone catalogue v1.0 (UK-2026.1.1). Starter set.",
     "catalogue": [

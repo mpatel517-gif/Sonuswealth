@@ -23,6 +23,9 @@ export const EV = {
   PRIOR_YEAR_SA_CAPTURED:'PRIOR_YEAR_SA_CAPTURED', // M2: a prior-year Self-Assessment record entered/imported → folds derived carry-forward into the entity (durable copy lives in localStorage sonuswealth.taxhistory)
   PROFILE_FIELD_SET:     'PROFILE_FIELD_SET', // W5-5a: non-asset household/income captures (current-year pension contribs, partner income, dependant child) → fold to the canonical fields engine readers consume
   document_captured:     'document_captured', // legacy lowercase alias from DataCapture
+  RISK_PERCEPTION_COMMITTED:    'risk_perception_committed',    // Risk attitude questionnaire → folds riskAppetite/timeHorizon/lossReaction
+  RISK_QUESTIONNAIRE_COMMITTED: 'risk_questionnaire_committed', // D6 estate-readiness questionnaire → folds will/lpa/noms/guardian/life-in-trust
+  RISK_QUESTION_BANK_UPDATED:   'risk_question_bank_updated',   // admin edit to the perception question bank → folds riskQuestionBank/version
 }
 
 // The 16 recognised life-event subtypes (mirror of the risk engine's

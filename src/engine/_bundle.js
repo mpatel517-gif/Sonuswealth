@@ -175,6 +175,11 @@ function _buildTAX(b) {
     safeguardedAdviceThreshold: b.pension?.safeguardedBenefitAdviceThreshold ?? 30000,
     // Long-term care — Care Act 2014 (England) upper capital limit for LA means-test.
     laCareUpperCapital:     b.care?.upperCapitalLimit ?? b.longTermCare?.upperCapitalLimit ?? 23250,
+    // Protection-need planning heuristics (Risk protection-gap estimate). Not
+    // statutory — read from the bundle so no component carries the literal.
+    lifeCoverMultipleDep:   b.protectionNeed?.lifeCoverIncomeMultipleWithDependants ?? 10,
+    lifeCoverMultipleNoDep: b.protectionNeed?.lifeCoverIncomeMultipleNoDependants   ?? 5,
+    ipBenefitFraction:      b.protectionNeed?.incomeProtectionBenefitFraction       ?? 0.6,
     // Per-asset-class growth (decision 'B') — engine reads these, never hardcodes.
     growthDefault:          b.growthAssumptions?.default      ?? 0.05,
     growthByCategory:       b.growthAssumptions?.byCategory   ?? {},

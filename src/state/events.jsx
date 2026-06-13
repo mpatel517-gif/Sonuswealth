@@ -289,6 +289,10 @@ export function applyEvents(baseEntity, events = []) {
           if (typeof ans.riskAppetite === 'string')  e.riskAppetite    = ans.riskAppetite
           if (typeof ans.timeHorizon === 'string')   e.riskTimeHorizon = ans.timeHorizon
           if (typeof ans.lossReaction === 'string')  e.riskLossReaction = ans.lossReaction
+          // When last reviewed + which question-set version answered — drives
+          // the annual re-prompt staleness check + future bank-version display.
+          e.riskAppetiteAnsweredAt = ev.ts || e.riskAppetiteAnsweredAt
+          if (ev.questionSetVersion) e.riskQuestionSetVersion = ev.questionSetVersion
         }
         break
       }
@@ -319,6 +323,19 @@ export function applyEvents(baseEntity, events = []) {
               },
             }
           }
+        }
+        break
+      }
+
+      case 'risk_question_bank_updated': {
+        // Admin edit to the risk-perception question bank (event-sourced — no
+        // separate store, D-EVENTSTORE-1). Folds the full new question set +
+        // version so the questionnaire renders the live bank and new answers
+        // stamp the new version. Payload: { questions: [...], version }.
+        const qs = ev.payload?.questions
+        if (Array.isArray(qs) && qs.length) {
+          e.riskQuestionBank = qs
+          e.riskQuestionBankVersion = ev.payload.version || `edited-${ev.ts || ''}`
         }
         break
       }

@@ -276,12 +276,13 @@ body {
 .sh-action { font-size:13px; font-weight:600; color:var(--c-acc); cursor:pointer; }
 
 /* ── ALERT CARDS ── */
-.alert-card { margin:0 16px 8px; background:var(--c-surface); border:1px solid var(--c-border); border-left:4px solid; border-radius:0 14px 14px 0; box-shadow:var(--sh); cursor:pointer; transition:transform .15s ease; }
+/* Severity shown via a full border (DESIGN.md bans side-stripe borders). */
+.alert-card { margin:0 16px 8px; background:var(--c-surface); border:1px solid var(--c-border); border-radius:14px; box-shadow:var(--sh); cursor:pointer; transition:transform .15s ease; }
 .alert-card:active { transform:scale(.99); }
-.alert-card.critical { border-left-color:#FF3B30; }
-.alert-card.high     { border-left-color:#FF9500; }
-.alert-card.medium   { border-left-color:#007AFF; }
-.alert-card.info     { border-left-color:#34C759; }
+.alert-card.critical { border-color:#FF3B30; }
+.alert-card.high     { border-color:#FF9500; }
+.alert-card.medium   { border-color:#007AFF; }
+.alert-card.info     { border-color:#34C759; }
 .ac-inner { padding:12px 14px; }
 .ac-top { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
 .ac-badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; padding:3px 7px; border-radius:100px; }

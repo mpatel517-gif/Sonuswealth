@@ -1183,8 +1183,8 @@ function ShockCard({ shock, onNav, onAddProtection }) {
 
   return (
     <div onClick={() => setOpen(!open)} className="sw-lift sw-press" style={{
-      background:'var(--c-surface)', border:'1px solid var(--c-sep)',
-      borderLeft:`4px solid ${colour}`, borderRadius:'0 14px 14px 0',
+      background:'var(--c-surface)', border:`1px solid color-mix(in srgb, ${colour} 50%, var(--c-border))`,
+      borderRadius:'14px',
       padding:'12px 14px', marginBottom:8, cursor:'pointer',
     }}>
       <div style={{ display:'flex', alignItems:'center',

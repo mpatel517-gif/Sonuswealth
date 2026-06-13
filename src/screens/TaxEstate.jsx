@@ -2804,9 +2804,8 @@ function PlanStalenessAccordion({ plans = [], onReview }) {
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px',
           background: 'var(--c-surface)',
-          border: '1px solid color-mix(in srgb, var(--c-gold) 30%, transparent)',
-          borderLeft: '4px solid var(--c-gold)',
-          borderRadius: '0 12px 12px 0',
+          border: '1px solid color-mix(in srgb, var(--c-gold) 55%, var(--c-border))',
+          borderRadius: '12px',
           cursor: 'pointer', textAlign: 'left',
         }}
       >

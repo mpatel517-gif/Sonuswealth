@@ -36,11 +36,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import mockProvider from './parsers/mock.js'
+// anthropic-vision is a thin fetch adapter to the parse-document edge function
+// (no SDK shipped), so a static import is safe. It stays INERT until selected
+// via VITE_PARSER_PROVIDER=anthropic-vision (or setParserProvider) AND the
+// edge function is deployed with ANTHROPIC_API_KEY. Default below is still mock.
+import anthropicVisionProvider from './parsers/anthropic-vision.js'
 
 const PROVIDERS = {
   mock: mockProvider,
-  // 'anthropic-vision': lazy-import on first call so we don't ship the SDK at
-  //   build time for the mock path. See parsers/README.md for the contract.
+  'anthropic-vision': anthropicVisionProvider,
 }
 
 // Default chosen at module load. Override via setParserProvider() or env.

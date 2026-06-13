@@ -34,7 +34,10 @@ const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 const PARSE_APP_ORIGIN = Deno.env.get('PARSE_APP_ORIGIN') ?? '*';
 
 // Vision-capable model. Document/image content blocks per Anthropic Vision API.
-const VISION_MODEL = 'claude-sonnet-4-20250514';
+// Env-overridable so the model can be bumped (or set to Opus) without a redeploy
+// of code — set VISION_MODEL in the function secrets. Default is current Sonnet,
+// the right cost/quality tier for statement/scan OCR.
+const VISION_MODEL = Deno.env.get('VISION_MODEL') ?? 'claude-sonnet-4-6';
 const MAX_TOKENS = 1500;
 const MAX_FILE_BYTES = 12 * 1024 * 1024; // 12MB — statements/scans are small
 

@@ -29,7 +29,18 @@ const IS_DEV = typeof import.meta !== 'undefined' && import.meta?.env?.DEV
 const PARSER_PROVIDER = IS_DEV
   ? (import.meta?.env?.VITE_PARSER || 'mock')
   : 'real'
-const REAL_PARSER_WIRED = false   // flip when /api/parse + anthropic-vision live
+// Activation gate is ENV-DRIVEN, not a source edit — the founder turns Upload/
+// Scan live at deploy time, nothing to change (or forget) in code:
+//   VITE_PARSER_PROVIDER=anthropic-vision  → selects the real provider AND opens
+//                                            this gate (one var does both).
+//   VITE_REAL_PARSER=true                  → explicit override (any real provider).
+// Unset in production → gate stays closed → honest phase2/empty state, never
+// fake fields. Dev (IS_DEV) keeps live channels so manual QA works on the mock.
+const _envProvider =
+  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_PARSER_PROVIDER) || ''
+const REAL_PARSER_WIRED =
+  _envProvider === 'anthropic-vision' ||
+  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_REAL_PARSER === 'true')
 
 // L1-7 (2026-05-28): Upload + Scan channels demote to status='phase2' when
 // running in production without a real parser wired. Previously these tiles

@@ -1,36 +1,46 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ANTHROPIC VISION PARSER — production swap-in for mock.js.
 //
-// NOT WIRED YET. This file documents the contract so the next-session swap is
-// one config change. Steps to enable:
+// Client-side adapter to the `parse-document` Supabase edge function. It POSTs
+// the file to the server endpoint and unmarshals the JSON response into the FP-5
+// ParseResult shape. The edge function holds ANTHROPIC_API_KEY server-side and
+// does the actual Claude Vision call.
 //
-//   1. Add to PROVIDERS in services/parser.js:
-//        'anthropic-vision': (await import('./parsers/anthropic-vision.js')).default,
-//      (lazy import so the mock build doesn't ship the SDK.)
+// ACTIVATION IS ENV-DRIVEN — no source edit required:
+//   1. Server (founder): `supabase secrets set ANTHROPIC_API_KEY=...` +
+//      `supabase functions deploy parse-document`.
+//   2. Endpoint: either keep '/api/parse' and add a Vercel rewrite to the
+//      deployed function, OR set VITE_PARSE_ENDPOINT to the function URL
+//      (https://<ref>.supabase.co/functions/v1/parse-document) — no rewrite then.
+//   3. Provider: set VITE_PARSER_PROVIDER=anthropic-vision (this also opens the
+//      DataCapture Upload/Scan gate — see DataCapture.jsx).
 //
-//   2. Provide ANTHROPIC_API_KEY via OS env var (per user_security_context — no .env).
-//      The browser cannot call Anthropic directly (CORS); the call goes through a
-//      thin server endpoint POST /api/parse that proxies the request with the key
-//      held server-side. See /server/parse.ts (to be added).
-//
-//   3. Set VITE_PARSER_PROVIDER=anthropic-vision in the build env, or call
-//      setParserProvider('anthropic-vision') at app start.
-//
-// The function below is the client-side adapter. It POSTs the file to the
-// server endpoint and unmarshals the JSON response into the FP-5 ParseResult
-// shape. The server endpoint is responsible for the actual Claude Vision call
-// with structured output schema enforcement.
+// AUTH: the edge function is JWT-gated (mirrors ask-sonu-proxy). We attach the
+// caller's Supabase session token, exactly like the Ask + llm-router proxies.
+// In demo/offline mode there is no session → no token → the call 401s, but the
+// active provider there is 'mock', so this adapter is never reached.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PARSE_ENDPOINT = '/api/parse'
+import { supabase } from '../../lib/supabase.js'
+
+const PARSE_ENDPOINT =
+  (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_PARSE_ENDPOINT) || '/api/parse'
 
 export default async function anthropicVisionProvider(file, opts = {}) {
   const form = new FormData()
   form.append('file', file)
   if (opts.docTypeHint) form.append('docTypeHint', opts.docTypeHint)
 
+  // Attach the Supabase session JWT the edge function requires.
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData?.session?.access_token
+  if (!accessToken) {
+    throw new Error('Sign in to read documents — real parsing needs an authenticated session.')
+  }
+
   const res = await fetch(PARSE_ENDPOINT, {
     method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
     body: form,
     signal: opts.signal,
   })

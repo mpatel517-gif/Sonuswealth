@@ -41,6 +41,7 @@ Status key: ✅ done+verified · 🔄 partial · ☐ open · ↗ engine/data-lay
 | F3 pension AA | Ask Sonu tax-year-state + decision-engine composer routed through canonical `pensionContributionsThisYear`; mrT-couple £0→£19.8k used. `usedProvisional` honest-absence flag threaded into LLM summary + AA chip. | `cd56941` |
 | Home dead code | Removed orphaned DeficitBanner/DeficitBannerView/SippIhtCountdown (~190 lines, superseded by HomeAlertsPanel). | (pushed) |
 | D-register verify | 3 items confirmed already-RESOLVED (punt copy, monthly-flow mismatch, see rows in §D); drill-label = founder brand-decision. |  |
+| Theme B/C drills | Wired all non-Risk driver-tree stub-hitters: `netWorth:<category>`, `will`, `gaps` (honest target-shortfall via canonical `gapDims`). Retirement/IHT confirmed covered natively. | `e7e1ee1`/`1ec8db0`/`c158b9b` |
 
 **Deferred this run (blocked, not skipped):** Theme A targetIncome (4 sites in risk-engine.js = Risk-locked, 6 in fq-calculator.js = blast-radius + parallel tie-outs, no golden-vector coverage yet); F5 live-snap (drives shared preview browser → would disrupt founder's Risk session).
 
@@ -92,7 +93,7 @@ Gap-analysis agent claims corrected where wrong (life-event log, cashflow-Q5, ho
 | Theme | Item | Status |
 |-------|------|--------|
 | A | `targetIncome` `||30000` vs `||50000` inconsistency | ☐ ↗ needs golden-vector + tie-out run |
-| B/C | methodology drill + decision-path onto hero numbers (NW, IHT, retirement) | 🔄 ↗ — infra IS the methodology surface: `DrillableNumber`/`onDrillMetric` → `driver-engine.js` `driver()` → `DetailOverlay` (formula+source+confidence+driver tree). 2026-06-13 wired the stub-hitters: `netWorth:<category>` composition sub-drills (`e7e1ee1`) + `will` estate-readiness (`will` commit). **Remaining stub-hitters:** `gaps`+`risk:${dim}` (radar — leave to Risk session); `est-iht`/`income` are TaxEstate-LOCAL subtab nav (NOT driver-tree) so they show the tile not a methodology drill — wiring them to `onDrillMetric` is a TaxEstate screen change; **retirement/fundedRatio has NO drill wired at all** (Cashflow CTA + driver case both needed). |
+| B/C | methodology drill + decision-path onto hero numbers (NW, IHT, retirement) | ✅(mostly) ↗ — infra IS the methodology surface: `DrillableNumber`/`onDrillMetric` → `driver-engine.js` `driver()` → `DetailOverlay` (formula+source+confidence+driver tree). 2026-06-13 wired ALL non-Risk stub-hitters: `netWorth:<category>` composition sub-drills (`e7e1ee1`), `will` estate-readiness (`1ec8db0`), `gaps`=honest target-shortfall via canonical `gapDims` (`c158b9b`). **NW✓ (tree+composition), IHT✓ (native TaxVsHMRC/InheritanceStory + drvPlanEstate), retirement✓ (native two-lens on Cashflow — richer than a generic node, intentionally NOT duplicated).** Genuinely-remaining: `risk:${dim}` stub (Risk-domain — leave to Risk session); `est-iht`/`income` are TaxEstate-LOCAL subtab nav that open the breakdown tile (acceptable, not a stub). |
 | D | live-path audit of dead-pathed Liabilities/Pensions modellers | ☐ (memory: built but possibly unreachable) |
 | F | ~17 inline side-stripe borders + ~29 sub-11px typography elements | 🔄 (de-striped several; full sweep open) |
 | — | Risk a11y: 0 semantic headings / 11 eyebrow-divs | ☐ per-instance pass |

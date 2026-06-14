@@ -34,13 +34,6 @@ export const ALIAS = {
   // Net Worth + drivers
   netWorth:           'Net Worth',
   nw:                 'Net Worth',
-  // Net-worth composition sub-drills (Home anchor segment taps)
-  'netWorth:pensions':  'Pensions share',
-  'netWorth:isa':       'ISA share',
-  'netWorth:property':  'Property share',
-  'netWorth:cash':      'Cash share',
-  'netWorth:business':  'Business share',
-  'netWorth:portfolio': 'Investments share',
   assets:             'What you own',
   liabilities:        'What you owe',
 
@@ -83,9 +76,7 @@ export const ALIAS = {
   bequest:            'Estate intent',
   bequestMotive:      'Estate intent',
   ihtExposure:        'Estate at risk',
-  gaps:               'Where to improve',
   will:               'Will & LPA',
-  willStatus:         'Will status',
   lpa:                'Power of attorney',
   ihtWaterfall:       'How estate is taxed',
   giftClock:          'Gift timeline',

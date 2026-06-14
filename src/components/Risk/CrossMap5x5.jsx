@@ -135,15 +135,15 @@ export default function CrossMap5x5({
               glow={glow}
               onTap={(rsId) => {
                 const id = cellId(fq.id, rsId)
-                if (fq.id === fqBand && rsId === riskBand) {
-                  onCellTap?.(id)
-                  return
-                }
-                if (isAdjacent(fqBand, riskBand, fq.id, rsId)) {
-                  setMovement({ id, name: cellName(fq.id, rsId), fqId: fq.id, rsId })
-                } else {
-                  onCellTap?.(id)
-                }
+                // Every cell explains itself in a sheet — no dead taps. The
+                // current cell shows "where you are"; others show what that
+                // mix of financial health × resilience means vs today.
+                setMovement({
+                  id, fqId: fq.id, rsId,
+                  name: cellName(fq.id, rsId),
+                  isCurrent: fq.id === fqBand && rsId === riskBand,
+                })
+                onCellTap?.(id)
               }}
             />
           )
@@ -161,6 +161,8 @@ export default function CrossMap5x5({
       {movement && (
         <MovementSheet
           target={movement}
+          curFq={fqBand}
+          curRs={riskBand}
           onClose={() => setMovement(null)}
         />
       )}
@@ -239,7 +241,23 @@ function Row({ fq, fqIdx, curFq, curRs, glow, onTap }) {
   )
 }
 
-function MovementSheet({ target, onClose }) {
+function MovementSheet({ target, curFq, curRs, onClose }) {
+  const dFq = FQ_BANDS.findIndex(b => b.id === target.fqId)
+            - FQ_BANDS.findIndex(b => b.id === curFq)
+  const dRs = RS_BANDS.findIndex(b => b.id === target.rsId)
+            - RS_BANDS.findIndex(b => b.id === curRs)
+
+  const wealthPhrase = dFq > 0 ? 'stronger financial health'
+                     : dFq < 0 ? 'lower financial health'
+                     : 'the same financial health';
+  const resPhrase    = dRs > 0 ? 'more resilience to shocks'
+                     : dRs < 0 ? 'less resilience to shocks'
+                     : 'the same resilience';
+  const stronger = (dFq + dRs) > 0 && dFq >= 0 && dRs >= 0;
+  const weaker   = (dFq + dRs) < 0 && dFq <= 0 && dRs <= 0;
+
+  const eyebrow = target.isCurrent ? 'Where you are now' : 'About this position';
+
   return (
     <div
       role="dialog" aria-modal="true"
@@ -270,7 +288,7 @@ function MovementSheet({ target, onClose }) {
           textTransform: 'uppercase', letterSpacing: 0.8,
           marginBottom: 4,
         }}>
-          How to get here
+          {eyebrow}
         </div>
         <div style={{
           fontSize: 'var(--fs-title)', fontWeight: 800,
@@ -278,14 +296,38 @@ function MovementSheet({ target, onClose }) {
         }}>
           {target.name}
         </div>
-        <div style={{
-          fontSize: 'var(--fs-body)', color: 'var(--c-text2)',
-          lineHeight: 1.55,
-        }}>
-          The single highest-leverage action to move you to this cell will be
-          surfaced here once you tap it from your live profile. (Stub — wires
-          to engine.movementPaths(currentCell, targetCell).)
-        </div>
+
+        {target.isCurrent ? (
+          <div style={{ fontSize: 'var(--fs-body)', color: 'var(--c-text2)', lineHeight: 1.55 }}>
+            This is your position today on the map — your financial health across
+            the top, your resilience to shocks across the side. The strongest
+            corner is the top-right (Exceptional / Resilient). Tap any other cell
+            to see what that mix would mean compared with where you are now.
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 'var(--fs-body)', color: 'var(--c-text2)', lineHeight: 1.55, marginBottom: 12 }}>
+              Compared with where you are now, this position means{' '}
+              <strong style={{ color: 'var(--c-text)' }}>{wealthPhrase}</strong> and{' '}
+              <strong style={{ color: 'var(--c-text)' }}>{resPhrase}</strong>.
+            </div>
+            {stronger && (
+              <div style={{ fontSize: 'var(--fs-body)', color: 'var(--c-text2)', lineHeight: 1.55 }}>
+                Financial health generally grows as you build assets, use tax
+                shelters like ISAs and pensions, and close protection gaps.
+                Resilience generally grows as you hold more accessible cash, add
+                income or life cover, and spread income across more than one source.
+              </div>
+            )}
+            {weaker && (
+              <div style={{ fontSize: 'var(--fs-body)', color: 'var(--c-text2)', lineHeight: 1.55 }}>
+                This is a weaker position than today. The map shows every
+                combination so you can see the full range — and what protects the
+                ground you've already made.
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

@@ -2249,7 +2249,6 @@ export function RiskBody({ entity, personaId, admin = false, onAddProtection, on
           <CrossMap5x5
             fqBand={mapFqBand(fq.band?.name)}
             riskBand={mapRiskBand(risk.band?.name)}
-            onCellTap={(cell) => onDrillMetric?.(`crossmap:${cell?.fq || ''}-${cell?.risk || ''}`)}
           />
         </FadeInOnMount>
 

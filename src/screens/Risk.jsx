@@ -1031,7 +1031,7 @@ function ShockLab({ entity }) {
         <span style={{
           fontSize:9, fontWeight:600, letterSpacing:'0.04em', color:'var(--c-text3)',
           background:'var(--c-surface2)', border:'1px solid var(--c-sep)',
-          borderRadius:4, padding:'1px 5px' }}>est · pending sign-off</span>
+          borderRadius:4, padding:'1px 5px' }}>est · not advice</span>
       </div>
 
       {/* Shock picker */}
@@ -1195,7 +1195,7 @@ function ShockBandChart({ traj }) {
           : recoveryMonth
             ? `Portfolio holds across the window; baseline recovers its pre-shock level by about month ${recoveryMonth}.`
             : `Portfolio holds across the window at current spending.`}
-        {' '}Net assumed growth {((netRate ?? 0.04) * 100).toFixed(1)}%/yr. Range widens with time (√t).
+        {' '}Net assumed growth {((netRate ?? 0.04) * 100).toFixed(1)}%/yr. The range widens the further ahead we look.
       </div>
     </div>
   )
@@ -1349,7 +1349,7 @@ function RiskHistory({ entity }) {
       <div style={{ display:'flex', alignItems:'center',
         justifyContent:'space-between', marginBottom:8 }}>
         <div className="card-title" style={{ marginBottom:0 }}>
-          Score History <span className="sw-eyebrow" style={{ marginLeft:4 }}>· always live</span>
+          Score History
         </div>
         <div style={{ display:'flex', background:'var(--c-surface2)',
           borderRadius:100, padding:3, gap:2 }}>
@@ -1660,7 +1660,7 @@ function WhatHelpsMost({ entity, onNav, onAddProtection }) {
               }}>
               <td style={{ padding:'8px', color:'var(--c-text)' }}>
                 <div style={{ fontWeight:700, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-                  <span>#{i+1} {m.action.replace(/_/g, ' ')}</span>
+                  <span>#{i+1} {m.action.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())}</span>
                   {route && (
                     <span style={{
                       fontSize: 10, fontWeight: 700,
@@ -2286,7 +2286,7 @@ export function RiskBody({ entity, personaId, admin = false, onAddProtection, on
             vulnerable: 'At lower resilience, people often hold 12+ months in accessible cash and focus on income stability before taking on new debt.',
             cautious:   'A 6–12 month cash buffer and reviewed protection cover are common at this level, with allocations tending to be more conservative.',
             managed:    'At this level, annual stress-scenario reviews and use of ISA / pension tax shelters are typical.',
-            protected:  'Resilience is solid — attention often shifts toward growth and estate efficiency.',
+            protected:  'Resilience is solid — attention often shifts toward growing wealth and planning how it passes on.',
             resilient:  'Resilience is strong — there is often capacity for more investment risk and a focus on legacy.',
           }
           const decision = RISK_DECISIONS[(band.name || '').toLowerCase()] || 'Your seven dimensions show where resilience could improve.'
@@ -2400,17 +2400,17 @@ export function RiskBody({ entity, personaId, admin = false, onAddProtection, on
         <TakeAction
           entity={entity}
           onAct={(a) => {
-            if (typeof window === 'undefined') return
-            // Prefer drill if the action has a dimension key
-            if (a?.dimension && typeof onDrillMetric === 'function') {
-              onDrillMetric(`risk:${a.dimension}`)
-              return
-            }
-            try {
-              window.dispatchEvent(new CustomEvent('sonus:action', {
-                detail: { source: 'risk-take-action', action: a },
-              }))
-            } catch {}
+            // Route the tapped action to the surface that OWNS it (FD-CROSS-1),
+            // same resolver the "What would help most" rows use. APQ items carry
+            // no .dimension, so the old drill branch never fired and the
+            // sonus:action event had no listener — the rows were dead taps.
+            // APQ ids use hyphens (life-insurance); mitigationRoute matches the
+            // engine's underscore tokens (life_insurance) — normalise so each
+            // action lands on its precise owning surface, not the generic default.
+            const key = (a?.id || a?.title || '').replace(/-/g, '_')
+            const route = mitigationRoute(key, onNav, onAddProtection)
+            if (route) route()
+            else onNav?.('money')
           }}
         />
 

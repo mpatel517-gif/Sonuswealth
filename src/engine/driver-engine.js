@@ -119,6 +119,7 @@ function drvWealthScore(entity, level) {
       value: dims[key]?.value ?? dims[key] ?? 0,
       unit: 'score',
       formula: bd[key]?.summary || dims[key]?.formula || `${key} dimension contribution`,
+      breakdown: bd[key] || null, // structured parts → DetailOverlay renders a table
       source: 'engine',
       confidence: 'medium',
       terminal: true,
@@ -154,6 +155,7 @@ function drvRiskScore(entity, level) {
       value: dims[key]?.value ?? dims[key] ?? 0,
       unit: 'score',
       formula: bd[key]?.summary || RISK_DIM_DESCRIPTIONS[key] || `Contributes to your overall financial resilience score.`,
+      breakdown: bd[key] || null, // structured parts → DetailOverlay renders a table
       source: 'engine',
       confidence: 'medium',
       terminal: true,
@@ -490,6 +492,7 @@ function drvDimension(entity, metric) {
     return {
       metric, value, unit: 'score',
       formula: `${wd.definition} You're at ${Math.round(value)} of a possible ${wd.max} on this dimension.${how}`,
+      breakdown: bd || null, // structured parts → DetailOverlay renders a table
       source: 'engine', confidence: 'medium', terminal: true, drivers: [],
     }
   }
@@ -502,6 +505,7 @@ function drvDimension(entity, metric) {
     return {
       metric, value, unit: 'score',
       formula: `${RISK_DIM_DESCRIPTIONS[metric]} You're at ${Math.round(value)}${max} on this resilience dimension.${how}`,
+      breakdown: bd || null, // structured parts → DetailOverlay renders a table
       source: 'engine', confidence: 'medium', terminal: true, drivers: [],
     }
   }

@@ -40,6 +40,15 @@ export default function DetailOverlay({ frame, onDrill, onBack, onClose, crumbs 
   if (!frame) return null
   const fmtVal = FORMAT_BY_UNIT[frame.unit] || FORMAT_BY_UNIT.gbp
 
+  // Structured per-component breakdown (score dimensions). When present we render
+  // it as a line-item table below, so strip the duplicate "How it's built: …"
+  // tail the engine appends to the prose formula.
+  const bdParts = Array.isArray(frame.breakdown?.parts) ? frame.breakdown.parts : null
+  const formulaText = bdParts
+    ? String(frame.formula || '').split(/\s*How it['’]s built:/)[0].trim()
+    : frame.formula
+  const signed = (n) => (n >= 0 ? '+' : '−') + Math.abs(Math.round(n))
+
   return (
     <div className="sheet-overlay">
       <div className="sheet-backdrop" onClick={typeof onClose === 'function' ? onClose : undefined} />
@@ -101,7 +110,7 @@ export default function DetailOverlay({ frame, onDrill, onBack, onClose, crumbs 
               marginTop: 12, fontSize: 13, color: 'var(--c-text2)',
               lineHeight: 1.5,
             }}>
-              {frame.formula}
+              {formulaText}
             </div>
             <div style={{
               marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap',
@@ -113,6 +122,42 @@ export default function DetailOverlay({ frame, onDrill, onBack, onClose, crumbs 
               {frame.terminal && <span className="sw-chip sw-chip-sm">terminal</span>}
             </div>
           </div>
+
+          {/* Component breakdown table — every score value traced to its parts
+              (Baseline 15 · ISA in use +2 · … = 19 of 20). Same table for wealth
+              and risk dimensions so the two sides match. */}
+          {bdParts && bdParts.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div className="sw-eyebrow" style={{ marginBottom: 8 }}>How this number is built</div>
+              <div style={{ border: '1px solid var(--c-border)', borderRadius: 12, overflow: 'hidden' }}>
+                {bdParts.map((p, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+                    padding: '8px 12px',
+                    borderTop: i > 0 ? '1px solid var(--c-sep)' : 'none',
+                  }}>
+                    <span style={{ fontSize: 12.5, color: 'var(--c-text2)', lineHeight: 1.4 }}>{p.label}</span>
+                    <span style={{
+                      fontSize: 13, fontWeight: 700, flexShrink: 0,
+                      color: p.points < 0 ? 'var(--c-coral-text)'
+                        : (p.base || p.band) ? 'var(--c-text2)' : 'var(--c-acc)',
+                    }}>
+                      {(p.base || p.band) ? Math.round(p.points) : signed(p.points)}
+                    </span>
+                  </div>
+                ))}
+                <div style={{
+                  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                  padding: '8px 12px', borderTop: '1px solid var(--c-border)', background: 'var(--c-surface2)',
+                }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)' }}>Total</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>
+                    {Math.round(frame.breakdown.value)} of {frame.breakdown.max}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Drivers list */}
           {frame.drivers?.length > 0 && (

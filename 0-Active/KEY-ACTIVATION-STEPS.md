@@ -1,3 +1,44 @@
+# ⚡ Activate the Decision Engine + Ask Sonu (real Claude) — founder steps
+
+**Diagnosed 2026-06-13 (via Supabase MCP, read-only):** the real blocker for the
+DE "joke" / fallback trees is **not just the key** — the `ask-sonu-proxy` edge
+function the client calls **is not deployed** on project `yknnfglfbpcyxcllrvmd`
+(only `cron-context-pull` + `cron-rules-activation` are live). Setting the key
+alone does nothing until the proxy exists. The MCP is read-only so I couldn't
+deploy it; run these from the repo root:
+
+```bash
+# 1) Rotate first — the old VITE_ANTHROPIC_KEY was bundled client-side (treat as compromised)
+#    console.anthropic.com → revoke old, create new.
+
+# 2) Set the key (NEW rotated key) — your secret, never in repo
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-api03-...  --project-ref yknnfglfbpcyxcllrvmd
+
+# 3) Deploy the proxy (already written + self-contained, JWT-gated, inert until key set)
+supabase functions deploy ask-sonu-proxy  --project-ref yknnfglfbpcyxcllrvmd
+
+# 4) (optional) usage logging — proxy works without it (best-effort insert)
+supabase db push   # applies 014_ask_usage_log.sql
+
+# 5) (prod, recommended) lock CORS to your origin
+supabase secrets set ASK_APP_ORIGIN=https://app.sonuswealth.com  --project-ref yknnfglfbpcyxcllrvmd
+```
+
+**Build env (confirm set wherever you build):**
+`VITE_SUPABASE_URL=https://yknnfglfbpcyxcllrvmd.supabase.co` + `VITE_SUPABASE_ANON_KEY=...`
+
+**⚠️ Auth prerequisite — the catch:** the proxy requires a real signed-in Supabase
+session (binds Anthropic spend to a user). The DE/Ask only call real Claude when
+**logged in**. The **demo personas (`?demo=mrt`) have no session → they keep the
+honestly-labelled fallback trees.** To SEE real trees, test as a signed-in user,
+not a demo. Models the client sends: DE `claude-opus-4-7`, Ask `claude-sonnet-4-6`
+(both current; the function's `DEFAULT_MODEL` is stale but never used).
+
+**Verify:** sign in → Ask Sonu question → Network shows `/functions/v1/ask-sonu-proxy`
+returning Anthropic shape → DE question shows a real tree with NO "Illustrative" banner.
+
+---
+
 # Activate real document reading (Upload / Scan) — founder steps
 
 **Status as of 2026-06-13:** the parser pipeline is fully built and the client
